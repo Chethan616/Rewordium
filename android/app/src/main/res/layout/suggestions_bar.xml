@@ -1,0 +1,56 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:id="@+id/suggestions_container"
+    android:layout_width="match_parent"
+    android:layout_height="@dimen/suggestion_bar_height"
+    android:gravity="center_vertical"
+    android:orientation="horizontal"
+    android:paddingStart="8dp"
+    android:paddingEnd="8dp">
+
+    <FrameLayout
+        android:id="@+id/ai_button"
+        android:layout_width="40dp"
+        android:layout_height="40dp"
+        android:layout_gravity="center_vertical"
+        android:layout_marginEnd="8dp"
+        android:background="?attr/selectableItemBackgroundBorderless">
+
+        <TextView
+            android:id="@+id/ai_text_view"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_gravity="center"
+            android:text="AI"
+            android:textSize="20sp"
+            android:fontFamily="cursive"
+            android:textStyle="bold"
+            
+            android:contentDescription="@string/ai_button" />
+    </FrameLayout>
+
+    <TextView
+        android:id="@+id/suggestion_1"
+        style="@style/SuggestionTextStyle"
+        tools:text="Hello" />
+
+    <View
+        android:id="@+id/separator_1"
+        style="@style/SuggestionSeparatorStyle" />
+
+    <TextView
+        android:id="@+id/suggestion_2"
+        style="@style/SuggestionTextStyle"
+        tools:text="World" />
+
+    <View
+        android:id="@+id/separator_2"
+        style="@style/SuggestionSeparatorStyle" />
+
+    <TextView
+        android:id="@+id/suggestion_3"
+        style="@style/SuggestionTextStyle"
+        tools:text="Correct" />
+
+</LinearLayout>

@@ -1,0 +1,24 @@
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="24dp"
+    android:height="24dp"
+    android:viewportWidth="24.0"
+    android:viewportHeight="24.0"
+    android:tint="?attr/colorControlNormal">
+
+    <!-- Wand Stick -->
+    <path
+        android:fillColor="@android:color/white"
+        android:pathData="M15,3l-1.41,1.41L15,5.83V15.5c0,0.28 -0.22,0.5 -0.5,0.5s-0.5,-0.22 -0.5,-0.5V5.83L12.59,4.41 11.17,3H15M10,3h1v1h-1V3M6,3h1v1H6V3M16,3h1v1h-1V3M10.5,16h3c0.28,0 0.5,0.22 0.5,0.5v3c0,0.28 -0.22,0.5 -0.5,0.5h-3c-0.28,0 -0.5,-0.22 -0.5,-0.5v-3c0,-0.28 0.22,-0.5 0.5,-0.5Z" />
+
+    <!-- Sparkles/Star at the tip -->
+    <path
+        android:fillColor="@android:color/white"
+        android:pathData="M8,2L7.19,4.34L5,4.73L6.91,6.26L6.27,8.57L8,7.34L9.73,8.57L9.09,6.26L11,4.73L8.81,4.34L8,2Z" />
+    <path
+        android:fillColor="@android:color/white"
+        android:pathData="M18,10l-0.81,2.34L15,12.73l1.91,1.53L16.27,16.57L18,15.34l1.73,1.23L19.09,14.26L21,12.73l-2.19,-0.39L18,10Z" />
+     <path
+        android:fillColor="@android:color/white"
+        android:pathData="M20,5l-0.5,1.5L18,7l1.5,0.5L20,9l0.5,-1.5L22,7l-1.5,-0.5Z" />
+
+</vector>

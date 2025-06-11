@@ -1,0 +1,72 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="wrap_content"
+    android:layout_height="wrap_content"
+    android:orientation="vertical"
+    android:background="#1A1B26"
+    android:padding="8dp">
+
+    <TextView
+        android:id="@+id/persona_title"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="Select Persona"
+        android:textColor="#FFFFFF"
+        android:textSize="16sp"
+        android:textStyle="bold"
+        android:padding="8dp" />
+
+    <View
+        android:layout_width="match_parent"
+        android:layout_height="1dp"
+        android:background="#333333"
+        android:layout_marginBottom="8dp" />
+
+    <TextView
+        android:id="@+id/persona_happy"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="Happy"
+        android:textColor="#FFFFFF"
+        android:textSize="16sp"
+        android:padding="12dp"
+        android:background="?android:attr/selectableItemBackground" />
+
+    <TextView
+        android:id="@+id/persona_sad"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="Sad"
+        android:textColor="#FFFFFF"
+        android:textSize="16sp"
+        android:padding="12dp"
+        android:background="?android:attr/selectableItemBackground" />
+
+    <TextView
+        android:id="@+id/persona_humor"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="Humor"
+        android:textColor="#FFFFFF"
+        android:textSize="16sp"
+        android:padding="12dp"
+        android:background="?android:attr/selectableItemBackground" />
+
+    <View
+        android:layout_width="match_parent"
+        android:layout_height="1dp"
+        android:background="#333333"
+        android:layout_marginTop="8dp"
+        android:layout_marginBottom="8dp" />
+
+    <TextView
+        android:id="@+id/persona_add_new"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="+ Add New Persona"
+        android:textColor="#1A73E8"
+        android:textSize="16sp"
+        android:padding="12dp"
+        android:background="?android:attr/selectableItemBackground" />
+
+</LinearLayout>

@@ -1,0 +1,42 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="vertical"
+    android:background="#D1D5DB">
+
+    <!-- Suggestion Bar - Apple style with rounded rectangles -->
+    <LinearLayout
+        android:id="@+id/suggestion_bar"
+        android:layout_width="match_parent"
+        android:layout_height="48dp"
+        android:orientation="horizontal"
+        android:background="#E5E7EB"
+        android:padding="4dp"
+        android:gravity="center_vertical">
+        <!-- Suggestions will be added here programmatically -->
+    </LinearLayout>
+
+    <!-- Keyboard view - Apple style with rounded keys and gradients -->
+    <android.inputmethodservice.KeyboardView
+        android:id="@+id/apple_keyboard_view"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:background="#D1D5DB"
+        android:keyPreviewLayout="@layout/key_preview"
+        android:keyPreviewOffset="0dp"
+        android:keyPreviewHeight="60dp"
+        android:paddingTop="5dp"
+        android:paddingBottom="5dp" />
+        
+    <!-- Home indicator -->
+    <View
+        android:layout_width="120dp"
+        android:layout_height="5dp"
+        android:layout_gravity="center_horizontal"
+        android:layout_marginTop="8dp"
+        android:layout_marginBottom="5dp"
+        android:background="#4D000000"
+        android:alpha="0.3" />
+
+</LinearLayout>

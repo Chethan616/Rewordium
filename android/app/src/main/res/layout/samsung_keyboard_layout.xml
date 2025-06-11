@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="vertical"
+    android:background="#1A1A1A">
+
+    <!-- Suggestion Bar -->
+    <LinearLayout
+        android:id="@+id/suggestion_bar"
+        android:layout_width="match_parent"
+        android:layout_height="48dp"
+        android:orientation="horizontal"
+        android:background="#2D2D2D"
+        android:padding="4dp"
+        android:gravity="center_vertical">
+        <!-- Emoji button -->
+        <ImageButton
+            android:id="@+id/emoji_button"
+            android:layout_width="40dp"
+            android:layout_height="40dp"
+            android:src="@drawable/ic_emoji"
+            android:background="?attr/selectableItemBackgroundBorderless"
+            android:contentDescription="Emoji" />
+        <!-- Suggestions will be added here programmatically -->
+    </LinearLayout>
+
+    <!-- Keyboard view - Samsung style with wider keys and curved corners -->
+    <android.inputmethodservice.KeyboardView
+        android:id="@+id/samsung_keyboard_view"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:background="#F5F5F5"
+        android:keyPreviewLayout="@layout/key_preview"
+        android:keyPreviewOffset="0dp"
+        android:keyPreviewHeight="60dp"
+        android:paddingTop="5dp"
+        android:paddingBottom="5dp" />
+
+</LinearLayout>

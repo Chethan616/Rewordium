@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="suggestion_background">#2C2C2E</color>
+    <color name="suggestion_background_pressed">#3A3A3C</color>
+    <color name="suggestion_stroke">#48484A</color>
+</resources>

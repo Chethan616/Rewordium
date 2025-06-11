@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<ripple xmlns:android="http://schemas.android.com/apk/res/android"
+    android:color="#3DFFFFFF">
+    <item>
+        <shape android:shape="rectangle">
+            <solid android:color="#1c1f28" />
+            <corners android:radius="6dp" />
+            <!-- Add a subtle gradient effect for special keys -->
+            <gradient
+                android:angle="90"
+                android:endColor="#1c1f28"
+                android:startColor="#252836"
+                android:type="linear" />
+        </shape>
+    </item>
+</ripple>

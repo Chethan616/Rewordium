@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Rewordium</string>
+    <string name="accessibility_service_description">Allows the app to show a helpful bubble when you are typing. This enables features like quick translation and grammar checks.</string>
+    <string name="keyboard_key">Keyboard key</string>
+    <string name="ai_button">AI Button</string>
+    <string name="tap_ai_to_paraphrase">Tap AI to paraphrase</string>
+    <string name="keyboard_name">Rewordium Keyboard</string>
+    <string name="keyboard_settings">Keyboard Settings</string>
+    <string name="process_text_action_name">Process with AI</string>
+</resources>

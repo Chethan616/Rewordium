@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Keyboard Background -->
+    <color name="keyboard_background">#1E1E2E</color>
+    <color name="keyboard_secondary">#252535</color>
+    <color name="keyboard_tertiary">#2A2A3A</color>
+    
+    <!-- Key Colors -->
+    <color name="key_background">#2D2D3D</color>
+    <color name="key_pressed">#3D3D4D</color>
+    <color name="key_ripple">#40FFFFFF</color>
+    <color name="key_text">#E0E0E0</color>
+    <color name="key_text_secondary">#A0A0B0</color>
+    <color name="key_border">#3A3A4A</color>
+    
+    <!-- Accent Colors -->
+    <color name="accent_primary">#7C4DFF</color>
+    <color name="accent_secondary">#5E35B1</color>
+    <color name="accent_tertiary">#4527A0</color>
+    
+    <!-- Text Colors -->
+    <color name="text_primary">#E0E0E0</color>
+    <color name="text_secondary">#A0A0B0</color>
+    <color name="text_tertiary">#707080</color>
+    
+    <!-- Status Colors -->
+    <color name="success">#4CAF50</color>
+    <color name="warning">#FFC107</color>
+    <color name="error">#F44336</color>
+    
+    <!-- Shadow Colors -->
+    <color name="shadow_dark">#1A000000</color>
+    <color name="shadow_light">#1AFFFFFF</color>
+    
+    <!-- Overlay Colors -->
+    <color name="overlay_dark">#80000000</color>
+    <color name="overlay_light">#33FFFFFF</color>
+    
+    <!-- Suggestion Colors -->
+    <color name="suggestion_background">#F2F2F7</color>
+    <color name="suggestion_background_pressed">#E5E5EA</color>
+    <color name="suggestion_stroke">#C6C6C8</color>
+</resources>

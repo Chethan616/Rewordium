@@ -1,0 +1,54 @@
+{
+  "project_info": {
+    "project_number": "764897323980",
+    "project_id": "yc-startup-yc",
+    "storage_bucket": "yc-startup-yc.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:764897323980:android:64562bc359208814784b69",
+        "android_client_info": {
+          "package_name": "com.example.yc_startup"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "764897323980-anii47i8t0tl42ghjbe5noq94knno3pc.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.example.yc_startup",
+            "certificate_hash": "70ef4970e7013bac4ddb4f711daf37cef8bfe4bd"
+          }
+        },
+        {
+          "client_id": "764897323980-d3ickjqq93g0mir9nrj1ri0gatdfqr1f.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDS_plUk1hp7t3YWrpsFUevGb9vCr3jC3E"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "764897323980-d3ickjqq93g0mir9nrj1ri0gatdfqr1f.apps.googleusercontent.com",
+              "client_type": 3
+            },
+            {
+              "client_id": "764897323980-6asarl1va57k8omfcoghefb7r2lfnrh2.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "com.example.ycStartup"
+              }
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
