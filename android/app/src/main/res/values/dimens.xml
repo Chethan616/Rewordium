@@ -1,9 +1,11 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <!-- General Key Dimensions -->
-    <dimen name="ios_key_height">48dp</dimen>
+    <dimen name="ios_key_height">50dp</dimen>
     <dimen name="ios_key_margin">6dp</dimen>
-    <dimen name="emoji_key_height">50dp</dimen>
+    <dimen name="emoji_key_height">48dp</dimen>
+    <dimen name="keyboard_bottom_margin">30dp</dimen>
+
 
     <!-- Text Sizes -->
     <dimen name="key_text_size">22sp</dimen>

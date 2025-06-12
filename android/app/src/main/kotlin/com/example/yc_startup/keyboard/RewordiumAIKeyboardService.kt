@@ -37,6 +37,7 @@ class RewordiumAIKeyboardService : InputMethodService() {
     internal lateinit var layoutManager: KeyboardLayoutManager
     internal var paraphraseManager: ParaphraseViewManager? = null
 
+    // ... (rest of your properties are fine) ...
     internal var keyboardHeight = 0
 
     internal var isCapsOn = false
@@ -64,7 +65,8 @@ class RewordiumAIKeyboardService : InputMethodService() {
     private val deleteHandler = Handler(Looper.getMainLooper())
     private lateinit var deleteRunnable: Runnable
     private var isDeleting = false
-
+    
+    // ... (Your settingsUpdateReceiver and onCreate are fine) ...
     private val settingsUpdateReceiver = object : BroadcastReceiver() {
         override fun onReceive(context: Context?, intent: Intent?) {
             when (intent?.action) {
@@ -129,8 +131,29 @@ class RewordiumAIKeyboardService : InputMethodService() {
         return rootView
     }
 
+    // =========================================================================
+    // START OF THE FIX
+    // =========================================================================
+    override fun onWindowShown() {
+        super.onWindowShown()
+        // This is the correct lifecycle point to fix the layout issue. It's called
+        // every time the keyboard window is displayed, including when returning
+        // from a landscape app.
+        // `requestLayout()` invalidates the entire view hierarchy and forces it
+        // to re-measure and re-draw itself using the current screen dimensions.
+        // This is the programmatic equivalent of the "fix" you observed when
+        // tapping a key.
+        if (::layoutManager.isInitialized) {
+            layoutManager.getRootView()?.requestLayout()
+        }
+    }
+    // =========================================================================
+    // END OF THE FIX
+    // =========================================================================
+
     override fun onStartInputView(info: EditorInfo?, restarting: Boolean) {
         super.onStartInputView(info, restarting)
+
         this.currentEditorInfo = info
         this.currentInputTypeSupportsMultiLine = (info?.inputType ?: 0 and InputType.TYPE_TEXT_FLAG_MULTI_LINE) != 0
         paraphraseManager?.exitParaphraseMode()
@@ -144,9 +167,11 @@ class RewordiumAIKeyboardService : InputMethodService() {
             isCapsOn = false
         }
         isCapsLock = false
+        // This call remains important to set the correct keyboard state (letters, symbols, caps, etc.)
         layoutManager.updateLayout()
     }
 
+    // ... (All other methods from onFinishInputView() onwards remain unchanged) ...
     override fun onFinishInputView(finishingInput: Boolean) {
         super.onFinishInputView(finishingInput)
         layoutManager.cleanup()
@@ -397,52 +422,52 @@ class RewordiumAIKeyboardService : InputMethodService() {
         val prefs = getSharedPreferences(KeyboardConstants.PREFS_NAME, Context.MODE_PRIVATE)
         isDarkMode = prefs.getBoolean(KeyboardConstants.KEY_DARK_MODE, false)
         themeColor = prefs.getString(KeyboardConstants.KEY_THEME_COLOR, "#007AFF") ?: "#007AFF"
-        
+
         // Debug log to check the actual value in shared preferences
         val hapticValue = prefs.getBoolean(KeyboardConstants.KEY_HAPTIC_FEEDBACK, true)
         Log.d(KeyboardConstants.TAG, "Loading haptic feedback setting: $hapticValue")
         isHapticFeedbackEnabled = hapticValue
-        
+
         isAutoCapitalizeEnabled = prefs.getBoolean(KeyboardConstants.KEY_AUTO_CAPITALIZE, true)
         isDoubleSpacePeriodEnabled = prefs.getBoolean(KeyboardConstants.KEY_DOUBLE_SPACE_PERIOD, true)
         isAutocorrectEnabled = prefs.getBoolean(KeyboardConstants.KEY_AUTOCORRECT, true)
-        
+
         Log.d(KeyboardConstants.TAG, "Current haptic feedback state: $isHapticFeedbackEnabled")
     }
 
     private fun loadPersonas() {
         val prefs = getSharedPreferences(KeyboardConstants.PREFS_NAME, Context.MODE_PRIVATE)
         val savedPersonas = prefs.getString(KeyboardConstants.KEY_PERSONAS, null)
-        
+
         availablePersonas.clear()
         availablePersonas.add("Neutral")  // Always include Neutral as the default persona
-        
+
         // Only add other personas if they exist in saved preferences
-        savedPersonas?.let { 
-            val personaList = it.split(",").filter { name -> 
-                name.isNotBlank() && name != "Neutral" 
+        savedPersonas?.let {
+            val personaList = it.split(",").filter { name ->
+                name.isNotBlank() && name != "Neutral"
             }.distinct().take(4)
             availablePersonas.addAll(personaList)
         }
-        
+
         Log.d(KeyboardConstants.TAG, "Loaded personas: ${availablePersonas.joinToString()}")
     }
-    
+
     fun updateKeyboardPersonas(personaList: List<String>) {
         Log.d(KeyboardConstants.TAG, "Updating keyboard personas: ${personaList.joinToString()}")
-        
+
         // Save to shared preferences
         val prefs = getSharedPreferences(KeyboardConstants.PREFS_NAME, Context.MODE_PRIVATE)
         prefs.edit()
             .putString(KeyboardConstants.KEY_PERSONAS, personaList.joinToString(","))
             .apply()
-            
+
         // Reload personas from preferences to ensure consistency
         loadPersonas()
-        
+
         // Update UI if in paraphrase mode
         paraphraseManager?.updatePersonaButtons()
-        
+
         Log.d(KeyboardConstants.TAG, "Keyboard personas updated successfully")
     }
 

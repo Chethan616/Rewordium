@@ -19,7 +19,7 @@ class ParaphraseViewManager(private val service: RewordiumAIKeyboardService, pri
         private set
 
     private val mainKeyboardView: View = rootView.findViewById(R.id.keyboard_root_container)
-    
+
     private val paraphraseContainer: FrameLayout
     private var currentPersona = "Neutral"
     private var currentOriginalText: String = ""
@@ -54,7 +54,7 @@ class ParaphraseViewManager(private val service: RewordiumAIKeyboardService, pri
     }
 
     // --- All other methods are unchanged ---
-    
+
     fun show(originalText: String) {
         if (isParaphrasingMode) return
         isParaphrasingMode = true
@@ -63,7 +63,7 @@ class ParaphraseViewManager(private val service: RewordiumAIKeyboardService, pri
 
         mainKeyboardView.visibility = View.GONE
         paraphraseContainer.visibility = View.VISIBLE
-        
+
         paraphraseContainer.removeAllViews()
         buildParaphraseShell()
         // It seems there's a typo here, it should probably be `currentPersona`
@@ -77,14 +77,14 @@ class ParaphraseViewManager(private val service: RewordiumAIKeyboardService, pri
 
         paraphraseContainer.visibility = View.GONE
         mainKeyboardView.visibility = View.VISIBLE
-        
+
         service.layoutManager.updateLayout()
     }
 
     private fun buildParaphraseShell() {
         val shell = LinearLayout(service).apply {
             orientation = LinearLayout.VERTICAL
-            
+
             // The container now handles the full height, so the shell can wrap its content
             layoutParams = FrameLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT,
@@ -150,11 +150,11 @@ class ParaphraseViewManager(private val service: RewordiumAIKeyboardService, pri
         buildParaphraseShell()
         service.generateParaphraseWithPersona(currentOriginalText, currentPersona)
     }
-    
+
     fun updatePersonaButtons() {
         // Only update if we're in paraphrase mode
         if (!isParaphrasingMode) return
-        
+
         // If the current persona is no longer in the available personas, reset to "Neutral"
         if (currentPersona != "Neutral" && !service.availablePersonas.contains(currentPersona)) {
             currentPersona = "Neutral"
@@ -191,7 +191,7 @@ class ParaphraseViewManager(private val service: RewordiumAIKeyboardService, pri
             }
             addView(backButton)
             val titleView = TextView(service).apply {
-                text = "Reword"
+                text = "Rewordium AI"
                 setTextColor(if (service.isDarkMode) Color.WHITE else Color.BLACK)
                 textSize = 17f
                 typeface = Typeface.DEFAULT_BOLD

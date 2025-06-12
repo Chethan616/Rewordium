@@ -89,14 +89,30 @@ class KeyboardLayoutManager(private val service: RewordiumAIKeyboardService) {
         separator1 = root.findViewById(R.id.separator_1)
         separator2 = root.findViewById(R.id.separator_2)
 
-        keyboardRootContainer.doOnLayout {
-            if (service.keyboardHeight == 0 && it.height > 0) {
-                service.keyboardHeight = it.height
-                val params = keyboardSwitcher.layoutParams
-                params.height = service.keyboardHeight
-                keyboardSwitcher.layoutParams = params
-            }
+        // =========================================================================
+        // START OF THE FIX:
+        // The previous `bottomMargin` logic has been removed.
+        // This listener now handles everything correctly.
+        // =========================================================================
+        ViewCompat.setOnApplyWindowInsetsListener(keyboardRootContainer) { view, insets ->
+            // Get the height of the system navigation bar
+            val navBarHeight = insets.getInsets(WindowInsetsCompat.Type.navigationBars()).bottom
+
+            // Get the desired "lift" value from your dimens.xml
+            val keyboardLift = view.context.resources.getDimensionPixelSize(R.dimen.keyboard_bottom_margin)
+
+            // The total padding is the sum of the required system space and your desired lift
+            val totalBottomPadding = navBarHeight + keyboardLift
+            
+            // Apply the calculated padding. The keyboard's background will fill this space.
+            view.updatePadding(bottom = totalBottomPadding)
+
+            insets
         }
+        // =========================================================================
+        // END OF THE FIX
+        // =========================================================================
+
         setupSuggestionClicks()
         setupAIButton()
         setupAITextViewGradient()
@@ -144,11 +160,6 @@ class KeyboardLayoutManager(private val service: RewordiumAIKeyboardService) {
     }
 
     fun setupEmojiKeyboard() {
-        if (service.keyboardHeight > 0) {
-            val params = emojiKeyboardContainer.layoutParams
-            params.height = service.keyboardHeight
-            emojiKeyboardContainer.layoutParams = params
-        }
         emojiKeyboardContainer.removeAllViews()
         createEmojiTabs()
         createEmojiRecyclerView()
@@ -183,67 +194,59 @@ class KeyboardLayoutManager(private val service: RewordiumAIKeyboardService) {
         }
     }
 
-    // In KeyboardLayoutManager.kt
+    @SuppressLint("ClickableViewAccessibility")
+    private fun createEmojiBottomControlRow() {
+        val totalWeight = 8.0f
+        val margin = service.resources.getDimensionPixelSize(R.dimen.ios_key_margin) / 2
+        val keyHeight = service.resources.getDimensionPixelSize(R.dimen.ios_key_height)
 
-@SuppressLint("ClickableViewAccessibility")
-private fun createEmojiBottomControlRow() {
-    val totalWeight = 8.0f
-    val margin = service.resources.getDimensionPixelSize(R.dimen.ios_key_margin) / 2
-    
-    // A total shift of ~0.8cm is ~43dp. We'll use this for the upward shift.
-    val upwardShiftPx = dpToPx(43f).toInt()
-    val originalHeight = service.resources.getDimensionPixelSize(R.dimen.ios_key_height)
+        emojiBottomControlRow = LinearLayout(service).apply {
+            layoutParams = LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, keyHeight)
+            orientation = LinearLayout.HORIZONTAL
+            weightSum = totalWeight
+            setPadding(0, margin, 0, margin)
+        }
 
-    emojiBottomControlRow = LinearLayout(service).apply {
-        // Increase the container's height and add bottom padding.
-        // This pushes the content up without shrinking the keys inside.
-        layoutParams = LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, originalHeight + upwardShiftPx)
-        orientation = LinearLayout.HORIZONTAL
-        weightSum = totalWeight
-        // The added bottom padding creates the space that pushes the keys up.
-        setPadding(0, margin, 0, margin + upwardShiftPx)
-    }
-
-    val abcButton = Button(service).apply {
-        layoutParams = LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.MATCH_PARENT, 1.5f).apply {
-            setMargins(margin, 0, margin, 0)
-        }
-        text = "ABC"
-        setTextColor(keyTextColor)
-        background = GradientDrawable().apply { cornerRadius = dpToPx(6f); setColor(specialKeyBackgroundColor) }
-        setOnTouchListener { _, event ->
-            if (event.action == MotionEvent.ACTION_DOWN) service.switchToLetters()
-            true
-        }
-    }
-    emojiBottomControlRow?.addView(abcButton)
-    val spacebar = Button(service).apply {
-        layoutParams = LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.MATCH_PARENT, 5.0f).apply {
-            setMargins(margin, 0, margin, 0)
-        }
-        text = "space"
-        setTextColor(keyTextColor)
-        background = GradientDrawable().apply { cornerRadius = dpToPx(6f); setColor(keyBackgroundColor) }
-        setOnTouchListener { _, _ -> service.handleText(" ", fromKey = true); true }
-    }
-    emojiBottomControlRow?.addView(spacebar)
-    val backspaceKey = ImageButton(service).apply {
-        layoutParams = LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.MATCH_PARENT, 1.5f).apply {
-            setMargins(margin, 0, margin, 0)
-        }
-        setImageResource(R.drawable.ic_backspace)
-        setColorFilter(keyTextColor, PorterDuff.Mode.SRC_IN)
-        background = GradientDrawable().apply { cornerRadius = dpToPx(6f); setColor(specialKeyBackgroundColor) }
-        setOnTouchListener { _, event ->
-            when (event.action) {
-                MotionEvent.ACTION_DOWN -> { service.startTurboDelete(); true }
-                MotionEvent.ACTION_UP, MotionEvent.ACTION_CANCEL -> { service.stopTurboDelete(); true }
-                else -> false
+        val abcButton = Button(service).apply {
+            layoutParams = LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.MATCH_PARENT, 1.5f).apply {
+                setMargins(margin, 0, margin, 0)
+            }
+            text = "ABC"
+            setTextColor(keyTextColor)
+            background = GradientDrawable().apply { cornerRadius = dpToPx(6f); setColor(specialKeyBackgroundColor) }
+            setOnTouchListener { _, event ->
+                if (event.action == MotionEvent.ACTION_DOWN) service.switchToLetters()
+                true
             }
         }
+        emojiBottomControlRow?.addView(abcButton)
+        val spacebar = Button(service).apply {
+            layoutParams = LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.MATCH_PARENT, 5.0f).apply {
+                setMargins(margin, 0, margin, 0)
+            }
+            text = "space"
+            setTextColor(keyTextColor)
+            background = GradientDrawable().apply { cornerRadius = dpToPx(6f); setColor(keyBackgroundColor) }
+            setOnTouchListener { _, _ -> service.handleText(" ", fromKey = true); true }
+        }
+        emojiBottomControlRow?.addView(spacebar)
+        val backspaceKey = ImageButton(service).apply {
+            layoutParams = LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.MATCH_PARENT, 1.5f).apply {
+                setMargins(margin, 0, margin, 0)
+            }
+            setImageResource(R.drawable.ic_backspace)
+            setColorFilter(keyTextColor, PorterDuff.Mode.SRC_IN)
+            background = GradientDrawable().apply { cornerRadius = dpToPx(6f); setColor(specialKeyBackgroundColor) }
+            setOnTouchListener { _, event ->
+                when (event.action) {
+                    MotionEvent.ACTION_DOWN -> { service.startTurboDelete(); true }
+                    MotionEvent.ACTION_UP, MotionEvent.ACTION_CANCEL -> { service.stopTurboDelete(); true }
+                    else -> false
+                }
+            }
+        }
+        emojiBottomControlRow?.addView(backspaceKey)
     }
-    emojiBottomControlRow?.addView(backspaceKey)
-}
 
     private fun updateEmojiCategoryTabs() {
         val tabsContainer = emojiCategoryTabsContainer ?: return
