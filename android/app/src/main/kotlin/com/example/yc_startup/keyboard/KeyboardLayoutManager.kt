@@ -23,6 +23,7 @@ import com.example.yc_startup.keyboard.util.KeyboardConstants
 import android.widget.TextView
 import android.graphics.Shader
 import android.graphics.LinearGradient
+import android.util.Log
 
 
 class KeyboardLayoutManager(private val service: RewordiumAIKeyboardService) {
@@ -65,6 +66,14 @@ class KeyboardLayoutManager(private val service: RewordiumAIKeyboardService) {
     private var keyboardBackgroundColor: Int = 0
     private var currentEmojiCategories: List<Pair<String, List<String>>> = emptyList()
 
+    // =========================================================================
+    // START OF THE FIX - STEP 1: Add a variable to store the measured height
+    // =========================================================================
+    private var mainKeyboardHeight: Int = 0
+    // =========================================================================
+    // END OF THE FIX - STEP 1
+    // =========================================================================
+
     fun getRootView(): View? = rootView
     fun getKeyboardSwitcher(): ViewAnimator = keyboardSwitcher
 
@@ -74,6 +83,7 @@ class KeyboardLayoutManager(private val service: RewordiumAIKeyboardService) {
         keyboardSwitcher = root.findViewById(R.id.keyboard_switcher)
         mainKeyboardContainer = root.findViewById(R.id.keyboard_container)
         emojiKeyboardContainer = root.findViewById(R.id.emoji_keyboard_container)
+        // ... (rest of your findViewById calls)
         numberRow = root.findViewById(R.id.number_row)
         rowQwerty = root.findViewById(R.id.row_qwerty)
         rowAsdf = root.findViewById(R.id.row_asdfghjkl)
@@ -89,28 +99,26 @@ class KeyboardLayoutManager(private val service: RewordiumAIKeyboardService) {
         separator1 = root.findViewById(R.id.separator_1)
         separator2 = root.findViewById(R.id.separator_2)
 
-        // =========================================================================
-        // START OF THE FIX:
-        // The previous `bottomMargin` logic has been removed.
-        // This listener now handles everything correctly.
-        // =========================================================================
         ViewCompat.setOnApplyWindowInsetsListener(keyboardRootContainer) { view, insets ->
-            // Get the height of the system navigation bar
             val navBarHeight = insets.getInsets(WindowInsetsCompat.Type.navigationBars()).bottom
-
-            // Get the desired "lift" value from your dimens.xml
             val keyboardLift = view.context.resources.getDimensionPixelSize(R.dimen.keyboard_bottom_margin)
-
-            // The total padding is the sum of the required system space and your desired lift
             val totalBottomPadding = navBarHeight + keyboardLift
-            
-            // Apply the calculated padding. The keyboard's background will fill this space.
             view.updatePadding(bottom = totalBottomPadding)
-
             insets
         }
+
         // =========================================================================
-        // END OF THE FIX
+        // START OF THE FIX - STEP 2: Measure the main keyboard's height once it's laid out
+        // =========================================================================
+        mainKeyboardContainer.doOnLayout { view ->
+            // We only need to measure this once.
+            if (mainKeyboardHeight == 0 && view.height > 0) {
+                mainKeyboardHeight = view.height
+                Log.d("KeyboardLayout", "Main keyboard height measured as: $mainKeyboardHeight")
+            }
+        }
+        // =========================================================================
+        // END OF THE FIX - STEP 2
         // =========================================================================
 
         setupSuggestionClicks()
@@ -141,6 +149,7 @@ class KeyboardLayoutManager(private val service: RewordiumAIKeyboardService) {
     }
 
     fun updateSuggestions(suggestions: List<String>) {
+        // ... (this method is fine, no changes needed)
         service.currentSuggestions = suggestions.take(3)
         val suggestionViews = listOf(suggestion1, suggestion2, suggestion3)
         suggestionsContainer.visibility = View.VISIBLE
@@ -160,10 +169,27 @@ class KeyboardLayoutManager(private val service: RewordiumAIKeyboardService) {
     }
 
     fun setupEmojiKeyboard() {
+        // =========================================================================
+        // START OF THE FIX - STEP 3: Apply the measured height to the emoji container
+        // =========================================================================
+        if (mainKeyboardHeight > 0) {
+            val params = emojiKeyboardContainer.layoutParams
+            // If the height is already correct, no need to change it.
+            if (params.height != mainKeyboardHeight) {
+                params.height = mainKeyboardHeight
+                emojiKeyboardContainer.layoutParams = params
+                Log.d("KeyboardLayout", "Applied fixed height ($mainKeyboardHeight) to emoji container.")
+            }
+        }
+        // =========================================================================
+        // END OF THE FIX - STEP 3
+        // =========================================================================
+
         emojiKeyboardContainer.removeAllViews()
         createEmojiTabs()
         createEmojiRecyclerView()
         createEmojiBottomControlRow()
+        // Add views to the now correctly-sized container
         emojiCategoryTabsContainer?.let { emojiKeyboardContainer.addView(it) }
         emojiRecyclerView?.let { emojiKeyboardContainer.addView(it) }
         emojiBottomControlRow?.let { emojiKeyboardContainer.addView(it) }
@@ -172,6 +198,7 @@ class KeyboardLayoutManager(private val service: RewordiumAIKeyboardService) {
     }
     
     private fun createEmojiTabs() {
+        // ... (this method is fine, no changes needed)
         emojiCategoryTabsContainer = HorizontalScrollView(service).apply {
             layoutParams = LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, dpToPx(40))
             isHorizontalScrollBarEnabled = false
@@ -184,6 +211,7 @@ class KeyboardLayoutManager(private val service: RewordiumAIKeyboardService) {
     }
 
     private fun createEmojiRecyclerView() {
+        // The weight-based layout param is now correct because its parent will have a fixed height.
         emojiRecyclerView = RecyclerView(service).apply {
             layoutParams = LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, 0, 1f)
             layoutManager = GridLayoutManager(service, KeyboardConstants.EMOJI_COLUMNS).apply {
@@ -196,6 +224,7 @@ class KeyboardLayoutManager(private val service: RewordiumAIKeyboardService) {
 
     @SuppressLint("ClickableViewAccessibility")
     private fun createEmojiBottomControlRow() {
+        // ... (this method is fine, no changes needed)
         val totalWeight = 8.0f
         val margin = service.resources.getDimensionPixelSize(R.dimen.ios_key_margin) / 2
         val keyHeight = service.resources.getDimensionPixelSize(R.dimen.ios_key_height)
@@ -248,6 +277,7 @@ class KeyboardLayoutManager(private val service: RewordiumAIKeyboardService) {
         emojiBottomControlRow?.addView(backspaceKey)
     }
 
+    // ... The rest of your KeyboardLayoutManager.java file remains unchanged ...
     private fun updateEmojiCategoryTabs() {
         val tabsContainer = emojiCategoryTabsContainer ?: return
         val tabsLayout = tabsContainer.getChildAt(0) as? LinearLayout ?: return
