@@ -4,6 +4,7 @@ import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
+import android.content.res.Configuration
 import android.graphics.Color
 import android.inputmethodservice.InputMethodService
 import android.os.Build
@@ -34,12 +35,10 @@ import kotlinx.coroutines.*
 
 class RewordiumAIKeyboardService : InputMethodService() {
 
+    // ... (All properties remain the same) ...
     internal lateinit var layoutManager: KeyboardLayoutManager
     internal var paraphraseManager: ParaphraseViewManager? = null
-
-    // ... (rest of your properties are fine) ...
     internal var keyboardHeight = 0
-
     internal var isCapsOn = false
     internal var isCapsLock = false
     internal var isSymbolsShown = false
@@ -65,8 +64,9 @@ class RewordiumAIKeyboardService : InputMethodService() {
     private val deleteHandler = Handler(Looper.getMainLooper())
     private lateinit var deleteRunnable: Runnable
     private var isDeleting = false
-    
-    // ... (Your settingsUpdateReceiver and onCreate are fine) ...
+
+
+    // ... (onCreate and other initial methods remain the same) ...
     private val settingsUpdateReceiver = object : BroadcastReceiver() {
         override fun onReceive(context: Context?, intent: Intent?) {
             when (intent?.action) {
@@ -130,35 +130,55 @@ class RewordiumAIKeyboardService : InputMethodService() {
         layoutManager.initialize(rootView)
         return rootView
     }
+    
+    // =========================================================================
+    // START OF THE FINAL FIX
+    // =========================================================================
 
-    // =========================================================================
-    // START OF THE FIX
-    // =========================================================================
-    override fun onWindowShown() {
-        super.onWindowShown()
-        // This is the correct lifecycle point to fix the layout issue. It's called
-        // every time the keyboard window is displayed, including when returning
-        // from a landscape app.
-        // `requestLayout()` invalidates the entire view hierarchy and forces it
-        // to re-measure and re-draw itself using the current screen dimensions.
-        // This is the programmatic equivalent of the "fix" you observed when
-        // tapping a key.
-        if (::layoutManager.isInitialized) {
-            layoutManager.getRootView()?.requestLayout()
-        }
+    /**
+     * This is the definitive fix. This method is called when the user leaves the text field
+     * (e.g., switches app, goes to home screen). By hiding the window and resetting state,
+     * we ensure the keyboard always starts fresh and never gets into a broken state.
+     */
+    override fun onFinishInput() {
+        super.onFinishInput()
+        // Reset internal state to default values.
+        isSymbolsShown = false
+        isEmojiKeyboardShown = false
+        isCapsOn = false
+        isCapsLock = false
+
+        // Hide the keyboard window. This forces a clean start next time.
+        hideWindow()
     }
-    // =========================================================================
-    // END OF THE FIX
-    // =========================================================================
+    
+    /**
+     * Handles live configuration changes (like screen rotation) while the keyboard is active.
+     */
+    override fun onConfigurationChanged(newConfig: Configuration) {
+        super.onConfigurationChanged(newConfig)
+        // Hide the window to prevent weird artifacts during recreation
+        hideWindow()
+        // Reload settings and recreate the view to match the new configuration
+        loadSettings()
+        updateSystemNavBar()
+        setInputView(onCreateInputView())
+    }
 
+    /**
+     * Sets up the keyboard's internal STATE when it's about to be displayed.
+     * The actual layout drawing is deferred to onWindowShown to avoid race conditions.
+     */
     override fun onStartInputView(info: EditorInfo?, restarting: Boolean) {
         super.onStartInputView(info, restarting)
 
         this.currentEditorInfo = info
         this.currentInputTypeSupportsMultiLine = (info?.inputType ?: 0 and InputType.TYPE_TEXT_FLAG_MULTI_LINE) != 0
+
         paraphraseManager?.exitParaphraseMode()
         layoutManager.applyTheme(isDarkMode, themeColor)
         layoutManager.updateSuggestions(emptyList())
+
         if (isAutoCapitalizeEnabled) {
             val capType = info?.inputType ?: 0
             val textBefore = currentInputConnection?.getTextBeforeCursor(1, 0)
@@ -167,15 +187,27 @@ class RewordiumAIKeyboardService : InputMethodService() {
             isCapsOn = false
         }
         isCapsLock = false
-        // This call remains important to set the correct keyboard state (letters, symbols, caps, etc.)
-        layoutManager.updateLayout()
     }
 
-    // ... (All other methods from onFinishInputView() onwards remain unchanged) ...
+    /**
+     * This is the safest place to perform the actual layout and drawing of the keys,
+     * as it guarantees the window has its final dimensions.
+     */
+    override fun onWindowShown() {
+        super.onWindowShown()
+        if (::layoutManager.isInitialized) {
+            layoutManager.updateLayout()
+        }
+    }
+    // =========================================================================
+    // END OF THE FINAL FIX
+    // =========================================================================
+
     override fun onFinishInputView(finishingInput: Boolean) {
-        super.onFinishInputView(finishingInput)
+        // This is called just before onFinishInput. Perform view-specific cleanup here.
         layoutManager.cleanup()
         stopTurboDelete()
+        super.onFinishInputView(finishingInput)
     }
 
     override fun onDestroy() {
@@ -184,6 +216,7 @@ class RewordiumAIKeyboardService : InputMethodService() {
         unregisterReceiver(settingsUpdateReceiver)
     }
 
+    // ... All other methods (handleText, handleBackspace, etc.) remain unchanged.
     fun handleAIButton() {
         performHapticFeedback()
         val rootView = layoutManager.getRootView()
@@ -303,17 +336,12 @@ class RewordiumAIKeyboardService : InputMethodService() {
             EditorInfo.IME_ACTION_SEARCH,
             EditorInfo.IME_ACTION_SEND,
             EditorInfo.IME_ACTION_NEXT -> {
-                // For all other specific actions, we let the app handle it.
                 ic.performEditorAction(editorAction)
             }
             else -> {
-                // This is the fallback case for IME_ACTION_NONE, IME_ACTION_UNSPECIFIED, etc.
                 if (currentInputTypeSupportsMultiLine) {
-                    // If it's a multi-line field (like a chat box), insert a newline.
                     ic.commitText("\n", 1)
                 } else {
-                    // If it's a single-line field with no specific action,
-                    // sending a standard Enter event is a safe default.
                     sendDownUpKeyEvents(KeyEvent.KEYCODE_ENTER)
                 }
             }
@@ -422,52 +450,37 @@ class RewordiumAIKeyboardService : InputMethodService() {
         val prefs = getSharedPreferences(KeyboardConstants.PREFS_NAME, Context.MODE_PRIVATE)
         isDarkMode = prefs.getBoolean(KeyboardConstants.KEY_DARK_MODE, false)
         themeColor = prefs.getString(KeyboardConstants.KEY_THEME_COLOR, "#007AFF") ?: "#007AFF"
-
-        // Debug log to check the actual value in shared preferences
         val hapticValue = prefs.getBoolean(KeyboardConstants.KEY_HAPTIC_FEEDBACK, true)
         Log.d(KeyboardConstants.TAG, "Loading haptic feedback setting: $hapticValue")
         isHapticFeedbackEnabled = hapticValue
-
         isAutoCapitalizeEnabled = prefs.getBoolean(KeyboardConstants.KEY_AUTO_CAPITALIZE, true)
         isDoubleSpacePeriodEnabled = prefs.getBoolean(KeyboardConstants.KEY_DOUBLE_SPACE_PERIOD, true)
         isAutocorrectEnabled = prefs.getBoolean(KeyboardConstants.KEY_AUTOCORRECT, true)
-
         Log.d(KeyboardConstants.TAG, "Current haptic feedback state: $isHapticFeedbackEnabled")
     }
 
     private fun loadPersonas() {
         val prefs = getSharedPreferences(KeyboardConstants.PREFS_NAME, Context.MODE_PRIVATE)
         val savedPersonas = prefs.getString(KeyboardConstants.KEY_PERSONAS, null)
-
         availablePersonas.clear()
-        availablePersonas.add("Neutral")  // Always include Neutral as the default persona
-
-        // Only add other personas if they exist in saved preferences
+        availablePersonas.add("Neutral")
         savedPersonas?.let {
             val personaList = it.split(",").filter { name ->
                 name.isNotBlank() && name != "Neutral"
             }.distinct().take(4)
             availablePersonas.addAll(personaList)
         }
-
         Log.d(KeyboardConstants.TAG, "Loaded personas: ${availablePersonas.joinToString()}")
     }
 
     fun updateKeyboardPersonas(personaList: List<String>) {
         Log.d(KeyboardConstants.TAG, "Updating keyboard personas: ${personaList.joinToString()}")
-
-        // Save to shared preferences
         val prefs = getSharedPreferences(KeyboardConstants.PREFS_NAME, Context.MODE_PRIVATE)
         prefs.edit()
             .putString(KeyboardConstants.KEY_PERSONAS, personaList.joinToString(","))
             .apply()
-
-        // Reload personas from preferences to ensure consistency
         loadPersonas()
-
-        // Update UI if in paraphrase mode
         paraphraseManager?.updatePersonaButtons()
-
         Log.d(KeyboardConstants.TAG, "Keyboard personas updated successfully")
     }
 
