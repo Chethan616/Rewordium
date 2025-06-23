@@ -201,6 +201,8 @@ class RewordiumAIKeyboardService : InputMethodService() {
             performHapticFeedback()
         }
     }
+
+    //latency issues
     
     /**
      * Performs haptic feedback for key presses
