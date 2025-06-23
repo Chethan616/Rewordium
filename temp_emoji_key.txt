@@ -1,3 +1,5 @@
+
+
 // Emoji key
 addSpecialKey(bottomRow, "", R.drawable.ic_emoji, 1f) {
     if (isHapticFeedbackEnabled) performHapticFeedback()
