@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Dark Theme Adaptive Colors -->
+    <color name="surface_primary">@color/settings_background_dark</color>
+    <color name="surface_secondary">@color/settings_card_background_dark</color>
+    <color name="text_adaptive">@color/text_primary_dark</color>
+    <color name="text_secondary_adaptive">@color/text_secondary_dark</color>
+    <color name="border_color">@color/settings_divider_dark</color>
+    <color name="card_background_adaptive">@color/settings_card_background_dark</color>
+    <color name="icon_tint_adaptive">#0A84FF</color>
+</resources>

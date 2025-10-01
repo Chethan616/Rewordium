@@ -1,0 +1,103 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Light Theme Keyboard Background -->
+    <color name="keyboard_background">#F8F9FA</color>
+    <color name="keyboard_secondary">#FFFFFF</color>
+    <color name="keyboard_tertiary">#F0F1F3</color>
+    
+    <!-- Light Theme Key Colors -->
+    <color name="key_background">#FFFFFF</color>
+    <color name="key_pressed">#E8E9EB</color>
+    <color name="key_ripple">#40000000</color>
+    <color name="key_text">#1C1D24</color>
+    <color name="key_text_secondary">#6C7085</color>
+    <color name="key_border">#E0E1E3</color>
+    
+    <!-- Light Theme Accent Colors -->
+    <color name="accent_primary">#007AFF</color>
+    <color name="accent_secondary">#0051D5</color>
+    <color name="accent_tertiary">#003C9B</color>
+    
+    <!-- Additional UI Colors -->
+    <color name="colorPrimary">#007AFF</color>
+    <color name="colorError">#D32F2F</color>
+    <color name="textColorSecondary">#757575</color>
+    
+    <!-- Light Theme Text Colors -->
+    <color name="text_primary">#1C1D24</color>
+    <color name="text_secondary">#6C7085</color>
+    <color name="text_tertiary">#8E8FA5</color>
+    
+    <!-- Status Colors -->
+    <color name="success">#4CAF50</color>
+    <color name="warning">#FFC107</color>
+    <color name="error">#F44336</color>
+    
+    <!-- Light Theme Shadow Colors -->
+    <color name="shadow_dark">#1A000000</color>
+    <color name="shadow_light">#0AFFFFFF</color>
+    
+    <!-- Light Theme Overlay Colors -->
+    <color name="overlay_dark">#40000000</color>
+    <color name="overlay_light">#1AFFFFFF</color>
+    
+    <!-- Light Theme Suggestion Colors -->
+    <color name="suggestion_background">#F2F2F7</color>
+    <color name="suggestion_background_pressed">#E5E5EA</color>
+    <color name="suggestion_stroke">#C6C6C8</color>
+    <color name="suggestion_bar_background">#FAFAFA</color>
+    <color name="suggestion_text_color">#1C1D24</color>
+    <color name="suggestion_separator_color">#E0E0E0</color>
+    
+    <!-- Material Design 3 Color System - Light Theme -->
+    <color name="colorSurface">#FFFFFF</color>
+    <color name="colorOnSurface">#1C1D24</color>
+    <color name="colorPrimaryContainer">#007AFF</color>
+    <color name="colorOnPrimaryContainer">#FFFFFF</color>
+    <color name="colorSecondaryContainer">#F0F1F3</color>
+    <color name="colorOnSecondaryContainer">#1C1D24</color>
+    
+    <!-- Light Theme Settings Colors -->
+    <color name="settings_background">#FFFFFF</color>
+    <color name="settings_card_background">#F8F9FA</color>
+    <color name="settings_title">#1C1D24</color>
+    <color name="settings_subtitle">#6C7085</color>
+    <color name="settings_text">#1C1D24</color>
+    <color name="settings_divider">#E0E0E0</color>
+    <color name="settings_switch_thumb">#007AFF</color>
+    <color name="settings_switch_track">#E0E0E0</color>
+    <color name="settings_button_text">#1C1D24</color>
+    <color name="settings_popup_background">#FFFFFF</color>
+    
+    <!-- Light Theme Clipboard Colors -->
+    <color name="clipboard_background">#FFFFFF</color>
+    <color name="clipboard_header_background">#F8F9FA</color>
+    <color name="clipboard_item_background">#FFFFFF</color>
+    <color name="clipboard_card_background">#FFFFFF</color>
+    <color name="clipboard_item_hover">#F0F1F3</color>
+    <color name="clipboard_item_text">#1C1D24</color>
+    <color name="clipboard_item_text_secondary">#6C7085</color>
+    <color name="clipboard_action_button">#007AFF</color>
+    <color name="clipboard_action_button_text">#FFFFFF</color>
+    <color name="clipboard_delete_button">#FF3B30</color>
+    <color name="clipboard_border">#E0E1E3</color>
+    <color name="clipboard_shadow">#1A000000</color>
+    <color name="clipboard_divider">#E5E5EA</color>
+    <color name="clipboard_empty_text">#8E8FA5</color>
+    
+    <!-- Light Theme Accessibility Service Colors -->
+    <color name="accessibility_persona_text">#000000</color>
+    <color name="accessibility_generate_button_bg">#000000</color>
+    <color name="accessibility_generate_button_text">#FFFFFF</color>
+    <color name="accessibility_dialog_text">#000000</color>
+    <color name="accessibility_dialog_title">#000000</color>
+    <color name="accessibility_dialog_hint">#9E9E9E</color>
+    <color name="accessibility_suggestion_text">#000000</color>
+    
+    <!-- AI Cards and Dialog Colors -->
+    <color name="card_background">#FFFFFF</color>
+    <color name="card_stroke">#E0E0E0</color>
+    <color name="scrim_background">#80000000</color>
+    <color name="accent_blue">#2196F3</color>
+    <color name="accent_orange">#FF9800</color>
+</resources>

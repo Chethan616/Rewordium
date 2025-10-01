@@ -1,0 +1,135 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:background="@drawable/bg_bottom_sheet"
+    android:orientation="vertical">
+
+    <!-- Handle for dragging -->
+    <View
+        android:layout_width="40dp"
+        android:layout_height="4dp"
+        android:layout_gravity="center_horizontal"
+        android:layout_marginTop="8dp"
+        android:background="@android:color/darker_gray" />
+
+    <!-- "Peeked" State Header (Visible when minimized) -->
+    <LinearLayout
+        android:id="@+id/peek_header"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:gravity="center_vertical"
+        android:orientation="horizontal"
+        android:padding="16dp">
+
+        <ImageView
+            android:layout_width="24dp"
+            android:layout_height="24dp"
+            android:src="@drawable/ic_grammarly_g" />
+
+        <TextView
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="16dp"
+            android:layout_weight="1"
+            android:text="AI Assistant Ready"
+            android:textColor="@android:color/white" />
+
+        <ImageView
+            android:layout_width="24dp"
+            android:layout_height="24dp"
+            android:src="@drawable/ic_paper_airplane" />
+    </LinearLayout>
+
+    <!-- "Expanded" State Content (The rest of the UI) -->
+    <LinearLayout
+        android:id="@+id/expanded_content"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:padding="16dp">
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Improve Writing"
+            android:textAppearance="@style/TextAppearance.AppCompat.Large"
+            android:textColor="@android:color/white" />
+
+        <EditText
+            android:id="@+id/edit_text_content"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:background="#444444"
+            android:gravity="top"
+            android:hint="Your text..."
+            android:inputType="textMultiLine"
+            android:minLines="5"
+            android:padding="12dp"
+            android:textColor="@android:color/white"
+            android:textColorHint="@android:color/darker_gray" />
+
+        <Button
+            android:id="@+id/button_rewrite"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="16dp"
+            android:backgroundTint="#4CAF50"
+            android:text="Rewrite with AI"
+            android:textColor="@android:color/white" />
+
+        <ProgressBar
+            android:id="@+id/progress_bar"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_gravity="center_horizontal"
+            android:layout_marginTop="8dp"
+            android:visibility="gone" />
+
+        <!-- Suggestion Area -->
+        <LinearLayout
+            android:id="@+id/suggestion_layout"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:visibility="gone">
+
+            <TextView
+                android:id="@+id/text_view_suggestion"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="16dp"
+                android:background="#222222"
+                android:padding="12dp"
+                android:textColor="@android:color/white" />
+
+            <LinearLayout
+                android:id="@+id/layout_actions"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="8dp"
+                android:orientation="horizontal">
+
+                <Button
+                    android:id="@+id/button_replace"
+                    style="@style/Widget.AppCompat.Button.Borderless"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:text="Replace"
+                    android:textColor="#4CAF50" />
+
+                <Button
+                    android:id="@+id/button_copy"
+                    style="@style/Widget.AppCompat.Button.Borderless"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:text="Copy"
+                    android:textColor="#4CAF50" />
+            </LinearLayout>
+        </LinearLayout>
+    </LinearLayout>
+
+</LinearLayout>

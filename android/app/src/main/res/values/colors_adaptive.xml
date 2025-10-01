@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Adaptive Colors that change based on theme -->
+    <color name="surface_primary">@color/settings_background</color>
+    <color name="surface_secondary">@color/settings_card_background</color>
+    <color name="text_adaptive">@color/text_primary</color>
+    <color name="text_secondary_adaptive">@color/text_secondary</color>
+    <color name="border_color">@color/settings_divider</color>
+    <color name="card_background_adaptive">@color/settings_card_background</color>
+    <color name="icon_tint_adaptive">#33A1FF</color>
+</resources>

@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Firebase Connection Test</title>
+</head>
+<body>
+    <h1>Firebase Connection Test</h1>
+    <div id="status">Testing...</div>
+    <div id="logs"></div>
+
+    <!-- Firebase SDKs -->
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+
+    <script>
+        const statusDiv = document.getElementById('status');
+        const logsDiv = document.getElementById('logs');
+        
+        function log(message, type = 'info') {
+            console.log(message);
+            const p = document.createElement('p');
+            p.textContent = new Date().toLocaleTimeString() + ': ' + message;
+            p.style.color = type === 'error' ? 'red' : type === 'success' ? 'green' : 'black';
+            logsDiv.appendChild(p);
+        }
+
+        // Firebase Configuration - Using Rewordium project
+        const firebaseConfig = {
+            apiKey: "AIzaSyBoG1w3GaQVy2O6kjp-ZQw09TZgbUWjrTg",
+            authDomain: "rewordium.firebaseapp.com",
+            projectId: "rewordium",
+            storageBucket: "rewordium.firebasestorage.app",
+            messagingSenderId: "1046215732414",
+            appId: "1:1046215732414:android:a97ddde5e4953c46ab02ef"
+        };
+
+        async function testFirebase() {
+            try {
+                log('🔄 Loading Firebase SDK...');
+                
+                if (typeof firebase === 'undefined') {
+                    log('❌ Firebase SDK not loaded', 'error');
+                    statusDiv.textContent = 'FAILED: Firebase SDK not loaded';
+                    return;
+                }
+                
+                log('✅ Firebase SDK loaded');
+                
+                log('🔄 Initializing Firebase...');
+                firebase.initializeApp(firebaseConfig);
+                log('✅ Firebase initialized');
+                
+                const db = firebase.firestore();
+                log('✅ Firestore instance created');
+                
+                log('🔄 Testing Firestore connection...');
+                
+                // Test read
+                const testDoc = await db.collection('_test').doc('connection').get();
+                log('✅ Firestore read test successful');
+                
+                // Test write
+                await db.collection('_test').doc('connection').set({
+                    timestamp: firebase.firestore.FieldValue.serverTimestamp(),
+                    test: 'firebase_connection_test',
+                    status: 'working'
+                });
+                log('✅ Firestore write test successful', 'success');
+                
+                statusDiv.textContent = 'SUCCESS: Firebase is working!';
+                statusDiv.style.color = 'green';
+                
+            } catch (error) {
+                log('❌ Firebase test failed: ' + error.message, 'error');
+                log('🔧 Error code: ' + (error.code || 'unknown'), 'error');
+                statusDiv.textContent = 'FAILED: ' + error.message;
+                statusDiv.style.color = 'red';
+            }
+        }
+
+        // Start test when page loads
+        window.addEventListener('load', () => {
+            setTimeout(testFirebase, 1000);
+        });
+    </script>
+</body>
+</html>

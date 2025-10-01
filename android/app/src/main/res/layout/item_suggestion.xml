@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="horizontal"
+    android:gravity="center_vertical"
+    android:background="@drawable/bg_suggestion_item_enhanced"
+    android:padding="14dp"
+    android:layout_marginBottom="8dp"> <!-- Reduced margin -->
+
+    <ImageView
+        android:layout_width="22dp"
+        android:layout_height="22dp"
+        android:src="@drawable/ic_content_copy"
+        android:layout_marginEnd="12dp"
+        app:tint="#33A1FF"/>
+
+    <TextView
+        android:id="@+id/text_suggestion"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_weight="1"
+        android:textColor="@color/accessibility_suggestion_text"
+        android:textSize="15sp"
+        android:fontFamily="sans-serif"
+        android:lineSpacingExtra="4dp"
+        tools:text="This is a more compact suggestion item with tighter padding."/>
+
+</LinearLayout>

@@ -1,0 +1,22 @@
+{
+  "name": "rewordium-notification-server",
+  "version": "1.0.0",
+  "description": "Backend server for sending FCM notifications using Firebase Admin SDK",
+  "main": "index.js",
+  "scripts": {
+    "start": "node index.js",
+    "dev": "nodemon index.js"
+  },
+  "dependencies": {
+    "cors": "^2.8.5",
+    "dotenv": "^16.6.1",
+    "express": "^4.21.2",
+    "firebase-admin": "^11.11.1"
+  },
+  "devDependencies": {
+    "nodemon": "^3.0.1"
+  },
+  "engines": {
+    "node": ">=14.0.0"
+  }
+}

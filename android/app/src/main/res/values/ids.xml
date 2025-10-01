@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Tag IDs for gesture detection -->
+    <item name="initial_x" type="id"/>
+    <item name="initial_y" type="id"/>
+    <item name="is_swiping" type="id"/>
+</resources>

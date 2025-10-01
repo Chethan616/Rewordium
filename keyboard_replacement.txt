@@ -1,0 +1,105 @@
+    private fun setupLettersKeyboard() {
+        // Add number row
+        for (char in "1234567890") {
+            addKey(numberRow, char.toString()) { handleText(char.toString()) }
+        }
+        
+        // Add QWERTY row
+        val qwertyRow = if (isCapsOn) "QWERTYUIOP" else "qwertyuiop"
+        for (char in qwertyRow) {
+            addKey(rowQwerty, char.toString()) { handleText(char.toString()) }
+        }
+        
+        // Add ASDF row - no offset for improved key width
+        val asdfRow = if (isCapsOn) "ASDFGHJKL" else "asdfghjkl"
+        for (char in asdfRow) {
+            addKey(rowAsdf, char.toString()) { handleText(char.toString()) }
+        }
+        
+        // Add ZXCV row
+        // Add shift key
+        val shiftIconRes = when {
+            isCapsLock -> R.drawable.ic_shift_filled
+            isCapsOn -> R.drawable.ic_shift_filled
+            else -> R.drawable.ic_shift
+        }
+        val shiftKey = addSpecialKey(rowZxcv, "", shiftIconRes, 2.0f) {
+            toggleCapsLock()
+        }
+        
+        // Apply special styling to shift key based on state
+        val shiftBackground = ContextCompat.getDrawable(this, R.drawable.ios_key_shift_selector)?.mutate()
+        if (shiftBackground != null) {
+            shiftKey.background = shiftBackground
+        }
+        
+        // Set state for proper background color
+        if (shiftKey is Button) {
+            // Use tag to track state since isActivated/isChecked might not be available
+            shiftKey.tag = if (isCapsLock) 2 else if (isCapsOn) 1 else 0
+            
+            // Apply different background tint based on state
+            val stateColor = when {
+                isCapsLock -> Color.parseColor(themeColor) // Blue for caps lock
+                isCapsOn -> Color.GRAY // Gray for shifted
+                else -> Color.DKGRAY // Dark gray for normal
+            }
+            
+            val drawable = shiftKey.background.mutate()
+            DrawableCompat.setTint(drawable, stateColor)
+            
+            // Increase text size for better visibility
+            shiftKey.textSize = 30f
+            shiftKey.typeface = android.graphics.Typeface.DEFAULT_BOLD
+            shiftKey.setPadding(0, 10, 0, 0) // Better vertical centering
+        }
+        
+        val zxcvRow = if (isCapsOn) "ZXCVBNM" else "zxcvbnm"
+        for (char in zxcvRow) {
+            addKey(rowZxcv, char.toString()) { handleText(char.toString()) }
+        }
+        
+        // Add backspace key
+        addSpecialKey(rowZxcv, "", R.drawable.ic_backspace, 1.5f) {
+            handleBackspace(currentInputConnection ?: return@addSpecialKey)
+        }
+        
+        // Add bottom row
+        // Numbers key
+        addSpecialKey(bottomRow, "123", null, 1.5f, true) {
+            isSymbolsShown = true
+            setupKeyboard()
+        }
+        
+        // Globe key (language)
+        addSpecialKey(bottomRow, "", R.drawable.ic_globe, 1f) {
+            // Would show language options
+            Log.d(TAG, "Globe key pressed")
+        }
+        
+        // Space bar - wider than other keys with iOS styling
+        val spaceKey = addKey(bottomRow, "space", 0, 5f, false, true) {
+            handleText(" ")
+        }
+        
+        // Apply iOS-style appearance to spacebar
+        if (spaceKey is Button) {
+            val spacebarBackground = ContextCompat.getDrawable(this, R.drawable.ios_key_space_selector)?.mutate()
+            if (spacebarBackground != null) {
+                spaceKey.background = spacebarBackground
+            }
+            spaceKey.textSize = 16f
+            spaceKey.setTextColor(keyTextColor)
+        }
+        
+        // Emoji key
+        addSpecialKey(bottomRow, "", R.drawable.ic_emoji, 1f) {
+            // Would show emoji keyboard
+            Log.d(TAG, "Emoji key pressed")
+        }
+        
+        // Return key (could be customized based on input type)
+        addSpecialKey(bottomRow, "return", null, 1.5f, true) {
+            currentInputConnection?.performEditorAction(EditorInfo.IME_ACTION_DONE)
+        }
+    }

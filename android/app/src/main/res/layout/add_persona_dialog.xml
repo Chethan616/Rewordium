@@ -1,0 +1,65 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="vertical"
+    android:padding="16dp"
+    android:background="#1A1B26">
+
+    <TextView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="Add New Persona"
+        android:textColor="#FFFFFF"
+        android:textSize="18sp"
+        android:textStyle="bold"
+        android:layout_marginBottom="16dp" />
+
+    <EditText
+        android:id="@+id/persona_name_input"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:hint="Persona Name"
+        android:textColorHint="#AAAAAA"
+        android:textColor="#FFFFFF"
+        android:padding="12dp"
+        android:background="@drawable/dark_key_background"
+        android:layout_marginBottom="16dp" />
+
+    <EditText
+        android:id="@+id/persona_description_input"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:hint="Persona Description (e.g., 'Write in a professional tone')"
+        android:textColorHint="#AAAAAA"
+        android:textColor="#FFFFFF"
+        android:padding="12dp"
+        android:minLines="3"
+        android:gravity="top"
+        android:background="@drawable/dark_key_background"
+        android:layout_marginBottom="24dp" />
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:gravity="end">
+
+        <Button
+            android:id="@+id/cancel_button"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Cancel"
+            android:textColor="#FFFFFF"
+            android:background="@drawable/dark_special_key_background"
+            android:layout_marginEnd="8dp" />
+
+        <Button
+            android:id="@+id/save_button"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Save"
+            android:textColor="#FFFFFF"
+            android:background="@drawable/dark_special_key_background" />
+    </LinearLayout>
+</LinearLayout>
