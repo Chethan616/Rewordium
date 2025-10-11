@@ -7,10 +7,12 @@ import android.view.ViewGroup
 import android.widget.TextView
 import androidx.recyclerview.widget.RecyclerView
 import com.noxquill.rewordium.R
+import com.noxquill.rewordium.keyboard.ui.UltraPremiumGlassEffects
 
 class EmojiAdapter(
     private val emojis: List<String>,
-    private val onEmojiClicked: (String) -> Unit
+    private val onEmojiClicked: (String) -> Unit,
+    private val isDarkMode: Boolean = true
 ) : RecyclerView.Adapter<EmojiAdapter.EmojiViewHolder>() {
 
     class EmojiViewHolder(val textView: TextView) : RecyclerView.ViewHolder(textView)
@@ -24,16 +26,19 @@ class EmojiAdapter(
             gravity = Gravity.CENTER
             textSize = 26f // Slightly larger for better visibility
             
-            // Minimal background for performance
-            setBackgroundResource(0) // No background for maximum performance
+            // ✨ EMOJI GLASS BUTTON (Enhancement #6) ✨
+            background = UltraPremiumGlassEffects.createGlassEmojiButton(parent.context, isDarkMode)
             
             // Optimized padding
-            val padding = 6
+            val padding = 8
             setPadding(padding, padding, padding, padding)
             
             // Disable drawing cache for better scrolling
             isDrawingCacheEnabled = false
             setWillNotDraw(false)
+            
+            // Enable hardware acceleration
+            setLayerType(android.view.View.LAYER_TYPE_HARDWARE, null)
         }
         return EmojiViewHolder(textView)
     }

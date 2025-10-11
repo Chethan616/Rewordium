@@ -7,6 +7,7 @@ plugins {
     id("com.google.firebase.appdistribution")
     id("kotlin-android")
     id("dev.flutter.flutter-gradle-plugin")
+    id("org.jetbrains.kotlin.plugin.compose") version "2.1.0"  // Required for Compose in Kotlin 2.0+
 }
 
 val keystoreProperties = Properties()
@@ -55,6 +56,11 @@ android {
 
     buildFeatures {
         buildConfig = true
+        compose = true // ENABLE JETPACK COMPOSE
+    }
+    
+    composeOptions {
+        kotlinCompilerExtensionVersion = "1.5.8"
     }
 
     packagingOptions {
@@ -142,6 +148,9 @@ dependencies {
     // Core & Coroutines
     implementation("androidx.core:core-ktx:1.12.0")
     implementation("androidx.lifecycle:lifecycle-runtime-ktx:2.7.0")
+    implementation("androidx.lifecycle:lifecycle-common:2.7.0")
+    implementation("androidx.lifecycle:lifecycle-viewmodel-ktx:2.7.0")
+    implementation("androidx.savedstate:savedstate:1.2.1")
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.7.3")
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.7.3")
     implementation("org.jetbrains.kotlin:kotlin-stdlib-jdk8:1.8.22") // Make sure you have this
@@ -165,6 +174,20 @@ dependencies {
 
     // Core library desugaring for Java 8+ APIs
     coreLibraryDesugaring("com.android.tools:desugar_jdk_libs:2.1.4")
+    
+    // ========== JETPACK COMPOSE ==========
+    // Compose BOM (Bill of Materials) - manages Compose versions
+    implementation(platform("androidx.compose:compose-bom:2024.10.00"))
+    implementation("androidx.compose.ui:ui")
+    implementation("androidx.compose.ui:ui-graphics")
+    implementation("androidx.compose.ui:ui-tooling-preview")
+    implementation("androidx.compose.foundation:foundation")
+    implementation("androidx.compose.material3:material3")
+    implementation("androidx.activity:activity-compose:1.9.3")
+    implementation("androidx.compose.runtime:runtime")
+    
+    debugImplementation("androidx.compose.ui:ui-tooling")
+    // ========== END COMPOSE DEPENDENCIES ==========
 
     // Firebase
     implementation(platform("com.google.firebase:firebase-bom:33.1.0"))

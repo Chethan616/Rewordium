@@ -13,6 +13,7 @@ import android.graphics.drawable.Drawable
 import android.graphics.drawable.GradientDrawable
 import android.graphics.drawable.LayerDrawable
 import android.graphics.drawable.ColorDrawable
+import android.graphics.drawable.RippleDrawable
 import android.text.TextWatcher
 import android.text.Editable
 import android.text.InputType
@@ -20,6 +21,14 @@ import android.util.Log
 import android.util.TypedValue
 import android.view.*
 import android.widget.*
+import androidx.compose.ui.platform.ComposeView
+import androidx.compose.ui.platform.ViewCompositionStrategy
+import androidx.compose.runtime.*
+import androidx.lifecycle.setViewTreeLifecycleOwner
+import androidx.savedstate.setViewTreeSavedStateRegistryOwner
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
 import androidx.core.content.ContextCompat
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
@@ -32,6 +41,9 @@ import com.noxquill.rewordium.keyboard.data.EmojiData
 import com.noxquill.rewordium.keyboard.util.KeyboardConstants
 import com.noxquill.rewordium.keyboard.gesture.SwipeGestureEngine
 import com.noxquill.rewordium.keyboard.ui.GboardToolbar
+import com.noxquill.rewordium.keyboard.compose.ProfessionalLiquidGlassKey
+import com.noxquill.rewordium.keyboard.compose.ProfessionalLiquidGlassSpecialKey
+import com.noxquill.rewordium.keyboard.compose.ProfessionalLiquidGlassReturnKey
 
 class KeyboardLayoutManager(private val service: RewordiumAIKeyboardService) {
     
@@ -89,8 +101,21 @@ class KeyboardLayoutManager(private val service: RewordiumAIKeyboardService) {
     private var emojiBottomControlRow: LinearLayout? = null
     private var emojiAdapter: EmojiAdapter? = null
 
-    private val letterKeyViews = mutableListOf<Button>()
+    private val letterKeyViews = mutableListOf<View>()  // Changed to View to support ComposeView
     private var keyPopup: PopupWindow? = null
+    
+    // Context from service for creating views
+    private val context: Context
+        get() = service as Context
+    
+    // 🎯 Key popup preview for professional key press feedback
+    private val keyPopupPreview: KeyPopupPreview by lazy {
+        KeyPopupPreview(context, service)
+    }
+    
+    // StateFlow for caps lock state - reactive for Compose keys
+    private val _isCapsState = MutableStateFlow(false)
+    val isCapsState: StateFlow<Boolean> = _isCapsState.asStateFlow()
     private var popupTextView: TextView? = null
     private var shiftKeyView: ImageButton? = null
 
@@ -132,6 +157,11 @@ class KeyboardLayoutManager(private val service: RewordiumAIKeyboardService) {
         this.rootView = root
         keyboardRootContainer = root.findViewById(R.id.keyboard_root_container)
         keyboardSwitcher = root.findViewById(R.id.keyboard_switcher)
+        
+        // ⚡ INSTANT PANEL SWITCHING - Disable all animations
+        keyboardSwitcher.inAnimation = null
+        keyboardSwitcher.outAnimation = null
+        
         mainKeyboardContainer = root.findViewById(R.id.keyboard_container)
         emojiKeyboardContainer = root.findViewById(R.id.emoji_keyboard_container)
         numberRow = root.findViewById(R.id.number_row)
@@ -175,6 +205,10 @@ class KeyboardLayoutManager(private val service: RewordiumAIKeyboardService) {
         
         // Initialize FlorisBoard-inspired Gboard toolbar
         initializeGboardToolbar()
+        
+        // CRITICAL: Setup lifecycle owners on keyboard rows IMMEDIATELY after initialization
+        // This ensures ComposeView keys can always find ViewTreeLifecycleOwner regardless of when they're added
+        setupRowLifecycleOwners()
         
         // Show special features by default when keyboard first loads
         updateSuggestions(emptyList())
@@ -224,13 +258,20 @@ class KeyboardLayoutManager(private val service: RewordiumAIKeyboardService) {
      */
     private fun initializeGboardToolbar() {
         try {
-            Log.d(KeyboardConstants.TAG, "🎨 Initializing FlorisBoard-inspired Gboard toolbar")
+            Log.d(KeyboardConstants.TAG, "🎨 Initializing FlorisBoard-inspired Gboard toolbar with GLASS EFFECT")
             
             // Create toolbar instance
             gboardToolbar = GboardToolbar(service, service)
             
-            // Toolbar is already created and will be used for suggestions
-            Log.d(KeyboardConstants.TAG, "✅ Gboard toolbar initialized successfully")
+            // ✨ Professional glass suggestion bar ✨
+            rootView?.findViewById<LinearLayout>(R.id.suggestions_container)?.let { suggestionBar ->
+                val baseColor = if (service.isDarkMode) Color.parseColor("#1C1C1E") else Color.parseColor("#F2F2F7")
+                suggestionBar.setBackgroundColor(baseColor)
+                suggestionBar.alpha = 0.95f
+                Log.d(KeyboardConstants.TAG, "✨ Professional glass applied to suggestion bar")
+            }
+            
+            Log.d(KeyboardConstants.TAG, "✅ Gboard toolbar initialized with ultra-premium glass")
         } catch (e: Exception) {
             Log.e(KeyboardConstants.TAG, "❌ Error initializing Gboard toolbar: ${e.message}")
             e.printStackTrace()
@@ -355,22 +396,17 @@ class KeyboardLayoutManager(private val service: RewordiumAIKeyboardService) {
             
             updateEmojiCategoryTabs()
             
-            // EMOJI EMPTY LAYOUT FIX: Ensure emoji list is populated after tabs are set up
-            // Use post to ensure the tabs container and categories are fully initialized
-            rootView?.post {
+            // ⚡ INSTANT EMOJI LOAD - Remove delay, update immediately
+            try {
+                updateEmojiList()
+            } catch (e: Exception) {
+                Log.e("EmojiKeyboard", "Error updating emoji list: ${e.message}")
+                // Emergency fallback: try to force first category
                 try {
-                    Log.d("EmojiKeyboard", "Updating emoji list after tab initialization...")
+                    service.currentEmojiCategoryIndex = 0
                     updateEmojiList()
-                    Log.d("EmojiKeyboard", "Emoji list updated successfully with ${currentEmojiCategories.size} categories")
-                } catch (e: Exception) {
-                    Log.e("EmojiKeyboard", "Error in delayed emoji list update: ${e.message}")
-                    // Emergency fallback: try to force first category
-                    try {
-                        service.currentEmojiCategoryIndex = 0
-                        updateEmojiList()
-                    } catch (fallbackError: Exception) {
-                        Log.e("EmojiKeyboard", "Emergency fallback failed: ${fallbackError.message}")
-                    }
+                } catch (fallbackError: Exception) {
+                    Log.e("EmojiKeyboard", "Emergency fallback failed: ${fallbackError.message}")
                 }
             }
             
@@ -382,6 +418,81 @@ class KeyboardLayoutManager(private val service: RewordiumAIKeyboardService) {
             emojiCategoryTabsContainer = null
             emojiBottomControlRow = null
             emojiAdapter = null
+        }
+    }
+    
+    /**
+     * Creates iOS 26 Liquid Glass effect for keyboard keys
+     * Features: Transparency, glossy shine, blur effect simulation, and depth
+     */
+    private fun createLiquidGlassDrawable(baseColor: Int, isPressed: Boolean = false): GradientDrawable {
+        return GradientDrawable().apply {
+            shape = GradientDrawable.RECTANGLE
+            cornerRadius = dpToPx(10f)
+            
+            // Extract RGB components and add transparency for glass effect
+            val alpha = if (isPressed) 90 else 60 // More transparent when not pressed
+            val red = Color.red(baseColor)
+            val green = Color.green(baseColor)
+            val blue = Color.blue(baseColor)
+            
+            // Create glossy gradient from lighter to darker (glass reflection effect)
+            val lightColor = Color.argb(
+                alpha,
+                minOf(255, (red * 1.4f).toInt()),
+                minOf(255, (green * 1.4f).toInt()),
+                minOf(255, (blue * 1.4f).toInt())
+            )
+            
+            val darkColor = Color.argb(
+                alpha,
+                (red * 0.7f).toInt(),
+                (green * 0.7f).toInt(),
+                (blue * 0.7f).toInt()
+            )
+            
+            // Top-to-bottom gradient for glossy liquid effect
+            colors = intArrayOf(lightColor, darkColor)
+            gradientType = GradientDrawable.LINEAR_GRADIENT
+            orientation = GradientDrawable.Orientation.TOP_BOTTOM
+            
+            // Add subtle border for depth - shimmer effect
+            val borderAlpha = if (isPressed) 100 else 60
+            val borderColor = Color.argb(
+                borderAlpha,
+                255, // White border for shimmer
+                255,
+                255
+            )
+            setStroke(dpToPx(0.8f).toInt(), borderColor)
+        }
+    }
+    
+    /**
+     * Creates enhanced liquid glass with inner glow effect
+     */
+    private fun createEnhancedLiquidGlassDrawable(baseColor: Int, isPressed: Boolean = false): LayerDrawable {
+        // Base glass layer
+        val glassLayer = createLiquidGlassDrawable(baseColor, isPressed)
+        
+        // Inner glow layer for extra shimmer
+        val innerGlow = GradientDrawable().apply {
+            shape = GradientDrawable.RECTANGLE
+            cornerRadius = dpToPx(10f)
+            
+            // Radial gradient from center for glow effect
+            val glowAlpha = if (isPressed) 40 else 25
+            val centerGlow = Color.argb(glowAlpha, 255, 255, 255)
+            val edgeGlow = Color.argb(0, 255, 255, 255)
+            
+            colors = intArrayOf(centerGlow, edgeGlow)
+            gradientType = GradientDrawable.RADIAL_GRADIENT
+            gradientRadius = dpToPx(100f)
+        }
+        
+        return LayerDrawable(arrayOf(glassLayer, innerGlow)).apply {
+            // Offset inner glow slightly from top for realistic light reflection
+            setLayerInset(1, dpToPx(2f).toInt(), dpToPx(1f).toInt(), dpToPx(2f).toInt(), dpToPx(2f).toInt())
         }
     }
 
@@ -406,8 +517,9 @@ class KeyboardLayoutManager(private val service: RewordiumAIKeyboardService) {
         }
 
         val cornerRadius = dpToPx(6f)
-        keyBackgroundDrawable = GradientDrawable().apply { this.cornerRadius = cornerRadius; setColor(keyBackgroundColor) }
-        specialKeyBackgroundDrawable = GradientDrawable().apply { this.cornerRadius = cornerRadius; setColor(specialKeyBackgroundColor) }
+        // Use iOS 26 liquid glass effect for keys
+        keyBackgroundDrawable = createEnhancedLiquidGlassDrawable(keyBackgroundColor, false)
+        specialKeyBackgroundDrawable = createEnhancedLiquidGlassDrawable(specialKeyBackgroundColor, false)
         
         // Safe theme color parsing - fallback to default if empty or invalid
         val safeThemeColor = if (service.themeColor.isNotEmpty()) {
@@ -421,9 +533,10 @@ class KeyboardLayoutManager(private val service: RewordiumAIKeyboardService) {
             if (isDarkMode) Color.parseColor("#007AFF") else Color.parseColor("#007AFF")
         }
         
+        // Use solid color gradient drawable for return key to show theme color
         returnKeyBackgroundDrawable = GradientDrawable().apply { this.cornerRadius = cornerRadius; setColor(safeThemeColor) }
-        spacebarBackgroundDrawable = GradientDrawable().apply { this.cornerRadius = cornerRadius; setColor(keyBackgroundColor) }
-        activeShiftDrawable = GradientDrawable().apply { this.cornerRadius = cornerRadius; setColor(Color.WHITE) }
+        spacebarBackgroundDrawable = createEnhancedLiquidGlassDrawable(keyBackgroundColor, false)
+        activeShiftDrawable = createEnhancedLiquidGlassDrawable(Color.WHITE, false)
 
         val suggestionTextColor = if(isDarkMode) Color.WHITE else Color.BLACK
         suggestion1.setTextColor(safeThemeColor)
@@ -462,7 +575,7 @@ class KeyboardLayoutManager(private val service: RewordiumAIKeyboardService) {
         val keyBackgroundColor = Color.parseColor(if (isDarkMode) "#333333" else "#FFFFFF")
         keyTextColor = if (isDarkMode) Color.WHITE else Color.BLACK
         val specialKeyBackgroundColor = Color.parseColor(if (isDarkMode) "#5A5A5A" else "#D1D1D6")
-        val keyboardBackgroundColor = Color.parseColor(if (isDarkMode) "#1C1C1E" else "#D1D1D6")
+        val keyboardBackgroundColor = Color.parseColor(if (isDarkMode) "#000000" else "#D1D1D6")
         
         // Set keyboard background with subtle gradient
         val keyboardGradient = GradientDrawable().apply {
@@ -506,8 +619,9 @@ class KeyboardLayoutManager(private val service: RewordiumAIKeyboardService) {
         }
 
         val cornerRadius = dpToPx(6f)
-        keyBackgroundDrawable = GradientDrawable().apply { this.cornerRadius = cornerRadius; setColor(keyBackgroundColor) }
-        specialKeyBackgroundDrawable = GradientDrawable().apply { this.cornerRadius = cornerRadius; setColor(specialKeyBackgroundColor) }
+        // Use iOS 26 liquid glass effect for gradient theme keys
+        keyBackgroundDrawable = createEnhancedLiquidGlassDrawable(keyBackgroundColor, false)
+        specialKeyBackgroundDrawable = createEnhancedLiquidGlassDrawable(specialKeyBackgroundColor, false)
         
         // Create beautiful gradient return key
         returnKeyBackgroundDrawable = GradientDrawable().apply { 
@@ -517,8 +631,8 @@ class KeyboardLayoutManager(private val service: RewordiumAIKeyboardService) {
             orientation = GradientDrawable.Orientation.TL_BR
         }
         
-        spacebarBackgroundDrawable = GradientDrawable().apply { this.cornerRadius = cornerRadius; setColor(keyBackgroundColor) }
-        activeShiftDrawable = GradientDrawable().apply { this.cornerRadius = cornerRadius; setColor(Color.WHITE) }
+        spacebarBackgroundDrawable = createEnhancedLiquidGlassDrawable(keyBackgroundColor, false)
+        activeShiftDrawable = createEnhancedLiquidGlassDrawable(Color.WHITE, false)
 
         val suggestionTextColor = if(isDarkMode) Color.WHITE else Color.BLACK
         suggestion1.setTextColor(gradientColors[0]) // Use gradient color for first suggestion
@@ -658,12 +772,8 @@ class KeyboardLayoutManager(private val service: RewordiumAIKeyboardService) {
                             else -> keyBg.constantState?.newDrawable()?.mutate()
                         }
                         
-                        // CRITICAL: Force background change and immediate invalidation
+                        // OPTIMIZED: Only set background, Android handles refresh automatically
                         child.background = newBackground
-                        child.invalidate()
-                        child.requestLayout()
-                        
-                        Log.d("KeyboardTheme", "Updated key '${child.text}' with tag '$tag' - immediate refresh forced")
                     }
                     child is ImageButton -> {
                         // Update ImageButton (like shift key) immediately
@@ -674,25 +784,13 @@ class KeyboardLayoutManager(private val service: RewordiumAIKeyboardService) {
                             else -> keyBg.constantState?.newDrawable()?.mutate()
                         }
                         child.background = newBackground
-                        child.invalidate()
-                        child.requestLayout()
-                        
-                        Log.d("KeyboardTheme", "Updated ImageButton with tag '$tag' - immediate refresh forced")
                     }
                     child is ViewGroup -> {
-                        // Recursively update child ViewGroups
+                        // Recursively update child ViewGroups (no manual refresh)
                         updateViewGroupKeysImmediately(child, keyBg, specialKeyBg, returnKeyBg, isDarkMode)
-                        // Force the ViewGroup itself to refresh
-                        child.invalidate()
-                        child.requestLayout()
                     }
                 }
             }
-            // Force the main container to refresh completely
-            container.invalidate()
-            container.requestLayout()
-            
-            Log.d("KeyboardTheme", "Container '${container.javaClass.simpleName}' updated - forced complete refresh")
         }
     }
 
@@ -701,85 +799,76 @@ class KeyboardLayoutManager(private val service: RewordiumAIKeyboardService) {
     // =========================================================================
     @SuppressLint("ClickableViewAccessibility")
     private fun addKey(parent: ViewGroup, text: String, weight: Float = 1f, isLetter: Boolean = false) {
-        val keyView = LayoutInflater.from(service).inflate(R.layout.ios_key_letter, parent, false) as Button
-        keyView.tag = text.lowercase()
-        keyView.text = text
-        keyView.setTextColor(keyTextColor)
+        // 🌊 PROFESSIONAL LIQUID GLASS KEY using Jetpack Compose
+        // NO ripple effects, NO pulsating - Pure liquid glass only
         
-        // Optimize view settings
-        keyView.setWillNotDraw(false)
-        keyView.isHapticFeedbackEnabled = true
+        val composeView = ComposeView(service).apply {
+            setViewTreeLifecycleOwner(service)
+            setViewTreeSavedStateRegistryOwner(service)
+            setViewCompositionStrategy(ViewCompositionStrategy.DisposeOnDetachedFromWindow)
+            
+            setContent {
+                var isPressed by remember { mutableStateOf(false) }
+                val isCaps by isCapsState.collectAsState()
+                
+                val displayText = if (isLetter && isCaps) text.uppercase() else text.lowercase()
+                
+                ProfessionalLiquidGlassKey(
+                    text = displayText,
+                    onClick = {
+                        try {
+                            service.queueKeyPress(displayText) // haptic is inside queueKeyPress
+                        } catch (e: Exception) {
+                            Log.e("KeyboardLayoutManager", "Error processing key: ${e.message}")
+                        }
+                    },
+                    isDarkMode = service.isDarkMode,
+                    isPressed = isPressed,
+                    onPress = {
+                        isPressed = true
+                        // Show popup on press
+                        this@apply.post {
+                            val locationInWindow = IntArray(2)
+                            this@apply.getLocationInWindow(locationInWindow)
+                            val keyWidth = this@apply.width
+                            val keyHeight = this@apply.height
+                            keyPopupPreview.show(
+                                text = displayText,
+                                x = locationInWindow[0] + keyWidth / 2f,  // Center X
+                                y = locationInWindow[1] + keyHeight / 2f,  // Center Y
+                                keyHeight = keyHeight.toFloat(),
+                                isDarkMode = service.isDarkMode
+                            )
+                        }
+                    },
+                    onRelease = {
+                        isPressed = false
+                        // Hide popup on release
+                        keyPopupPreview.hide()
+                    }
+                )
+            }
+        }
         
-        // Create and cache background drawables
-        val normalBg = keyBackgroundDrawable?.constantState?.newDrawable()?.mutate()
-        val pressedBg = keyBackgroundDrawable?.constantState?.newDrawable()?.mutate()
-        pressedBg?.alpha = 150
-        
-        keyView.background = normalBg
-        
-        keyView.layoutParams = LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.MATCH_PARENT, weight).apply {
+        composeView.tag = text  // Store original text for reference
+        composeView.layoutParams = LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.MATCH_PARENT, weight).apply {
             val margin = service.resources.getDimensionPixelSize(R.dimen.ios_key_margin) / 2
             setMargins(margin, margin, margin, margin)
         }
         
-            // SWIPE TYPING FIX: Simple touch handling that allows swipe gestures
-        // and handles key clicks properly without double-tap requirement
-        keyView.setOnTouchListener { v, event ->
-            when (event.action) {
-                MotionEvent.ACTION_DOWN -> {
-                    // Show visual feedback
-                    v.background = pressedBg
-                    val currentText = (v as Button).text.toString()
-                    showKeyPopup(v, currentText)
-                    false // Don't consume - let gesture system handle it
-                }
-                MotionEvent.ACTION_UP -> {
-                    // Handle the key press here directly for single tap
-                    val hitX = event.x.toInt()
-                    val hitY = event.y.toInt()
-                    val isInside = hitX >= 0 && hitY >= 0 && 
-                                 hitX < v.width && hitY < v.height
-                    
-                    if (isInside) {
-                        // Process the key press
-                        val currentText = (v as Button).text.toString()
-                        try {
-                            service.queueKeyPress(currentText)
-                            Log.v("KeyboardLayoutManager", "Key pressed: $currentText")
-                        } catch (e: Exception) {
-                            Log.e("KeyboardLayoutManager", "Error processing key: ${e.message}")
-                        }
-                    }
-                    
-                    // Reset visual state
-                    v.background = normalBg
-                    dismissKeyPopup()
-                    false // Don't consume - let gesture system handle it too
-                }
-                MotionEvent.ACTION_CANCEL -> {
-                    // Reset visual state on cancel
-                    v.background = normalBg
-                    dismissKeyPopup()
-                    false // Don't consume
-                }
-                else -> false // Don't consume any other events
-            }
-        }
-        
-        // Track key bounds for swipe detection using consistent coordinate system
-        keyView.doOnLayout {
-            // Use window coordinates for consistency with touch events
+        // Track key bounds for swipe detection
+        composeView.doOnLayout {
             val locationInWindow = IntArray(2)
-            keyView.getLocationInWindow(locationInWindow)
-            val centerX = locationInWindow[0] + keyView.width / 2f
-            val centerY = locationInWindow[1] + keyView.height / 2f
-            val radius = minOf(keyView.width, keyView.height) / 2f
+            composeView.getLocationInWindow(locationInWindow)
+            val centerX = locationInWindow[0] + composeView.width / 2f
+            val centerY = locationInWindow[1] + composeView.height / 2f
+            val radius = minOf(composeView.width, composeView.height) / 2f
             keyBounds[text] = KeyBounds(centerX, centerY, radius)
             Log.d("KeyboardLayoutManager", "Tracked key '$text' bounds: window coords ($centerX, $centerY) radius=$radius")
         }
 
-        parent.addView(keyView)
-        if (isLetter) letterKeyViews.add(keyView)
+        parent.addView(composeView)
+        if (isLetter) letterKeyViews.add(composeView)
     }
     // =========================================================================
     // END OF THE FIX
@@ -787,36 +876,58 @@ class KeyboardLayoutManager(private val service: RewordiumAIKeyboardService) {
 
     @SuppressLint("ClickableViewAccessibility")
     private fun addSpecialKey(parent: ViewGroup, text: String, iconResId: Int? = null, weight: Float = 1f, onClick: () -> Unit) {
-        val view: View = if (iconResId == null) {
-            (LayoutInflater.from(service).inflate(R.layout.ios_key_special, parent, false) as Button).apply { 
-                this.text = text
-                this.setTextColor(keyTextColor)
-                // Set bold text for specific keys
-                if (text == "123" || text == "@" || text == "." || text == "ABC") {
-                    this.setTypeface(this.typeface, android.graphics.Typeface.BOLD)
-                }
+        // 🌊 PROFESSIONAL LIQUID GLASS SPECIAL KEY using AndroidLiquidGlass + Jetpack Compose
+        // NO ripple effects - Pure liquid glass only
+        
+        val composeView = ComposeView(service).apply {
+            setViewTreeLifecycleOwner(service)
+            setViewTreeSavedStateRegistryOwner(service)
+            setViewCompositionStrategy(ViewCompositionStrategy.DisposeOnDetachedFromWindow)
+            
+            setContent {
+                var isPressed by remember { mutableStateOf(false) }
+                
+                ProfessionalLiquidGlassSpecialKey(
+                    text = text,
+                    iconResId = iconResId,
+                    onClick = {
+                        onClick()
+                        service.performHapticFeedback()
+                    },
+                    isDarkMode = service.isDarkMode,
+                    isPressed = isPressed
+                )
             }
-        } else {
-            (LayoutInflater.from(service).inflate(R.layout.ios_key_icon, parent, false) as ImageButton).apply { setImageResource(iconResId); setColorFilter(keyTextColor, PorterDuff.Mode.SRC_IN) }
         }
-        view.background = specialKeyBackgroundDrawable?.constantState?.newDrawable()?.mutate()
-        view.layoutParams = LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.MATCH_PARENT, weight).apply {
+        
+        composeView.layoutParams = LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.MATCH_PARENT, weight).apply {
             val margin = service.resources.getDimensionPixelSize(R.dimen.ios_key_margin) / 2
             setMargins(margin, margin, margin, margin)
         }
-        view.setOnTouchListener { _, event ->
-            if (event.action == MotionEvent.ACTION_DOWN) onClick()
-            true
+        
+        parent.addView(composeView)
+        
+        // Track shift key for state updates
+        if (iconResId == R.drawable.ic_shift || iconResId == R.drawable.ic_shift_filled || iconResId == R.drawable.ic_shift_caps_lock) {
+            // Store reference if needed for shift state updates
+            // Note: Shift state management may need refactoring for Compose
         }
-        parent.addView(view)
     }
 
     fun updateLetterKeys() {
         val isCaps = service.isCapsOn || service.isCapsLock
-        letterKeyViews.forEach { button ->
-            val originalText = button.tag as? String ?: ""
-            button.text = if (isCaps) originalText.uppercase() else originalText.lowercase()
+        
+        // Update StateFlow for Compose keys - this will automatically update all letter keys
+        _isCapsState.value = isCaps
+        
+        // Also update any legacy Button views if they exist
+        letterKeyViews.forEach { view ->
+            if (view is Button) {
+                val originalText = view.tag as? String ?: ""
+                view.text = if (isCaps) originalText.uppercase() else originalText.lowercase()
+            }
         }
+        
         updateShiftKeyState()
     }
     
@@ -884,19 +995,36 @@ class KeyboardLayoutManager(private val service: RewordiumAIKeyboardService) {
     }
 
     private fun addReturnKey(parent: ViewGroup, weight: Float) {
-        val keyView = LayoutInflater.from(service).inflate(R.layout.ios_key_special, parent, false) as Button
-        keyView.text = service.getReturnKeyLabel().lowercase()
-        keyView.setTextColor(Color.WHITE)
-        keyView.background = returnKeyBackgroundDrawable?.constantState?.newDrawable()?.mutate()
-        keyView.layoutParams = LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.MATCH_PARENT, weight).apply {
+        // 🌊 PROFESSIONAL LIQUID GLASS RETURN KEY using AndroidLiquidGlass + Jetpack Compose
+        // NO shimmer animation - Just pure themed glass
+        
+        val composeView = ComposeView(service).apply {
+            setViewTreeLifecycleOwner(service)
+            setViewTreeSavedStateRegistryOwner(service)
+            setViewCompositionStrategy(ViewCompositionStrategy.DisposeOnDetachedFromWindow)
+            
+            setContent {
+                var isPressed by remember { mutableStateOf(false) }
+                
+                ProfessionalLiquidGlassReturnKey(
+                    text = service.getReturnKeyLabel().lowercase(),
+                    themeColor = service.themeColor,
+                    onClick = {
+                        service.handleReturnKey()
+                        service.performHapticFeedback()
+                    },
+                    isDarkMode = service.isDarkMode,
+                    isPressed = isPressed
+                )
+            }
+        }
+        
+        composeView.layoutParams = LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.MATCH_PARENT, weight).apply {
             val margin = service.resources.getDimensionPixelSize(R.dimen.ios_key_margin) / 2
             setMargins(margin, margin, margin, margin)
         }
-        keyView.setOnTouchListener { _, event ->
-            if (event.action == MotionEvent.ACTION_DOWN) service.handleReturnKey()
-            true
-        }
-        parent.addView(keyView)
+        
+        parent.addView(composeView)
     }
 
     fun cleanup() {
@@ -917,9 +1045,34 @@ class KeyboardLayoutManager(private val service: RewordiumAIKeyboardService) {
         letterKeyViews.clear()
         shiftKeyView = null
     }
+    
+    /**
+     * CRITICAL FIX: Set lifecycle and saved state owners on all keyboard row containers
+     * This MUST be called before adding any ComposeView keys to prevent crash:
+     * "ViewTreeLifecycleOwner not found from android.widget.LinearLayout"
+     */
+    private fun setupRowLifecycleOwners() {
+        val rows = listOf(numberRow, rowQwerty, rowAsdf, rowZxcv, bottomRow)
+        Log.d("KeyboardLayoutManager", "🔧 Setting up lifecycle owners for ${rows.size} rows")
+        rows.forEachIndexed { index, row ->
+            try {
+                row.setViewTreeLifecycleOwner(service)
+                row.setViewTreeSavedStateRegistryOwner(service)
+                Log.v("KeyboardLayoutManager", "✅ Row $index lifecycle owner set successfully")
+            } catch (e: Exception) {
+                Log.e("KeyboardLayoutManager", "❌ Failed to set lifecycle owner on row $index: ${e.message}")
+            }
+        }
+        Log.d("KeyboardLayoutManager", "✅ All row lifecycle owners configured")
+    }
 
     private fun setupLettersKeyboard() {
         clearAlphabetRows()
+        
+        // CRITICAL: Re-set lifecycle owners after clearAlphabetRows() removes all views
+        // removeAllViews() clears ViewTree properties including lifecycle owners
+        setupRowLifecycleOwners()
+        
         "1234567890".forEach { addKey(numberRow, it.toString()) }
         "qwertyuiop".forEach { addKey(rowQwerty, it.toString(), isLetter = true) }
         addPaddingView(rowAsdf, 0.5f)
@@ -939,6 +1092,9 @@ class KeyboardLayoutManager(private val service: RewordiumAIKeyboardService) {
 
     private fun setupSymbolsKeyboard() {
         clearAlphabetRows()
+        
+        // CRITICAL: Re-set lifecycle owners after clearAlphabetRows() removes all views
+        setupRowLifecycleOwners()
         
         // Always show numbers on top row
         "1234567890".forEach { addKey(numberRow, it.toString()) }
@@ -1306,20 +1462,20 @@ class KeyboardLayoutManager(private val service: RewordiumAIKeyboardService) {
             // Only update if we have a RecyclerView
             emojiRecyclerView?.let { recyclerView ->
                 if (emojis.isNotEmpty()) {
-                    emojiAdapter = EmojiAdapter(emojis) { emoji -> 
+                    emojiAdapter = EmojiAdapter(emojis, { emoji -> 
                         try {
                             service.handleEmojiKeyPress(emoji)
                         } catch (e: Exception) {
                             android.util.Log.e("EmojiList", "Emoji press error: ${e.message}")
                         }
-                    }
+                    }, service.isDarkMode)
                     recyclerView.adapter = emojiAdapter
                     emojiAdapter?.notifyDataSetChanged()
                     Log.d("EmojiKeyboard", "✅ Successfully loaded ${emojis.size} emojis into RecyclerView")
                 } else {
                     Log.w("EmojiKeyboard", "⚠️  No emojis in category '$categoryName', setting empty adapter")
                     // Set empty adapter if no emojis
-                    recyclerView.adapter = EmojiAdapter(emptyList()) { }
+                    recyclerView.adapter = EmojiAdapter(emptyList(), { }, service.isDarkMode)
                 }
             } ?: Log.e("EmojiKeyboard", "❌ RecyclerView is null, cannot update emoji list")
             
@@ -1334,13 +1490,13 @@ class KeyboardLayoutManager(private val service: RewordiumAIKeyboardService) {
                 } else {
                     EmojiData.emojiCategories.firstOrNull()?.second ?: emptyList()
                 }
-                emojiRecyclerView?.adapter = EmojiAdapter(fallbackEmojis) { emoji -> 
+                emojiRecyclerView?.adapter = EmojiAdapter(fallbackEmojis, { emoji -> 
                     try {
                         service.handleEmojiKeyPress(emoji)
                     } catch (e2: Exception) {
                         android.util.Log.e("EmojiList", "Fallback emoji press error: ${e2.message}")
                     }
-                }
+                }, service.isDarkMode)
                 Log.d("EmojiKeyboard", "✅ Fallback loaded ${fallbackEmojis.size} emojis")
             } catch (fallbackError: Exception) {
                 android.util.Log.e("EmojiList", "Fallback update error: ${fallbackError.message}")

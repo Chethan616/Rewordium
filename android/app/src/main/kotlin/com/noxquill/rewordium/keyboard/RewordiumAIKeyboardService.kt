@@ -59,6 +59,14 @@ import android.graphics.drawable.GradientDrawable
 import android.inputmethodservice.InputMethodService
 import android.text.TextUtils
 import android.widget.ScrollView
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleOwner
+import androidx.lifecycle.LifecycleRegistry
+import androidx.lifecycle.setViewTreeLifecycleOwner
+import androidx.savedstate.setViewTreeSavedStateRegistryOwner
+import androidx.savedstate.SavedStateRegistry
+import androidx.savedstate.SavedStateRegistryController
+import androidx.savedstate.SavedStateRegistryOwner
 import android.os.Build
 import android.os.Handler
 import android.os.HandlerThread
@@ -102,13 +110,23 @@ import com.noxquill.rewordium.keyboard.gesture.model.KeyBounds
 import com.noxquill.rewordium.keyboard.util.KeyboardConstants
 import kotlinx.coroutines.*
 
-class RewordiumAIKeyboardService : InputMethodService() {
+class RewordiumAIKeyboardService : InputMethodService(), LifecycleOwner, SavedStateRegistryOwner {
 
     companion object {
         private var instance: RewordiumAIKeyboardService? = null
         
         fun getInstance(): RewordiumAIKeyboardService? = instance
     }
+    
+    // Lifecycle support for Compose
+    private val lifecycleRegistry = LifecycleRegistry(this)
+    private val savedStateRegistryController = SavedStateRegistryController.create(this)
+    
+    override val lifecycle: Lifecycle
+        get() = lifecycleRegistry
+        
+    override val savedStateRegistry: SavedStateRegistry
+        get() = savedStateRegistryController.savedStateRegistry
 
     internal lateinit var layoutManager: KeyboardLayoutManager
     internal var paraphraseManager: ParaphraseViewManager? = null
@@ -294,7 +312,8 @@ class RewordiumAIKeyboardService : InputMethodService() {
                         
                         if (frameTime > performanceTargetFrameTimeNs * 1.2) { // 20% over target
                             droppedFrames++
-                            Log.w(KeyboardConstants.TAG, "🎮 Frame drop detected: ${frameTime / 1_000_000}ms (target: ${performanceTargetFrameTimeNs / 1_000_000}ms)")
+                            // Frame drop logging disabled for cleaner console output
+                            // Log.w(KeyboardConstants.TAG, "🎮 Frame drop detected: ${frameTime / 1_000_000}ms (target: ${performanceTargetFrameTimeNs / 1_000_000}ms)")
                         }
                         
                         // Update average frame time with exponential smoothing
@@ -312,7 +331,7 @@ class RewordiumAIKeyboardService : InputMethodService() {
                     Log.w(KeyboardConstants.TAG, "Performance monitoring error: ${e.message}")
                 }
                 
-                performanceStatsHandler?.postDelayed(this, 16) // ~60 FPS monitoring
+                performanceStatsHandler?.postDelayed(this, 33) // ~30 FPS monitoring (reduced overhead)
             }
         }
         
@@ -514,6 +533,10 @@ class RewordiumAIKeyboardService : InputMethodService() {
     override fun onCreate() {
         super.onCreate()
         instance = this
+        
+        // Initialize lifecycle for Compose support
+        savedStateRegistryController.performRestore(null)
+        lifecycleRegistry.handleLifecycleEvent(Lifecycle.Event.ON_CREATE)
         
         // 🚀 PREMIUM PERFORMANCE INITIALIZATION
         initializePremiumPerformanceSystem()
@@ -836,6 +859,27 @@ class RewordiumAIKeyboardService : InputMethodService() {
         val contextThemeWrapper = ContextThemeWrapper(this, themeResId)
         val layoutInflater = layoutInflater.cloneInContext(contextThemeWrapper)
         val rootView = layoutInflater.inflate(R.layout.ios_keyboard_layout, null)
+        
+        // CRITICAL: Set lifecycle owner for Compose support
+        // Must set on rootView before any child ComposeViews are attached
+        rootView.setViewTreeLifecycleOwner(this)
+        rootView.setViewTreeSavedStateRegistryOwner(this)
+        
+        lifecycleRegistry.handleLifecycleEvent(Lifecycle.Event.ON_START)
+        lifecycleRegistry.handleLifecycleEvent(Lifecycle.Event.ON_RESUME)
+        
+        // CRITICAL: Also set lifecycle owners on the window's decorView
+        // This ensures the IME framework's parent panel has lifecycle owners
+        try {
+            window?.window?.decorView?.let { decorView ->
+                decorView.setViewTreeLifecycleOwner(this)
+                decorView.setViewTreeSavedStateRegistryOwner(this)
+                Log.d(KeyboardConstants.TAG, "✅ Lifecycle owners set on window decorView")
+            }
+        } catch (e: Exception) {
+            Log.e(KeyboardConstants.TAG, "Failed to set lifecycle on decorView: ${e.message}")
+        }
+        
         layoutManager = KeyboardLayoutManager(this)
         layoutManager.initialize(rootView)
         
@@ -1385,6 +1429,9 @@ class RewordiumAIKeyboardService : InputMethodService() {
     }
 
     override fun onDestroy() {
+        // Destroy lifecycle for Compose
+        lifecycleRegistry.handleLifecycleEvent(Lifecycle.Event.ON_DESTROY)
+        
         instance = null
         super.onDestroy()
         coroutineScope.cancel("Service is being destroyed")
@@ -6577,14 +6624,17 @@ class RewordiumAIKeyboardService : InputMethodService() {
     }
     
     /**
-     * Creates iOS-style segmented control for Light/Dark mode with enhanced aesthetics
+     * Creates iOS-style segmented control for Light/Dark mode
      */
     private fun createiOSSegmentedControl(): View {
+        val currentMode = getSharedPreferences("keyboard_prefs", Context.MODE_PRIVATE)
+            .getString("theme_mode", "dark") ?: "dark"
+        
         val container = LinearLayout(this).apply {
             orientation = LinearLayout.HORIZONTAL
             layoutParams = LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.WRAP_CONTENT,
-                (40 * resources.displayMetrics.density).toInt() // Slightly taller for better touch
+                (40 * resources.displayMetrics.density).toInt()
             ).apply {
                 topMargin = 20
                 gravity = android.view.Gravity.CENTER_HORIZONTAL
@@ -6598,18 +6648,17 @@ class RewordiumAIKeyboardService : InputMethodService() {
             gravity = android.view.Gravity.CENTER
             elevation = 2f
             
-            // Prevent touch pass-through on segmented control
             isClickable = true
             isFocusable = true
-            setOnTouchListener { _, _ -> true } // Consume all touches
+            setOnTouchListener { _, _ -> true }
         }
         
-        // Light mode segment with enhanced iOS styling
+        // Light mode segment
         val lightSegment = TextView(this).apply {
             text = "Light"
-            textSize = 15f
+            textSize = 14f
             typeface = android.graphics.Typeface.create("sans-serif-medium", android.graphics.Typeface.BOLD)
-            setPadding(24, 10, 24, 10)
+            setPadding(20, 10, 20, 10)
             gravity = android.view.Gravity.CENTER
             layoutParams = LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.WRAP_CONTENT,
@@ -6619,8 +6668,7 @@ class RewordiumAIKeyboardService : InputMethodService() {
             isClickable = true
             isFocusable = true
             
-            if (!isDarkMode) {
-                // Selected state - Enhanced iOS white background with subtle shadow
+            if (currentMode == "light") {
                 background = android.graphics.drawable.GradientDrawable().apply {
                     cornerRadius = 16f
                     setColor(Color.WHITE)
@@ -6629,37 +6677,24 @@ class RewordiumAIKeyboardService : InputMethodService() {
                 setTextColor(Color.BLACK)
                 elevation = 4f
             } else {
-                // Unselected state
                 background = null
-                setTextColor(Color.argb(180, 255, 255, 255))
+                setTextColor(if (isDarkMode) Color.argb(180, 255, 255, 255) else Color.argb(180, 0, 0, 0))
                 elevation = 0f
             }
             
             setOnTouchListener { v, event ->
                 when (event.action) {
                     MotionEvent.ACTION_DOWN -> {
-                        v.scaleX = 0.95f
-                        v.scaleY = 0.95f
-                        v.alpha = 0.8f
+                        v.scaleX = 0.95f; v.scaleY = 0.95f; v.alpha = 0.8f
                         true
                     }
                     MotionEvent.ACTION_UP -> {
-                        v.animate()
-                            .scaleX(1f)
-                            .scaleY(1f)
-                            .alpha(1f)
-                            .setDuration(150)
-                            .start()
+                        v.animate().scaleX(1f).scaleY(1f).alpha(1f).setDuration(150).start()
                         switchToLightMode()
                         true
                     }
                     MotionEvent.ACTION_CANCEL -> {
-                        v.animate()
-                            .scaleX(1f)
-                            .scaleY(1f)
-                            .alpha(1f)
-                            .setDuration(150)
-                            .start()
+                        v.animate().scaleX(1f).scaleY(1f).alpha(1f).setDuration(150).start()
                         true
                     }
                     else -> true
@@ -6667,12 +6702,12 @@ class RewordiumAIKeyboardService : InputMethodService() {
             }
         }
         
-        // Dark mode segment with enhanced iOS styling
+        // Dark mode segment
         val darkSegment = TextView(this).apply {
             text = "Dark"
-            textSize = 15f
+            textSize = 14f
             typeface = android.graphics.Typeface.create("sans-serif-medium", android.graphics.Typeface.BOLD)
-            setPadding(24, 10, 24, 10)
+            setPadding(20, 10, 20, 10)
             gravity = android.view.Gravity.CENTER
             layoutParams = LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.WRAP_CONTENT,
@@ -6682,8 +6717,7 @@ class RewordiumAIKeyboardService : InputMethodService() {
             isClickable = true
             isFocusable = true
             
-            if (isDarkMode) {
-                // Selected state - Enhanced iOS dark selection with subtle glow
+            if (currentMode == "dark") {
                 background = android.graphics.drawable.GradientDrawable().apply {
                     cornerRadius = 16f
                     setColor(Color.argb(100, 255, 255, 255))
@@ -6692,37 +6726,24 @@ class RewordiumAIKeyboardService : InputMethodService() {
                 setTextColor(Color.WHITE)
                 elevation = 4f
             } else {
-                // Unselected state
                 background = null
-                setTextColor(Color.argb(180, 0, 0, 0))
+                setTextColor(if (isDarkMode) Color.argb(180, 255, 255, 255) else Color.argb(180, 0, 0, 0))
                 elevation = 0f
             }
             
             setOnTouchListener { v, event ->
                 when (event.action) {
                     MotionEvent.ACTION_DOWN -> {
-                        v.scaleX = 0.95f
-                        v.scaleY = 0.95f
-                        v.alpha = 0.8f
+                        v.scaleX = 0.95f; v.scaleY = 0.95f; v.alpha = 0.8f
                         true
                     }
                     MotionEvent.ACTION_UP -> {
-                        v.animate()
-                            .scaleX(1f)
-                            .scaleY(1f)
-                            .alpha(1f)
-                            .setDuration(150)
-                            .start()
+                        v.animate().scaleX(1f).scaleY(1f).alpha(1f).setDuration(150).start()
                         switchToDarkMode()
                         true
                     }
                     MotionEvent.ACTION_CANCEL -> {
-                        v.animate()
-                            .scaleX(1f)
-                            .scaleY(1f)
-                            .alpha(1f)
-                            .setDuration(150)
-                            .start()
+                        v.animate().scaleX(1f).scaleY(1f).alpha(1f).setDuration(150).start()
                         true
                     }
                     else -> true
@@ -7505,6 +7526,7 @@ class RewordiumAIKeyboardService : InputMethodService() {
         performHapticFeedback()
         val prefs = getSharedPreferences(KeyboardConstants.PREFS_NAME, Context.MODE_PRIVATE)
         prefs.edit().putBoolean(KeyboardConstants.KEY_DARK_MODE, false).apply()
+        prefs.edit().putString("theme_mode", "light").apply()
         
         this.isDarkMode = false
         
@@ -7535,6 +7557,7 @@ class RewordiumAIKeyboardService : InputMethodService() {
         performHapticFeedback()
         val prefs = getSharedPreferences(KeyboardConstants.PREFS_NAME, Context.MODE_PRIVATE)
         prefs.edit().putBoolean(KeyboardConstants.KEY_DARK_MODE, true).apply()
+        prefs.edit().putString("theme_mode", "dark").apply()
         
         this.isDarkMode = true
         

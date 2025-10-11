@@ -352,28 +352,38 @@ class SwipeGestureEngine(
             return
         }
         
-        // Safety check: Verify MotionEvent is valid
+        // 🔥 CRASH FIX: Extract data BEFORE posting to handler (MotionEvent gets recycled!)
+        val x: Float
+        val y: Float
+        val pressure: Float
+        val eventTime: Long
+        
         try {
-            // Test access to prevent pointer-overflow crash
-            val testX = event.x
-            val testY = event.y
-            val testPressure = event.pressure
-            val testTime = event.eventTime
+            x = event.x
+            y = event.y
+            pressure = event.pressure
+            eventTime = event.eventTime
         } catch (e: Exception) {
             Log.e(KeyboardConstants.TAG, "Invalid MotionEvent in addGesturePoint: ${e.message}")
             return
         }
         
+        // Create a copy of the event for velocity tracker (will be recycled properly)
+        val eventCopy = MotionEvent.obtain(event)
+        
         gestureHandler.post {
-            val gesture = activeGestures.find { it.id == gestureId } ?: return@post
+            val gesture = activeGestures.find { it.id == gestureId } ?: run {
+                eventCopy.recycle()
+                return@post
+            }
             
-            // Add point to path with additional safety
+            // Add point to path with extracted data (not from recycled event!)
             try {
-                gesture.addPoint(event.x, event.y, event.pressure, event.eventTime)
-                velocityTracker.addMovement(event)
+                gesture.addPoint(x, y, pressure, eventTime)
+                velocityTracker.addMovement(eventCopy)
                 
                 // REAL-TIME SPACEBAR CURSOR MOVEMENT like Gboard
-                processRealTimeCursorMovement(gesture, event)
+                processRealTimeCursorMovement(gesture, eventCopy)
                 
                 // Real-time prediction every 3 points for performance
                 if (gesture.points.size % 3 == 0) {
@@ -381,6 +391,8 @@ class SwipeGestureEngine(
                 }
             } catch (e: Exception) {
                 Log.e(KeyboardConstants.TAG, "Error processing gesture point: ${e.message}")
+            } finally {
+                eventCopy.recycle()
             }
         }
     }
