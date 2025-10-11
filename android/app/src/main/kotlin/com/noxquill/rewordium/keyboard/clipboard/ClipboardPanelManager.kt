@@ -30,7 +30,7 @@ class ClipboardPanelManager(
     private val rootView: FrameLayout
 ) {
     private var clipboardPanelView: View? = null
-    private var clipboardManager: ClipboardManager = ClipboardManager(service)
+    private var clipboardManager: ClipboardManager = service.provideClipboardHistoryManager()
     private var clipboardAdapter: ClipboardAdapter? = null
     private var isShowing = false
     private val coroutineScope = CoroutineScope(Dispatchers.Main)

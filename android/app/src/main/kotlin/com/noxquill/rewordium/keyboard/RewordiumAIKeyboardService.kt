@@ -132,6 +132,10 @@ class RewordiumAIKeyboardService : InputMethodService(), LifecycleOwner, SavedSt
     internal var paraphraseManager: ParaphraseViewManager? = null
     internal var clipboardPanelManager: ClipboardPanelManager? = null
     internal var clipboardMonitor: SystemClipboardMonitor? = null
+    private var cachedSettingsPanel: View? = null
+    private var cachedThemePanel: View? = null
+    private var cachedClipboardPanel: View? = null
+    private var cachedClipboardDataManager: com.noxquill.rewordium.keyboard.clipboard.ClipboardManager? = null
     
     // Advanced Gesture System - Gboard Level
     internal lateinit var swipeGestureEngine: SwipeGestureEngine
@@ -151,6 +155,9 @@ class RewordiumAIKeyboardService : InputMethodService(), LifecycleOwner, SavedSt
     private var lastSpaceTime: Long = 0
     internal var themeColor = "#009B6E"
     internal var isDarkMode = false
+    private var lastAppliedThemeColor: String? = null
+    private var lastAppliedGradientId: String? = null
+    private var lastAppliedDarkMode: Boolean? = null
     internal var isHapticFeedbackEnabled = true
     internal var isAutoCapitalizeEnabled = true
     internal var isDoubleSpacePeriodEnabled = true
@@ -538,10 +545,12 @@ class RewordiumAIKeyboardService : InputMethodService(), LifecycleOwner, SavedSt
         savedStateRegistryController.performRestore(null)
         lifecycleRegistry.handleLifecycleEvent(Lifecycle.Event.ON_CREATE)
         
-        // 🚀 PREMIUM PERFORMANCE INITIALIZATION
-        initializePremiumPerformanceSystem()
-        
-        loadSettings()
+    // 🚀 PREMIUM PERFORMANCE INITIALIZATION
+    initializePremiumPerformanceSystem()
+
+    ensureDefaultHapticsEnabled()
+
+    loadSettings()
         loadPersonas()
         AutocorrectManager.initialize(this)
         SuggestionEngine.initialize(this)
@@ -882,6 +891,13 @@ class RewordiumAIKeyboardService : InputMethodService(), LifecycleOwner, SavedSt
         
         layoutManager = KeyboardLayoutManager(this)
         layoutManager.initialize(rootView)
+
+        try {
+            rootView.isHapticFeedbackEnabled = true
+            refreshHapticFeedbackSystem()
+        } catch (e: Exception) {
+            Log.w(KeyboardConstants.TAG, "⚠️ Unable to prime haptic system on input view creation: ${e.message}")
+        }
         
         // Initialize orientation detection
         initializeOrientation()
@@ -1385,17 +1401,29 @@ class RewordiumAIKeyboardService : InputMethodService(), LifecycleOwner, SavedSt
         this.currentInputTypeSupportsMultiLine = (info?.inputType ?: 0 and InputType.TYPE_TEXT_FLAG_MULTI_LINE) != 0
         paraphraseManager?.exitParaphraseMode()
         
-        // Apply theme - check for gradient first
+        // Apply theme only if changes detected to avoid redundant work on launch
         val prefs = getSharedPreferences(KeyboardConstants.PREFS_NAME, Context.MODE_PRIVATE)
         val currentGradient = prefs.getString(KeyboardConstants.KEY_GRADIENT_THEME, "") ?: ""
         if (currentGradient.isNotEmpty()) {
-            val gradientColors = getGradientColorsById(currentGradient)
-            layoutManager.applyGradientTheme(isDarkMode, currentGradient, gradientColors)
+            if (lastAppliedGradientId != currentGradient || lastAppliedDarkMode != isDarkMode) {
+                val gradientColors = getGradientColorsById(currentGradient)
+                layoutManager.applyGradientTheme(isDarkMode, currentGradient, gradientColors)
+                lastAppliedGradientId = currentGradient
+                lastAppliedThemeColor = null
+            }
         } else {
-            layoutManager.applyTheme(isDarkMode, themeColor)
+            if (lastAppliedThemeColor != themeColor || lastAppliedDarkMode != isDarkMode || lastAppliedGradientId != null) {
+                layoutManager.applyTheme(isDarkMode, themeColor)
+            }
+            lastAppliedGradientId = null
+            lastAppliedThemeColor = themeColor
         }
-        
-        updateSuggestions()
+        lastAppliedDarkMode = isDarkMode
+
+        // Defer heavy suggestion refresh until after keyboard is visible
+        keyProcessingHandler.post {
+            updateSuggestions()
+        }
         if (isAutoCapitalizeEnabled) {
             val capType = info?.inputType ?: 0
             val textBefore = currentInputConnection?.getTextBeforeCursor(1, 0)
@@ -1405,8 +1433,10 @@ class RewordiumAIKeyboardService : InputMethodService(), LifecycleOwner, SavedSt
         }
         isCapsLock = false
         
-        // Start clipboard monitoring when keyboard becomes active
-        startClipboardMonitoring()
+        // Start clipboard monitoring asynchronously so launch stays instant
+        mainHandler.post {
+            startClipboardMonitoring()
+        }
     }
 
     override fun onWindowShown() {
@@ -1620,6 +1650,19 @@ class RewordiumAIKeyboardService : InputMethodService(), LifecycleOwner, SavedSt
     }
     
     private var vibratorCache: Vibrator? = null
+
+    private fun ensureDefaultHapticsEnabled() {
+        try {
+            val prefs = getSharedPreferences(KeyboardConstants.PREFS_NAME, Context.MODE_PRIVATE)
+            if (!prefs.contains(KeyboardConstants.KEY_HAPTIC_FEEDBACK)) {
+                Log.d(KeyboardConstants.TAG, "🔥 Enabling premium haptics by default")
+                prefs.edit().putBoolean(KeyboardConstants.KEY_HAPTIC_FEEDBACK, true).apply()
+                isHapticFeedbackEnabled = true
+            }
+        } catch (e: Exception) {
+            Log.e(KeyboardConstants.TAG, "❌ Failed to enforce default haptic preference: ${e.message}")
+        }
+    }
     
     /**
      * Recursively update haptic feedback settings for all views
@@ -2351,46 +2394,36 @@ class RewordiumAIKeyboardService : InputMethodService(), LifecycleOwner, SavedSt
             // Force refresh system clipboard first
             refreshSystemClipboard()
             
-            val keyboardView = layoutManager.getRootView()
-            
-            if (keyboardView is ViewGroup) {
-                // Check if clipboard panel already exists
-                val existingPanel = keyboardView.findViewWithTag<View>("clipboard_panel")
-                
-                if (existingPanel != null) {
-                    // Hide existing clipboard panel with animation
-                    existingPanel.animate()
-                        .alpha(0f)
-                        .translationY(300f)
-                        .scaleX(0.95f)
-                        .scaleY(0.95f)
-                        .setDuration(250)
-                        .setInterpolator(android.view.animation.AccelerateInterpolator())
-                        .withEndAction {
-                            keyboardView.removeView(existingPanel)
-                            Log.d(KeyboardConstants.TAG, "✅ Clipboard panel hidden with style")
-                        }
-                        .start()
-                } else {
-                    // Show new clipboard panel
-                    val clipboardPanel = createKeyboardClipboardPanel()
-                    clipboardPanel.tag = "clipboard_panel"
-                    
-                    // Add directly to the FrameLayout (same as settings panel)
-                    keyboardView.addView(clipboardPanel)
-                    
-                    // Ensure the panel is brought to front
-                    clipboardPanel.bringToFront()
-                    keyboardView.invalidate()
-                    
-                    Log.d(KeyboardConstants.TAG, "✅ Clipboard panel shown and brought to front")
-                    Log.d(KeyboardConstants.TAG, "� Panel visibility: ${clipboardPanel.visibility}")
-                    Log.d(KeyboardConstants.TAG, "🔍 Panel alpha: ${clipboardPanel.alpha}")
-                    Log.d(KeyboardConstants.TAG, "� Panel elevation: ${clipboardPanel.elevation}")
-                }
-            } else {
+            val keyboardView = layoutManager.getRootView() as? ViewGroup
+            if (keyboardView == null) {
                 Log.w(KeyboardConstants.TAG, "⚠️ Keyboard view is not a ViewGroup")
+                return
             }
+
+            val activePanel = keyboardView.findViewWithTag<View>("clipboard_panel")
+            if (activePanel != null) {
+                animateClipboardPanelOut(activePanel) {
+                    keyboardView.removeView(activePanel)
+                }
+                return
+            }
+
+            val clipboardPanel = (cachedClipboardPanel ?: createKeyboardClipboardPanel().also { cachedClipboardPanel = it }).apply {
+                tag = "clipboard_panel"
+            }
+
+            (clipboardPanel.parent as? ViewGroup)?.removeView(clipboardPanel)
+
+            if (clipboardPanel is ViewGroup) {
+                refreshClipboardPanelContent(clipboardPanel)
+            }
+
+            keyboardView.addView(clipboardPanel)
+            clipboardPanel.bringToFront()
+            keyboardView.invalidate()
+
+            animateClipboardPanelIn(clipboardPanel)
+            Log.d(KeyboardConstants.TAG, "✅ Clipboard panel displayed instantly (cached=${cachedClipboardPanel !== null})")
         } catch (e: Exception) {
             Log.e(KeyboardConstants.TAG, "❌ Error handling Clipboard button: ${e.message}")
             e.printStackTrace()
@@ -2411,7 +2444,7 @@ class RewordiumAIKeyboardService : InputMethodService(), LifecycleOwner, SavedSt
                     val text = item.text?.toString()
                     if (!text.isNullOrBlank() && text.trim().length > 1) {
                         // Add to internal clipboard manager
-                        val internalClipboardManager = com.noxquill.rewordium.keyboard.clipboard.ClipboardManager(this)
+                        val internalClipboardManager = getClipboardHistoryManager()
                         coroutineScope.launch {
                             internalClipboardManager.addItem(text.trim())
                             Log.d(KeyboardConstants.TAG, "📋 Added current clipboard: ${text.take(50)}...")
@@ -2456,8 +2489,8 @@ class RewordiumAIKeyboardService : InputMethodService(), LifecycleOwner, SavedSt
                 }
                 
                 // Get the shared clipboard manager instance
-                val clipboardManagerInstance = clipboardPanelManager?.getClipboardManager() 
-                    ?: com.noxquill.rewordium.keyboard.clipboard.ClipboardManager(this)
+                val clipboardManagerInstance = clipboardPanelManager?.getClipboardManager()
+                    ?: getClipboardHistoryManager()
                 
                 clipboardMonitor = SystemClipboardMonitor(
                     this, 
@@ -2538,54 +2571,69 @@ class RewordiumAIKeyboardService : InputMethodService(), LifecycleOwner, SavedSt
      */
     private fun showIntegratedSettingsPanel() {
         try {
-            // Find the main keyboard container
-            val keyboardView = layoutManager.getRootView()
-            Log.d(KeyboardConstants.TAG, "🔍 Keyboard view type: ${keyboardView?.javaClass?.simpleName}")
-            Log.d(KeyboardConstants.TAG, "🔍 Keyboard view children count: ${(keyboardView as? ViewGroup)?.childCount}")
-            
-            if (keyboardView is ViewGroup) {
-                // Check if settings panel already exists
-                val existingPanel = keyboardView.findViewWithTag<View>("settings_panel")
-                if (existingPanel != null) {
-                    // Hide existing panel with professional slide-down animation
-                    existingPanel.animate()
-                        .alpha(0f)
-                        .translationY(300f)
-                        .scaleX(0.95f)
-                        .scaleY(0.95f)
-                        .setDuration(250)
-                        .setInterpolator(android.view.animation.AccelerateInterpolator())
-                        .withEndAction {
-                            keyboardView.removeView(existingPanel)
-                            Log.d(KeyboardConstants.TAG, "✅ Settings panel hidden with style")
-                        }
-                        .start()
-                } else {
-                    // Show new settings panel
-                    val settingsPanel = createKeyboardSettingsPanel()
-                    settingsPanel.tag = "settings_panel"
-                    
-                    // Add directly to the FrameLayout (ios_keyboard_layout.xml root)
-                    keyboardView.addView(settingsPanel)
-                    
-                    // Ensure the panel is brought to front
-                    settingsPanel.bringToFront()
-                    keyboardView.invalidate()
-                    
-                    Log.d(KeyboardConstants.TAG, "✅ Settings panel shown and brought to front")
-                    Log.d(KeyboardConstants.TAG, "🔍 Panel visibility: ${settingsPanel.visibility}")
-                    Log.d(KeyboardConstants.TAG, "🔍 Panel alpha: ${settingsPanel.alpha}")
-                    Log.d(KeyboardConstants.TAG, "🔍 Panel elevation: ${settingsPanel.elevation}")
-                }
-            } else {
+            val keyboardView = layoutManager.getRootView() as? ViewGroup
+            if (keyboardView == null) {
                 Log.w(KeyboardConstants.TAG, "⚠️ Keyboard view is not a ViewGroup")
+                return
             }
+
+            val activePanel = keyboardView.findViewWithTag<View>("settings_panel")
+            if (activePanel != null) {
+                animateSettingsPanelOut(activePanel) {
+                    keyboardView.removeView(activePanel)
+                }
+                return
+            }
+
+            val panel = (cachedSettingsPanel ?: createKeyboardSettingsPanel().also { cachedSettingsPanel = it }).apply {
+                tag = "settings_panel"
+            }
+
+            // Ensure panel is detached from any previous parent before reattaching
+            (panel.parent as? ViewGroup)?.removeView(panel)
+
+            keyboardView.addView(panel)
+            panel.bringToFront()
+            keyboardView.invalidate()
+
+            animateSettingsPanelIn(panel)
+            Log.d(KeyboardConstants.TAG, "✅ Settings panel displayed instantly (cached=${cachedSettingsPanel !== null})")
         } catch (e: Exception) {
             Log.e(KeyboardConstants.TAG, "❌ Error showing integrated settings panel: ${e.message}")
             e.printStackTrace()
         }
     }
     
+    private fun animateSettingsPanelIn(panel: View) {
+        panel.clearAnimation()
+        panel.alpha = 0f
+        panel.translationY = 300f
+        panel.scaleX = 0.96f
+        panel.scaleY = 0.96f
+
+        panel.animate()
+            .alpha(1f)
+            .translationY(0f)
+            .scaleX(1f)
+            .scaleY(1f)
+            .setDuration(350)
+            .setInterpolator(android.view.animation.DecelerateInterpolator(2.5f))
+            .start()
+    }
+
+    private fun animateSettingsPanelOut(panel: View, endAction: () -> Unit) {
+        panel.clearAnimation()
+        panel.animate()
+            .alpha(0f)
+            .translationY(300f)
+            .scaleX(0.95f)
+            .scaleY(0.95f)
+            .setDuration(250)
+            .setInterpolator(android.view.animation.AccelerateInterpolator())
+            .withEndAction(endAction)
+            .start()
+    }
+
     /**
      * Creates the integrated keyboard settings panel with clean, modern design
      */
@@ -2636,21 +2684,6 @@ class RewordiumAIKeyboardService : InputMethodService(), LifecycleOwner, SavedSt
             visibility = View.VISIBLE
             alpha = 1f
         }
-        
-        // Add professional slide-up animation with iOS spring physics
-        panel.alpha = 0f
-        panel.translationY = 300f
-        panel.scaleX = 0.96f
-        panel.scaleY = 0.96f
-        
-        panel.animate()
-            .alpha(1f)
-            .translationY(0f)
-            .scaleX(1f)
-            .scaleY(1f)
-            .setDuration(350)
-            .setInterpolator(android.view.animation.DecelerateInterpolator(2.5f))
-            .start()
         
         // iOS-style header matching clipboard panel
         val header = createiOSStyleSettingsHeader()
@@ -3258,8 +3291,62 @@ class RewordiumAIKeyboardService : InputMethodService(), LifecycleOwner, SavedSt
     /**
      * Creates the clipboard panel using exact same pattern as settings panel
      */
+    private fun getClipboardHistoryManager(): com.noxquill.rewordium.keyboard.clipboard.ClipboardManager {
+        val existing = cachedClipboardDataManager
+        if (existing != null) {
+            return existing
+        }
+        return com.noxquill.rewordium.keyboard.clipboard.ClipboardManager(this).also {
+            cachedClipboardDataManager = it
+        }
+    }
+
+    private fun animateClipboardPanelIn(panel: View) {
+        panel.clearAnimation()
+        panel.alpha = 0f
+        panel.translationY = 80f
+        panel.scaleX = 0.95f
+        panel.scaleY = 0.95f
+
+        panel.animate()
+            .alpha(1f)
+            .translationY(0f)
+            .scaleX(1f)
+            .scaleY(1f)
+            .setDuration(400)
+            .setInterpolator(android.view.animation.DecelerateInterpolator(1.8f))
+            .start()
+    }
+
+    private fun animateClipboardPanelOut(panel: View, endAction: () -> Unit) {
+        panel.clearAnimation()
+        panel.animate()
+            .alpha(0f)
+            .translationY(300f)
+            .scaleX(0.95f)
+            .scaleY(0.95f)
+            .setDuration(250)
+            .setInterpolator(android.view.animation.AccelerateInterpolator())
+            .withEndAction(endAction)
+            .start()
+    }
+
+    private fun refreshClipboardPanelContent(panel: ViewGroup) {
+        val clipboardManager = getClipboardHistoryManager()
+        if (panel.childCount > 1) {
+            panel.removeViewAt(1)
+        }
+        val content = createiOSClipboardContent(clipboardManager)
+        val insertionIndex = if (panel.childCount > 0) 1 else 0
+        panel.addView(content, insertionIndex)
+    }
+
+    internal fun provideClipboardHistoryManager(): com.noxquill.rewordium.keyboard.clipboard.ClipboardManager {
+        return getClipboardHistoryManager()
+    }
+
     private fun createKeyboardClipboardPanel(): View {
-        val clipboardManager = com.noxquill.rewordium.keyboard.clipboard.ClipboardManager(this)
+        val clipboardManager = getClipboardHistoryManager()
         
         val panel = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
@@ -3299,21 +3386,6 @@ class RewordiumAIKeyboardService : InputMethodService(), LifecycleOwner, SavedSt
                 }
             }
         }
-        
-        // iOS-style smooth slide-up animation with enhanced easing
-        panel.alpha = 0f
-        panel.translationY = 80f
-        panel.scaleX = 0.95f
-        panel.scaleY = 0.95f
-        
-        panel.animate()
-            .alpha(1f)
-            .translationY(0f)
-            .scaleX(1f)
-            .scaleY(1f)
-            .setDuration(400)
-            .setInterpolator(android.view.animation.DecelerateInterpolator(1.8f))
-            .start()
         
         // iOS-style header matching theme panel
         val header = createClipboardiOSStyleHeader(clipboardManager)
@@ -6348,47 +6420,32 @@ class RewordiumAIKeyboardService : InputMethodService(), LifecycleOwner, SavedSt
      */
     private fun showThemeSelectionPanel() {
         try {
-            val keyboardView = layoutManager.getRootView()
-            Log.d(KeyboardConstants.TAG, "🎨 Opening theme selection panel")
-            
-            if (keyboardView is ViewGroup) {
-                // Check if theme panel already exists
-                val existingPanel = keyboardView.findViewWithTag<View>("theme_panel")
-                
-                if (existingPanel != null) {
-                    // Hide existing panel with professional slide-down animation
-                    existingPanel.animate()
-                        .alpha(0f)
-                        .translationY(300f)
-                        .scaleX(0.95f)
-                        .scaleY(0.95f)
-                        .setDuration(250)
-                        .setInterpolator(android.view.animation.AccelerateInterpolator())
-                        .withEndAction {
-                            try {
-                                keyboardView.removeView(existingPanel)
-                            } catch (e: Exception) {
-                                Log.w(KeyboardConstants.TAG, "Error removing existing theme panel: ${e.message}")
-                            }
-                        }
-                        .start()
-                } else {
-                    // Show new theme panel
-                    val themePanel = createThemeSelectionPanel()
-                    themePanel.tag = "theme_panel"
-                    
-                    // Add directly to the FrameLayout
-                    keyboardView.addView(themePanel)
-                    
-                    // Ensure the panel is brought to front
-                    themePanel.bringToFront()
-                    keyboardView.invalidate()
-                    
-                    Log.d(KeyboardConstants.TAG, "✅ Theme selection panel shown")
-                }
-            } else {
+            val keyboardView = layoutManager.getRootView() as? ViewGroup
+            if (keyboardView == null) {
                 Log.w(KeyboardConstants.TAG, "⚠️ Keyboard view is not a ViewGroup")
+                return
             }
+
+            val activePanel = keyboardView.findViewWithTag<View>("theme_panel")
+            if (activePanel != null) {
+                animateThemePanelOut(activePanel) {
+                    keyboardView.removeView(activePanel)
+                }
+                return
+            }
+
+            val themePanel = (cachedThemePanel ?: createThemeSelectionPanel().also { cachedThemePanel = it }).apply {
+                tag = "theme_panel"
+            }
+
+            (themePanel.parent as? ViewGroup)?.removeView(themePanel)
+
+            keyboardView.addView(themePanel)
+            themePanel.bringToFront()
+            keyboardView.invalidate()
+
+            animateThemePanelIn(themePanel)
+            Log.d(KeyboardConstants.TAG, "✅ Theme selection panel displayed instantly (cached=${cachedThemePanel !== null})")
         } catch (e: Exception) {
             Log.e(KeyboardConstants.TAG, "❌ Error showing theme selection panel: ${e.message}")
             e.printStackTrace()
@@ -6438,21 +6495,6 @@ class RewordiumAIKeyboardService : InputMethodService(), LifecycleOwner, SavedSt
             }
         }
         
-        // iOS-style smooth slide-up animation with enhanced easing
-        panel.alpha = 0f
-        panel.translationY = 80f
-        panel.scaleX = 0.95f
-        panel.scaleY = 0.95f
-        
-        panel.animate()
-            .alpha(1f)
-            .translationY(0f)
-            .scaleX(1f)
-            .scaleY(1f)
-            .setDuration(400)
-            .setInterpolator(android.view.animation.DecelerateInterpolator(1.8f))
-            .start()
-        
         // iOS-style header with professional toggle
         val header = createiOSStyleHeader()
         panel.addView(header)
@@ -6462,6 +6504,36 @@ class RewordiumAIKeyboardService : InputMethodService(), LifecycleOwner, SavedSt
         panel.addView(themeGrid)
         
         return panel
+    }
+
+    private fun animateThemePanelIn(panel: View) {
+        panel.clearAnimation()
+        panel.alpha = 0f
+        panel.translationY = 80f
+        panel.scaleX = 0.95f
+        panel.scaleY = 0.95f
+
+        panel.animate()
+            .alpha(1f)
+            .translationY(0f)
+            .scaleX(1f)
+            .scaleY(1f)
+            .setDuration(400)
+            .setInterpolator(android.view.animation.DecelerateInterpolator(1.8f))
+            .start()
+    }
+
+    private fun animateThemePanelOut(panel: View, endAction: () -> Unit) {
+        panel.clearAnimation()
+        panel.animate()
+            .alpha(0f)
+            .translationY(300f)
+            .scaleX(0.95f)
+            .scaleY(0.95f)
+            .setDuration(250)
+            .setInterpolator(android.view.animation.AccelerateInterpolator())
+            .withEndAction(endAction)
+            .start()
     }
     
     /**
