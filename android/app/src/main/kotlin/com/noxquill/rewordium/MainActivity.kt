@@ -206,58 +206,58 @@ class MainActivity : FlutterActivity() {
                 "setDarkMode" -> {
                     val enabled = call.argument<Boolean>("enabled") ?: false
                     updateSetting(KeyboardConstants.KEY_DARK_MODE, enabled)
-                    result.success(null)
+                    result.success(true)
                 }
                 "updateThemeColor" -> {
                     val colorHex = call.argument<String>("colorHex") ?: "#007AFF"
                     updateSetting(KeyboardConstants.KEY_THEME_COLOR, colorHex)
-                    result.success(null)
+                    result.success(true)
                 }
                 "setHapticFeedback" -> {
                     val enabled = call.argument<Boolean>("enabled") ?: true
                     updateSetting(KeyboardConstants.KEY_HAPTIC_FEEDBACK, enabled)
-                    result.success(null)
+                    result.success(true)
                 }
                 "setAutoCapitalize" -> {
                     val enabled = call.argument<Boolean>("enabled") ?: true
                     updateSetting(KeyboardConstants.KEY_AUTO_CAPITALIZE, enabled)
-                    result.success(null)
+                    result.success(true)
                 }
                 "setDoubleSpacePeriod" -> {
                     val enabled = call.argument<Boolean>("enabled") ?: true
                     updateSetting(KeyboardConstants.KEY_DOUBLE_SPACE_PERIOD, enabled)
-                    result.success(null)
+                    result.success(true)
                 }
                 // 🚀 PREMIUM GLIDE TYPING SETTINGS
                 "setGlideTypingEnabled" -> {
                     val enabled = call.argument<Boolean>("enabled") ?: true
                     updateSetting(KeyboardConstants.KEY_GLIDE_TYPING_ENABLED, enabled)
                     Log.d(TAG, "🔥 Glide typing enabled: $enabled")
-                    result.success(null)
+                    result.success(true)
                 }
                 "setGlideTypingSensitivity" -> {
                     val sensitivity = call.argument<Double>("sensitivity")?.toFloat() ?: 0.8f
                     updateSetting(KeyboardConstants.KEY_GLIDE_TYPING_SENSITIVITY, sensitivity)
                     Log.d(TAG, "🎯 Glide typing sensitivity: $sensitivity")
-                    result.success(null)
+                    result.success(true)
                 }
                 "setGlideTypingPreview" -> {
                     val enabled = call.argument<Boolean>("enabled") ?: true
                     updateSetting(KeyboardConstants.KEY_GLIDE_TYPING_PREVIEW, enabled)
                     Log.d(TAG, "👁️ Glide typing preview: $enabled")
-                    result.success(null)
+                    result.success(true)
                 }
                 "setGlideTypingAutoSpace" -> {
                     val enabled = call.argument<Boolean>("enabled") ?: true
                     updateSetting(KeyboardConstants.KEY_GLIDE_TYPING_AUTO_SPACE, enabled)
                     Log.d(TAG, "🚀 Glide typing auto-space: $enabled")
-                    result.success(null)
+                    result.success(true)
                 }
                 "setGlideTypingLearning" -> {
                     val enabled = call.argument<Boolean>("enabled") ?: true
                     updateSetting(KeyboardConstants.KEY_GLIDE_TYPING_LEARNING, enabled)
                     Log.d(TAG, "🧠 Glide typing learning: $enabled")
-                    result.success(null)
+                    result.success(true)
                 }
                 "updateKeyboardPersonas" -> {
                     try {

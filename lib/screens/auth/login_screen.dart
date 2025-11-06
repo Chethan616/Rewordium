@@ -116,20 +116,7 @@ class _LoginScreenState extends State<LoginScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  // Close button
-                  Align(
-                    alignment: Alignment.topLeft,
-                    child: IconButton(
-                      icon: Icon(
-                        Icons.arrow_back_ios_new_rounded,
-                        color: AppTheme.textPrimaryColor,
-                        size: 20,
-                      ),
-                      onPressed: () => Navigator.pop(context),
-                    ),
-                  ),
-
-                  SizedBox(height: size.height * 0.02),
+                  SizedBox(height: size.height * 0.04),
 
                   // App logo and heading
                   Column(

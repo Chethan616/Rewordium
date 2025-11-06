@@ -1,0 +1,9 @@
+What's new in Rewordium v1.0.9 (build 9)
+
+- Faster startup and buttery-smooth typing experience.
+- Improved haptics enabled by default for premium tactile feedback.
+- Clipboard history sync: copied texts now appear instantly in the keyboard's clipboard panel.
+- Faster, smarter suggestions and reduced lag when switching panels.
+- Bug fixes and stability improvements for popups, themes, and panel animations.
+
+Thank you for using Rewordium — happy writing!

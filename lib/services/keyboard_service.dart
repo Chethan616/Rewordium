@@ -2,24 +2,21 @@ import 'package:flutter/services.dart';
 import 'package:flutter/material.dart';
 import '../widgets/keyboard/system_keyboard_overlay.dart';
 
-enum KeyboardLayout {
-  onePlus,
-  samsung,
-  apple
-}
+enum KeyboardLayout { onePlus, samsung, apple }
 
 class KeyboardService {
-  static const MethodChannel _channel = MethodChannel('com.noxquill.rewordium/rewordium_keyboard');
-  
+  static const MethodChannel _channel =
+      MethodChannel('com.noxquill.rewordium/rewordium_keyboard');
+
   // Singleton instance
   static final KeyboardService _instance = KeyboardService._internal();
-  
+
   factory KeyboardService() {
     return _instance;
   }
-  
+
   KeyboardService._internal();
-  
+
   /// Check if the Rewordium Keyboard is enabled as an input method
   Future<bool> isKeyboardEnabled() async {
     try {
@@ -30,7 +27,7 @@ class KeyboardService {
       return false;
     }
   }
-  
+
   /// Open the system keyboard settings to enable the Rewordium Keyboard
   Future<void> openKeyboardSettings() async {
     try {
@@ -39,7 +36,7 @@ class KeyboardService {
       print('Error opening keyboard settings: ${e.message}');
     }
   }
-  
+
   /// Set the keyboard layout for the system-wide keyboard
   Future<bool> setKeyboardLayout(KeyboardLayout layout) async {
     try {
@@ -53,7 +50,7 @@ class KeyboardService {
       return false;
     }
   }
-  
+
   /// Get the current keyboard layout
   Future<KeyboardLayout> getCurrentLayout() async {
     try {
@@ -72,7 +69,7 @@ class KeyboardService {
       return KeyboardLayout.onePlus;
     }
   }
-  
+
   /// Enable or disable haptic feedback
   Future<bool> setHapticFeedback(bool enabled) async {
     try {
@@ -85,7 +82,7 @@ class KeyboardService {
       return false;
     }
   }
-  
+
   /// Enable or disable AI suggestions
   Future<bool> setAiSuggestions(bool enabled) async {
     try {
@@ -108,7 +105,7 @@ class KeyboardService {
       print('Error updating keyboard theme: ${e.message}');
     }
   }
-  
+
   /// Enable or disable the paraphraser button
   Future<bool> setParaphraserButton(bool enabled) async {
     try {
@@ -121,16 +118,16 @@ class KeyboardService {
       return false;
     }
   }
-  
+
   // Show the system keyboard overlay
   OverlayEntry? _overlayEntry;
   bool _isOverlayVisible = false;
-  
+
   void showSystemKeyboardOverlay(BuildContext context) {
     if (_overlayEntry != null) {
       return;
     }
-    
+
     _overlayEntry = OverlayEntry(
       builder: (context) => SystemKeyboardOverlay(
         onVisibilityChanged: (isVisible) {
@@ -138,10 +135,10 @@ class KeyboardService {
         },
       ),
     );
-    
+
     Overlay.of(context).insert(_overlayEntry!);
   }
-  
+
   void hideSystemKeyboardOverlay() {
     if (_overlayEntry != null) {
       _overlayEntry!.remove();
@@ -149,9 +146,9 @@ class KeyboardService {
       _isOverlayVisible = false;
     }
   }
-  
+
   bool get isOverlayVisible => _isOverlayVisible;
-  
+
   /// Set the active persona for the keyboard
   Future<bool> setPersona(String personaName) async {
     try {
@@ -164,7 +161,7 @@ class KeyboardService {
       return false;
     }
   }
-  
+
   /// Set the keyboard personas (max 3) that will appear on the keyboard
   Future<bool> setKeyboardPersonas(List<String> personaNames) async {
     try {
@@ -172,23 +169,25 @@ class KeyboardService {
       if (personaNames.length > 3) {
         personaNames = personaNames.sublist(0, 3);
       }
-      
+
       // Log the personas being sent
-      print('[Flutter KeyboardService] Sending personas to native: $personaNames');
-      
-      final dynamic result = await _channel.invokeMethod('updateKeyboardPersonas', {
+      print(
+          '[Flutter KeyboardService] Sending personas to native: $personaNames');
+
+      final dynamic result =
+          await _channel.invokeMethod('updateKeyboardPersonas', {
         'personas': personaNames,
       });
-      
+
       // Ensure we got a boolean response
       if (result is bool) {
         return result;
       }
-      
+
       // Log warning if response is not a boolean
-      print('[Flutter KeyboardService] Warning: Unexpected response type from updateKeyboardPersonas');
+      print(
+          '[Flutter KeyboardService] Warning: Unexpected response type from updateKeyboardPersonas');
       return false;
-      
     } on PlatformException catch (e) {
       print('Error setting keyboard personas: ${e.message}');
       return false;
