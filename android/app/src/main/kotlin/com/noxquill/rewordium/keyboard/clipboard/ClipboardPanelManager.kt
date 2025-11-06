@@ -27,10 +27,12 @@ import kotlinx.coroutines.withContext
  */
 class ClipboardPanelManager(
     private val service: RewordiumAIKeyboardService,
-    private val rootView: FrameLayout
+    private val rootView: FrameLayout,
+    private val sharedClipboardManager: ClipboardManager = service.provideClipboardHistoryManager()
 ) {
     private var clipboardPanelView: View? = null
-    private var clipboardManager: ClipboardManager = service.provideClipboardHistoryManager()
+    // Use shared singleton clipboard manager from service to avoid duplicate state
+    private var clipboardManager: ClipboardManager = sharedClipboardManager
     private var clipboardAdapter: ClipboardAdapter? = null
     private var isShowing = false
     private val coroutineScope = CoroutineScope(Dispatchers.Main)
@@ -501,8 +503,10 @@ class ClipboardPanelManager(
      */
     fun addClipboardItem(text: String) {
         coroutineScope.launch {
-            val newItem = clipboardManager.addItem(text)
-            updateClipboardList()
+            val addedItem = clipboardManager.addItem(text)
+            if (addedItem != null) {
+                updateClipboardList()
+            }
         }
     }
     
@@ -572,7 +576,10 @@ class ClipboardPanelManager(
             if (success) {
                 withContext(Dispatchers.Main) {
                     service.performHapticFeedback()
-                    clipboardAdapter?.removeItem(item)
+                    
+                    // Refresh the entire list instead of just removing the item
+                    // This ensures the UI stays in sync with the data
+                    updateClipboardList()
                     
                     // Show empty view if needed
                     val items = if (showingOnlyFavorites) {

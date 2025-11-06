@@ -80,11 +80,14 @@ class SystemClipboardMonitor(
                     coroutineScope.launch(Dispatchers.IO) {
                         try {
                             val newItem = clipboardManager.addItem(clipText)
-                            Log.d(KeyboardConstants.TAG, "📋 Added clipboard item to manager: ${clipText.take(30)}...")
-                            
-                            // Notify UI to refresh (this is the missing piece!)
-                            withContext(Dispatchers.Main) {
-                                notifyClipboardChanged()
+                            if (newItem != null) {
+                                Log.d(KeyboardConstants.TAG, "📋 Added clipboard item to manager: ${clipText.take(30)}...")
+
+                                withContext(Dispatchers.Main) {
+                                    notifyClipboardChanged()
+                                }
+                            } else {
+                                Log.d(KeyboardConstants.TAG, "📋 Skipping clipboard add - duplicate or recently deleted: ${clipText.take(30)}...")
                             }
                         } catch (e: Exception) {
                             Log.e(KeyboardConstants.TAG, "❌ Error adding clipboard item: ${e.message}")

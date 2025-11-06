@@ -25,7 +25,7 @@ class ClipboardAdapter(
         val charCount: TextView = view.findViewById(R.id.clipboard_char_count)
         val favoriteButton: ImageButton = view.findViewById(R.id.btn_favorite)
         val deleteButton: ImageButton = view.findViewById(R.id.btn_delete)
-        val pasteButton: ImageButton = view.findViewById(R.id.btn_paste)
+        // Paste button removed - tap card to paste
     }
 
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): ViewHolder {
@@ -61,7 +61,7 @@ class ClipboardAdapter(
         
         // Set click listeners
         holder.itemView.setOnClickListener { onItemClick(item) }
-        holder.pasteButton.setOnClickListener { onItemClick(item) } // Paste on button click
+        // Paste button removed - clicking the card itself pastes
         holder.favoriteButton.setOnClickListener { onFavoriteClick(item) }
         holder.deleteButton.setOnClickListener { onDeleteClick(item) }
     }

@@ -54,6 +54,12 @@ import android.content.res.Configuration
 import com.noxquill.rewordium.keyboard.clipboard.ClipboardManager
 import com.noxquill.rewordium.keyboard.clipboard.ClipboardPanelManager
 import com.noxquill.rewordium.keyboard.clipboard.SystemClipboardMonitor
+import com.noxquill.rewordium.keyboard.clipboard.OptimizedClipboardManager
+import com.noxquill.rewordium.keyboard.util.ViewPool
+import com.noxquill.rewordium.keyboard.util.PerformanceMonitor
+import com.noxquill.rewordium.keyboard.util.AnimationHelper
+import com.noxquill.rewordium.keyboard.util.HapticFeedbackHelper
+import com.noxquill.rewordium.keyboard.util.GestureHandler
 import android.graphics.Color
 import android.graphics.drawable.GradientDrawable
 import android.inputmethodservice.InputMethodService
@@ -136,6 +142,17 @@ class RewordiumAIKeyboardService : InputMethodService(), LifecycleOwner, SavedSt
     private var cachedThemePanel: View? = null
     private var cachedClipboardPanel: View? = null
     private var cachedClipboardDataManager: com.noxquill.rewordium.keyboard.clipboard.ClipboardManager? = null
+    
+    // =========================================================================
+    // FLORISBOARD-INSPIRED PERFORMANCE UTILITIES
+    // =========================================================================
+    private lateinit var performanceMonitor: PerformanceMonitor
+    private var viewPool: ViewPool<View>? = null  // Nullable, initialized on demand
+    private lateinit var motionEventPool: ViewPool.ObjectPool<MotionEvent>
+    private lateinit var hapticHelper: HapticFeedbackHelper
+    private var optimizedClipboardManager: OptimizedClipboardManager? = null
+    private var gestureHandler: GestureHandler? = null
+    // =========================================================================
     
     // Advanced Gesture System - Gboard Level
     internal lateinit var swipeGestureEngine: SwipeGestureEngine
@@ -263,6 +280,51 @@ class RewordiumAIKeyboardService : InputMethodService(), LifecycleOwner, SavedSt
             
         } catch (e: Exception) {
             Log.e(KeyboardConstants.TAG, "❌ Failed to initialize premium performance: ${e.message}")
+        }
+    }
+    
+    /**
+     * Initialize FlorisBoard-inspired performance utilities
+     */
+    private fun initializeFlorisboardUtilities() {
+        try {
+            Log.d(KeyboardConstants.TAG, "🎯 Initializing FlorisBoard-inspired utilities")
+            
+            // Performance Monitor - adaptive FPS tracking
+            performanceMonitor = PerformanceMonitor()
+            performanceMonitor.start()
+            Log.d(KeyboardConstants.TAG, "✅ PerformanceMonitor started")
+            
+            // View Pool - view recycling for popups and panels
+            // Note: ViewPool requires a factory, so we'll initialize it when needed
+            // viewPool = ViewPool(maxPoolSize = 20, factory = { /* create view */ })
+            Log.d(KeyboardConstants.TAG, "✅ ViewPool ready (will initialize on demand)")
+            
+            // MotionEvent Pool - for gesture handling
+            motionEventPool = ViewPool.ObjectPool(
+                maxPoolSize = 50,
+                factory = { MotionEvent.obtain(0L, 0L, MotionEvent.ACTION_DOWN, 0f, 0f, 0) },
+                reset = { /* MotionEvent recycling handled by Android */ }
+            )
+            Log.d(KeyboardConstants.TAG, "✅ MotionEvent pool initialized (size: 50)")
+            
+            // Haptic Feedback Helper - enhanced haptics
+            hapticHelper = HapticFeedbackHelper(this)
+            Log.d(KeyboardConstants.TAG, "✅ HapticFeedbackHelper initialized")
+            
+            // Optimized Clipboard Manager - debouncing + fuzzy matching
+            optimizedClipboardManager = OptimizedClipboardManager(this, maxItems = 20)
+            optimizedClipboardManager?.start()
+            Log.d(KeyboardConstants.TAG, "✅ OptimizedClipboardManager started")
+            
+            // Gesture Handler - for swipe-to-dismiss and other gestures
+            gestureHandler = GestureHandler(motionEventPool)
+            Log.d(KeyboardConstants.TAG, "✅ GestureHandler initialized")
+            
+            Log.d(KeyboardConstants.TAG, "🎉 FlorisBoard utilities initialization complete!")
+            
+        } catch (e: Exception) {
+            Log.e(KeyboardConstants.TAG, "❌ Failed to initialize FlorisBoard utilities: ${e.message}")
         }
     }
     
@@ -545,12 +607,15 @@ class RewordiumAIKeyboardService : InputMethodService(), LifecycleOwner, SavedSt
         savedStateRegistryController.performRestore(null)
         lifecycleRegistry.handleLifecycleEvent(Lifecycle.Event.ON_CREATE)
         
-    // 🚀 PREMIUM PERFORMANCE INITIALIZATION
-    initializePremiumPerformanceSystem()
+        // 🚀 PREMIUM PERFORMANCE INITIALIZATION
+        initializePremiumPerformanceSystem()
+        
+        // 🎯 FLORISBOARD-INSPIRED UTILITIES INITIALIZATION
+        initializeFlorisboardUtilities()
 
-    ensureDefaultHapticsEnabled()
+        ensureDefaultHapticsEnabled()
 
-    loadSettings()
+        loadSettings()
         loadPersonas()
         AutocorrectManager.initialize(this)
         SuggestionEngine.initialize(this)
@@ -1462,6 +1527,25 @@ class RewordiumAIKeyboardService : InputMethodService(), LifecycleOwner, SavedSt
         // Destroy lifecycle for Compose
         lifecycleRegistry.handleLifecycleEvent(Lifecycle.Event.ON_DESTROY)
         
+        // Clean up FlorisBoard utilities
+        try {
+            if (::performanceMonitor.isInitialized) {
+                performanceMonitor.stop()
+                Log.d(KeyboardConstants.TAG, "🛑 PerformanceMonitor stopped")
+            }
+            
+            optimizedClipboardManager?.stop()
+            Log.d(KeyboardConstants.TAG, "🛑 OptimizedClipboardManager stopped")
+            
+            // Clear pools
+            viewPool?.clear()
+            motionEventPool.clear()
+            Log.d(KeyboardConstants.TAG, "🧹 View and MotionEvent pools cleared")
+            
+        } catch (e: Exception) {
+            Log.e(KeyboardConstants.TAG, "❌ Error cleaning up FlorisBoard utilities: ${e.message}")
+        }
+        
         instance = null
         super.onDestroy()
         coroutineScope.cancel("Service is being destroyed")
@@ -1485,6 +1569,11 @@ class RewordiumAIKeyboardService : InputMethodService(), LifecycleOwner, SavedSt
      * @return true if successfully processed
      */
     fun queueKeyPress(text: String): Boolean {
+        // Record frame for performance monitoring
+        if (::performanceMonitor.isInitialized) {
+            performanceMonitor.recordFrame()
+        }
+        
         // Input validation
         if (text.isEmpty()) {
             Log.w(KeyboardConstants.TAG, "⚠️ Empty key press ignored")
@@ -1688,6 +1777,7 @@ class RewordiumAIKeyboardService : InputMethodService(), LifecycleOwner, SavedSt
 
     /**
      * Enhanced haptic feedback function that respects the current setting
+     * Now using FlorisBoard-inspired HapticFeedbackHelper
      */
     private fun performHapticFeedbackForKey() {
         // FORCE IMMEDIATE SYNC: Check and sync haptic settings from preferences
@@ -1704,39 +1794,28 @@ class RewordiumAIKeyboardService : InputMethodService(), LifecycleOwner, SavedSt
         }
         
         if (!isHapticFeedbackEnabled) {
-            Log.v(KeyboardConstants.TAG, "🔇 Haptic feedback disabled - skipping")
+            // Reduced logging - haptic feedback status
             return
         }
         
         try {
-            // Try multiple haptic feedback methods for maximum compatibility
+            // Use enhanced haptic helper for professional feedback
             val rootView = if (::layoutManager.isInitialized) layoutManager.getRootView() else null
             
-            if (rootView != null) {
-                // FORCE ENABLE haptic feedback on the root view
-                rootView.isHapticFeedbackEnabled = true
-                
-                // Primary method: Use view's haptic feedback
-                val success = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-                    rootView.performHapticFeedback(
-                        HapticFeedbackConstants.KEYBOARD_PRESS,
-                        HapticFeedbackConstants.FLAG_IGNORE_GLOBAL_SETTING
-                    )
-                } else {
-                    rootView.performHapticFeedback(HapticFeedbackConstants.VIRTUAL_KEY)
-                }
-                
-                if (success) {
-                    Log.v(KeyboardConstants.TAG, "✅ Key haptic feedback via view")
-                    return
-                }
+            if (::hapticHelper.isInitialized) {
+                // Use light feedback for regular keys
+                hapticHelper.performKeyPress(rootView)
+                Log.v(KeyboardConstants.TAG, "✅ Enhanced haptic feedback via HapticHelper")
+            } else {
+                // Fallback to old method if helper not initialized
+                performUltraFastHapticFeedback()
+                Log.v(KeyboardConstants.TAG, "⚠️ Using fallback haptic (helper not initialized)")
             }
-            
-            // Fallback: Direct vibrator control
-            performUltraFastHapticFeedback()
             
         } catch (e: Exception) {
             Log.e(KeyboardConstants.TAG, "❌ Key haptic feedback error: ${e.message}")
+            // Final fallback
+            performUltraFastHapticFeedback()
         }
     }
     /**
@@ -2080,7 +2159,14 @@ class RewordiumAIKeyboardService : InputMethodService(), LifecycleOwner, SavedSt
     }
 
     fun toggleShift() {
-        performHapticFeedback()
+        // Enhanced haptic feedback for special action
+        if (::hapticHelper.isInitialized && isHapticFeedbackEnabled) {
+            val rootView = if (::layoutManager.isInitialized) layoutManager.getRootView() else null
+            hapticHelper.performSpecialKey(rootView)
+        } else {
+            performHapticFeedback()
+        }
+        
         val currentTime = System.currentTimeMillis()
         if (isCapsLock) {
             isCapsLock = false
@@ -2088,6 +2174,11 @@ class RewordiumAIKeyboardService : InputMethodService(), LifecycleOwner, SavedSt
         } else if (isCapsOn && (currentTime - lastShiftTime) < DOUBLE_TAP_SHIFT_TIMEOUT) {
             isCapsLock = true
             isCapsOn = true
+            // Double-tap detected - enhanced haptic
+            if (::hapticHelper.isInitialized && isHapticFeedbackEnabled) {
+                val rootView = if (::layoutManager.isInitialized) layoutManager.getRootView() else null
+                hapticHelper.performHaptic(rootView, HapticFeedbackHelper.FeedbackType.DOUBLE)
+            }
         } else {
             isCapsOn = !isCapsOn
         }
@@ -2447,7 +2538,7 @@ class RewordiumAIKeyboardService : InputMethodService(), LifecycleOwner, SavedSt
                         val internalClipboardManager = getClipboardHistoryManager()
                         coroutineScope.launch {
                             internalClipboardManager.addItem(text.trim())
-                            Log.d(KeyboardConstants.TAG, "📋 Added current clipboard: ${text.take(50)}...")
+                            // Reduced logging
                         }
                     }
                 }
@@ -2465,7 +2556,7 @@ class RewordiumAIKeyboardService : InputMethodService(), LifecycleOwner, SavedSt
             // Initialize clipboard panel manager if needed
             val rootView = layoutManager.getRootView()
             if (rootView != null && clipboardPanelManager == null) {
-                clipboardPanelManager = ClipboardPanelManager(this, rootView as FrameLayout)
+                clipboardPanelManager = ClipboardPanelManager(this, rootView as FrameLayout, getClipboardHistoryManager())
             }
             
             // Add text to clipboard history
@@ -2477,15 +2568,24 @@ class RewordiumAIKeyboardService : InputMethodService(), LifecycleOwner, SavedSt
     
     /**
      * Start clipboard monitoring to automatically capture copied text
+     * Now using OptimizedClipboardManager for better performance
      */
     private fun startClipboardMonitoring() {
         try {
+            // Use optimized clipboard manager if available
+            if (optimizedClipboardManager != null) {
+                // Already started in onCreate, just log
+                Log.d(KeyboardConstants.TAG, "📋 Using OptimizedClipboardManager (already running)")
+                return
+            }
+            
+            // Fallback to old system if optimized manager failed to initialize
             if (clipboardMonitor == null) {
                 // IMPORTANT: Always create panel manager first to ensure shared clipboard manager
                 val rootView = layoutManager.getRootView()
                 if (rootView != null && clipboardPanelManager == null) {
                     Log.d(KeyboardConstants.TAG, "📋 Creating ClipboardPanelManager for monitoring")
-                    clipboardPanelManager = ClipboardPanelManager(this, rootView as FrameLayout)
+                    clipboardPanelManager = ClipboardPanelManager(this, rootView as FrameLayout, getClipboardHistoryManager())
                 }
                 
                 // Get the shared clipboard manager instance
@@ -2503,7 +2603,7 @@ class RewordiumAIKeyboardService : InputMethodService(), LifecycleOwner, SavedSt
             }
             
             clipboardMonitor?.startMonitoring()
-            Log.d(KeyboardConstants.TAG, "📋 Clipboard monitoring started")
+            Log.d(KeyboardConstants.TAG, "📋 Fallback clipboard monitoring started")
         } catch (e: Exception) {
             Log.e(KeyboardConstants.TAG, "❌ Error starting clipboard monitoring: ${e.message}")
         }

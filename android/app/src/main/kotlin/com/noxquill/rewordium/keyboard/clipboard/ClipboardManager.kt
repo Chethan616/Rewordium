@@ -9,6 +9,7 @@ import com.noxquill.rewordium.keyboard.util.KeyboardConstants
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.util.Date
+import java.util.LinkedHashMap
 import java.util.LinkedList
 
 /**
@@ -20,6 +21,9 @@ class ClipboardManager(private val context: Context) {
     private val clipboardItems = LinkedList<ClipboardItem>() // Use LinkedList for efficient insertions at the beginning
     private val maxRegularItems = 20 // Maximum number of regular clipboard items to keep
     private val maxTotalItems = 100 // Maximum total items (including favorites) to prevent memory issues
+    private val recentlyDeletedLock = Any()
+    private val recentlyDeletedTexts = LinkedHashMap<String, Long>()
+    private val maxRecentlyDeletedEntries = 20
     
     // SharedPreferences for persistent storage
     private val prefs: SharedPreferences = context.getSharedPreferences(
@@ -35,46 +39,42 @@ class ClipboardManager(private val context: Context) {
     /**
      * Add a new item to clipboard history
      */
-    suspend fun addItem(text: String): ClipboardItem = withContext(Dispatchers.IO) {
-        Log.d(KeyboardConstants.TAG, "📋 ClipboardManager.addItem() called with text: '${text.take(50)}...'")
-        
-        // Don't add empty or whitespace-only text
-        if (text.trim().isEmpty()) {
-            Log.w(KeyboardConstants.TAG, "📋 Ignoring empty clipboard text")
-            // Return a new empty item instead of null
-            return@withContext ClipboardItem(
-                id = ClipboardItem.generateId(),
-                text = text,
-                timestamp = Date()
-            )
+    suspend fun addItem(text: String): ClipboardItem? = withContext(Dispatchers.IO) {
+        val sanitizedText = text.trim()
+        if (sanitizedText.isEmpty()) {
+            return@withContext null
         }
-        
+
+        if (shouldSkipReadding(sanitizedText)) {
+            Log.d(KeyboardConstants.TAG, "📋 Skipping re-adding recently deleted clipboard text: '${sanitizedText.take(20)}...'")
+            return@withContext null
+        }
+
         // Check if identical text already exists
         val existingItem = clipboardItems.firstOrNull { it.text == text }
         if (existingItem != null) {
-            Log.d(KeyboardConstants.TAG, "📋 Moving existing item to top: '${text.take(20)}...'")
-            // Move to top of list if it exists
             clipboardItems.remove(existingItem)
             clipboardItems.addFirst(existingItem)
+            clearAllRecentlyDeleted()
             return@withContext existingItem
         }
-        
+
         // Create new item
         val newItem = ClipboardItem(
             id = ClipboardItem.generateId(),
             text = text,
             timestamp = Date()
         )
-        
-        Log.d(KeyboardConstants.TAG, "📋 Adding new clipboard item: '${text.take(20)}...' - Total items: ${clipboardItems.size + 1}")
+
+        Log.d(KeyboardConstants.TAG, "📋 Adding new clipboard item: '${sanitizedText.take(20)}...' - Total items: ${clipboardItems.size + 1}")
         clipboardItems.addFirst(newItem)
-        
+
         // Memory management - keep list size under control
         cleanupClipboardItems()
-        
+
         Log.d(KeyboardConstants.TAG, "📋 Clipboard item added successfully - Current total: ${clipboardItems.size}")
-        
-        // Return the newly added item
+        clearAllRecentlyDeleted()
+
         return@withContext newItem
     }
     
@@ -82,7 +82,7 @@ class ClipboardManager(private val context: Context) {
      * Get all clipboard items
      */
     fun getAllItems(): List<ClipboardItem> {
-        Log.d(KeyboardConstants.TAG, "📋 ClipboardManager.getAllItems() called - returning ${clipboardItems.size} items")
+        // Reduced logging
         return clipboardItems
     }
     
@@ -91,7 +91,7 @@ class ClipboardManager(private val context: Context) {
      */
     fun getFavoriteItems(): List<ClipboardItem> {
         val favorites = clipboardItems.filter { it.isFavorite }
-        Log.d(KeyboardConstants.TAG, "📋 ClipboardManager.getFavoriteItems() called - returning ${favorites.size} favorites")
+        // Reduced logging
         return favorites
     }
     
@@ -114,15 +114,23 @@ class ClipboardManager(private val context: Context) {
      * Delete a clipboard item
      */
     suspend fun deleteItem(itemId: String): Boolean = withContext(Dispatchers.IO) {
-        val initialSize = clipboardItems.size
-        clipboardItems.removeIf { it.id == itemId }
-        
-        // If we removed a favorite item, update persistent storage
-        if (clipboardItems.size < initialSize) {
+        val iterator = clipboardItems.iterator()
+        var removedItem: ClipboardItem? = null
+        while (iterator.hasNext()) {
+            val item = iterator.next()
+            if (item.id == itemId) {
+                iterator.remove()
+                removedItem = item
+                break
+            }
+        }
+
+        if (removedItem != null) {
+            rememberDeletedText(removedItem.text)
             saveFavoriteItems()
             return@withContext true
         }
-        
+
         return@withContext false
     }
     
@@ -130,9 +138,15 @@ class ClipboardManager(private val context: Context) {
      * Delete all non-favorite items
      */
     suspend fun clearNonFavorites(): Int = withContext(Dispatchers.IO) {
-        val initialSize = clipboardItems.size
-        clipboardItems.removeIf { !it.isFavorite }
-        return@withContext initialSize - clipboardItems.size
+        val itemsToRemove = clipboardItems.filter { !it.isFavorite }
+        if (itemsToRemove.isEmpty()) {
+            return@withContext 0
+        }
+
+        itemsToRemove.forEach { rememberDeletedText(it.text) }
+        clipboardItems.removeAll(itemsToRemove)
+        saveFavoriteItems()
+        return@withContext itemsToRemove.size
     }
     
     /**
@@ -236,12 +250,12 @@ class ClipboardManager(private val context: Context) {
             val itemToRemove = clipboardItems.find { it.id == itemId }
             if (itemToRemove != null) {
                 clipboardItems.remove(itemToRemove)
-                
-                // Also remove from persistent storage if it was a favorite
+                rememberDeletedText(itemToRemove.text)
+
                 if (itemToRemove.isFavorite) {
                     saveFavoriteItems()
                 }
-                
+
                 Log.d(KeyboardConstants.TAG, "📋 Removed clipboard item: ${itemId}")
                 true
             } else {
@@ -251,6 +265,35 @@ class ClipboardManager(private val context: Context) {
         } catch (e: Exception) {
             Log.e(KeyboardConstants.TAG, "❌ Error removing clipboard item: ${e.message}")
             false
+        }
+    }
+
+    private fun rememberDeletedText(rawText: String) {
+        val sanitized = rawText.trim()
+        if (sanitized.isEmpty()) return
+
+        synchronized(recentlyDeletedLock) {
+            recentlyDeletedTexts[sanitized] = System.currentTimeMillis()
+            while (recentlyDeletedTexts.size > maxRecentlyDeletedEntries) {
+                val iterator = recentlyDeletedTexts.entries.iterator()
+                if (iterator.hasNext()) {
+                    iterator.next()
+                    iterator.remove()
+                }
+            }
+        }
+    }
+
+    private fun shouldSkipReadding(sanitizedText: String): Boolean {
+        if (sanitizedText.isEmpty()) return false
+        synchronized(recentlyDeletedLock) {
+            return recentlyDeletedTexts.containsKey(sanitizedText)
+        }
+    }
+
+    private fun clearAllRecentlyDeleted() {
+        synchronized(recentlyDeletedLock) {
+            recentlyDeletedTexts.clear()
         }
     }
 }
