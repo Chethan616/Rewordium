@@ -17,14 +17,6 @@ object KeyboardConstants {
     const val KEY_RECENT_EMOJIS = "flutter.recentEmojis" // NEW
     const val KEY_CLIPBOARD_FAVORITES = "flutter.clipboardFavorites" // For storing favorite clipboard items
     
-    // PREMIUM GLIDE TYPING SETTINGS
-    const val KEY_GLIDE_TYPING_ENABLED = "flutter.glideTypingEnabled" // Enable/disable glide typing
-    const val KEY_GLIDE_TYPING_SENSITIVITY = "flutter.glideTypingSensitivity" // Sensitivity level
-    const val KEY_GLIDE_TYPING_PREVIEW = "flutter.glideTypingPreview" // Real-time preview
-    const val KEY_GLIDE_TYPING_AUTO_SPACE = "flutter.glideTypingAutoSpace" // Auto space after words
-    const val KEY_GLIDE_TYPING_SOUND = "flutter.glideTypingSound" // Sound feedback
-    const val KEY_GLIDE_TYPING_LEARNING = "flutter.glideTypingLearning" // Learning user patterns
-    
     const val ACTION_SETTINGS_UPDATED = "com.noxquill.rewordium.SETTINGS_UPDATED"
     const val ACTION_FORCE_THEME_REFRESH = "com.noxquill.rewordium.FORCE_THEME_REFRESH"
 

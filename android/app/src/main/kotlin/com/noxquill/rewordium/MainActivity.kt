@@ -111,37 +111,6 @@ class MainActivity : FlutterActivity() {
             settingsChanged = true
         }
         
-        // 🚀 PREMIUM GLIDE TYPING DEFAULTS - ENABLED BY DEFAULT
-        if (!prefs.contains(KeyboardConstants.KEY_GLIDE_TYPING_ENABLED)) {
-            Log.d(TAG, "🔥 Setting premium glide typing ENABLED by default")
-            editor.putBoolean(KeyboardConstants.KEY_GLIDE_TYPING_ENABLED, true)
-            settingsChanged = true
-        }
-        
-        if (!prefs.contains(KeyboardConstants.KEY_GLIDE_TYPING_SENSITIVITY)) {
-            Log.d(TAG, "🎯 Setting premium glide typing sensitivity to 0.8 (High)")
-            editor.putFloat(KeyboardConstants.KEY_GLIDE_TYPING_SENSITIVITY, 0.8f)
-            settingsChanged = true
-        }
-        
-        if (!prefs.contains(KeyboardConstants.KEY_GLIDE_TYPING_PREVIEW)) {
-            Log.d(TAG, "👁️ Setting glide typing preview ENABLED by default")
-            editor.putBoolean(KeyboardConstants.KEY_GLIDE_TYPING_PREVIEW, true)
-            settingsChanged = true
-        }
-        
-        if (!prefs.contains(KeyboardConstants.KEY_GLIDE_TYPING_AUTO_SPACE)) {
-            Log.d(TAG, "🚀 Setting glide typing auto-space ENABLED by default")
-            editor.putBoolean(KeyboardConstants.KEY_GLIDE_TYPING_AUTO_SPACE, true)
-            settingsChanged = true
-        }
-        
-        if (!prefs.contains(KeyboardConstants.KEY_GLIDE_TYPING_LEARNING)) {
-            Log.d(TAG, "🧠 Setting glide typing learning ENABLED by default")
-            editor.putBoolean(KeyboardConstants.KEY_GLIDE_TYPING_LEARNING, true)
-            settingsChanged = true
-        }
-
         // Clear personas on first run to ensure clean slate
         if (isFirstRun) {
             Log.d(TAG, "First run detected, clearing any existing personas")
@@ -228,37 +197,6 @@ class MainActivity : FlutterActivity() {
                     updateSetting(KeyboardConstants.KEY_DOUBLE_SPACE_PERIOD, enabled)
                     result.success(true)
                 }
-                // 🚀 PREMIUM GLIDE TYPING SETTINGS
-                "setGlideTypingEnabled" -> {
-                    val enabled = call.argument<Boolean>("enabled") ?: true
-                    updateSetting(KeyboardConstants.KEY_GLIDE_TYPING_ENABLED, enabled)
-                    Log.d(TAG, "🔥 Glide typing enabled: $enabled")
-                    result.success(true)
-                }
-                "setGlideTypingSensitivity" -> {
-                    val sensitivity = call.argument<Double>("sensitivity")?.toFloat() ?: 0.8f
-                    updateSetting(KeyboardConstants.KEY_GLIDE_TYPING_SENSITIVITY, sensitivity)
-                    Log.d(TAG, "🎯 Glide typing sensitivity: $sensitivity")
-                    result.success(true)
-                }
-                "setGlideTypingPreview" -> {
-                    val enabled = call.argument<Boolean>("enabled") ?: true
-                    updateSetting(KeyboardConstants.KEY_GLIDE_TYPING_PREVIEW, enabled)
-                    Log.d(TAG, "👁️ Glide typing preview: $enabled")
-                    result.success(true)
-                }
-                "setGlideTypingAutoSpace" -> {
-                    val enabled = call.argument<Boolean>("enabled") ?: true
-                    updateSetting(KeyboardConstants.KEY_GLIDE_TYPING_AUTO_SPACE, enabled)
-                    Log.d(TAG, "🚀 Glide typing auto-space: $enabled")
-                    result.success(true)
-                }
-                "setGlideTypingLearning" -> {
-                    val enabled = call.argument<Boolean>("enabled") ?: true
-                    updateSetting(KeyboardConstants.KEY_GLIDE_TYPING_LEARNING, enabled)
-                    Log.d(TAG, "🧠 Glide typing learning: $enabled")
-                    result.success(true)
-                }
                 "updateKeyboardPersonas" -> {
                     try {
                         val personas = call.argument<List<String>>("personas")
@@ -286,39 +224,15 @@ class MainActivity : FlutterActivity() {
                         prefs.edit().putBoolean(KeyboardConstants.KEY_DOUBLE_SPACE_PERIOD, true).apply()
                     }
                     
-                    // 🚀 Ensure premium glide typing defaults exist
-                    if (!prefs.contains(KeyboardConstants.KEY_GLIDE_TYPING_ENABLED)) {
-                        prefs.edit().putBoolean(KeyboardConstants.KEY_GLIDE_TYPING_ENABLED, true).apply()
-                    }
-                    if (!prefs.contains(KeyboardConstants.KEY_GLIDE_TYPING_SENSITIVITY)) {
-                        prefs.edit().putFloat(KeyboardConstants.KEY_GLIDE_TYPING_SENSITIVITY, 0.8f).apply()
-                    }
-                    if (!prefs.contains(KeyboardConstants.KEY_GLIDE_TYPING_PREVIEW)) {
-                        prefs.edit().putBoolean(KeyboardConstants.KEY_GLIDE_TYPING_PREVIEW, true).apply()
-                    }
-                    if (!prefs.contains(KeyboardConstants.KEY_GLIDE_TYPING_AUTO_SPACE)) {
-                        prefs.edit().putBoolean(KeyboardConstants.KEY_GLIDE_TYPING_AUTO_SPACE, true).apply()
-                    }
-                    if (!prefs.contains(KeyboardConstants.KEY_GLIDE_TYPING_LEARNING)) {
-                        prefs.edit().putBoolean(KeyboardConstants.KEY_GLIDE_TYPING_LEARNING, true).apply()
-                    }
-                    
                     val settings = mapOf(
                         "themeColor" to (prefs.getString(KeyboardConstants.KEY_THEME_COLOR, "#007AFF") ?: "#007AFF"),
                         "darkMode" to prefs.getBoolean(KeyboardConstants.KEY_DARK_MODE, false),
                         "hapticFeedback" to prefs.getBoolean(KeyboardConstants.KEY_HAPTIC_FEEDBACK, true),
                         "autoCapitalize" to prefs.getBoolean(KeyboardConstants.KEY_AUTO_CAPITALIZE, true),
-                        "doubleSpacePeriod" to prefs.getBoolean(KeyboardConstants.KEY_DOUBLE_SPACE_PERIOD, true),
-                        
-                        // 🚀 PREMIUM GLIDE TYPING SETTINGS
-                        "glideTypingEnabled" to prefs.getBoolean(KeyboardConstants.KEY_GLIDE_TYPING_ENABLED, true),
-                        "glideTypingSensitivity" to prefs.getFloat(KeyboardConstants.KEY_GLIDE_TYPING_SENSITIVITY, 0.8f),
-                        "glideTypingPreview" to prefs.getBoolean(KeyboardConstants.KEY_GLIDE_TYPING_PREVIEW, true),
-                        "glideTypingAutoSpace" to prefs.getBoolean(KeyboardConstants.KEY_GLIDE_TYPING_AUTO_SPACE, true),
-                        "glideTypingLearning" to prefs.getBoolean(KeyboardConstants.KEY_GLIDE_TYPING_LEARNING, true)
+                        "doubleSpacePeriod" to prefs.getBoolean(KeyboardConstants.KEY_DOUBLE_SPACE_PERIOD, true)
                     )
                     
-                    Log.d(TAG, "📝 Returning keyboard settings with glide typing: $settings")
+                    Log.d(TAG, "📝 Returning keyboard settings")
                     result.success(settings)
                 }
                 "refreshKeyboard" -> {

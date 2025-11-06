@@ -142,23 +142,6 @@ class SwipeGestureEngine(
                         startPoint = PointF(event.x, event.y)
                     )
                     
-                    // PROFESSIONAL DETECTION: Distinguish between spacebar cursor and glide typing
-                    val spacebarBounds = getSpacebarBounds(layoutManager)
-                    if (spacebarBounds != null && isInBounds(event.x, event.y, spacebarBounds)) {
-                        Log.d(KeyboardConstants.TAG, "🎯 Starting PROFESSIONAL SPACEBAR cursor control")
-                        path.gestureType = SwipePath.GestureType.SPACEBAR_CURSOR
-                        path.isSpacebarGesture = true
-                        path.initialCursorPosition = getCurrentCursorPosition()
-                        path.currentCursorPosition = path.initialCursorPosition
-                        path.lastHapticPosition = path.initialCursorPosition
-                    } else {
-                        Log.d(KeyboardConstants.TAG, "✍️ Starting PROFESSIONAL GLIDE TYPING")
-                        path.gestureType = SwipePath.GestureType.GLIDE_TYPING
-                        path.isSpacebarGesture = false
-                        path.visitedKeys = mutableListOf()
-                        path.currentWord = StringBuilder()
-                    }
-                    
                     activeGestures.add(path)
                     isGestureActive.set(true)
                     
@@ -177,20 +160,6 @@ class SwipeGestureEngine(
                             path.addPoint(currentPoint)
                             
                             gestureHandler.post {
-                                when (path.gestureType) {
-                                    SwipePath.GestureType.SPACEBAR_CURSOR -> {
-                                        Log.v(KeyboardConstants.TAG, "🎯 SPACEBAR CURSOR MOVE to (${event.x}, ${event.y})")
-                                        handleProfessionalSpacebarMovement(path, currentPoint)
-                                    }
-                                    SwipePath.GestureType.GLIDE_TYPING -> {
-                                        Log.v(KeyboardConstants.TAG, "✍️ GLIDE TYPING MOVE to (${event.x}, ${event.y})")
-                                        handleAdvancedGlideTyping(path, currentPoint, layoutManager)
-                                    }
-                                    else -> {
-                                        Log.v(KeyboardConstants.TAG, "🤷 LEGACY GESTURE MOVE to (${event.x}, ${event.y})")
-                                        // Fallback to legacy system
-                                    }
-                                }
                                 gestureCallback.onGestureUpdate(path)
                             }
                         }
@@ -209,27 +178,19 @@ class SwipeGestureEngine(
                             path.endTime = System.nanoTime()
                             path.complete()
                             
-                            Log.d(KeyboardConstants.TAG, "🎯 GESTURE END at (${event.x}, ${event.y}) - Type: ${path.gestureType}")
+                            Log.d(KeyboardConstants.TAG, "🎯 GESTURE END at (${event.x}, ${event.y})")
                             
                             gestureHandler.post {
-                                val result = when (path.gestureType) {
-                                    SwipePath.GestureType.SPACEBAR_CURSOR -> {
-                                        finalizeProfessionalSpacebarGesture(path)
-                                    }
-                                    SwipePath.GestureType.GLIDE_TYPING -> {
-                                        finalizeAdvancedGlideGesture(path, layoutManager)
-                                    }
-                                    else -> {
-                                        // Legacy fallback - might be null if not enough movement
-                                        null
-                                    }
-                                }
-                                
-                                result?.let {
-                                    mainHandler.post {
-                                        gestureCallback.onGestureComplete(it)
-                                    }
-                                }
+                                // Legacy fallback behavior - create a simple GestureResult
+                                val result = GestureResult(
+                                    type = GestureResult.Type.TEXT_INPUT,
+                                    text = "",
+                                    confidence = 0.0f,
+                                    keySequence = emptyList(),
+                                    gestureDistance = path.totalDistance,
+                                    metadata = mapOf("gestureId" to path.id)
+                                )
+                                gestureCallback.onGestureComplete(result)
                             }
                         }
                         
@@ -951,304 +912,7 @@ class SwipeGestureEngine(
         return isEnabled
     }
     
-    // ========== PROFESSIONAL GLIDE TYPING IMPLEMENTATION ==========
-    
-    /**
-     * Handle advanced glide typing with multi-key path tracking and real-time word prediction
-     */
-    private fun handleAdvancedGlideTyping(path: SwipePath, currentPoint: PointF, keyboardLayoutManager: Any?) {
-        try {
-            // Get the key at current position with improved detection
-            val currentKey = getKeyAtPosition(currentPoint.x, currentPoint.y, keyboardLayoutManager)
-            
-            if (!currentKey.isNullOrEmpty() && currentKey != "SPACE" && currentKey.length == 1) {
-                // Add key to visited keys if it's new and valid
-                if (path.visitedKeys.isEmpty() || path.visitedKeys.last() != currentKey) {
-                    path.addVisitedKey(currentKey)
-                    path.currentWord.append(currentKey.lowercase())
-                    
-                    // PREMIUM GLIDE TYPING: Get real-time word predictions
-                    if (path.currentWord.length >= 2) {
-                        val predictions = wordPredictor.getPredictions(path.currentWord.toString())
-                        path.predictedWords.clear()
-                        path.predictedWords.addAll(predictions.take(5)) // Top 5 predictions
-                        
-                        // Visual feedback - show word prediction overlay
-                        mainHandler.post {
-                            gestureCallback.onGestureProgress(
-                                path.id,
-                                if (path.predictedWords.isNotEmpty()) path.predictedWords.first() else path.currentWord.toString(),
-                                if (path.predictedWords.isNotEmpty()) 0.9f else 0.7f
-                            )
-                        }
-                        
-                        Log.d("PremiumGlideTyping", "✍️ Glide: ${path.currentWord} | Keys: ${path.visitedKeys.joinToString("")} | Top prediction: ${path.predictedWords.firstOrNull()}")
-                    }
-                }
-            }
-            
-        } catch (e: Exception) {
-            Log.e("GlideTyping", "❌ Error in premium glide typing: ${e.message}")
-        }
-    }
-    
-    /**
-     * Finalize glide typing gesture and return the best predicted word
-     */
-    private fun finalizeAdvancedGlideGesture(path: SwipePath, keyboardLayoutManager: Any?): GestureResult? {
-        return try {
-            if (path.visitedKeys.size >= 2 && path.currentWord.isNotEmpty()) { 
-                val bestPrediction = if (path.predictedWords.isNotEmpty()) {
-                    path.predictedWords.first()
-                } else {
-                    path.currentWord.toString()
-                }
-                
-                Log.d("PremiumGlideTyping", "🎯 Glide complete! Word: '$bestPrediction' from keys: ${path.visitedKeys.joinToString("")}")
-                
-                GestureResult(
-                    type = GestureResult.Type.GLIDE_WORD,
-                    text = bestPrediction,
-                    confidence = if (path.predictedWords.isNotEmpty()) 0.95f else 0.8f,
-                    specialAction = SpecialGesture.GLIDE_TYPING,
-                    alternatives = path.predictedWords.drop(1).take(2), // Alternative predictions
-                    metadata = mapOf(
-                        "visitedKeys" to path.visitedKeys.joinToString(""),
-                        "keyCount" to path.visitedKeys.size,
-                        "predictions" to path.predictedWords,
-                        "glideTyping" to true
-                    )
-                )
-            } else {
-                // Not enough keys for glide typing
-                Log.d("PremiumGlideTyping", "⚠️ Insufficient keys for glide typing: ${path.visitedKeys.size} keys, word: '${path.currentWord}'")
-                null
-            }
-        } catch (e: Exception) {
-            Log.e("GlideTyping", "❌ Error finalizing glide: ${e.message}")
-            null
-        }
-    }
-    
-    // ========== PROFESSIONAL SPACEBAR CURSOR CONTROL ==========
-    
-    /**
-     * Handle professional spacebar cursor movement with character-level precision and haptic feedback
-     */
-    private fun handleProfessionalSpacebarMovement(path: SwipePath, currentPoint: PointF) {
-        try {
-            val startPoint = path.startPoint ?: return
-            
-            // Calculate movement distance in pixels
-            val deltaX = currentPoint.x - startPoint.x
-            val deltaY = currentPoint.y - startPoint.y
-            
-            // Professional sensitivity settings (matching Gboard)
-            val sensitivityPixelsPerChar = 25.0f // Pixels needed to move one character
-            val verticalTolerance = 100.0f // Allow some vertical movement
-            
-            // Calculate character movement based on horizontal displacement
-            val characterMovement = (deltaX / sensitivityPixelsPerChar).toInt()
-            val newCursorPosition = (path.initialCursorPosition + characterMovement).coerceAtLeast(0)
-            
-            // Only process if there's significant horizontal movement and vertical is within tolerance
-            if (kotlin.math.abs(deltaX) >= sensitivityPixelsPerChar && kotlin.math.abs(deltaY) < verticalTolerance) {
-                
-                // Update cursor position with haptic feedback check
-                val shouldHaptic = path.updateCursorMovement(newCursorPosition, true)
-                
-                if (shouldHaptic) {
-                    // Trigger professional haptic feedback
-                    triggerProfessionalHaptic()
-                }
-                
-                // Apply cursor movement in real-time
-                applyCursorMovement(newCursorPosition)
-                
-                Log.d("SpacebarCursor", "🎯 Cursor: ${path.initialCursorPosition} → $newCursorPosition (moved ${characterMovement} chars, ${path.characterMovementCount} total)")
-            }
-            
-        } catch (e: Exception) {
-            Log.e("SpacebarCursor", "❌ Error in spacebar movement: ${e.message}")
-        }
-    }
-    
-    /**
-     * Finalize spacebar cursor gesture
-     */
-    private fun finalizeProfessionalSpacebarGesture(path: SwipePath): GestureResult? {
-        return try {
-            if (path.characterMovementCount > 0) {
-                Log.d("SpacebarCursor", "🎯 Spacebar gesture complete! Moved ${path.characterMovementCount} characters")
-                
-                GestureResult(
-                    type = GestureResult.Type.CURSOR_MOVEMENT,
-                    text = "",
-                    confidence = 1.0f,
-                    specialAction = SpecialGesture.SPACEBAR_CURSOR,
-                    metadata = mapOf(
-                        "startPosition" to path.initialCursorPosition,
-                        "endPosition" to path.currentCursorPosition,
-                        "charactersMoved" to path.characterMovementCount
-                    )
-                )
-            } else {
-                // No significant movement, treat as spacebar tap
-                GestureResult(
-                    type = GestureResult.Type.SPACEBAR_TAP,
-                    text = " ",
-                    confidence = 1.0f,
-                    specialAction = SpecialGesture.SPACE
-                )
-            }
-        } catch (e: Exception) {
-            Log.e("SpacebarCursor", "❌ Error finalizing spacebar gesture: ${e.message}")
-            null
-        }
-    }
-    
     // ========== HELPER METHODS ==========
-    
-    /**
-     * Get spacebar bounds using reflection
-     */
-    private fun getSpacebarBounds(keyboardLayoutManager: Any?): android.graphics.RectF? {
-        return try {
-            if (keyboardLayoutManager != null) {
-                // Use reflection to access the getKeyBounds method
-                val getKeyBoundsMethod = keyboardLayoutManager.javaClass.getMethod("getKeyBounds")
-                @Suppress("UNCHECKED_CAST")
-                val keyBounds = getKeyBoundsMethod.invoke(keyboardLayoutManager) as Map<String, Any>
-                val spaceKeyBounds = keyBounds["space"] ?: keyBounds[" "]
-                
-                if (spaceKeyBounds != null) {
-                    val centerX = getFloatProperty(spaceKeyBounds, "centerX") ?: return null
-                    val centerY = getFloatProperty(spaceKeyBounds, "centerY") ?: return null  
-                    val radius = getFloatProperty(spaceKeyBounds, "radius") ?: return null
-                    
-                    // Create RectF from center and radius
-                    return android.graphics.RectF(
-                        centerX - radius,
-                        centerY - radius,
-                        centerX + radius,
-                        centerY + radius
-                    )
-                }
-            }
-            null
-        } catch (e: Exception) {
-            Log.w("SpacebarBounds", "Could not get spacebar bounds: ${e.message}")
-            null
-        }
-    }
-    
-    /**
-     * Check if point is within bounds
-     */
-    private fun isInBounds(x: Float, y: Float, bounds: android.graphics.RectF): Boolean {
-        return bounds.contains(x, y)
-    }
-    
-    /**
-     * Get the key at a specific position using improved coordinate handling
-     */
-    private fun getKeyAtPosition(x: Float, y: Float, keyboardLayoutManager: Any?): String? {
-        return try {
-            if (keyboardLayoutManager != null) {
-                // Convert coordinates to match the layout manager's coordinate system
-                val convertedCoords = convertToLayoutManagerCoordinates(x, y, keyboardLayoutManager)
-                
-                val method = keyboardLayoutManager::class.java.getMethod("getKeyAt", Float::class.java, Float::class.java)
-                val result = method.invoke(keyboardLayoutManager, convertedCoords.first, convertedCoords.second) as? String
-                
-                if (result != null) {
-                    Log.d("GlideTyping", "🎯 Found key '$result' at touch($x,$y) -> converted(${convertedCoords.first},${convertedCoords.second})")
-                } else {
-                    Log.v("GlideTyping", "❌ No key found at touch($x,$y) -> converted(${convertedCoords.first},${convertedCoords.second})")
-                }
-                
-                return result
-            } else null
-        } catch (e: Exception) {
-            Log.w("KeyDetection", "Could not get key at ($x, $y): ${e.message}")
-            null
-        }
-    }
-    
-    /**
-     * Convert touch coordinates to layout manager's coordinate system
-     */
-    private fun convertToLayoutManagerCoordinates(x: Float, y: Float, keyboardLayoutManager: Any?): Pair<Float, Float> {
-        return try {
-            val service = context as? RewordiumAIKeyboardService
-            val rootView = service?.layoutManager?.getRootView()
-            
-            if (rootView != null) {
-                // Get the keyboard switcher view (where touch events are relative to)
-                val keyboardSwitcher = service.layoutManager?.getKeyboardSwitcher()
-                if (keyboardSwitcher != null) {
-                    val location = IntArray(2)
-                    keyboardSwitcher.getLocationInWindow(location)
-                    
-                    // Convert touch coordinates to be relative to keyboard switcher
-                    return Pair(x - location[0], y - location[1])
-                }
-            }
-            
-            // Fallback: return original coordinates
-            Pair(x, y)
-        } catch (e: Exception) {
-            Log.w("KeyDetection", "Error converting coordinates: ${e.message}")
-            Pair(x, y)
-        }
-    }
-    
-    /**
-     * Get current cursor position from input connection
-     */
-    private fun getCurrentCursorPosition(): Int {
-        return try {
-            val serviceContext = context as? RewordiumAIKeyboardService
-            val ic = serviceContext?.getCurrentInputConnection()
-            val textBeforeCursor = ic?.getTextBeforeCursor(1000, 0) ?: ""
-            textBeforeCursor.length
-        } catch (e: Exception) {
-            Log.w("CursorPosition", "Could not get cursor position: ${e.message}")
-            0
-        }
-    }
-    
-    /**
-     * Apply cursor movement to input connection
-     */
-    private fun applyCursorMovement(newPosition: Int) {
-        try {
-            val serviceContext = context as? RewordiumAIKeyboardService
-            val ic = serviceContext?.getCurrentInputConnection() ?: return
-            
-            val textBeforeCursor = ic.getTextBeforeCursor(1000, 0) ?: ""
-            val currentPosition = textBeforeCursor.length
-            val movement = newPosition - currentPosition
-            
-            if (movement != 0) {
-                ic.setSelection(newPosition, newPosition)
-            }
-        } catch (e: Exception) {
-            Log.e("CursorMovement", "Error applying cursor movement: ${e.message}")
-        }
-    }
-    
-    /**
-     * Trigger professional haptic feedback matching Gboard's feel
-     */
-    private fun triggerProfessionalHaptic() {
-        try {
-            val serviceContext = context as? RewordiumAIKeyboardService
-            serviceContext?.performHapticFeedback()
-        } catch (e: Exception) {
-            Log.w("Haptic", "Could not trigger haptic feedback: ${e.message}")
-        }
-    }
     
     /**
      * Cleanup resources

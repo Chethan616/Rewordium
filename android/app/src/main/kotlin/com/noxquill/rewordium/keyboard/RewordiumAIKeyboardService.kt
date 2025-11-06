@@ -674,28 +674,6 @@ class RewordiumAIKeyboardService : InputMethodService(), LifecycleOwner, SavedSt
                     Log.d(KeyboardConstants.TAG, "🎯 Professional gesture completed: Type=${result.type}, Text='${result.text}', Confidence=${result.confidence}")
                     
                     when (result.type) {
-                        GestureResult.Type.GLIDE_WORD -> {
-                            // Professional glide typing - insert the predicted word
-                            if (result.isValid && result.text.isNotEmpty()) {
-                                queueKeyPress(result.text)
-                                Log.d(KeyboardConstants.TAG, "✍️ GLIDE TYPED: '${result.text}' from ${result.metadata["visitedKeys"]}")
-                                
-                                // Learn from successful glide gesture
-                                swipeGestureEngine.wordPredictor.learnFromInput(result.text, result.keySequence)
-                                
-                                // Haptic feedback for successful glide
-                                performHapticFeedback()
-                            }
-                        }
-                        
-                        GestureResult.Type.CURSOR_MOVEMENT -> {
-                            // Professional spacebar cursor control - position already applied in gesture engine
-                            Log.d(KeyboardConstants.TAG, "🎯 SPACEBAR CURSOR: Moved to position ${result.metadata["endPosition"]} (${result.metadata["charactersMoved"]} chars)")
-                            
-                            // Professional haptic feedback for cursor movement completion
-                            performHapticFeedback()
-                        }
-                        
                         GestureResult.Type.SPACEBAR_TAP -> {
                             // Regular spacebar tap
                             queueKeyPress(" ")

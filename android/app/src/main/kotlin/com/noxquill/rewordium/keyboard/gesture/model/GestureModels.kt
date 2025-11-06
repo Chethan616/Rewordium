@@ -30,25 +30,12 @@ data class SwipePath(
     // Enhanced gesture type support for professional features
     enum class GestureType {
         UNKNOWN,
-        GLIDE_TYPING,     // Multi-key swipe for word formation
-        SPACEBAR_CURSOR,  // Spacebar swipe for cursor movement
         LEGACY_GESTURE    // Backward compatibility
     }
     
     // Gesture classification
     var gestureType: GestureType = GestureType.UNKNOWN
     var isSpacebarGesture: Boolean = false // Legacy support
-    
-    // Glide typing properties
-    var visitedKeys: MutableList<String> = mutableListOf()
-    var currentWord: StringBuilder = StringBuilder()
-    var predictedWords: MutableList<String> = mutableListOf()
-    
-    // Spacebar cursor control properties  
-    var initialCursorPosition: Int = 0
-    var currentCursorPosition: Int = 0
-    var characterMovementCount: Int = 0
-    var lastHapticPosition: Int = 0
     
     // Performance metrics
     var totalDistance: Float = 0f
@@ -93,35 +80,6 @@ data class SwipePath(
      */
     fun addPoint(point: PointF) {
         addPoint(point.x, point.y, 1.0f, System.nanoTime() / 1_000_000)
-    }
-    
-    /**
-     * Professional glide typing: Add visited key
-     */
-    fun addVisitedKey(key: String) {
-        if (visitedKeys.isEmpty() || visitedKeys.last() != key) {
-            visitedKeys.add(key)
-            currentWord.append(key)
-        }
-    }
-    
-    /**
-     * Professional spacebar: Update cursor movement with character-level precision
-     */
-    fun updateCursorMovement(newPosition: Int, shouldTriggerHaptic: Boolean): Boolean {
-        val oldPosition = currentCursorPosition
-        currentCursorPosition = newPosition
-        
-        if (oldPosition != newPosition) {
-            characterMovementCount = kotlin.math.abs(newPosition - initialCursorPosition)
-            
-            // Trigger haptic feedback for each character movement
-            if (shouldTriggerHaptic && kotlin.math.abs(newPosition - lastHapticPosition) >= 1) {
-                lastHapticPosition = newPosition
-                return true // Indicates haptic should be triggered
-            }
-        }
-        return false
     }
     
     /**
@@ -199,8 +157,6 @@ data class GestureResult(
 ) {
     enum class Type {
         TEXT_INPUT,
-        GLIDE_WORD,          // Professional glide typing result
-        CURSOR_MOVEMENT,     // Professional spacebar cursor control
         SPACEBAR_TAP,        // Single spacebar tap
         DELETE_GESTURE,
         SPECIAL_ACTION
@@ -247,9 +203,6 @@ data class SpecialGesture(
     }
     
     companion object {
-        // Professional gesture constants for new features
-        val GLIDE_TYPING = SpecialGesture(SpecialGestureType.QUICK_SYMBOL, "glide_typing")
-        val SPACEBAR_CURSOR = SpecialGesture(SpecialGestureType.CURSOR_MOVEMENT, "spacebar_cursor")
         val SPACE = SpecialGesture(SpecialGestureType.SPACE_BAR_SLIDE, " ")
     }
 }
