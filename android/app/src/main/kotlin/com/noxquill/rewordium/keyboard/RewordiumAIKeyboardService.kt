@@ -102,6 +102,7 @@ import androidx.appcompat.view.ContextThemeWrapper
 import androidx.core.content.ContextCompat
 import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsControllerCompat
+import androidx.core.view.doOnLayout
 import com.noxquill.rewordium.BuildConfig
 import com.noxquill.rewordium.R
 import com.noxquill.rewordium.keyboard.api.GroqApiClient
@@ -156,6 +157,11 @@ class RewordiumAIKeyboardService : InputMethodService(), LifecycleOwner, SavedSt
     
     // Advanced Gesture System - Gboard Level
     internal lateinit var swipeGestureEngine: SwipeGestureEngine
+    
+    // FlorisBoard Glide Typing System
+    private lateinit var glideTypingManager: com.noxquill.rewordium.keyboard.florisboard.gestures.GlideTypingManager
+    private lateinit var glideGestureDetector: com.noxquill.rewordium.keyboard.florisboard.gestures.GlideTypingGesture.Detector
+    private var isGlideTypingEnabled = true
     
     fun isSwipeGestureEngineInitialized(): Boolean = ::swipeGestureEngine.isInitialized
     private var currentGestureId: Long = 0
@@ -652,6 +658,9 @@ class RewordiumAIKeyboardService : InputMethodService(), LifecycleOwner, SavedSt
      */
     private fun initializeGestureEngine() {
         try {
+            // Initialize FlorisBoard Glide Typing System
+            initializeGlideTyping()
+            
             swipeGestureEngine = SwipeGestureEngine(this, object : SwipeGestureEngine.GestureCallback {
                 override fun onGestureStarted(gestureId: Long) {
                     currentGestureId = gestureId
@@ -720,6 +729,46 @@ class RewordiumAIKeyboardService : InputMethodService(), LifecycleOwner, SavedSt
             
         } catch (e: Exception) {
             Log.e(KeyboardConstants.TAG, "Failed to initialize gesture engine: ${e.message}")
+        }
+    }
+    
+    /**
+     * Initialize FlorisBoard Glide Typing System
+     */
+    private fun initializeGlideTyping() {
+        try {
+            // Create gesture detector
+            glideGestureDetector = com.noxquill.rewordium.keyboard.florisboard.gestures.GlideTypingGesture.Detector(this)
+            
+            // Create glide typing manager
+            glideTypingManager = com.noxquill.rewordium.keyboard.florisboard.gestures.GlideTypingManager(this)
+            
+            // Register manager as listener for gesture events
+            glideGestureDetector.registerListener(glideTypingManager)
+            
+            // Set up callbacks for suggestions
+            glideTypingManager.setOnSuggestionsListener { suggestions ->
+                Log.d(KeyboardConstants.TAG, "📝 Glide suggestions: $suggestions")
+                // Update suggestion bar with glide typing suggestions
+                mainHandler.post {
+                    if (::layoutManager.isInitialized) {
+                        layoutManager.updateSuggestions(suggestions)
+                    }
+                }
+            }
+            
+            // Set up callback for word completion
+            glideTypingManager.setOnCompleteListener { word ->
+                word?.let {
+                    Log.d(KeyboardConstants.TAG, "✅ Glide typing complete: $it")
+                    queueKeyPress(it)
+                    performHapticFeedback()
+                }
+            }
+            
+            Log.d(KeyboardConstants.TAG, "🎯 FlorisBoard glide typing system initialized")
+        } catch (e: Exception) {
+            Log.e(KeyboardConstants.TAG, "Failed to initialize glide typing: ${e.message}", e)
         }
     }
 
@@ -903,6 +952,25 @@ class RewordiumAIKeyboardService : InputMethodService(), LifecycleOwner, SavedSt
             Log.d(KeyboardConstants.TAG, "✅ Swipe typing enabled with gesture interception")
         } else {
             Log.w(KeyboardConstants.TAG, "❌ SwipeGestureEngine or LayoutManager not initialized - swipe typing disabled!")
+        }
+        
+        // Setup glide typing integration
+        if (::glideGestureDetector.isInitialized && ::glideTypingManager.isInitialized && ::layoutManager.isInitialized) {
+            try {
+                // Setup touch interception on keyboard container
+                layoutManager.setupGlideTouchInterception(glideGestureDetector)
+                
+                // Build and sync keyboard layout after view is laid out
+                rootView.doOnLayout {
+                    val layoutMap = layoutManager.buildKeyboardLayoutMap()
+                    glideTypingManager.setLayout(layoutMap)
+                    Log.d(KeyboardConstants.TAG, "✅ Glide typing layout synced with ${layoutMap.size} keys")
+                }
+                
+                Log.d(KeyboardConstants.TAG, "✅ FlorisBoard glide typing integration complete")
+            } catch (e: Exception) {
+                Log.e(KeyboardConstants.TAG, "Failed to setup glide typing integration: ${e.message}", e)
+            }
         }
     }
 

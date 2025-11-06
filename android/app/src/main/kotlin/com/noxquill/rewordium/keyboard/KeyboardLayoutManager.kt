@@ -2044,4 +2044,66 @@ class KeyboardLayoutManager(private val service: RewordiumAIKeyboardService) {
         
         return null
     }
+    
+    /**
+     * Setup glide typing touch interception on keyboard container
+     * This intercepts touch events before they reach individual keys
+     */
+    @SuppressLint("ClickableViewAccessibility")
+    fun setupGlideTouchInterception(detector: com.noxquill.rewordium.keyboard.florisboard.gestures.GlideTypingGesture.Detector) {
+        mainKeyboardContainer.setOnTouchListener { _, event ->
+            // Let the glide detector process the touch event
+            val consumed = detector.onTouchEvent(event)
+            
+            // If glide typing consumed the event, don't pass to children
+            // If not consumed, let normal key presses work
+            consumed
+        }
+        
+        Log.d(KeyboardConstants.TAG, "🎯 Glide touch interception setup on keyboard container")
+    }
+    
+    /**
+     * Build keyboard layout map for glide typing classifier
+     * Maps each key to its position information
+     */
+    fun buildKeyboardLayoutMap(): Map<String, com.noxquill.rewordium.keyboard.florisboard.gestures.GlideTypingClassifier.KeyPosition> {
+        val layoutMap = mutableMapOf<String, com.noxquill.rewordium.keyboard.florisboard.gestures.GlideTypingClassifier.KeyPosition>()
+        
+        // Helper function to extract keys from a ViewGroup
+        fun extractKeysFromView(view: View) {
+            when (view) {
+                is ViewGroup -> {
+                    for (i in 0 until view.childCount) {
+                        extractKeysFromView(view.getChildAt(i))
+                    }
+                }
+                is ComposeView -> {
+                    // Get the key text from tag
+                    val keyText = view.tag as? String
+                    if (keyText != null && keyText.length == 1) {
+                        val locationInWindow = IntArray(2)
+                        view.getLocationInWindow(locationInWindow)
+                        
+                        val centerX = locationInWindow[0] + view.width / 2f
+                        val centerY = locationInWindow[1] + view.height / 2f
+                        
+                        layoutMap[keyText.lowercase()] = com.noxquill.rewordium.keyboard.florisboard.gestures.GlideTypingClassifier.KeyPosition(
+                            key = keyText.lowercase(),
+                            centerX = centerX,
+                            centerY = centerY,
+                            width = view.width.toFloat(),
+                            height = view.height.toFloat()
+                        )
+                    }
+                }
+            }
+        }
+        
+        // Extract keys from all keyboard rows
+        extractKeysFromView(mainKeyboardContainer)
+        
+        Log.d(KeyboardConstants.TAG, "📍 Built keyboard layout map with ${layoutMap.size} keys")
+        return layoutMap
+    }
 }
