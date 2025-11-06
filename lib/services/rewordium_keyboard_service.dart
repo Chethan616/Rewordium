@@ -183,4 +183,28 @@ class RewordiumKeyboardService {
       return false;
     }
   }
+
+  /// Toggle glide typing (FlorisBoard integration)
+  static Future<void> setGlideTypingEnabled(bool enabled) async {
+    try {
+      print('✍️ Setting glide typing: $enabled');
+      await _channel
+          .invokeMethod('setGlideTypingEnabled', {'enabled': enabled});
+      print('✅ Glide typing setting applied successfully');
+    } on PlatformException catch (e) {
+      print('❌ Error setting glide typing: ${e.message}');
+    }
+  }
+
+  /// Toggle spacebar navigation (FlorisBoard integration)
+  static Future<void> setSpacebarNavigationEnabled(bool enabled) async {
+    try {
+      print('⌨️ Setting spacebar navigation: $enabled');
+      await _channel
+          .invokeMethod('setSpacebarNavigationEnabled', {'enabled': enabled});
+      print('✅ Spacebar navigation setting applied successfully');
+    } on PlatformException catch (e) {
+      print('❌ Error setting spacebar navigation: ${e.message}');
+    }
+  }
 }

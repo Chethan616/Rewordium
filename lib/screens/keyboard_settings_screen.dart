@@ -32,6 +32,10 @@ class _KeyboardSettingsScreenState extends State<KeyboardSettingsScreen> {
   bool _spaceSwipeEnabled = true;
   bool _directionalSwipeEnabled = true;
 
+  // Glide typing settings (FlorisBoard integration)
+  bool _glideTypingEnabled = true;
+  bool _spacebarNavigationEnabled = true;
+
   @override
   void initState() {
     super.initState();
@@ -59,6 +63,9 @@ class _KeyboardSettingsScreenState extends State<KeyboardSettingsScreen> {
 
       // Load swipe gesture settings from SharedPreferences
       await _loadSwipeGestureSettings();
+
+      // Load glide typing settings
+      await _loadGlideTypingSettings();
 
       if (!mounted) return;
 
@@ -363,6 +370,57 @@ class _KeyboardSettingsScreenState extends State<KeyboardSettingsScreen> {
       setState(() {});
     } catch (e) {
       print('Error toggling special gesture: $e');
+    }
+  }
+
+  // Glide typing methods (FlorisBoard integration)
+  Future<void> _loadGlideTypingSettings() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      _glideTypingEnabled = prefs.getBool('glide_typing_enabled') ?? true;
+      _spacebarNavigationEnabled =
+          prefs.getBool('spacebar_navigation_enabled') ?? true;
+    } catch (e) {
+      print('Error loading glide typing settings: $e');
+    }
+  }
+
+  void _toggleGlideTyping(bool value) async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setBool('glide_typing_enabled', value);
+
+      // Send to Android keyboard service
+      await RewordiumKeyboardService.setGlideTypingEnabled(value);
+
+      setState(() {
+        _glideTypingEnabled = value;
+      });
+    } catch (e) {
+      print('Error toggling glide typing: $e');
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Failed to update glide typing setting')),
+      );
+    }
+  }
+
+  void _toggleSpacebarNavigation(bool value) async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setBool('spacebar_navigation_enabled', value);
+
+      // Send to Android keyboard service
+      await RewordiumKeyboardService.setSpacebarNavigationEnabled(value);
+
+      setState(() {
+        _spacebarNavigationEnabled = value;
+      });
+    } catch (e) {
+      print('Error toggling spacebar navigation: $e');
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+            content: Text('Failed to update spacebar navigation setting')),
+      );
     }
   }
 
@@ -764,6 +822,39 @@ class _KeyboardSettingsScreenState extends State<KeyboardSettingsScreen> {
                   ),
                 ),
               ],
+
+              const SizedBox(height: 24),
+              const Text(
+                'Glide Typing',
+                style: TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              const SizedBox(height: 8),
+
+              // Glide typing master toggle
+              Card(
+                elevation: 2,
+                child: SwitchListTile(
+                  title: const Text('Enable Glide Typing'),
+                  subtitle: const Text(
+                      'Slide your finger across keys to type words (FlorisBoard)'),
+                  value: _glideTypingEnabled,
+                  onChanged: _toggleGlideTyping,
+                ),
+              ),
+
+              // Spacebar navigation toggle
+              Card(
+                elevation: 2,
+                child: SwitchListTile(
+                  title: const Text('Spacebar Navigation'),
+                  subtitle: const Text('Swipe on spacebar to move cursor'),
+                  value: _spacebarNavigationEnabled,
+                  onChanged: _toggleSpacebarNavigation,
+                ),
+              ),
 
               const SizedBox(height: 24),
               const Text(

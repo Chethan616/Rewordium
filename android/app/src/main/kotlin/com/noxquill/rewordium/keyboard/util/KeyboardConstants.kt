@@ -16,6 +16,8 @@ object KeyboardConstants {
     const val KEY_ONE_HANDED_MODE = "flutter.oneHandedMode" // New one-handed mode feature
     const val KEY_RECENT_EMOJIS = "flutter.recentEmojis" // NEW
     const val KEY_CLIPBOARD_FAVORITES = "flutter.clipboardFavorites" // For storing favorite clipboard items
+    const val KEY_GLIDE_TYPING_ENABLED = "flutter.glideTypingEnabled" // FlorisBoard glide typing
+    const val KEY_SPACEBAR_NAVIGATION_ENABLED = "flutter.spacebarNavigationEnabled" // FlorisBoard spacebar navigation
     
     const val ACTION_SETTINGS_UPDATED = "com.noxquill.rewordium.SETTINGS_UPDATED"
     const val ACTION_FORCE_THEME_REFRESH = "com.noxquill.rewordium.FORCE_THEME_REFRESH"

@@ -40,6 +40,7 @@ import com.noxquill.rewordium.R
 import com.noxquill.rewordium.keyboard.data.EmojiData
 import com.noxquill.rewordium.keyboard.util.KeyboardConstants
 import com.noxquill.rewordium.keyboard.gesture.SwipeGestureEngine
+import com.noxquill.rewordium.keyboard.florisboard.gestures.SwipeAction
 import com.noxquill.rewordium.keyboard.ui.GboardToolbar
 import com.noxquill.rewordium.keyboard.compose.ProfessionalLiquidGlassKey
 import com.noxquill.rewordium.keyboard.compose.ProfessionalLiquidGlassSpecialKey
@@ -954,26 +955,71 @@ class KeyboardLayoutManager(private val service: RewordiumAIKeyboardService) {
             val margin = service.resources.getDimensionPixelSize(R.dimen.ios_key_margin) / 2
             setMargins(margin, margin, margin, margin)
         }
+        
+        // Enhanced spacebar navigation with FlorisBoard-style gesture handling
         var startX = 0f
+        var startY = 0f
         var isSwiping = false
+        var isNavigating = false
+        var lastMoveTime = 0L
         val swipeThreshold = ViewConfiguration.get(service).scaledTouchSlop.toFloat()
+        val velocityThreshold = 0.5f // pixels per ms for continuous navigation
+        
         keyView.setOnTouchListener { _, event ->
             val ic = service.currentInputConnection ?: return@setOnTouchListener false
+            
             when (event.action) {
-                MotionEvent.ACTION_DOWN -> { startX = event.x; isSwiping = false; true }
+                MotionEvent.ACTION_DOWN -> {
+                    startX = event.x
+                    startY = event.y
+                    isSwiping = false
+                    isNavigating = false
+                    lastMoveTime = System.currentTimeMillis()
+                    true
+                }
+                
                 MotionEvent.ACTION_MOVE -> {
                     val deltaX = event.x - startX
-                    if (Math.abs(deltaX) > swipeThreshold) {
+                    val deltaY = Math.abs(event.y - startY)
+                    
+                    // Check if this is a horizontal swipe (not vertical)
+                    if (Math.abs(deltaX) > swipeThreshold && deltaX > deltaY * 2) {
                         isSwiping = true
-                        val keyCode = if (deltaX > 0) KeyEvent.KEYCODE_DPAD_RIGHT else KeyEvent.KEYCODE_DPAD_LEFT
-                        ic.sendKeyEvent(KeyEvent(KeyEvent.ACTION_DOWN, keyCode))
-                        ic.sendKeyEvent(KeyEvent(KeyEvent.ACTION_UP, keyCode))
-                        startX = event.x
-                        service.performHapticFeedback()
+                        isNavigating = true
+                        
+                        val currentTime = System.currentTimeMillis()
+                        val timeDelta = currentTime - lastMoveTime
+                        
+                        // Continuous navigation: move cursor as user swipes
+                        if (timeDelta > 50) { // Throttle to 20 moves per second
+                            val direction = if (deltaX > 0) {
+                                SwipeAction.MOVE_CURSOR_RIGHT
+                            } else {
+                                SwipeAction.MOVE_CURSOR_LEFT
+                            }
+                            
+                            // Execute cursor movement
+                            executeSpacebarAction(direction, ic)
+                            
+                            // Update for next movement
+                            startX = event.x
+                            lastMoveTime = currentTime
+                            service.performHapticFeedback()
+                        }
                     }
                     true
                 }
-                MotionEvent.ACTION_UP -> { if (!isSwiping) service.queueKeyPress(" "); true }
+                
+                MotionEvent.ACTION_UP -> {
+                    // Only insert space if user didn't swipe
+                    if (!isSwiping) {
+                        service.queueKeyPress(" ")
+                    }
+                    isSwiping = false
+                    isNavigating = false
+                    true
+                }
+                
                 else -> false
             }
         }
@@ -992,6 +1038,51 @@ class KeyboardLayoutManager(private val service: RewordiumAIKeyboardService) {
         }
         
         parent.addView(keyView)
+    }
+    
+    /**
+     * Execute spacebar swipe actions using FlorisBoard SwipeAction enum
+     */
+    private fun executeSpacebarAction(action: SwipeAction, ic: android.view.inputmethod.InputConnection) {
+        when (action) {
+            SwipeAction.MOVE_CURSOR_LEFT -> {
+                // Move cursor left by 1 character
+                ic.sendKeyEvent(android.view.KeyEvent(android.view.KeyEvent.ACTION_DOWN, android.view.KeyEvent.KEYCODE_DPAD_LEFT))
+                ic.sendKeyEvent(android.view.KeyEvent(android.view.KeyEvent.ACTION_UP, android.view.KeyEvent.KEYCODE_DPAD_LEFT))
+            }
+            SwipeAction.MOVE_CURSOR_RIGHT -> {
+                // Move cursor right by 1 character
+                ic.sendKeyEvent(android.view.KeyEvent(android.view.KeyEvent.ACTION_DOWN, android.view.KeyEvent.KEYCODE_DPAD_RIGHT))
+                ic.sendKeyEvent(android.view.KeyEvent(android.view.KeyEvent.ACTION_UP, android.view.KeyEvent.KEYCODE_DPAD_RIGHT))
+            }
+            SwipeAction.MOVE_CURSOR_START_OF_LINE -> {
+                // Move to start of line
+                val textBeforeCursor = ic.getTextBeforeCursor(1000, 0)?.toString() ?: ""
+                val lastNewline = textBeforeCursor.lastIndexOf('\n')
+                val charsToDelete = if (lastNewline >= 0) {
+                    textBeforeCursor.length - lastNewline - 1
+                } else {
+                    textBeforeCursor.length
+                }
+                ic.setSelection(ic.getTextBeforeCursor(1000, 0)?.length?.minus(charsToDelete) ?: 0, 
+                               ic.getTextBeforeCursor(1000, 0)?.length?.minus(charsToDelete) ?: 0)
+            }
+            SwipeAction.MOVE_CURSOR_END_OF_LINE -> {
+                // Move to end of line
+                val textAfterCursor = ic.getTextAfterCursor(1000, 0)?.toString() ?: ""
+                val nextNewline = textAfterCursor.indexOf('\n')
+                val charsToMove = if (nextNewline >= 0) {
+                    nextNewline
+                } else {
+                    textAfterCursor.length
+                }
+                ic.setSelection(ic.getTextBeforeCursor(1000, 0)?.length?.plus(charsToMove) ?: 0,
+                               ic.getTextBeforeCursor(1000, 0)?.length?.plus(charsToMove) ?: 0)
+            }
+            else -> {
+                // Other actions not yet implemented for spacebar
+            }
+        }
     }
 
     private fun addReturnKey(parent: ViewGroup, weight: Float) {

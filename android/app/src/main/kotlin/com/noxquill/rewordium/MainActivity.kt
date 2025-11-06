@@ -197,6 +197,16 @@ class MainActivity : FlutterActivity() {
                     updateSetting(KeyboardConstants.KEY_DOUBLE_SPACE_PERIOD, enabled)
                     result.success(true)
                 }
+                "setGlideTypingEnabled" -> {
+                    val enabled = call.argument<Boolean>("enabled") ?: true
+                    updateSetting(KeyboardConstants.KEY_GLIDE_TYPING_ENABLED, enabled)
+                    result.success(true)
+                }
+                "setSpacebarNavigationEnabled" -> {
+                    val enabled = call.argument<Boolean>("enabled") ?: true
+                    updateSetting(KeyboardConstants.KEY_SPACEBAR_NAVIGATION_ENABLED, enabled)
+                    result.success(true)
+                }
                 "updateKeyboardPersonas" -> {
                     try {
                         val personas = call.argument<List<String>>("personas")
