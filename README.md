@@ -10,11 +10,9 @@
 <a href="https://github.com/Chethan616/Rewordium/releases/latest">
   <img alt="Latest Release" src="https://img.shields.io/github/v/release/Chethan616/Rewordium?label=%F0%9F%A6%8E%20Latest&color=32CD32">
 </a>
-<img alt="Version" src="https://img.shields.io/badge/version-1.0.10%2B11-white.svg">
+<img alt="Version" src="https://img.shields.io/badge/version-1.0.10%2B10-white.svg">
 <img alt="Platform" src="https://img.shields.io/badge/platform-Android-brightgreen.svg">
-<a href="LICENSE.md">
-  <img alt="License" src="https://img.shields.io/badge/license-Proprietary%20(Source--Available)-orange.svg">
-</a>
+<img alt="License" src="https://img.shields.io/badge/license-Proprietary-black.svg">
 <img alt="Build" src="https://img.shields.io/badge/build-passing-brightgreen.svg">
 <a href="https://github.com/Chethan616/Rewordium/releases">
   <img alt="Downloads" src="https://img.shields.io/github/downloads/Chethan616/Rewordium/total?color=32CD32">
@@ -116,48 +114,3 @@ cd Rewordium
 flutter pub get
 flutter run
 flutter build apk --release
-
----
-
-##  License
-
-**Rewordium** is licensed under a **Proprietary Source-Available License**.
-
-### What does this mean?
--  **You CAN:** View, clone, fork, and contribute to this repository
--  **You CAN:** Learn from the code and experiment locally
--  **You CAN:** Submit pull requests and report issues
--  **You CANNOT:** Redistribute, republish, or use commercially without permission
--  **You CANNOT:** Remove branding or claim ownership
-
-**Full License:** [LICENSE.md](LICENSE.md)
-
-### Copyright
-** 2025 Chethan Krishna Manikonda and Rupak R**  
-All rights reserved.
-
----
-
-##  Contributing
-
-We welcome contributions! By contributing, you agree that your work will be licensed under the same terms as this project.
-
-1. Fork the repository
-2. Create a feature branch: git checkout -b feature/amazing-feature
-3. Commit your changes: git commit -m 'Add amazing feature'
-4. Push to the branch: git push origin feature/amazing-feature
-5. Open a Pull Request
-
-**Questions?** Reach out to:
--  Chethan Krishna: chethankrishna2022@gmail.com
--  Rupak R: rupakr31@gmail.com
-
----
-
-<div align="center">
-
-**Made with  by the Rewordium Team**
-
-[![GitHub](https://img.shields.io/badge/GitHub-Chethan616%2FRewordium-brightgreen?logo=github)](https://github.com/Chethan616/Rewordium)
-
-</div>
