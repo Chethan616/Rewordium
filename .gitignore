@@ -1,121 +1,35 @@
 # Miscellaneous
 *.class
+# Top-level ignore file for repository
+
+# ---------------------------
+# Misc / OS
+# ---------------------------
+*.class
 *.log
 *.pyc
 *.swp
 .DS_Store
-.atom/
-.build/
-.buildlog/
-.history
-.svn/
-.swiftpm/
-migrate_working_dir/
+*.swp
 
-# IntelliJ related
+# ---------------------------
+# Editors / IDEs
+# ---------------------------
+.idea/
 *.iml
 *.ipr
 *.iws
-.idea/
+.vscode/
+*.code-workspace
 
-# The .vscode folder contains launch configuration and tasks you configure in
-# VS Code which you may wish to be included in version control, so this line
-# is commented out by default.
-#.vscode/
-
-# Flutter/Dart/Pub related
-**/doc/api/
-**/ios/Flutter/.last_build_id
+# ---------------------------
+# Flutter / Dart / build
+# ---------------------------
 .dart_tool/
 .flutter-plugins
 .flutter-plugins-dependencies
-.pub-cache/
-.pub/
+.packages
 /build/
-
-# Symbolication related
-app.*.symbols
-
-# Obfuscation related
-app.*.map.json
-
-# Android Studio will place build artifacts here
-/android/app/debug
-/android/app/profile
-/android/app/release
-
-# ============================================
-# SECRETS AND SENSITIVE FILES - DO NOT COMMIT
-# ============================================
-# Environment variables and API keys
-.env
-.env.*
-!.env.example
-
-# Firebase configuration (use .example files instead)
-lib/firebase_options.dart
-android/app/google-services.json
-ios/Runner/GoogleService-Info.plist
-ios/firebase_app_id_file.json
-
-# Android signing keys
-android/key.properties
-android/app/*.jks
-android/app/*.keystore
-*.jks
-*.keystore
-*.env
-.env.*
-!.env.example
-
-# Android signing keys and properties
-*.jks
-*.keystore
-key.properties
-android/key.properties
-android/app/key.properties
-
-# Firebase service account credentials
-**/rewordium-*.json
-rewordium-4a89181f09b0.json
-functions/rewordium-4a89181f09b0.json
-
-# Local configuration
-local.properties
-android/local.properties
-
-# ============================================
-# EXCLUDED FOLDERS AND THIRD-PARTY CODE
-# ============================================
-# Business logic (not open-sourced)
-delete_account/
-**/delete_account/**
-payment_portal/
-**/payment_portal/**
-
-# Copilot AI generated files and analysis
-.copilot/
-**/.copilot/**
-
-# ============================================
-# ARCHIVES AND BINARY FILES
-# ============================================
-# Compressed archives
-*.zip
-*.rar
-*.tar
-*.tar.gz
-*.7z
-
-# APK and AAB releases (use GitHub releases instead)
-*.apk
-*.aab
-/releases/
-
-# ============================================
-# BUILD ARTIFACTS AND GENERATED CODE
-# ============================================
-# Android build outputs
 /android/.gradle/
 /android/app/build/
 /android/build/
@@ -123,92 +37,80 @@ payment_portal/
 /android/*/build/
 /android/.externalNativeBuild/
 /android/.cxx/
-
-# Flutter build outputs
-/build/
-/.dart_tool/
-/.flutter-plugins
-/.flutter-plugins-dependencies
-/.packages
-
-# iOS build outputs
 /ios/Pods/
 /ios/.symlinks/
 /ios/Flutter/Flutter.framework
-/ios/Flutter/Flutter.podspec
 /ios/.generated/
-/ios/Runner.xcworkspace/xcuserdata/
-/ios/Runner.xcodeproj/xcuserdata/
-
-# macOS build outputs
 /macos/Pods/
 /macos/Flutter/ephemeral/
-
-# Windows build outputs
 /windows/flutter/ephemeral/
+/web/build/
 
-# Web build outputs
-/web/flutter_service_worker.js
+# ---------------------------
+# Secrets & sensitive files (do NOT commit)
+# ---------------------------
+# Environment files
+.env
+.env.*
+!.env.example
 
-# ============================================
-# IDE AND EDITOR FILES
-# ============================================
-# VS Code
-.vscode/
-*.code-workspace
+# Firebase config
+lib/firebase_options.dart
+android/app/google-services.json
+ios/Runner/GoogleService-Info.plist
 
-# IntelliJ / Android Studio
-.idea/
-*.iml
-*.ipr
-*.iws
-.idea_modules/
+# Android signing credentials
+android/key.properties
+android/*.jks
+*.jks
+android/*.keystore
+*.keystore
+key.properties
 
-# ============================================
-# DOCUMENTATION TO EXCLUDE (TEMPORARY/DEBUG)
-# ============================================
-# Temporary development docs (keep README.md, LICENSE, CONTRIBUTING.md)
+# Service account / credential files
+**/*-service-account.json
+**/*-credentials.json
+rewordium-*.json
+
+# Local configs
+local.properties
+android/local.properties
+
+# ---------------------------
+# Third-party / vendor / large folders
+# ---------------------------
+# other local or private folders
+delete_account/
+payment_portal/
+.copilot/
+
+# ---------------------------
+# Binary, archives, build outputs
+# ---------------------------
+*.zip
+*.rar
+*.tar
+*.tar.gz
+*.7z
+*.apk
+*.aab
+/releases/
+
+# ---------------------------
+# Misc developer files
+# ---------------------------
 plan.md
 todo.md
-ISSUE_*.md
 BUILD_SUCCESS_SUMMARY.md
-FLORISBOARD_IMPROVEMENTS_COMPLETE.md
 *_COMPLETE.md
 *_OPTIMIZATION_GUIDE.md
 
-# Debug and test files
-test_*.dart
-debug_*.dart
-*_debug.dart
-
-# Temporary text files
+# temporary files
 *.txt.bak
 temp.txt
 *_temp.txt
-keyboard_lines.txt
-keyboard_replacement.txt
 
-# Loose build scripts in root
-*.ps1
-*.bat
-*.sh.local
-
-# Loose Kotlin/Java files in root (should be in android/)
-emoji_*.kt
-emoji_*.java
-keyboard_*.java
-haptic_*.java
-
-# Play Store metadata (handled separately)
-# playstore_releases/ - keep this for release notes
-
-# ============================================
-# OS AND SYSTEM FILES
-# ============================================
+# OS files
 .DS_Store
-.DS_Store?
-._*
-.Spotlight-V100
-.Trashes
 ehthumbs.db
 Thumbs.db
