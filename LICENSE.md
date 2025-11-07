@@ -1,9 +1,9 @@
 # Rewordium — Proprietary License (Source-Available)
 
-Copyright (c) 2025 **Chethan Krishna Manikonda and Rupak R**  
+**Copyright © 2025 Chethan Krishna Manikonda and Rupak R**  
 All rights reserved.
 
-Rewordium is proprietary software developed and maintained by **Chethan Krishna Manikonda** and **Rupak R**.
+Rewordium is proprietary software developed and maintained by Chethan Krishna Manikonda and Rupak R.
 
 ---
 
@@ -54,7 +54,17 @@ If you discover an exposed secret, please report it privately to the contact bel
 
 ---
 
+## Disclaimer
+THIS SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+
+---
+
 ## Notes
 This is a **source-available proprietary license**:  
-You may read and contribute to the code, but redistribution and commercial reuse are restricted.  
-If the project is later registered or published commercially, copyright ownership remains with the listed authors.
+- You may read and contribute to the code, but redistribution and commercial reuse are restricted.  
+- If the project is later registered or published commercially, copyright ownership remains with the listed authors.
+- This license may be updated at any time without prior notice.
+
+---
+
+**Last Updated:** November 2025
