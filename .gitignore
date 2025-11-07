@@ -80,10 +80,10 @@ android/local.properties
 # ---------------------------
 # Third-party / vendor / large folders
 # ---------------------------
-# The florisboard-main folder is a local copy of upstream FlorisBoard assets.
-# We keep it locally but do NOT want it in the public repo.
-#file:florisboard-main
-florisboard-main/
+# other local or private folders
+delete_account/
+payment_portal/
+.copilot/
 
 # other local or private folders
 delete_account/
