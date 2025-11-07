@@ -106,9 +106,11 @@ android {
     signingConfigs {
         create("release") {
             keyAlias = "upload"
-            keyPassword = "noxquill2025"
-            storeFile = file("upload-keystore.jks")
-            storePassword = "noxquill2025"
+            // Read passwords and store file from local key.properties when available.
+            // Falls back to placeholders so no secrets are stored in the repo.
+            keyPassword = keystoreProperties.getProperty("keyPassword") ?: "YOUR_KEY_PASSWORD"
+            storeFile = file(keystoreProperties.getProperty("storeFile") ?: "upload-keystore.jks")
+            storePassword = keystoreProperties.getProperty("storePassword") ?: "YOUR_STORE_PASSWORD"
         }
     }
 
