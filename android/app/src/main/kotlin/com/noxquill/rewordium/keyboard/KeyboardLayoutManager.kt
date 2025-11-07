@@ -1125,6 +1125,9 @@ class KeyboardLayoutManager(private val service: RewordiumAIKeyboardService) {
         
         // Clean up popup
         dismissKeyPopup()
+        
+        // Clean up key popup preview to prevent stuck popups
+        keyPopupPreview.hide()
     }
 
     private fun clearAlphabetRows() {
@@ -1625,13 +1628,23 @@ class KeyboardLayoutManager(private val service: RewordiumAIKeyboardService) {
             val margin = service.resources.getDimensionPixelSize(R.dimen.ios_key_margin) / 2
             setMargins(margin, margin, margin, margin)
         }
-        keyView.setOnTouchListener { _, event ->
+        
+        // Enhanced turbo delete with proper state management
+        keyView.setOnTouchListener { v, event ->
             when (event.action) {
-                MotionEvent.ACTION_DOWN -> { service.startTurboDelete(); true }
-                MotionEvent.ACTION_UP, MotionEvent.ACTION_CANCEL -> { service.stopTurboDelete(); true }
+                MotionEvent.ACTION_DOWN -> {
+                    service.performHapticFeedback()
+                    service.startTurboDelete()
+                    true
+                }
+                MotionEvent.ACTION_UP, MotionEvent.ACTION_CANCEL -> {
+                    service.stopTurboDelete()
+                    true
+                }
                 else -> false
             }
         }
+        
         parent.addView(keyView)
     }
 

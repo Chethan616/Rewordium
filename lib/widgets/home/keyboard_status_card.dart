@@ -6,6 +6,7 @@ import '../animated_card.dart';
 import '../custom_button.dart';
 import 'package:flutter/widgets.dart';
 import '../../providers/keyboard_provider.dart';
+import '../experimental_keyboard_dialog.dart';
 
 class KeyboardStatusCard extends StatefulWidget {
   const KeyboardStatusCard({super.key});
@@ -134,9 +135,13 @@ class _KeyboardStatusCardState extends State<KeyboardStatusCard> with WidgetsBin
               const SizedBox(width: 4),
               CustomButton(
                 text: "Manage",
-                onPressed: () {
-                  // Always open the phone's keyboard settings regardless of current status
-                  keyboardProvider.openKeyboardSettings();
+                onPressed: () async {
+                  // Show experimental feature dialog first
+                  final shouldProceed = await showExperimentalKeyboardDialog(context);
+                  if (shouldProceed) {
+                    // Open the phone's keyboard settings
+                    keyboardProvider.openKeyboardSettings();
+                  }
                 },
                 width: isSmallScreen ? 85 : 110,
                 height: isSmallScreen ? 40 : 48,

@@ -42,9 +42,9 @@ object KeyboardConstants {
     const val MEMORY_THRESHOLD = 0.75 // 75% of max memory
 
     // Turbo Delete Timings
-    const val INITIAL_DELETE_DELAY = 500L
-    const val REPEAT_DELETE_DELAY = 80L
-    const val TURBO_DELETE_DELAY = 30L
+    const val INITIAL_DELETE_DELAY = 400L  // First repeat delay (Gboard-like)
+    const val REPEAT_DELETE_DELAY = 50L    // Normal repeat speed
+    const val TURBO_DELETE_DELAY = 35L     // Maximum speed
     const val MAX_DELETES_BEFORE_TURBO = 8
     const val WORD_DELETE_DELAY = 3000L
 }

@@ -47,8 +47,8 @@ class KeyPopupPreview(
      * Show popup preview above a key
      */
     fun show(text: String, x: Float, y: Float, keyHeight: Float, isDarkMode: Boolean) {
-        android.util.Log.d("KeyPopupPreview", "🎯 show() called for text='$text' at ($x, $y)")
-        hide() // Hide any existing popup
+        // Always hide existing popup first to prevent duplicates
+        hide()
         
         // Create popup view
         popupView = ComposeView(context).apply {
@@ -91,24 +91,28 @@ class KeyPopupPreview(
             scaleY = 0.8f
         }
         
-        // Add to keyboard view
+        // Add to keyboard view with proper error handling
         try {
             val rootView = service.window?.window?.decorView as? ViewGroup
-            rootView?.addView(popupView)
-            
-            // Animate in - faster for snappier feel
-            currentAnimator = ValueAnimator.ofFloat(0f, 1f).apply {
-                duration = 80  // Faster animation (was 100)
-                addUpdateListener { animation ->
-                    val value = animation.animatedValue as Float
-                    popupView?.alpha = value
-                    popupView?.scaleX = 0.8f + (0.2f * value)
-                    popupView?.scaleY = 0.8f + (0.2f * value)
+            if (rootView != null && popupView?.parent == null) {
+                rootView.addView(popupView)
+                
+                // Animate in - faster for snappier feel
+                currentAnimator?.cancel()
+                currentAnimator = ValueAnimator.ofFloat(0f, 1f).apply {
+                    duration = 80  // Faster animation
+                    addUpdateListener { animation ->
+                        val value = animation.animatedValue as Float
+                        popupView?.alpha = value
+                        popupView?.scaleX = 0.8f + (0.2f * value)
+                        popupView?.scaleY = 0.8f + (0.2f * value)
+                    }
+                    start()
                 }
-                start()
             }
         } catch (e: Exception) {
-            // Silently fail if unable to show popup
+            // Clean up on error
+            popupView = null
         }
     }
     
@@ -116,33 +120,19 @@ class KeyPopupPreview(
      * Hide popup preview
      */
     fun hide() {
+        // Cancel any ongoing animation
         currentAnimator?.cancel()
         currentAnimator = null
         
-        popupView?.let { popup ->
-            // Animate out - faster for snappier feel
-            ValueAnimator.ofFloat(1f, 0f).apply {
-                duration = 60  // Faster hide (was 80)
-                addUpdateListener { animation ->
-                    val value = animation.animatedValue as Float
-                    popup.alpha = value
-                    popup.scaleX = 0.8f + (0.2f * value)
-                    popup.scaleY = 0.8f + (0.2f * value)
-                }
-                start()
-            }
-            
-            // Remove after animation
-            popup.postDelayed({
-                try {
-                    (popup.parent as? ViewGroup)?.removeView(popup)
-                } catch (e: Exception) {
-                    // Silently fail
-                }
-            }, 80)
-        }
-        
+        val popup = popupView ?: return
         popupView = null
+        
+        try {
+            // Immediate removal to prevent stuck popups
+            (popup.parent as? ViewGroup)?.removeView(popup)
+        } catch (e: Exception) {
+            // Silently handle errors
+        }
     }
 }
 

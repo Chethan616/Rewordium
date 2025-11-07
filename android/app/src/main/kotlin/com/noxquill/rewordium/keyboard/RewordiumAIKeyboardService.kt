@@ -195,6 +195,7 @@ class RewordiumAIKeyboardService : InputMethodService(), LifecycleOwner, SavedSt
     private val deleteHandler = Handler(Looper.getMainLooper())
     private lateinit var deleteRunnable: Runnable
     private var isDeleting = false
+    private var deleteCount = 0  // Track delete count for turbo acceleration
     private var suggestionJob: Job? = null
     
     // Orientation and layout optimization
@@ -2350,21 +2351,41 @@ class RewordiumAIKeyboardService : InputMethodService(), LifecycleOwner, SavedSt
 
     fun startTurboDelete() {
         isDeleting = true
+        deleteCount = 0
+        
+        // Immediate first delete
         handleBackspace()
+        
         deleteRunnable = object : Runnable {
             override fun run() {
                 if (isDeleting) {
+                    deleteCount++
                     handleBackspace()
-                    deleteHandler.postDelayed(this, KeyboardConstants.REPEAT_DELETE_DELAY)
+                    
+                    // Smooth Gboard-like acceleration curve
+                    val delay = when {
+                        deleteCount == 1 -> 400L  // First repeat
+                        deleteCount < 4 -> 80L    // Gentle start
+                        deleteCount < 8 -> 60L    // Speed up
+                        deleteCount < 15 -> 45L   // Faster
+                        else -> 35L               // Maximum speed
+                    }
+                    
+                    deleteHandler.postDelayed(this, delay)
                 }
             }
         }
+        
+        // Start with initial delay
         deleteHandler.postDelayed(deleteRunnable, KeyboardConstants.INITIAL_DELETE_DELAY)
     }
 
     fun stopTurboDelete() {
         isDeleting = false
-        if (::deleteRunnable.isInitialized) deleteHandler.removeCallbacks(deleteRunnable)
+        deleteCount = 0
+        if (::deleteRunnable.isInitialized) {
+            deleteHandler.removeCallbacks(deleteRunnable)
+        }
     }
 
     fun getRecentEmojis(): List<String> {

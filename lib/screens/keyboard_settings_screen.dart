@@ -2,9 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter_colorpicker/flutter_colorpicker.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:url_launcher/url_launcher.dart';
 import '../services/rewordium_keyboard_service.dart';
 import '../services/swipe_gesture_service.dart';
 import '../widgets/keyboard/keyboard_preview.dart';
+import '../widgets/experimental_keyboard_dialog.dart';
 
 class KeyboardSettingsScreen extends StatefulWidget {
   const KeyboardSettingsScreen({Key? key}) : super(key: key);
@@ -97,7 +99,12 @@ class _KeyboardSettingsScreenState extends State<KeyboardSettingsScreen> {
   }
 
   void _openKeyboardSettings() async {
-    await RewordiumKeyboardService.openKeyboardSettings();
+    // Show experimental feature dialog first
+    final shouldProceed = await showExperimentalKeyboardDialog(context);
+
+    if (shouldProceed) {
+      await RewordiumKeyboardService.openKeyboardSettings();
+    }
   }
 
   void _updateThemeColor(String colorHex) async {
