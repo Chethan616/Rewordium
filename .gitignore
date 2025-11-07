@@ -1,7 +1,6 @@
 # Miscellaneous
 *.class
 # Top-level ignore file for repository
-#file:florisboard-main
 
 # ---------------------------
 # Misc / OS
@@ -80,11 +79,6 @@ android/local.properties
 # ---------------------------
 # Third-party / vendor / large folders
 # ---------------------------
-# other local or private folders
-delete_account/
-payment_portal/
-.copilot/
-
 # other local or private folders
 delete_account/
 payment_portal/
