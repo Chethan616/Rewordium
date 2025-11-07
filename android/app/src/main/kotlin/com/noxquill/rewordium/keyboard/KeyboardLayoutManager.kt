@@ -40,7 +40,7 @@ import com.noxquill.rewordium.R
 import com.noxquill.rewordium.keyboard.data.EmojiData
 import com.noxquill.rewordium.keyboard.util.KeyboardConstants
 import com.noxquill.rewordium.keyboard.gesture.SwipeGestureEngine
-import com.noxquill.rewordium.keyboard.gestures.SwipeAction
+import com.noxquill.rewordium.keyboard.florisboard.gestures.SwipeAction
 import com.noxquill.rewordium.keyboard.ui.GboardToolbar
 import com.noxquill.rewordium.keyboard.compose.ProfessionalLiquidGlassKey
 import com.noxquill.rewordium.keyboard.compose.ProfessionalLiquidGlassSpecialKey
@@ -2154,7 +2154,7 @@ class KeyboardLayoutManager(private val service: RewordiumAIKeyboardService) {
      * This intercepts touch events before they reach individual keys
      */
     @SuppressLint("ClickableViewAccessibility")
-    fun setupGlideTouchInterception(detector: com.noxquill.rewordium.keyboard.gestures.GlideTypingGesture.Detector) {
+    fun setupGlideTouchInterception(detector: com.noxquill.rewordium.keyboard.florisboard.gestures.GlideTypingGesture.Detector) {
         mainKeyboardContainer.setOnTouchListener { _, event ->
             // Let the glide detector process the touch event
             val consumed = detector.onTouchEvent(event)
@@ -2171,8 +2171,8 @@ class KeyboardLayoutManager(private val service: RewordiumAIKeyboardService) {
      * Build keyboard layout map for glide typing classifier
      * Maps each key to its position information
      */
-    fun buildKeyboardLayoutMap(): Map<String, com.noxquill.rewordium.keyboard.gestures.GlideTypingClassifier.KeyPosition> {
-        val layoutMap = mutableMapOf<String, com.noxquill.rewordium.keyboard.gestures.GlideTypingClassifier.KeyPosition>()
+    fun buildKeyboardLayoutMap(): Map<String, com.noxquill.rewordium.keyboard.florisboard.gestures.GlideTypingClassifier.KeyPosition> {
+        val layoutMap = mutableMapOf<String, com.noxquill.rewordium.keyboard.florisboard.gestures.GlideTypingClassifier.KeyPosition>()
         
         // Helper function to extract keys from a ViewGroup
         fun extractKeysFromView(view: View) {
