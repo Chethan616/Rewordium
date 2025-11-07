@@ -1,28 +1,274 @@
-hi
-sdk.dir=C:\\Users\\ChethanKrishna\\AppData\\Local\\Android\\sdk
-flutter.sdk=C:\\flutter
-flutter.buildMode=debug
-flutter.versionName=1.0.0
-flutter.versionCode=1
-GROQ_API_KEY=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
- 
- 
+# 🎹 Rewordium AI Keyboard
 
-storePassword=noxquill2025
-keyPassword=noxquill2025
-keyAlias=upload
-storeFile=<keystore-file-location> 
+<div align="center">
 
- 
-also upload-keystore in android/app and key.properties in android/ folders
+![Version](https://img.shields.io/badge/version-1.0.10-blue.svg)
+![Platform](https://img.shields.io/badge/platform-Android-green.svg)
+![License](https://img.shields.io/badge/license-Proprietary-red.svg)
+![Build](https://img.shields.io/badge/build-passing-brightgreen.svg)
 
+**A powerful, privacy-focused AI keyboard for Android with advanced features and natural typing experience.**
 
-for the notis go to cd server and npm start if fails re check ipconfg ip address in admin.dart around line 27 (npm install express firebase-admin cors dotenv)
+[Features](#-features) • [Installation](#-installation) • [Building](#-building) • [Contributing](#-contributing) • [License](#-license)
 
-speed: floating_assistant_layout.xml
+</div>
 
-ic_grammarly_g.xml
-ic_bubble_logo.xml
+---
 
+## 📖 About
 
-<animated-vector xmlns:android="http://schemas.android.com/apk/res/android" xmlns:aapt="http://schemas.android.com/aapt"><aapt:attr name="android:drawable"><vector android:height="356dp" android:width="400dp" android:viewportHeight="356" android:viewportWidth="400"><group android:name="_R_G"><group android:name="_R_G_L_1_G" android:translateX="110" android:translateY="43" android:pivotX="0.75" android:pivotY="50.75" android:scaleX="1.7157900000000001" android:scaleY="1.7157900000000001"><path android:name="_R_G_L_1_G_D_0_P_0" android:strokeColor="#00FFFF" android:strokeLineCap="round" android:strokeLineJoin="round" android:strokeWidth="1" android:strokeAlpha="1" android:trimPathStart="1" android:trimPathEnd="0" android:trimPathOffset="0" android:pathData=" M0.75 40 C13.86,40 24.5,44.82 24.5,50.75 C24.5,56.68 13.86,61.5 0.75,61.5 C-12.36,61.5 -23,56.68 -23,50.75 C-23,44.82 -12.36,40 0.75,40c "/></group><group android:name="_R_G_L_0_G" android:translateX="110" android:translateY="43"><path android:name="_R_G_L_0_G_D_0_P_0" android:strokeColor="#00FFFF" android:strokeLineCap="round" android:strokeLineJoin="round" android:strokeWidth="2" android:strokeAlpha="1" android:trimPathStart="1" android:trimPathEnd="0" android:trimPathOffset="0" android:pathData=" M1 2.5 C9.83,2.5 17,22.78 17,47.75 C17,72.72 9.83,93 1,93 C-7.83,93 -15,72.72 -15,47.75 C-15,22.78 -7.83,2.5 1,2.5c "/></group></group><group android:name="time_group"/></vector></aapt:attr><target android:name="_R_G_L_1_G_D_0_P_0"><aapt:attr name="android:animation"><set android:ordering="together"><objectAnimator android:propertyName="trimPathStart" android:duration="95" android:startOffset="0" android:valueFrom="1" android:valueTo="1" android:valueType="floatType"><aapt:attr name="android:interpolator"><pathInterpolator android:pathData="M 0.0,0.0 c0.333,0 0.667,1 1.0,1.0"/></aapt:attr></objectAnimator><objectAnimator android:propertyName="trimPathStart" android:duration="2770" android:startOffset="95" android:valueFrom="1" android:valueTo="0" android:valueType="floatType"><aapt:attr name="android:interpolator"><pathInterpolator android:pathData="M 0.0,0.0 c0.333,0 0.667,1 1.0,1.0"/></aapt:attr></objectAnimator></set></aapt:attr></target><target android:name="_R_G_L_1_G_D_0_P_0"><aapt:attr name="android:animation"><set android:ordering="together"><objectAnimator android:propertyName="trimPathEnd" android:duration="2946" android:startOffset="0" android:valueFrom="0" android:valueTo="1" android:valueType="floatType"><aapt:attr name="android:interpolator"><pathInterpolator android:pathData="M 0.0,0.0 c0.333,0 0.667,1 1.0,1.0"/></aapt:attr></objectAnimator></set></aapt:attr></target><target android:name="_R_G_L_1_G_D_0_P_0"><aapt:attr name="android:animation"><set android:ordering="together"><objectAnimator android:propertyName="trimPathOffset" android:duration="2946" android:startOffset="0" android:valueFrom="0" android:valueTo="9.030555555555557" android:valueType="floatType"><aapt:attr name="android:interpolator"><pathInterpolator android:pathData="M 0.0,0.0 c0.333,0 0.667,1 1.0,1.0"/></aapt:attr></objectAnimator></set></aapt:attr></target><target android:name="_R_G_L_0_G_D_0_P_0"><aapt:attr name="android:animation"><set android:ordering="together"><objectAnimator android:propertyName="trimPathStart" android:duration="2946" android:startOffset="0" android:valueFrom="1" android:valueTo="0" android:valueType="floatType"><aapt:attr name="android:interpolator"><pathInterpolator android:pathData="M 0.0,0.0 c0.333,0 0.667,1 1.0,1.0"/></aapt:attr></objectAnimator></set></aapt:attr></target><target android:name="_R_G_L_0_G_D_0_P_0"><aapt:attr name="android:animation"><set android:ordering="together"><objectAnimator android:propertyName="trimPathEnd" android:duration="95" android:startOffset="0" android:valueFrom="0" android:valueTo="0" android:valueType="floatType"><aapt:attr name="android:interpolator"><pathInterpolator android:pathData="M 0.0,0.0 c0.333,0 0.667,1 1.0,1.0"/></aapt:attr></objectAnimator><objectAnimator android:propertyName="trimPathEnd" android:duration="2770" android:startOffset="95" android:valueFrom="0" android:valueTo="1" android:valueType="floatType"><aapt:attr name="android:interpolator"><pathInterpolator android:pathData="M 0.0,0.0 c0.333,0 0.667,1 1.0,1.0"/></aapt:attr></objectAnimator></set></aapt:attr></target><target android:name="_R_G_L_0_G_D_0_P_0"><aapt:attr name="android:animation"><set android:ordering="together"><objectAnimator android:propertyName="trimPathOffset" android:duration="2946" android:startOffset="0" android:valueFrom="0" android:valueTo="8.030555555555555" android:valueType="floatType"><aapt:attr name="android:interpolator"><pathInterpolator android:pathData="M 0.0,0.0 c0.333,0 0.667,1 1.0,1.0"/></aapt:attr></objectAnimator></set></aapt:attr></target><target android:name="time_group"><aapt:attr name="android:animation"><set android:ordering="together"><objectAnimator android:propertyName="translateX" android:duration="2959" android:startOffset="0" android:valueFrom="0" android:valueTo="1" android:valueType="floatType"/></set></aapt:attr></target></animated-vector>
+Rewordium is an intelligent Android keyboard that combines the best aspects of modern keyboard design with AI-powered assistance, while maintaining a strong focus on **privacy** and **performance**. Built with Flutter and Kotlin, it delivers a buttery-smooth typing experience with advanced features like:
+
+- **5-tier progressive turbo delete** (Gboard-like acceleration)
+- **Premium haptic feedback** tuned for minimal latency
+- **AI-powered suggestions** and text transformation
+- **Clipboard history management** with favorites
+- **Gesture-based navigation** and swipe actions
+- **Customizable themes** and layouts
+- **Privacy-first design** - your data stays on your device
+
+---
+
+## ✨ Features
+
+### 🎯 Core Features
+
+- **Smooth Typing Experience**
+  - Gboard-quality key popups and animations
+  - 5-tier turbo delete with natural acceleration (400ms → 35ms)
+  - Optimized haptic feedback on every keypress
+  - Cached theme panels for instant switching
+
+- **AI Integration**
+  - Text paraphrasing and tone adjustment
+  - Grammar and spelling correction
+  - Smart suggestions powered by AI
+  - Translation support
+
+- **Clipboard Management**
+  - History panel with instant sync
+  - Favorite clipboard items
+  - Quick clear and delete actions
+  - Persistent storage across restarts
+
+- **Customization**
+  - Multiple themes (day/night modes)
+  - Adjustable keyboard height
+  - Custom key layouts
+  - Color and gradient customization
+
+- **Gesture Support**
+  - Swipe actions for common operations
+  - Gesture-based text selection
+  - Quick emoji panel access
+  - Toolbar shortcuts
+
+### 🔒 Privacy & Security
+
+- **Local-first processing** - your typing data never leaves your device
+- **No keylogging** - we don't track what you type
+- **Transparent data usage** - clear about what data is used and why
+- **Open contribution model** - review the code yourself
+
+### 🚀 Performance
+
+- **Fast startup** - deferred non-critical initialization
+- **Low memory usage** - optimized clipboard and cache management
+- **Battery efficient** - minimal background processes
+- **Smooth animations** - 60fps+ throughout
+
+---
+
+## 🎬 Latest Release: v1.0.10 "Axolotl"
+
+Current stable version focuses on UI improvements and enhanced turbo delete:
+
+- ✅ Enhanced turbo delete with 5-tier progressive acceleration
+- ✅ Experimental feature dialog for transparent communication
+- ✅ Fixed dialog overflow issues for all screen sizes
+- ✅ Resolved stuck key popup previews
+- ✅ Added haptic feedback to backspace
+
+See [AXOLOTL.md](AXOLOTL.md) for full release notes and [playstore_releases/](playstore_releases/) for detailed changelogs.
+
+---
+
+## 📥 Installation
+
+### From GitHub Releases (Recommended)
+
+1. Go to [Releases](https://github.com/Chethan616/YC_startup/releases)
+2. Download the latest `v1.0.10-Axolotl.apk`
+3. Install on your Android device (enable "Install from Unknown Sources" if needed)
+4. Enable Rewordium in **Settings → System → Languages & input → On-screen keyboard**
+
+### From Google Play Store
+
+Coming soon! 🚀
+
+---
+
+## 🏗️ Building from Source
+
+Want to build the app yourself? See our comprehensive [SETUP.md](SETUP.md) guide.
+
+### Quick Start
+
+```bash
+# Clone repository
+git clone https://github.com/Chethan616/YC_startup.git
+cd YC_startup
+
+# Install dependencies
+flutter pub get
+
+# Run on connected device
+flutter run
+
+# Build release APK
+flutter build apk --release
+```
+
+**Important:** You'll need to configure:
+- `android/key.properties` (signing keys)
+- `android/local.properties` (SDK paths, API keys)
+- Firebase configuration files
+- `.env` file for environment variables
+
+See [SETUP.md](SETUP.md) for detailed instructions.
+
+---
+
+## 🤝 Contributing
+
+We welcome contributions! This project uses a **strict licensing model** that allows contributions while protecting intellectual property.
+
+### How to Contribute
+
+1. **Read the Guidelines**
+   - See [CONTRIBUTING.md](CONTRIBUTING.md) for detailed contribution guidelines
+   - Review our [Code of Conduct](CODE_OF_CONDUCT.md)
+
+2. **Fork and Clone**
+   ```bash
+   git fork https://github.com/Chethan616/YC_startup
+   git clone https://github.com/YOUR_USERNAME/YC_startup.git
+   ```
+
+3. **Create a Feature Branch**
+   ```bash
+   git checkout -b feature/your-feature-name
+   ```
+
+4. **Make Your Changes**
+   - Follow code style guidelines
+   - Add tests for new features
+   - Update documentation as needed
+
+5. **Submit a Pull Request**
+   - Describe what you changed and why
+   - Reference any related issues
+   - Ensure all tests pass
+
+### Contribution Areas
+
+We're especially interested in:
+- 🐛 Bug fixes and stability improvements
+- 🎨 UI/UX enhancements
+- 🌍 Localization and translations
+- 📝 Documentation improvements
+- ⚡ Performance optimizations
+- ♿ Accessibility features
+
+---
+
+## 📄 License
+
+**Copyright © 2025 Noxquill Technologies. All Rights Reserved.**
+
+This project uses a **proprietary license with contribution permissions**:
+
+- ✅ **You CAN:** View the source code, contribute improvements, fork for contribution purposes
+- ❌ **You CANNOT:** Copy, redistribute, or use commercially without permission
+- ⚖️ **Contributors:** By contributing, you agree that your contributions become part of the project under the same license
+
+See [LICENSE](LICENSE) file for full details.
+
+**Why this license?**
+- We want transparency and community contributions
+- We need to protect our commercial interests
+- We aim for a sustainable business model while staying open to collaboration
+
+---
+
+## 🗺️ Roadmap
+
+### Coming Soon
+
+- [ ] iOS version (Flutter compatibility)
+- [ ] More AI features (summarization, expansion)
+- [ ] Voice input integration
+- [ ] Multi-language support (50+ languages)
+- [ ] Advanced gesture recognition
+- [ ] Plugin system for custom extensions
+
+### Future Plans
+
+- [ ] Cross-platform sync (desktop integration)
+- [ ] Advanced theming engine
+- [ ] Keyboard sharing marketplace
+- [ ] Offline AI models
+- [ ] Integration with popular apps
+
+Vote on features and track progress in [Discussions](https://github.com/Chethan616/YC_startup/discussions).
+
+---
+
+## 🙏 Acknowledgments
+
+Rewordium is built with the help of amazing open-source projects:
+
+- **Flutter** - Google's UI framework
+- **Kotlin** - Modern Android development
+- **Firebase** - Backend services
+- **Jetpack Compose** - Modern UI toolkit
+- **Lottie** - Animation library
+- **Material Design** - Google's design system
+
+Special thanks to our contributors and testers! ❤️
+
+---
+
+## 📞 Contact & Support
+
+- **Website:** https://www.rewordium.tech
+- **Support:** [support@rewordium.tech](mailto:support@rewordium.tech)
+- **Donations:** https://www.rewordium.tech/donate
+- **GitHub Issues:** [Report a bug](https://github.com/Chethan616/YC_startup/issues/new)
+- **Discussions:** [Ask questions](https://github.com/Chethan616/YC_startup/discussions)
+
+---
+
+## 📊 Project Stats
+
+- **Current Version:** 1.0.10 "Axolotl"
+- **Release Date:** November 7, 2025
+- **Target Android:** 7.0+ (API 24+)
+- **Language:** Dart, Kotlin, Java
+- **Build System:** Flutter 3.35.4, Gradle 8.7.0
+
+---
+
+## 🌟 Star History
+
+If you like this project, please give it a ⭐ on GitHub!
+
+---
+
+<div align="center">
+
+**Made with ❤️ by Noxquill Technologies**
+
+[⬆ Back to Top](#-rewordium-ai-keyboard)
+
+</div>

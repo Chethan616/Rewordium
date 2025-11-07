@@ -43,3 +43,139 @@ app.*.map.json
 /android/app/debug
 /android/app/profile
 /android/app/release
+
+# ============================================
+# SECRETS AND SENSITIVE FILES - DO NOT COMMIT
+# ============================================
+# Environment variables and API keys
+.env
+*.env
+.env.*
+!.env.example
+
+# Android signing keys and properties
+*.jks
+*.keystore
+key.properties
+android/key.properties
+android/app/key.properties
+
+# Firebase service account credentials
+**/rewordium-*.json
+rewordium-4a89181f09b0.json
+functions/rewordium-4a89181f09b0.json
+
+# Local configuration
+local.properties
+android/local.properties
+
+# ============================================
+# EXCLUDED FOLDERS AND THIRD-PARTY CODE
+# ============================================
+# FlorisBoard integration (third-party, not to be open-sourced)
+florisboard-main/
+**/florisboard-main/**
+*florisboard*
+
+# Payment portal (contains sensitive logic)
+payment_portal/
+**/payment_portal/**
+
+# Account deletion portal (sensitive)
+delete_account/
+**/delete_account/**
+
+# Copilot AI generated files and analysis
+.copilot/
+**/.copilot/**
+
+# ============================================
+# ARCHIVES AND BINARY FILES
+# ============================================
+# Compressed archives
+*.zip
+*.rar
+*.tar
+*.tar.gz
+*.7z
+
+# APK and AAB releases (use GitHub releases instead)
+*.apk
+*.aab
+/releases/
+
+# ============================================
+# BUILD ARTIFACTS AND GENERATED CODE
+# ============================================
+# Android build outputs
+/android/.gradle/
+/android/app/build/
+/android/build/
+/android/captures/
+/android/*/build/
+/android/.externalNativeBuild/
+/android/.cxx/
+
+# Flutter build outputs
+/build/
+/.dart_tool/
+/.flutter-plugins
+/.flutter-plugins-dependencies
+/.packages
+
+# iOS build outputs
+/ios/Pods/
+/ios/.symlinks/
+/ios/Flutter/Flutter.framework
+/ios/Flutter/Flutter.podspec
+/ios/.generated/
+/ios/Runner.xcworkspace/xcuserdata/
+/ios/Runner.xcodeproj/xcuserdata/
+
+# macOS build outputs
+/macos/Pods/
+/macos/Flutter/ephemeral/
+
+# Windows build outputs
+/windows/flutter/ephemeral/
+
+# Web build outputs
+/web/flutter_service_worker.js
+
+# ============================================
+# IDE AND EDITOR FILES
+# ============================================
+# VS Code
+.vscode/
+*.code-workspace
+
+# IntelliJ / Android Studio
+.idea/
+*.iml
+*.ipr
+*.iws
+.idea_modules/
+
+# ============================================
+# DOCUMENTATION TO EXCLUDE (TEMPORARY/DEBUG)
+# ============================================
+# Temporary development docs (keep README.md, LICENSE, CONTRIBUTING.md)
+plan.md
+todo.md
+ISSUE_*.md
+BUILD_SUCCESS_SUMMARY.md
+FLORISBOARD_IMPROVEMENTS_COMPLETE.md
+
+# Play Store metadata (handled separately)
+# playstore_releases/ - keep this for release notes
+
+# ============================================
+# OS AND SYSTEM FILES
+# ============================================
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
