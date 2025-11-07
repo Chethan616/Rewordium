@@ -26,7 +26,8 @@ Future<bool> showExperimentalKeyboardDialog(BuildContext context) async {
               ],
             ),
             Padding(
-              padding: EdgeInsets.only(left: 40), // Align with text above (28px icon + 12px spacing)
+              padding: EdgeInsets.only(
+                  left: 40), // Align with text above (28px icon + 12px spacing)
               child: Text(
                 'Feature',
                 style: TextStyle(fontSize: 20),

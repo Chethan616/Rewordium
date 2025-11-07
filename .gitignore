@@ -165,6 +165,31 @@ todo.md
 ISSUE_*.md
 BUILD_SUCCESS_SUMMARY.md
 FLORISBOARD_IMPROVEMENTS_COMPLETE.md
+*_COMPLETE.md
+*_OPTIMIZATION_GUIDE.md
+
+# Debug and test files
+test_*.dart
+debug_*.dart
+*_debug.dart
+
+# Temporary text files
+*.txt.bak
+temp.txt
+*_temp.txt
+keyboard_lines.txt
+keyboard_replacement.txt
+
+# Loose build scripts in root
+*.ps1
+*.bat
+*.sh.local
+
+# Loose Kotlin/Java files in root (should be in android/)
+emoji_*.kt
+emoji_*.java
+keyboard_*.java
+haptic_*.java
 
 # Play Store metadata (handled separately)
 # playstore_releases/ - keep this for release notes
