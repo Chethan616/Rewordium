@@ -6,9 +6,8 @@
 
 <div align="center">
 
-<!-- ✅ Fixed badge links -->
 <a href="https://github.com/Chethan616/Rewordium/releases/latest">
-  <img alt="Latest Release" src="https://img.shields.io/github/v/release/Chethan616/Rewordium?label=%F0%9F%A6%8E%20Latest&color=32CD32">
+  <img alt="Latest Release" src="https://img.shields.io/github/v/release/Chethan616/Rewordium?label=Latest&color=32CD32">
 </a>
 <img alt="Version" src="https://img.shields.io/badge/version-1.0.10%2B10-white.svg">
 <img alt="Platform" src="https://img.shields.io/badge/platform-Android-brightgreen.svg">
@@ -20,10 +19,10 @@
 
 ---
 
-**Rewordium** is a next-generation **AI writing assistant & keyboard** for Android.  
-Rewrite, summarize, refine, and write anywhere — *privately, beautifully, intelligently.* 🪶  
+**Rewordium** is an **AI-powered writing assistant & keyboard** for Android.  
+Rewrite, summarize, and refine your text anywhere — *fast, private, and beautiful.*  
 
-[🌊 Features](#-features) • [📥 Installation](#-installation) • [🧠 AI Tools](#-ai-tools) • [⚙️ Building](#-building) • [🤝 Contributing](#-contributing)
+[🌊 Features](#-features) • [📥 Installation](#-installation) • [🧠 AI Tools](#-ai-engine-overview) • [🏗️ Building](#-building-from-source) • [🎨 Visuals](#-visual-experience) • [🛠️ Tech Stack](#-tech-stack)
 
 </div>
 
@@ -31,10 +30,9 @@ Rewrite, summarize, refine, and write anywhere — *privately, beautifully, inte
 
 ## 📖 About
 
-Rewordium combines the power of **AI writing tools**, a **smart keyboard**, and a **floating rewrite assistant** — all built with **privacy at its core**.  
-It’s designed for creators, professionals, and anyone who values effortless, intelligent writing.
+Rewordium blends a smart keyboard, an overlay assistant, and an AI writing suite — built for people who write constantly.  
+It helps you shape better sentences, switch tones, or summarize ideas on the fly — all without leaving your current app.
 
-### 🧬 Core Philosophy
 > “Like the Axolotl, Rewordium regenerates — your creativity, your words, your ideas.”
 
 ---
@@ -42,75 +40,55 @@ It’s designed for creators, professionals, and anyone who values effortless, i
 ## ✨ Features
 
 ### 🧠 AI Writing Tools
-- ✍️ Rewrite, summarize, and refine text instantly  
-- 🎭 Adjust tone — formal, creative, or concise  
-- 💬 Works across any app via the floating AI bubble  
-- ⚡ Lightning-fast response with privacy-first AI  
+- ✍️ Rewrite, summarize, and refine any text instantly  
+- 🎭 Change tone — professional, creative, or simple  
+- 💬 Access via the floating AI bubble across all apps  
+- ⚡ Near-instant results powered by private, local AI  
 
 ### 🎹 Intelligent Keyboard
-- 5-tier **Turbo Delete** acceleration  
-- Low-latency **premium haptics**  
-- Smart AI suggestions and clipboard sync  
-- Seamless animations and theme transitions  
+- 🧩 Five-tier **Turbo Delete** acceleration  
+- 🎧 Smooth haptics and low-latency feedback  
+- 💡 Smart clipboard and suggestion system  
+- 🌗 Dynamic light/dark transitions and animations  
 
-### 🔒 Privacy & Security
-- No tracking, no ads, no data collection  
-- Local-first text processing  
-- Transparent permission and privacy handling  
+### 🔒 Privacy & Transparency
+- No data collection, no ads, no tracking  
+- Local-first processing for every AI action  
+- Clear permissions and privacy-aware UX  
 
 ### 🎨 Design & Customization
-- Light/dark green gradient themes  
-- Adjustable height, spacing, and layouts  
-- Clean modern design with smooth feedback  
+- Gradient themes with adaptive feedback  
+- Adjustable keyboard height and spacing  
+- Minimal, fluid design with personality  
 
 ---
 
-## 🦎 Latest Release: *v1.0.10 — Axolotl*
+## 🦎 Latest Release — *v1.0.10 “Axolotl”*
 
 > *Regeneration through refinement.*
 
-- ✅ Turbo Delete 2.0 — smoother, 5-tier acceleration  
-- ✅ Fixed overflow in experimental dialog  
-- ✅ Refined key popup animations  
-- ✅ Improved haptics and transitions  
+**Highlights**
+- ⚡ Turbo Delete 2.0 — smoother and faster  
+- 🧭 Fixed overflow issues in experimental dialog  
+- 🎚️ Polished key popups, transitions, and haptics  
+- 🎯 Improved performance on mid-range devices  
 
-📄 [Full Changelog →](playstore_releases/RELEASE_NOTES_AXOLOTL.md)
-
----
-
-## 📥 Installation
-
-### From GitHub  
-1. Visit [**Releases**](https://github.com/Chethan616/Rewordium/releases)  
-2. Download `v1.0.10-Axolotl.apk`  
-3. Install it on your Android device  
-4. Enable Rewordium via  
-   `Settings → System → Languages & input → On-screen keyboard`
-
-### From Play Store  
-<a href="https://play.google.com/store/apps/details?id=com.noxquill.rewordium" style="text-decoration:none">
-    <img alt="Play Store" src="https://img.shields.io/badge/📱%20Get%20it%20on-Google%20Play-brightgreen?style=for-the-badge&logo=google-play&logoColor=white" />
-  </a>  
+📄 [View full changelog →](playstore_releases/RELEASE_NOTES_AXOLOTL.md)
 
 ---
 
-## 🧠 AI Tools Overview
+## 🧠 AI Engine Overview
 
-| Tool | Description |
-|------|--------------|
-| **Rewrite** | Reword sentences naturally with AI |
-| **Summarize** | Condense long text into key ideas |
-| **Tone Shift** | Switch tone between creative, formal, or academic |
-| **Grammar Fix** | Instantly correct grammar and punctuation |
-| **Ask AI** | Get rewriting help inside any app |
+```mermaid
+graph LR
+    A[📝 Your Text] --> B{Rewordium Engine}
+    B --> C[✨ Paraphrase]
+    B --> D[📊 Summarize]
+    B --> E[🎭 Tone Shift]
+    B --> F[⚡ Instant Suggestion]
 
----
-
-## 🏗️ Building From Source
-
-```bash
-git clone https://github.com/Chethan616/Rewordium.git
-cd Rewordium
-flutter pub get
-flutter run
-flutter build apk --release
+    style B fill:#6C63FF,stroke:#4CAF50,stroke-width:3px,color:#fff
+    style C fill:#FF6B6B,color:#fff
+    style D fill:#4ECDC4,color:#fff
+    style E fill:#FFE66D,color:#000
+    style F fill:#95E1D3,color:#000
