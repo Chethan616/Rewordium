@@ -7,15 +7,15 @@
 <div align="center">
 
 <!-- ✅ Fixed badge links -->
-<a href="https://github.com/Chethan616/YC_startup/releases/latest">
-  <img alt="Latest Release" src="https://img.shields.io/github/v/release/Chethan616/YC_startup?label=🦎%20Latest&color=32CD32">
+<a href="https://github.com/Chethan616/Rewordium/releases/latest">
+  <img alt="Latest Release" src="https://img.shields.io/github/v/release/Chethan616/Rewordium?label=%F0%9F%A6%8E%20Latest&color=32CD32">
 </a>
 <img alt="Version" src="https://img.shields.io/badge/version-1.0.10%2B10-white.svg">
 <img alt="Platform" src="https://img.shields.io/badge/platform-Android-brightgreen.svg">
 <img alt="License" src="https://img.shields.io/badge/license-Proprietary-black.svg">
 <img alt="Build" src="https://img.shields.io/badge/build-passing-brightgreen.svg">
-<a href="https://github.com/Chethan616/YC_startup/releases">
-  <img alt="Downloads" src="https://img.shields.io/github/downloads/Chethan616/YC_startup/total?color=32CD32">
+<a href="https://github.com/Chethan616/Rewordium/releases">
+  <img alt="Downloads" src="https://img.shields.io/github/downloads/Chethan616/Rewordium/total?color=32CD32">
 </a>
 
 ---
@@ -81,7 +81,7 @@ It’s designed for creators, professionals, and anyone who values effortless, i
 ## 📥 Installation
 
 ### From GitHub  
-1. Visit [**Releases**](https://github.com/Chethan616/YC_startup/releases)  
+1. Visit [**Releases**](https://github.com/Chethan616/Rewordium/releases)  
 2. Download `v1.0.10-Axolotl.apk`  
 3. Install it on your Android device  
 4. Enable Rewordium via  
@@ -107,8 +107,8 @@ It’s designed for creators, professionals, and anyone who values effortless, i
 ## 🏗️ Building From Source
 
 ```bash
-git clone https://github.com/Chethan616/YC_startup.git
-cd YC_startup
+git clone https://github.com/Chethan616/Rewordium.git
+cd Rewordium
 flutter pub get
 flutter run
 flutter build apk --release
