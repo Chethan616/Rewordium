@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 
-/// Keyboard theming system inspired by FlorisBoard's Snygg
+/// Keyboard theming system with advanced styling engine
 class KeyboardTheme {
   // Colors
   final Color backgroundColor;
@@ -11,22 +11,22 @@ class KeyboardTheme {
   final Color suggestionTextColor;
   final Color borderColor;
   final Color accentColor;
-  
+
   // Dimensions
   final double keyHeight;
   final double keySpacing;
   final double keyBorderRadius;
   final double keyElevation;
   final double suggestionBarHeight;
-  
+
   // Typography
   final TextStyle keyTextStyle;
   final TextStyle suggestionTextStyle;
   final TextStyle clipboardTextStyle;
-  
+
   // Shadows
   final BoxShadow? keyShadow;
-  
+
   const KeyboardTheme({
     required this.backgroundColor,
     required this.keyBackgroundColor,
@@ -46,8 +46,8 @@ class KeyboardTheme {
     required this.clipboardTextStyle,
     this.keyShadow,
   });
-  
-  /// Light theme similar to FlorisBoard
+
+  /// Light theme with clean design
   factory KeyboardTheme.light() {
     return KeyboardTheme(
       backgroundColor: const Color(0xFFE8E8E8),
@@ -85,8 +85,8 @@ class KeyboardTheme {
       ),
     );
   }
-  
-  /// Dark theme similar to FlorisBoard
+
+  /// Dark theme with modern aesthetics
   factory KeyboardTheme.dark() {
     return KeyboardTheme(
       backgroundColor: const Color(0xFF1E1E1E),
@@ -124,7 +124,7 @@ class KeyboardTheme {
       ),
     );
   }
-  
+
   KeyboardTheme copyWith({
     Color? backgroundColor,
     Color? keyBackgroundColor,

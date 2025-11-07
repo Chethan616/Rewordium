@@ -81,7 +81,7 @@ class KeyboardLayoutManager(private val service: RewordiumAIKeyboardService) {
     private lateinit var themeButton: ImageView
     private lateinit var keyboardSettingsButton: ImageView
     
-    // FlorisBoard-inspired Gboard toolbar
+    // Advanced Gboard-style toolbar
     private var gboardToolbar: GboardToolbar? = null
     
     // Key bounds tracking for swipe gestures
@@ -204,7 +204,7 @@ class KeyboardLayoutManager(private val service: RewordiumAIKeyboardService) {
         setupSettingsIcon()
         createKeyPopup()
         
-        // Initialize FlorisBoard-inspired Gboard toolbar
+        // Initialize advanced Gboard-style toolbar
         initializeGboardToolbar()
         
         // CRITICAL: Setup lifecycle owners on keyboard rows IMMEDIATELY after initialization
@@ -255,11 +255,11 @@ class KeyboardLayoutManager(private val service: RewordiumAIKeyboardService) {
     }
     
     /**
-     * Initialize FlorisBoard-inspired Gboard toolbar
+     * Initialize advanced Gboard-style toolbar
      */
     private fun initializeGboardToolbar() {
         try {
-            Log.d(KeyboardConstants.TAG, "🎨 Initializing FlorisBoard-inspired Gboard toolbar with GLASS EFFECT")
+            Log.d(KeyboardConstants.TAG, "🎨 Initializing advanced Gboard toolbar with GLASS EFFECT")
             
             // Create toolbar instance
             gboardToolbar = GboardToolbar(service, service)
@@ -956,7 +956,7 @@ class KeyboardLayoutManager(private val service: RewordiumAIKeyboardService) {
             setMargins(margin, margin, margin, margin)
         }
         
-        // Enhanced spacebar navigation with FlorisBoard-style gesture handling
+        // Enhanced spacebar navigation with advanced gesture handling
         var startX = 0f
         var startY = 0f
         var isSwiping = false
@@ -1041,7 +1041,7 @@ class KeyboardLayoutManager(private val service: RewordiumAIKeyboardService) {
     }
     
     /**
-     * Execute spacebar swipe actions using FlorisBoard SwipeAction enum
+     * Execute spacebar swipe actions using SwipeAction enum
      */
     private fun executeSpacebarAction(action: SwipeAction, ic: android.view.inputmethod.InputConnection) {
         when (action) {
