@@ -1,5 +1,7 @@
 # Release v1.0.10 - Dialog UI Fix & Version Update
 
+Codename: Axolotl
+
 ## Summary
 This release fixes the experimental feature dialog overflow issue and updates the app version to 1.0.10 with new release notes. The dialog title now displays cleanly on all screen sizes.
 

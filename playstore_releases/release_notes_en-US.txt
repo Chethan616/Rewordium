@@ -1,5 +1,6 @@
-What's new in Rewordium v1.0.10 (build 10)What's new in Rewordium v1.0.9 (build 9)
+What's new in Rewordium v1.0.10 (build 10)
 
+Codename: Axolotl
 
 
 - Enhanced turbo delete: Smoother 5-tier progressive acceleration for natural Gboard-like backspace feel.- Faster startup and buttery-smooth typing experience.
