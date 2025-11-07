@@ -49,6 +49,21 @@ app.*.map.json
 # ============================================
 # Environment variables and API keys
 .env
+.env.*
+!.env.example
+
+# Firebase configuration (use .example files instead)
+lib/firebase_options.dart
+android/app/google-services.json
+ios/Runner/GoogleService-Info.plist
+ios/firebase_app_id_file.json
+
+# Android signing keys
+android/key.properties
+android/app/*.jks
+android/app/*.keystore
+*.jks
+*.keystore
 *.env
 .env.*
 !.env.example
@@ -72,18 +87,11 @@ android/local.properties
 # ============================================
 # EXCLUDED FOLDERS AND THIRD-PARTY CODE
 # ============================================
-# FlorisBoard integration (third-party, not to be open-sourced)
-florisboard-main/
-**/florisboard-main/**
-*florisboard*
-
-# Payment portal (contains sensitive logic)
-payment_portal/
-**/payment_portal/**
-
-# Account deletion portal (sensitive)
+# Business logic (not open-sourced)
 delete_account/
 **/delete_account/**
+payment_portal/
+**/payment_portal/**
 
 # Copilot AI generated files and analysis
 .copilot/

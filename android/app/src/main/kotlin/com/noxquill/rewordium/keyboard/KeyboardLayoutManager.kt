@@ -40,7 +40,7 @@ import com.noxquill.rewordium.R
 import com.noxquill.rewordium.keyboard.data.EmojiData
 import com.noxquill.rewordium.keyboard.util.KeyboardConstants
 import com.noxquill.rewordium.keyboard.gesture.SwipeGestureEngine
-import com.noxquill.rewordium.keyboard.florisboard.gestures.SwipeAction
+import com.noxquill.rewordium.keyboard.gestures.SwipeAction
 import com.noxquill.rewordium.keyboard.ui.GboardToolbar
 import com.noxquill.rewordium.keyboard.compose.ProfessionalLiquidGlassKey
 import com.noxquill.rewordium.keyboard.compose.ProfessionalLiquidGlassSpecialKey
@@ -81,7 +81,7 @@ class KeyboardLayoutManager(private val service: RewordiumAIKeyboardService) {
     private lateinit var themeButton: ImageView
     private lateinit var keyboardSettingsButton: ImageView
     
-    // FlorisBoard-inspired Gboard toolbar
+    // Advanced Gboard-style toolbar
     private var gboardToolbar: GboardToolbar? = null
     
     // Key bounds tracking for swipe gestures
@@ -204,7 +204,7 @@ class KeyboardLayoutManager(private val service: RewordiumAIKeyboardService) {
         setupSettingsIcon()
         createKeyPopup()
         
-        // Initialize FlorisBoard-inspired Gboard toolbar
+        // Initialize advanced Gboard-style toolbar
         initializeGboardToolbar()
         
         // CRITICAL: Setup lifecycle owners on keyboard rows IMMEDIATELY after initialization
@@ -255,11 +255,11 @@ class KeyboardLayoutManager(private val service: RewordiumAIKeyboardService) {
     }
     
     /**
-     * Initialize FlorisBoard-inspired Gboard toolbar
+     * Initialize advanced Gboard-style toolbar
      */
     private fun initializeGboardToolbar() {
         try {
-            Log.d(KeyboardConstants.TAG, "🎨 Initializing FlorisBoard-inspired Gboard toolbar with GLASS EFFECT")
+            Log.d(KeyboardConstants.TAG, "🎨 Initializing advanced Gboard toolbar with GLASS EFFECT")
             
             // Create toolbar instance
             gboardToolbar = GboardToolbar(service, service)
@@ -956,7 +956,7 @@ class KeyboardLayoutManager(private val service: RewordiumAIKeyboardService) {
             setMargins(margin, margin, margin, margin)
         }
         
-        // Enhanced spacebar navigation with FlorisBoard-style gesture handling
+        // Enhanced spacebar navigation with advanced gesture handling
         var startX = 0f
         var startY = 0f
         var isSwiping = false
@@ -1041,7 +1041,7 @@ class KeyboardLayoutManager(private val service: RewordiumAIKeyboardService) {
     }
     
     /**
-     * Execute spacebar swipe actions using FlorisBoard SwipeAction enum
+     * Execute spacebar swipe actions using SwipeAction enum
      */
     private fun executeSpacebarAction(action: SwipeAction, ic: android.view.inputmethod.InputConnection) {
         when (action) {
@@ -2154,7 +2154,7 @@ class KeyboardLayoutManager(private val service: RewordiumAIKeyboardService) {
      * This intercepts touch events before they reach individual keys
      */
     @SuppressLint("ClickableViewAccessibility")
-    fun setupGlideTouchInterception(detector: com.noxquill.rewordium.keyboard.florisboard.gestures.GlideTypingGesture.Detector) {
+    fun setupGlideTouchInterception(detector: com.noxquill.rewordium.keyboard.gestures.GlideTypingGesture.Detector) {
         mainKeyboardContainer.setOnTouchListener { _, event ->
             // Let the glide detector process the touch event
             val consumed = detector.onTouchEvent(event)
@@ -2171,8 +2171,8 @@ class KeyboardLayoutManager(private val service: RewordiumAIKeyboardService) {
      * Build keyboard layout map for glide typing classifier
      * Maps each key to its position information
      */
-    fun buildKeyboardLayoutMap(): Map<String, com.noxquill.rewordium.keyboard.florisboard.gestures.GlideTypingClassifier.KeyPosition> {
-        val layoutMap = mutableMapOf<String, com.noxquill.rewordium.keyboard.florisboard.gestures.GlideTypingClassifier.KeyPosition>()
+    fun buildKeyboardLayoutMap(): Map<String, com.noxquill.rewordium.keyboard.gestures.GlideTypingClassifier.KeyPosition> {
+        val layoutMap = mutableMapOf<String, com.noxquill.rewordium.keyboard.gestures.GlideTypingClassifier.KeyPosition>()
         
         // Helper function to extract keys from a ViewGroup
         fun extractKeysFromView(view: View) {

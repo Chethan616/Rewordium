@@ -34,7 +34,7 @@ class _KeyboardSettingsScreenState extends State<KeyboardSettingsScreen> {
   bool _spaceSwipeEnabled = true;
   bool _directionalSwipeEnabled = true;
 
-  // Glide typing settings (FlorisBoard integration)
+  // Glide typing settings (advanced gesture recognition)
   bool _glideTypingEnabled = true;
   bool _spacebarNavigationEnabled = true;
 
@@ -380,7 +380,7 @@ class _KeyboardSettingsScreenState extends State<KeyboardSettingsScreen> {
     }
   }
 
-  // Glide typing methods (FlorisBoard integration)
+  // Glide typing methods (advanced gesture recognition)
   Future<void> _loadGlideTypingSettings() async {
     try {
       final prefs = await SharedPreferences.getInstance();
@@ -845,8 +845,8 @@ class _KeyboardSettingsScreenState extends State<KeyboardSettingsScreen> {
                 elevation: 2,
                 child: SwitchListTile(
                   title: const Text('Enable Glide Typing'),
-                  subtitle: const Text(
-                      'Slide your finger across keys to type words (FlorisBoard)'),
+                  subtitle:
+                      const Text('Slide your finger across keys to type words'),
                   value: _glideTypingEnabled,
                   onChanged: _toggleGlideTyping,
                 ),
