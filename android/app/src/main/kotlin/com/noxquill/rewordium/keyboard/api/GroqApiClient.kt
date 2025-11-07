@@ -12,7 +12,7 @@ import java.util.concurrent.TimeUnit
 object GroqApiClient {
     private const val TAG = "GroqApiClient"
     private const val BASE_URL = "https://api.groq.com/openai/v1/"
-    private const val API_KEY = "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" // Replace with your key
+    private val API_KEY = com.noxquill.rewordium.BuildConfig.GROQ_API_KEY
     private const val MODEL = "llama-3.1-8b-instant"
     
     private val service: GroqApiService
