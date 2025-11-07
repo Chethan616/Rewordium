@@ -15,7 +15,8 @@ class KeyboardStatusCard extends StatefulWidget {
   State<KeyboardStatusCard> createState() => _KeyboardStatusCardState();
 }
 
-class _KeyboardStatusCardState extends State<KeyboardStatusCard> with WidgetsBindingObserver {
+class _KeyboardStatusCardState extends State<KeyboardStatusCard>
+    with WidgetsBindingObserver {
   late final KeyboardProvider _keyboardProvider;
   late final VoidCallback _onAppResume;
 
@@ -24,7 +25,7 @@ class _KeyboardStatusCardState extends State<KeyboardStatusCard> with WidgetsBin
     super.initState();
     // Get the provider reference
     _keyboardProvider = Provider.of<KeyboardProvider>(context, listen: false);
-    
+
     // Setup app resume callback
     _onAppResume = () {
       // Add a small delay to ensure the app is fully resumed
@@ -32,10 +33,10 @@ class _KeyboardStatusCardState extends State<KeyboardStatusCard> with WidgetsBin
         _keyboardProvider.checkKeyboardStatus();
       });
     };
-    
+
     // Add lifecycle observer
     WidgetsBinding.instance.addObserver(this);
-    
+
     // Start checking keyboard status when widget initializes
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _keyboardProvider.startKeyboardStatusCheck();
@@ -121,7 +122,9 @@ class _KeyboardStatusCardState extends State<KeyboardStatusCard> with WidgetsBin
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      isEnabled ? "System Keyboard Active" : "Manage Your Keyboard",
+                      isEnabled
+                          ? "System Keyboard Active"
+                          : "Manage Your Keyboard",
                       style: AppTheme.bodyMedium,
                     ),
                     const SizedBox(height: 4),
@@ -137,7 +140,8 @@ class _KeyboardStatusCardState extends State<KeyboardStatusCard> with WidgetsBin
                 text: "Manage",
                 onPressed: () async {
                   // Show experimental feature dialog first
-                  final shouldProceed = await showExperimentalKeyboardDialog(context);
+                  final shouldProceed =
+                      await showExperimentalKeyboardDialog(context);
                   if (shouldProceed) {
                     // Open the phone's keyboard settings
                     keyboardProvider.openKeyboardSettings();
@@ -185,7 +189,7 @@ class _KeyboardStatusCardState extends State<KeyboardStatusCard> with WidgetsBin
       ),
     );
   }
-  
+
   void _showKeyboardSettings(BuildContext context, KeyboardProvider provider) {
     showModalBottomSheet(
       context: context,
@@ -200,14 +204,14 @@ class _KeyboardStatusCardState extends State<KeyboardStatusCard> with WidgetsBin
 
 class KeyboardSettingsSheet extends StatelessWidget {
   final KeyboardProvider provider;
-  
+
   const KeyboardSettingsSheet({super.key, required this.provider});
-  
+
   @override
   Widget build(BuildContext context) {
     final Size screenSize = MediaQuery.of(context).size;
     final bool isSmallScreen = screenSize.width < 360;
-    
+
     return Padding(
       padding: EdgeInsets.all(isSmallScreen ? 16 : 24),
       child: Column(
@@ -280,7 +284,7 @@ class KeyboardSettingsSheet extends StatelessWidget {
       ),
     );
   }
-  
+
   Widget _buildSettingItem({
     required String title,
     required String subtitle,

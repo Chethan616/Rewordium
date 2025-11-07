@@ -9,11 +9,29 @@ Future<bool> showExperimentalKeyboardDialog(BuildContext context) async {
     barrierDismissible: false,
     builder: (BuildContext context) {
       return AlertDialog(
-        title: Row(
+        title: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(Icons.science_outlined, color: Colors.orange, size: 28),
-            SizedBox(width: 12),
-            Text('Experimental Feature'),
+            Row(
+              children: [
+                Icon(Icons.science_outlined, color: Colors.orange, size: 28),
+                SizedBox(width: 12),
+                Expanded(
+                  child: Text(
+                    'Experimental',
+                    style: TextStyle(fontSize: 20),
+                  ),
+                ),
+              ],
+            ),
+            Padding(
+              padding: EdgeInsets.only(left: 40), // Align with text above (28px icon + 12px spacing)
+              child: Text(
+                'Feature',
+                style: TextStyle(fontSize: 20),
+              ),
+            ),
           ],
         ),
         content: SingleChildScrollView(
@@ -111,13 +129,16 @@ Future<bool> showExperimentalKeyboardDialog(BuildContext context) async {
                     SizedBox(height: 8),
                     InkWell(
                       onTap: () async {
-                        final uri = Uri.parse('https://www.rewordium.tech/donate');
+                        final uri =
+                            Uri.parse('https://www.rewordium.tech/donate');
                         if (await canLaunchUrl(uri)) {
-                          await launchUrl(uri, mode: LaunchMode.externalApplication);
+                          await launchUrl(uri,
+                              mode: LaunchMode.externalApplication);
                         }
                       },
                       child: Container(
-                        padding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                        padding:
+                            EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                         decoration: BoxDecoration(
                           color: Colors.purple,
                           borderRadius: BorderRadius.circular(6),
@@ -135,7 +156,8 @@ Future<bool> showExperimentalKeyboardDialog(BuildContext context) async {
                               ),
                             ),
                             SizedBox(width: 4),
-                            Icon(Icons.open_in_new, color: Colors.white, size: 14),
+                            Icon(Icons.open_in_new,
+                                color: Colors.white, size: 14),
                           ],
                         ),
                       ),
