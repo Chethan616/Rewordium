@@ -1,3 +1,4 @@
+SPDX-License-Identifier: LicenseRef-Rewordium-Proprietary
 # Rewordium — Proprietary License (Source-Available)
 
 **Copyright © 2025 Chethan Krishna Manikonda and Rupak R**  
