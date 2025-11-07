@@ -1,0 +1,160 @@
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+    package="com.noxquill.rewordium">
+
+    <!-- =================================================================== -->
+    <!-- PERMISSIONS -->
+    <!-- =================================================================== -->
+
+    <!-- For Overlay Window and Haptic Feedback -->
+    <uses-permission android:name="android.permission.SYSTEM_ALERT_WINDOW" />
+    <uses-permission android:name="android.permission.VIBRATE"/>
+
+    <!-- For Network Communication (Groq, Firebase, etc.) -->
+    <uses-permission android:name="android.permission.INTERNET"/>
+    
+    <!-- For Firebase Cloud Messaging -->
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+    <uses-permission android:name="android.permission.WAKE_LOCK" />
+    <uses-permission android:name="android.permission.SCHEDULE_EXACT_ALARM" />
+
+    <!-- Permissions requested by the Flutter app for specific features -->
+    <!-- <uses-permission android:name="android.permission.CAMERA" /> -->
+    <!-- <uses-permission android:name="android.permission.RECORD_AUDIO" /> -->
+
+    <!-- For accessing media on different Android versions -->
+    <!-- For Android 10 (API 29) and below -->
+    <!-- <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" /> -->
+    <!-- For Android 13 (API 33) and above -->
+    <!-- <uses-permission android:name="android.permission.READ_MEDIA_IMAGES" /> -->
+    <!-- <uses-permission android:name="android.permission.READ_MEDIA_VIDEO" /> -->
+    <!-- <uses-permission android:name="android.permission.READ_MEDIA_AUDIO" /> -->
+
+    <!-- =================================================================== -->
+    <!-- GOOGLE PLAY ADVERTISING ID DECLARATION (REQUIRED FOR ANDROID 13+) -->
+    <!-- =================================================================== -->
+    <!-- Declare that this app does NOT use Advertising ID for ads or attribution -->
+    <!-- This is required by Google Play Store policy for apps targeting Android 13+ -->
+    <uses-permission android:name="com.google.android.gms.permission.AD_ID" 
+        tools:node="remove" />
+    
+    <!-- Alternative: If you DO use advertising ID, use this instead:
+    <uses-permission android:name="com.google.android.gms.permission.AD_ID" />
+    -->
+
+
+    <!-- The <queries> element is necessary for package visibility on Android 11+ -->
+    <queries>
+        <!-- For launching URLs -->
+        <intent>
+            <action android:name="android.intent.action.VIEW" />
+            <data android:scheme="https" />
+        </intent>
+        <!-- For sending email -->
+        <intent>
+            <action android:name="android.intent.action.SENDTO" />
+            <data android:scheme="mailto" />
+        </intent>
+    </queries>
+
+
+    <!-- =================================================================== -->
+    <!-- APPLICATION DEFINITION -->
+    <!-- =================================================================== -->
+    <application
+        android:label="@string/app_name"
+        android:name="${applicationName}"
+        android:icon="@mipmap/ic_launcher"
+        android:extractNativeLibs="true"
+        android:largeHeap="true"
+        android:hardwareAccelerated="true"
+        android:usesCleartextTraffic="true">
+
+        <!-- Main Activity that hosts the Flutter UI -->
+        <activity
+            android:name=".MainActivity"
+            android:exported="true"
+            android:launchMode="singleTop"
+            android:theme="@style/LaunchTheme"
+            android:configChanges="orientation|keyboardHidden|keyboard|screenSize|smallestScreenSize|locale|layoutDirection|fontScale|screenLayout|density|uiMode"
+            android:hardwareAccelerated="true"
+            android:windowSoftInputMode="adjustResize"
+            android:windowAnimationStyle="@style/WindowAnimation"
+            android:screenOrientation="portrait">
+            
+            <!-- Specifies an Android theme to apply to this Activity as soon as
+                 the Android process has started. This theme is visible to the user
+                 while the Flutter UI initializes. After that, this theme continues
+                 to determine the Window background behind the Flutter UI. -->
+            <meta-data
+              android:name="io.flutter.embedding.android.NormalTheme"
+              android:resource="@style/NormalTheme"
+              />
+            <!-- Displays an Android View that continues showing the launch screen
+                 Drawable until Flutter paints its first frame, then this splash
+                 screen fades out. A splash screen provides a smoother transition
+                 when starting the application. -->
+            <meta-data
+              android:name="io.flutter.embedding.android.SplashScreenDrawable"
+              android:resource="@drawable/launch_background"
+              />
+
+            <meta-data
+              android:name="com.google.android.gms.wallet.api.enabled"
+              android:value="true" />
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN"/>
+                <category android:name="android.intent.category.LAUNCHER"/>
+            </intent-filter>
+        </activity>
+
+        <!-- General Flutter meta-data -->
+        <meta-data
+            android:name="flutterEmbedding"
+            android:value="2" />
+        <meta-data
+            android:name="io.flutter.embedding.android.EnableImpeller"
+            android:value="true" />
+            
+        <!-- =================================================================== -->
+        <!-- START OF SERVICE DECLARATIONS -->
+        <!-- =================================================================== -->
+        <!--
+            NOTE: The <activity> for BottomSheetActivity has been REMOVED
+            because it is no longer needed in this architecture.
+        -->
+
+        <!-- 1. Custom Keyboard Service (InputMethodService) -->
+        <service
+            android:name=".keyboard.RewordiumAIKeyboardService"
+            android:label="@string/keyboard_name"
+            android:permission="android.permission.BIND_INPUT_METHOD"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.view.InputMethod" />
+            </intent-filter>
+            <meta-data
+                android:name="android.view.im"
+                android:resource="@xml/method" />
+        </service>
+
+        <!-- 2. Floating Assistant Service (AccessibilityService) -->
+        <service
+            android:name=".service.MyAccessibilityService"
+            android:label="@string/app_name"
+            android:permission="android.permission.BIND_ACCESSIBILITY_SERVICE"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.accessibilityservice.AccessibilityService" />
+            </intent-filter>
+            <meta-data
+                android:name="android.accessibilityservice"
+                android:resource="@xml/accessibility_service_config" />
+        </service>
+        <!-- =================================================================== -->
+        <!-- END OF SERVICE DECLARATIONS -->
+        <!-- =================================================================== -->
+        
+    </application>
+
+</manifest>

@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<TextView xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/popup_text"
+    android:layout_width="54dp"
+    android:layout_height="54dp"
+    android:background="@drawable/key_popup_background"
+    android:textSize="28sp"
+    android:textColor="#000000"
+    android:textStyle="normal"
+    android:gravity="center"
+    android:includeFontPadding="false"
+    android:fontFamily="sans-serif"
+    android:letterSpacing="0.08"
+    android:lineSpacingMultiplier="1.0"
+    android:textAlignment="center" />

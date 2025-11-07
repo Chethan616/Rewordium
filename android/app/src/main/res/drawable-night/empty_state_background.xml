@@ -1,0 +1,52 @@
+<?xml version="1.0" encoding="utf-8"?>
+<layer-list xmlns:android="http://schemas.android.com/apk/res/android">
+    <!-- Dark mode shadow -->
+    <item android:top="2dp" android:left="2dp" android:right="2dp">
+        <shape android:shape="rectangle">
+            <corners android:radius="24dp" />
+            <solid android:color="#20000000" />
+        </shape>
+    </item>
+    
+    <!-- Main dark empty state background -->
+    <item>
+        <shape android:shape="rectangle">
+            <corners android:radius="24dp" />
+            <gradient
+                android:type="linear"
+                android:angle="270"
+                android:startColor="#60121212"
+                android:centerColor="#50181818"
+                android:endColor="#401A1A1A" />
+            <stroke 
+                android:width="1dp" 
+                android:color="#35FFFFFF" />
+        </shape>
+    </item>
+    
+    <!-- Glass effect overlay -->
+    <item android:top="1dp" android:left="1dp" android:right="1dp" android:bottom="1dp">
+        <shape android:shape="rectangle">
+            <corners android:radius="23dp" />
+            <gradient
+                android:type="linear"
+                android:angle="270"
+                android:startColor="#25FFFFFF"
+                android:centerColor="#15FFFFFF"
+                android:endColor="#05FFFFFF" />
+        </shape>
+    </item>
+    
+    <!-- Dark mode center spotlight -->
+    <item android:top="80dp" android:left="80dp" android:right="80dp" android:bottom="80dp">
+        <shape android:shape="oval">
+            <gradient
+                android:type="radial"
+                android:gradientRadius="50dp"
+                android:centerX="0.5"
+                android:centerY="0.5"
+                android:startColor="#20FFFFFF"
+                android:endColor="#00FFFFFF" />
+        </shape>
+    </item>
+</layer-list>

@@ -1,0 +1,21 @@
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="24dp"
+    android:height="24dp"
+    android:viewportWidth="24"
+    android:viewportHeight="24">
+  <!-- Ball -->
+  <path
+      android:fillColor="@android:color/white"
+      android:pathData="M12,2C13.1,2 14,2.9 14,4C14,5.1 13.1,6 12,6C10.9,6 10,5.1 10,4C10,2.9 10.9,2 12,2Z"/>
+  <!-- Soccer ball pattern -->
+  <path
+      android:fillColor="@android:color/white"
+      android:pathData="M12,4C16.97,4 21,8.03 21,13C21,17.97 16.97,22 12,22C7.03,22 3,17.97 3,13C3,8.03 7.03,4 12,4ZM15.5,9L12,12.5L8.5,9H15.5ZM16.5,10V14.5L13,11V10H16.5ZM11,10V11L7.5,14.5V10H11ZM8.5,15L12,11.5L15.5,15H8.5Z"/>
+  <!-- Additional sports elements -->
+  <path
+      android:fillColor="@android:color/white"
+      android:pathData="M19,7C19.55,7 20,6.55 20,6C20,5.45 19.55,5 19,5C18.45,5 18,5.45 18,6C18,6.55 18.45,7 19,7Z"/>
+  <path
+      android:fillColor="@android:color/white"
+      android:pathData="M5,7C5.55,7 6,6.55 6,6C6,5.45 5.55,5 5,5C4.45,5 4,5.45 4,6C4,6.55 4.45,7 5,7Z"/>
+</vector>

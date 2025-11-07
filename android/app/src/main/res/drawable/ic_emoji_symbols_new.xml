@@ -1,0 +1,24 @@
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="24dp"
+    android:height="24dp"
+    android:viewportWidth="24"
+    android:viewportHeight="24">
+  <!-- Heart symbol -->
+  <path
+      android:fillColor="@android:color/white"
+      android:pathData="M12,21.35L10.55,20.03C5.4,15.36 2,12.27 2,8.5C2,5.41 4.42,3 7.5,3C9.24,3 10.91,3.81 12,5.08C13.09,3.81 14.76,3 16.5,3C19.58,3 22,5.41 22,8.5C22,12.27 18.6,15.36 13.45,20.03L12,21.35Z"/>
+  <!-- Star -->
+  <path
+      android:fillColor="@android:color/white"
+      android:pathData="M12,2L15.09,8.26L22,9.27L17,14.14L18.18,21.02L12,17.77L5.82,21.02L7,14.14L2,9.27L8.91,8.26L12,2Z"
+      android:fillAlpha="0.7"/>
+  <!-- Mathematical symbols -->
+  <path
+      android:fillColor="@android:color/white"
+      android:pathData="M19,13H5V11H19V13Z"
+      android:fillAlpha="0.8"/>
+  <path
+      android:fillColor="@android:color/white"
+      android:pathData="M19,17H5V15H19V17Z"
+      android:fillAlpha="0.6"/>
+</vector>

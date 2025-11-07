@@ -1,0 +1,54 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Dark Theme Keyboard Background -->
+    <color name="keyboard_background_dark">#1C1C1E</color>
+    <color name="keyboard_secondary_dark">#2C2C2E</color>
+    <color name="keyboard_tertiary_dark">#3A3A3C</color>
+    
+    <!-- Dark Theme Key Colors -->
+    <color name="key_background_dark">#2C2C2E</color>
+    <color name="key_pressed_dark">#48484A</color>
+    <color name="key_ripple_dark">#40FFFFFF</color>
+    <color name="key_text_dark">#FFFFFF</color>
+    <color name="key_text_secondary_dark">#8E8E93</color>
+    <color name="key_border_dark">#48484A</color>
+    
+    <!-- Dark Theme Accent Colors -->
+    <color name="accent_primary_dark">#0A84FF</color>
+    <color name="accent_secondary_dark">#409CFF</color>
+    <color name="accent_tertiary_dark">#64B5F6</color>
+    
+    <!-- Dark Theme Text Colors -->
+    <color name="text_primary_dark">#FFFFFF</color>
+    <color name="text_secondary_dark">#8E8E93</color>
+    <color name="text_tertiary_dark">#6D6D70</color>
+    
+    <!-- Dark Theme Shadow Colors -->
+    <color name="shadow_dark_dark">#40000000</color>
+    <color name="shadow_light_dark">#10FFFFFF</color>
+    
+    <!-- Dark Theme Overlay Colors -->
+    <color name="overlay_dark_dark">#60000000</color>
+    <color name="overlay_light_dark">#20FFFFFF</color>
+    
+    <!-- Dark Theme Surface Colors -->
+    <color name="surface_primary_dark">#1C1C1E</color>
+    <color name="surface_secondary_dark">#2C2C2E</color>
+    <color name="surface_tertiary_dark">#3A3A3C</color>
+    
+    <!-- Dark Theme Settings Colors -->
+    <color name="settings_background_dark">#1C1C1E</color>
+    <color name="settings_card_background_dark">#2C2C2E</color>
+    <color name="settings_title_dark">#FFFFFF</color>
+    <color name="settings_subtitle_dark">#8E8E93</color>
+    <color name="settings_text_dark">#FFFFFF</color>
+    <color name="settings_divider_dark">#48484A</color>
+    
+    <!-- Dark Theme Suggestion Colors -->
+    <color name="suggestion_background_dark">#2C2C2E</color>
+    <color name="suggestion_background_pressed_dark">#3A3A3C</color>
+    <color name="suggestion_stroke_dark">#48484A</color>
+    <color name="suggestion_bar_background_dark">#1C1C1E</color>
+    <color name="suggestion_text_color_dark">#FFFFFF</color>
+    <color name="suggestion_separator_color_dark">#48484A</color>
+</resources>

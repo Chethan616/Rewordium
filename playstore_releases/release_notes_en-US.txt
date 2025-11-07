@@ -1,0 +1,18 @@
+What's new in Rewordium v1.0.10 (build 10)
+
+Codename: Axolotl
+
+
+- Enhanced turbo delete: Smoother 5-tier progressive acceleration for natural Gboard-like backspace feel.- Faster startup and buttery-smooth typing experience.
+
+- Experimental feature dialog: Transparent notice about development status with mission statement and support info.- Improved haptics enabled by default for premium tactile feedback.
+
+- UI improvements: Fixed dialog overflow issues for better display on all screen sizes.- Clipboard history sync: copied texts now appear instantly in the keyboard's clipboard panel.
+
+- Key popup fixes: Resolved stuck popup previews for cleaner typing experience.- Faster, smarter suggestions and reduced lag when switching panels.
+
+- Better haptic feedback: Added tactile response to backspace key press.- Bug fixes and stability improvements for popups, themes, and panel animations.
+
+
+
+Thank you for using Rewordium — happy writing!Thank you for using Rewordium — happy writing!

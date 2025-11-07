@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Custom keyboard theme attributes for real-time theme switching -->
+    <declare-styleable name="KeyboardTheme">
+        <attr name="keyBackground" format="color|reference" />
+        <attr name="keyTextColor" format="color|reference" />
+        <attr name="keyBorderColor" format="color|reference" />
+        <attr name="keyPressedColor" format="color|reference" />
+        <attr name="keyRippleColor" format="color|reference" />
+        <attr name="keySecondaryTextColor" format="color|reference" />
+        <attr name="keyboardBackgroundColor" format="color|reference" />
+        <attr name="suggestionBackgroundColor" format="color|reference" />
+        <attr name="suggestionTextColor" format="color|reference" />
+        <attr name="suggestionBorderColor" format="color|reference" />
+    </declare-styleable>
+</resources>

@@ -1,0 +1,26 @@
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="24dp"
+    android:height="24dp"
+    android:viewportWidth="24"
+    android:viewportHeight="24">
+  <!-- Flag pole -->
+  <path
+      android:fillColor="@android:color/white"
+      android:pathData="M4,2V22H6V15H13L14,13H6V4H4V2Z"/>
+  <!-- Flag -->
+  <path
+      android:fillColor="@android:color/white"
+      android:pathData="M6,4V13H14L13,11H20V4H6Z"/>
+  <!-- Additional flag elements -->
+  <path
+      android:fillColor="@android:color/white"
+      android:pathData="M20,4V11H22V4H20Z"
+      android:fillAlpha="0.7"/>
+  <!-- Small decorative elements -->
+  <path
+      android:fillColor="@android:color/white"
+      android:pathData="M10,7C10.55,7 11,6.55 11,6C11,5.45 10.55,5 10,5C9.45,5 9,5.45 9,6C9,6.55 9.45,7 10,7Z"/>
+  <path
+      android:fillColor="@android:color/white"
+      android:pathData="M16,8C16.55,8 17,7.55 17,7C17,6.45 16.55,6 16,6C15.45,6 15,6.45 15,7C15,7.55 15.45,8 16,8Z"/>
+</vector>

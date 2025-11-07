@@ -1,0 +1,396 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="vertical"
+    android:background="@drawable/settings_panel_background"
+    android:padding="20dp">
+
+    <!-- Header Section -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:gravity="center_vertical"
+        android:layout_marginBottom="24dp">
+
+        <ImageView
+            android:layout_width="28dp"
+            android:layout_height="28dp"
+            android:src="@drawable/ic_theme"
+            android:tint="#009B6E"
+            android:layout_marginEnd="12dp" />
+
+        <TextView
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:text="Keyboard Themes"
+            android:textSize="20sp"
+            android:textStyle="bold"
+            android:textColor="#1A202C" />
+
+        <ImageView
+            android:id="@+id/btn_close_theme"
+            android:layout_width="32dp"
+            android:layout_height="32dp"
+            android:src="@drawable/ic_close_modern"
+            android:background="@drawable/close_button_background"
+            android:padding="6dp"
+            android:contentDescription="Close themes" />
+
+    </LinearLayout>
+
+    <!-- Theme Categories -->
+    <ScrollView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:scrollbars="none">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical">
+
+            <!-- App Themes Section -->
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="App Colors"
+                android:textSize="16sp"
+                android:textStyle="bold"
+                android:textColor="#4A5568"
+                android:layout_marginBottom="16dp" />
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:layout_marginBottom="24dp">
+
+                <!-- Primary Green Theme -->
+                <LinearLayout
+                    android:id="@+id/theme_primary_green"
+                    android:layout_width="0dp"
+                    android:layout_height="80dp"
+                    android:layout_weight="1"
+                    android:orientation="vertical"
+                    android:background="@drawable/theme_card_background"
+                    android:gravity="center"
+                    android:layout_marginEnd="8dp"
+                    android:clickable="true"
+                    android:focusable="true">
+
+                    <View
+                        android:layout_width="40dp"
+                        android:layout_height="40dp"
+                        android:background="@drawable/theme_color_circle"
+                        android:backgroundTint="#009B6E"
+                        android:layout_marginBottom="8dp" />
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="Rewordium"
+                        android:textSize="12sp"
+                        android:textColor="#4A5568" />
+
+                </LinearLayout>
+
+                <!-- Secondary Blue Theme -->
+                <LinearLayout
+                    android:id="@+id/theme_secondary_blue"
+                    android:layout_width="0dp"
+                    android:layout_height="80dp"
+                    android:layout_weight="1"
+                    android:orientation="vertical"
+                    android:background="@drawable/theme_card_background"
+                    android:gravity="center"
+                    android:layout_marginStart="8dp"
+                    android:clickable="true"
+                    android:focusable="true">
+
+                    <View
+                        android:layout_width="40dp"
+                        android:layout_height="40dp"
+                        android:background="@drawable/theme_color_circle"
+                        android:backgroundTint="#1E3A8A"
+                        android:layout_marginBottom="8dp" />
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="Ocean"
+                        android:textSize="12sp"
+                        android:textColor="#4A5568" />
+
+                </LinearLayout>
+
+            </LinearLayout>
+
+            <!-- Popular Themes Section -->
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="Popular Colors"
+                android:textSize="16sp"
+                android:textStyle="bold"
+                android:textColor="#4A5568"
+                android:layout_marginBottom="16dp" />
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:layout_marginBottom="16dp">
+
+                <!-- Purple Theme -->
+                <LinearLayout
+                    android:id="@+id/theme_purple"
+                    android:layout_width="0dp"
+                    android:layout_height="80dp"
+                    android:layout_weight="1"
+                    android:orientation="vertical"
+                    android:background="@drawable/theme_card_background"
+                    android:gravity="center"
+                    android:layout_marginEnd="4dp"
+                    android:clickable="true"
+                    android:focusable="true">
+
+                    <View
+                        android:layout_width="40dp"
+                        android:layout_height="40dp"
+                        android:background="@drawable/theme_color_circle"
+                        android:backgroundTint="#7C3AED"
+                        android:layout_marginBottom="8dp" />
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="Purple"
+                        android:textSize="12sp"
+                        android:textColor="#4A5568" />
+
+                </LinearLayout>
+
+                <!-- Pink Theme -->
+                <LinearLayout
+                    android:id="@+id/theme_pink"
+                    android:layout_width="0dp"
+                    android:layout_height="80dp"
+                    android:layout_weight="1"
+                    android:orientation="vertical"
+                    android:background="@drawable/theme_card_background"
+                    android:gravity="center"
+                    android:layout_marginStart="4dp"
+                    android:layout_marginEnd="4dp"
+                    android:clickable="true"
+                    android:focusable="true">
+
+                    <View
+                        android:layout_width="40dp"
+                        android:layout_height="40dp"
+                        android:background="@drawable/theme_color_circle"
+                        android:backgroundTint="#EC4899"
+                        android:layout_marginBottom="8dp" />
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="Rose"
+                        android:textSize="12sp"
+                        android:textColor="#4A5568" />
+
+                </LinearLayout>
+
+                <!-- Orange Theme -->
+                <LinearLayout
+                    android:id="@+id/theme_orange"
+                    android:layout_width="0dp"
+                    android:layout_height="80dp"
+                    android:layout_weight="1"
+                    android:orientation="vertical"
+                    android:background="@drawable/theme_card_background"
+                    android:gravity="center"
+                    android:layout_marginStart="4dp"
+                    android:clickable="true"
+                    android:focusable="true">
+
+                    <View
+                        android:layout_width="40dp"
+                        android:layout_height="40dp"
+                        android:background="@drawable/theme_color_circle"
+                        android:backgroundTint="#F59E0B"
+                        android:layout_marginBottom="8dp" />
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="Amber"
+                        android:textSize="12sp"
+                        android:textColor="#4A5568" />
+
+                </LinearLayout>
+
+            </LinearLayout>
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:layout_marginBottom="24dp">
+
+                <!-- Red Theme -->
+                <LinearLayout
+                    android:id="@+id/theme_red"
+                    android:layout_width="0dp"
+                    android:layout_height="80dp"
+                    android:layout_weight="1"
+                    android:orientation="vertical"
+                    android:background="@drawable/theme_card_background"
+                    android:gravity="center"
+                    android:layout_marginEnd="4dp"
+                    android:clickable="true"
+                    android:focusable="true">
+
+                    <View
+                        android:layout_width="40dp"
+                        android:layout_height="40dp"
+                        android:background="@drawable/theme_color_circle"
+                        android:backgroundTint="#EF4444"
+                        android:layout_marginBottom="8dp" />
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="Ruby"
+                        android:textSize="12sp"
+                        android:textColor="#4A5568" />
+
+                </LinearLayout>
+
+                <!-- Teal Theme -->
+                <LinearLayout
+                    android:id="@+id/theme_teal"
+                    android:layout_width="0dp"
+                    android:layout_height="80dp"
+                    android:layout_weight="1"
+                    android:orientation="vertical"
+                    android:background="@drawable/theme_card_background"
+                    android:gravity="center"
+                    android:layout_marginStart="4dp"
+                    android:layout_marginEnd="4dp"
+                    android:clickable="true"
+                    android:focusable="true">
+
+                    <View
+                        android:layout_width="40dp"
+                        android:layout_height="40dp"
+                        android:background="@drawable/theme_color_circle"
+                        android:backgroundTint="#14B8A6"
+                        android:layout_marginBottom="8dp" />
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="Teal"
+                        android:textSize="12sp"
+                        android:textColor="#4A5568" />
+
+                </LinearLayout>
+
+                <!-- Dark Theme -->
+                <LinearLayout
+                    android:id="@+id/theme_dark"
+                    android:layout_width="0dp"
+                    android:layout_height="80dp"
+                    android:layout_weight="1"
+                    android:orientation="vertical"
+                    android:background="@drawable/theme_card_background"
+                    android:gravity="center"
+                    android:layout_marginStart="4dp"
+                    android:clickable="true"
+                    android:focusable="true">
+
+                    <View
+                        android:layout_width="40dp"
+                        android:layout_height="40dp"
+                        android:background="@drawable/theme_color_circle"
+                        android:backgroundTint="#1F2937"
+                        android:layout_marginBottom="8dp" />
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="Dark"
+                        android:textSize="12sp"
+                        android:textColor="#4A5568" />
+
+                </LinearLayout>
+
+            </LinearLayout>
+
+            <!-- Preview Section -->
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="Preview"
+                android:textSize="16sp"
+                android:textStyle="bold"
+                android:textColor="#4A5568"
+                android:layout_marginBottom="16dp" />
+
+            <LinearLayout
+                android:id="@+id/theme_preview"
+                android:layout_width="match_parent"
+                android:layout_height="60dp"
+                android:orientation="horizontal"
+                android:background="@drawable/theme_preview_background"
+                android:padding="8dp"
+                android:gravity="center_vertical">
+
+                <TextView
+                    android:layout_width="0dp"
+                    android:layout_height="40dp"
+                    android:layout_weight="1"
+                    android:text="Q"
+                    android:textSize="18sp"
+                    android:textStyle="bold"
+                    android:textColor="#1A202C"
+                    android:background="@drawable/ultra_key_background"
+                    android:gravity="center"
+                    android:layout_marginEnd="4dp" />
+
+                <TextView
+                    android:layout_width="0dp"
+                    android:layout_height="40dp"
+                    android:layout_weight="1"
+                    android:text="W"
+                    android:textSize="18sp"
+                    android:textStyle="bold"
+                    android:textColor="#1A202C"
+                    android:background="@drawable/ultra_key_background"
+                    android:gravity="center"
+                    android:layout_marginStart="4dp"
+                    android:layout_marginEnd="4dp" />
+
+                <TextView
+                    android:id="@+id/preview_ai_button"
+                    android:layout_width="0dp"
+                    android:layout_height="40dp"
+                    android:layout_weight="1.5"
+                    android:text="AI"
+                    android:textSize="14sp"
+                    android:textStyle="bold"
+                    android:textColor="#FFFFFF"
+                    android:background="@drawable/ultra_ai_button"
+                    android:gravity="center"
+                    android:layout_marginStart="4dp" />
+
+            </LinearLayout>
+
+        </LinearLayout>
+
+    </ScrollView>
+
+</LinearLayout>

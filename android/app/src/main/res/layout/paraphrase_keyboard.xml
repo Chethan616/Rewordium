@@ -1,0 +1,197 @@
+<?xml version="1.0" encoding="utf-8"?>
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/paraphrase_keyboard_layout"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="#1F1F1F">
+
+<LinearLayout
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="vertical"
+    android:paddingHorizontal="4dp"
+    android:paddingTop="2dp"
+    android:paddingBottom="4dp"
+    android:clipToPadding="false"
+    android:minHeight="220dp">
+
+    <!-- Paraphrase Header -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="40dp"
+        android:orientation="horizontal"
+        android:background="#232323"
+        android:gravity="center_vertical"
+        android:layout_marginBottom="6dp">
+        
+        <TextView
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:text="Paraphraser"
+            android:textColor="#FFFFFF"
+            android:textSize="16sp"
+            android:paddingStart="16dp"
+            android:paddingEnd="16dp"
+            android:textStyle="bold" />
+
+        <ImageButton
+            android:id="@+id/close_paraphrase"
+            android:layout_width="40dp"
+            android:layout_height="40dp"
+            android:src="@android:drawable/ic_menu_close_clear_cancel"
+            android:background="?android:attr/selectableItemBackground"
+            android:tint="#FFFFFF"
+            android:contentDescription="Close" />
+    </LinearLayout>
+
+    <!-- Original text display -->
+    <TextView
+        android:id="@+id/original_text"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:textColor="#A0A0A0"
+        android:textSize="14sp"
+        android:padding="8dp"
+        android:layout_marginBottom="6dp"
+        android:background="#232323"
+        android:maxLines="2"
+        android:ellipsize="end" />
+
+    <!-- Loading indicator (shows when loading paraphrases) -->
+    <FrameLayout
+        android:id="@+id/paraphrase_loading_container"
+        android:layout_width="match_parent"
+        android:layout_height="150dp"
+        android:background="#1F1F1F">
+        
+        <ProgressBar
+            android:id="@+id/paraphrase_loading"
+            android:layout_width="48dp"
+            android:layout_height="48dp"
+            android:layout_gravity="center"
+            android:indeterminateTint="#4CD964" />
+            
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Generating paraphrases..."
+            android:textColor="#FFFFFF"
+            android:layout_gravity="center"
+            android:layout_marginTop="60dp"
+            android:textSize="14sp" />
+    </FrameLayout>
+
+    <!-- Paraphrase options (shows when paraphrases are loaded) -->
+    <LinearLayout
+        android:id="@+id/paraphrase_options"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:visibility="gone">
+
+        <!-- Option 1 -->
+        <TextView
+            android:id="@+id/paraphrase_option_1"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:textColor="#FF9500"
+            android:textSize="16sp"
+            android:padding="12dp"
+            android:layout_marginBottom="6dp"
+            android:background="#232323"
+            android:clickable="true"
+            android:focusable="true" />
+
+        <!-- Option 2 -->
+        <TextView
+            android:id="@+id/paraphrase_option_2"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:textColor="#5AC8FA"
+            android:textSize="16sp"
+            android:padding="12dp"
+            android:layout_marginBottom="6dp"
+            android:background="#232323"
+            android:clickable="true"
+            android:focusable="true" />
+
+        <!-- Option 3 -->
+        <TextView
+            android:id="@+id/paraphrase_option_3"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:textColor="#4CD964"
+            android:textSize="16sp"
+            android:padding="12dp"
+            android:background="#232323"
+            android:clickable="true"
+            android:focusable="true" />
+    </LinearLayout>
+    
+    <!-- Bottom row with space bar (always visible) -->
+    <LinearLayout
+        android:id="@+id/paraphrase_bottom_row"
+        android:layout_width="match_parent"
+        android:layout_height="55dp"
+        android:orientation="horizontal"
+        android:layout_marginTop="6dp"
+        android:gravity="center"
+        android:baselineAligned="false">
+        
+        <!-- Return button -->
+        <FrameLayout
+            android:id="@+id/paraphrase_keyboard_button"
+            android:layout_width="0dp"
+            android:layout_height="match_parent"
+            android:layout_weight="1.5"
+            android:layout_marginHorizontal="2dp"
+            android:background="@drawable/key_background">
+            
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_gravity="center"
+                android:text="ABC"
+                android:textSize="16sp"
+                android:textColor="#FFFFFF" />
+        </FrameLayout>
+        
+        <!-- Spacebar -->
+        <FrameLayout
+            android:id="@+id/paraphrase_spacebar"
+            android:layout_width="0dp"
+            android:layout_height="match_parent"
+            android:layout_weight="6"
+            android:layout_marginHorizontal="2dp"
+            android:background="@drawable/key_background">
+            
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_gravity="center"
+                android:text="Space"
+                android:textSize="16sp"
+                android:textColor="#FFFFFF" />
+        </FrameLayout>
+        
+        <!-- Backspace -->
+        <FrameLayout
+            android:id="@+id/paraphrase_backspace"
+            android:layout_width="0dp"
+            android:layout_height="match_parent"
+            android:layout_weight="1.5"
+            android:layout_marginHorizontal="2dp"
+            android:background="@drawable/key_background">
+            
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_gravity="center"
+                android:text="⌫"
+                android:textSize="24sp"
+                android:textColor="#FFFFFF" />
+        </FrameLayout>
+    </LinearLayout>
+</LinearLayout>
+</FrameLayout>

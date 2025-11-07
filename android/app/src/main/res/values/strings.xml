@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Rewordium</string>
+    
+    <string name="accessibility_service_description">Rewordium helps you communicate more effectively across all your messaging and email apps.\n\nMake messaging and emailing simple 😉\n\nEnhance your typing experience with AI assistance, including smart replies, grammar correction, and tone adjustments. Your privacy is respected - all processing happens on your device.</string>
+    <string name="keyboard_key">Keyboard key</string>
+    <string name="ai_button">AI Button</string>
+    <string name="tap_ai_to_paraphrase">Tap AI to paraphrase</string>
+    <string name="keyboard_name">Rewordium Keyboard</string>
+    <string name="keyboard_settings">Keyboard Settings</string>
+    <string name="process_text_action_name">Process with AI</string>
+    <string name="settings">Settings</string>
+</resources>
