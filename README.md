@@ -88,7 +88,9 @@ It’s designed for creators, professionals, and anyone who values effortless, i
    `Settings → System → Languages & input → On-screen keyboard`
 
 ### From Play Store  
-🕓 *Coming soon!*  
+<a href="https://play.google.com/store/apps/details?id=com.noxquill.rewordium" style="text-decoration:none">
+    <img alt="Play Store" src="https://img.shields.io/badge/📱%20Get%20it%20on-Google%20Play-brightgreen?style=for-the-badge&logo=google-play&logoColor=white" />
+  </a>  
 
 ---
 
