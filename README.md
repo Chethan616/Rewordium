@@ -2,10 +2,12 @@
 
 <div align="center">
 
+![Latest Release](https://img.shields.io/github/v/release/Chethan616/YC_startup?label=🦎%20Latest&color=ff69b4)
 ![Version](https://img.shields.io/badge/version-1.0.10-blue.svg)
 ![Platform](https://img.shields.io/badge/platform-Android-green.svg)
 ![License](https://img.shields.io/badge/license-Proprietary-red.svg)
 ![Build](https://img.shields.io/badge/build-passing-brightgreen.svg)
+![Downloads](https://img.shields.io/github/downloads/Chethan616/YC_startup/total?color=success)
 
 **A powerful, privacy-focused AI keyboard for Android with advanced features and natural typing experience.**
 
