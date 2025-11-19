@@ -1,4 +1,4 @@
-# ✨ Rewordium — AI Writing Assistant & Keyboard
+#  Rewordium — AI Writing Assistant & Keyboard
 
 <p align="center">
   <img alt="Rewordium Banner" src="https://img.shields.io/badge/Rewordium-AI_Writing_Suite-brightgreen?style=for-the-badge&labelColor=111&color=32CD32" />
@@ -37,26 +37,26 @@ It’s designed for creators, professionals, and anyone who values effortless, i
 
 ---
 
-## ✨ Features
+##  Features
 
-### 🧠 AI Writing Tools
-- ✍️ Rewrite, summarize, and refine text instantly  
-- 🎭 Adjust tone — formal, creative, or concise  
-- 💬 Works across any app via the floating AI bubble  
-- ⚡ Lightning-fast response with privacy-first AI  
+###  AI Writing Tools
+-  Rewrite, summarize, and refine text instantly  
+-  Adjust tone — formal, creative, or concise  
+-  Works across any app via the floating AI bubble  
+-  Lightning-fast response with privacy-first AI  
 
-### 🎹 Intelligent Keyboard
-- 🚀 Five-tier **Turbo Delete** acceleration  
-- 🎧 Premium haptics and smooth key transitions  
-- 💡 Smart clipboard integration  
-- 🌗 Adaptive theme and animation transitions  
+###  Intelligent Keyboard
+-  Five-tier **Turbo Delete** acceleration  
+-  Premium haptics and smooth key transitions  
+-  Smart clipboard integration  
+-  Adaptive theme and animation transitions  
 
-### 🔒 Privacy & Security
+### Privacy & Security
 - No tracking, no ads, no data collection  
 - Local-first text processing  
 - Transparent permission and privacy controls  
 
-### 🎨 Design & Customization
+### Design & Customization
 - Light/dark green gradient themes  
 - Adjustable keyboard height and spacing  
 - Fluid, minimal interface with responsive design  
@@ -76,7 +76,7 @@ It’s designed for creators, professionals, and anyone who values effortless, i
 
 ---
 
-## 📥 Installation
+## Installation
 
 ### From GitHub
 1. Visit [**Releases**](https://github.com/Chethan616/Rewordium/releases)  
@@ -98,15 +98,15 @@ It’s designed for creators, professionals, and anyone who values effortless, i
 
 ---
 
-## 🧠 AI Tools
+## AI Tools
 
 | Tool | Description |
 |------|-------------|
-| ✍️ **Rewrite** | Reword sentences naturally with AI |
-| 🧾 **Summarize** | Condense long text into concise ideas |
-| 🎭 **Tone Shift** | Instantly switch tone between creative, formal, or casual |
-| 🪶 **Grammar Fix** | Correct grammar, punctuation, and flow |
-| 💬 **Ask AI** | Get rewriting help anywhere, inside any app |
+|  **Rewrite** | Reword sentences naturally with AI |
+|  **Summarize** | Condense long text into concise ideas |
+|  **Tone Shift** | Instantly switch tone between creative, formal, or casual |
+|  **Grammar Fix** | Correct grammar, punctuation, and flow |
+|  **Ask AI** | Get rewriting help anywhere, inside any app |
 
 ---
 
