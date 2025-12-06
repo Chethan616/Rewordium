@@ -1,0 +1,7 @@
+{
+  "id": "com.chethan616.reboard",
+  "url": "https://github.com/ReBoard/ReBoard",
+  "author": "ReBoard",
+  "name": "ReBoard Stable",
+  "additionalSettings": "{\"includePrereleases\":false,\"fallbackToOlderReleases\":true,\"apkFilterRegEx\":\"stable\"}"
+}

@@ -1,0 +1,7 @@
+- Major rework of the Smartbar and quick actions
+- Add incognito mode and related toggles
+- Privacy policy has been moved and is now accessible here: https://ReBoard.org/legal/privacy/
+  - For you as a user nothing has changed, ReBoard is still as private as ever.
+  - See detailed changelog why this change had to be done.
+
+Detailed changelog: https://github.com/ReBoard/ReBoard/releases/tag/v0.4.0-alpha03

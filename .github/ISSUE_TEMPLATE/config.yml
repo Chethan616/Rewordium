@@ -1,0 +1,8 @@
+blank_issues_enabled: false
+contact_links:
+  - name: 💬 Matrix
+    url: https://matrix.to/#/#ReBoard:matrix.org
+    about: General chat about ReBoard and quick Q/A
+  - name: ❓ Questions / Feedback
+    url: https://github.com/ReBoard/ReBoard/discussions/new/choose
+    about: Post your questions or feedback in the discussions panel

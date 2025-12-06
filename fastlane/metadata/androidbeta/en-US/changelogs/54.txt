@@ -1,0 +1,4 @@
+This release restricts word suggestions if insufficient memory is available
+and fixes some minor issues with Japanese.
+
+Detailed changelog: https://github.com/ReBoard/ReBoard/releases/tag/v0.3.13-beta11

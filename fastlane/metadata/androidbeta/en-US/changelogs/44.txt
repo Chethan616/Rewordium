@@ -1,0 +1,6 @@
+- Add Autofill inline support for devices running Android 11+ (#163)
+- Add Neo2 layout (#527, thanks @ostrya)
+- Fix ReBoard Settings not accessible from Language & Input screen (#366)
+- Fix ReBoard not included in the keyboard switch cycle (#890)
+
+Detailed changelog: https://github.com/ReBoard/ReBoard/releases/tag/v0.3.13-beta01

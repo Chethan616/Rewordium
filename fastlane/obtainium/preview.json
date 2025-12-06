@@ -1,0 +1,7 @@
+{
+  "id": "com.chethan616.reboard.beta",
+  "url": "https://github.com/ReBoard/ReBoard",
+  "author": "ReBoard",
+  "name": "ReBoard Preview",
+  "additionalSettings": "{\"includePrereleases\":true,\"fallbackToOlderReleases\":true,\"apkFilterRegEx\":\"preview\"}"
+}
