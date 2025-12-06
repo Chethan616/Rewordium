@@ -2,7 +2,7 @@ This project includes modified components of FlorisBoard,
 available at: https://github.com/florisboard/florisboard
 
 FlorisBoard is licensed under the Apache License, Version 2.0.
-See LICENSE_FLORISBOARD_APACHE2.txt for full license text.
+See third_party/licenses/FLORISBOARD_LICENSE for full license text.
 
 Copyright (c) Patrick Goldinger and FlorisBoard contributors.
 Modifications made by Chethan616 / ReBoard.

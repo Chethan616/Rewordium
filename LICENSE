@@ -19,7 +19,7 @@ RESTRICTIONS:
 - No use for competing products or services
 
 This Software contains modified components from FlorisBoard (Apache License 2.0).
-See LICENSE_FLORISBOARD_APACHE2.txt and NOTICE for upstream attribution.
+See third_party/licenses/FLORISBOARD_LICENSE and NOTICE for upstream attribution.
 
 THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR 
 IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, 

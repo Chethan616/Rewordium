@@ -6,7 +6,7 @@ This project is based on **FlorisBoard**, an open-source keyboard for Android, l
 
 - **Original Project**: [FlorisBoard on GitHub](https://github.com/florisboard/florisboard)
 - **Original Author**: Patrick Goldinger ([@patrickgold](https://github.com/patrickgold))
-- **License**: Apache License 2.0 (see `LICENSE_FLORISBOARD_APACHE2.txt` and `NOTICE`)
+- **License**: Apache License 2.0 (see `third_party/licenses/FLORISBOARD_LICENSE` and `NOTICE`)
 
 We are grateful to the FlorisBoard contributors for their work on the upstream project. All upstream copyright and license notices are preserved in this repository.
 
@@ -50,7 +50,7 @@ For detailed license information, see the in-app "About" screen.
 
 Redistribution, modification, or reuse of ReBoard code is prohibited without written permission.
 
-See `LICENSE_FLORISBOARD_APACHE2.txt` and `NOTICE` for full Apache 2.0 terms and attribution.
+See `third_party/licenses/FLORISBOARD_LICENSE` and `NOTICE` for full Apache 2.0 terms and attribution.
 
 ---
 
