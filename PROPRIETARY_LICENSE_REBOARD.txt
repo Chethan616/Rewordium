@@ -1,0 +1,9 @@
+ReBoard Proprietary License
+
+Copyright (c) 2025 Chethan616. All rights reserved.
+
+Permission is granted to install and use the binary distributions of ReBoard for personal or commercial purposes subject to subscription or licensing terms provided by Chethan616. Redistribution, modification, reverse engineering, or derivative works of the software binaries are prohibited unless expressly permitted by written consent.
+
+This repository contains modified components from FlorisBoard (Apache License 2.0). Upstream code portions remain subject to Apache-2.0 terms and attributions as documented in the NOTICE and FLORISBOARD_LICENSE files.
+
+NO WARRANTY. The software is provided "as is" without warranty of any kind.

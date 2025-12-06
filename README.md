@@ -178,5 +178,5 @@ Commercial distribution license applies to binaries and branding in this reposit
 
 **Licenses**
 - Upstream: See `FLORISBOARD_LICENSE` and `NOTICE` for FlorisBoard (Apache-2.0) attribution.
-- Distribution: See `LICENSE_REBOARD_PROPRIETARY.txt` for ReBoard proprietary binary and branding terms.
+- Distribution: See `PROPRIETARY_LICENSE_REBOARD.txt` for ReBoard proprietary binary and branding terms.
 
