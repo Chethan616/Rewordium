@@ -43,7 +43,7 @@ dependencyResolutionManagement {
 enableFeaturePreview("TYPESAFE_PROJECT_ACCESSORS")
 
 include(":app")
-//include(":benchmark")
+// benchmark module removed
 include(":lib:android")
 include(":lib:color")
 include(":lib:compose")
