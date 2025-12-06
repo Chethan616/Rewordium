@@ -148,18 +148,19 @@ Issues and feature requests are welcome. This repository is currently closed-sou
 
 ## 📜 Attribution
 
-This project is a downstream fork and adaptation of **FlorisBoard** by Patrick Gold (dev.patrickgold.florisboard), licensed under **Apache License 2.0**.
+This project is based on **FlorisBoard** by Patrick Goldinger and contributors, licensed under **Apache License 2.0**.
 
 - Upstream: https://github.com/florisboard/florisboard
-- License: Apache-2.0 (applies to upstream code portions)
+- License: Apache-2.0 (see `FLORISBOARD_LICENSE` and `NOTICE`)
+- Full Credits: See [CREDITS.md](CREDITS.md)
 
-We respectfully credit and thank the original maintainers and contributors. Changes in this repository include rebranding, packaging, integrations, and proprietary distribution elements.
+We credit and thank the original maintainers and contributors. ReBoard includes modifications, rebranding, and proprietary features for subscription-based distribution.
 
 ### License for this repository
 
-Commercial distribution license applies to binaries and branding in this repository. Upstream Apache-2.0 notices are preserved in `LICENSE` and `app/src/main/assets/license/`.
+ReBoard binaries are distributed under proprietary terms for commercial use. Upstream Apache-2.0 code remains attributed per license terms. See `FLORISBOARD_LICENSE` and `NOTICE` for full attribution.
 
-> Note: While this repository uses a proprietary license for distribution, upstream Apache-2.0 code remains attributed per the license terms, and no upstream trademark claims are implied.
+> **Note**: This project is not affiliated with or endorsed by FlorisBoard. No upstream trademark claims are implied.
 
 ---
 
