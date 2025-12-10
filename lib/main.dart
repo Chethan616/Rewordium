@@ -56,7 +56,6 @@ void main() async {
     AdminService.init();
     debugPrint('AdminService initialized');
   } catch (e) {
-  } catch (e) {
     debugPrint('Error initializing Firebase: $e');
     // Continue with app launch but some features may be limited
     isFirebaseInitialized = true;

@@ -180,3 +180,99 @@
 -dontwarn com.google.android.play.core.**
 -keep class com.google.android.play.core.splitcompat.** { *; }
 -keep class com.google.android.play.core.splitinstall.** { *; }
+
+# ==============================================================================
+# KOTLINX SERIALIZATION RULES (For ReBoard Navigation)
+# ==============================================================================
+
+# Keep `Companion` object fields of serializable classes.
+-if @kotlinx.serialization.Serializable class **
+-keepclassmembers class <1> {
+    static <1>$Companion Companion;
+}
+
+# Keep `serializer()` on companion objects (both default and named) of serializable classes.
+-if @kotlinx.serialization.Serializable class ** {
+    static **$* *;
+}
+-keepclassmembers class <2>$<3> {
+    kotlinx.serialization.KSerializer serializer(...);
+}
+
+# Keep `INSTANCE.serializer()` of serializable objects.
+-if @kotlinx.serialization.Serializable class ** {
+    public static ** INSTANCE;
+}
+-keepclassmembers class <1> {
+    public static <1> INSTANCE;
+    kotlinx.serialization.KSerializer serializer(...);
+}
+
+# @Serializable and @Polymorphic are used at runtime for polymorphic serialization.
+-keepattributes RuntimeVisibleAnnotations,AnnotationDefault
+
+# Keep all serializers
+-keepclassmembers class kotlinx.serialization.json.** {
+    *** Companion;
+}
+-keepclasseswithmembers class kotlinx.serialization.json.** {
+    kotlinx.serialization.KSerializer serializer(...);
+}
+
+# Keep ReBoard Routes serializers (correct package name)
+-keep class com.noxquill.rewordium.keyboard.app.Routes { *; }
+-keep class com.noxquill.rewordium.keyboard.app.Routes$* { *; }
+-keep class com.noxquill.rewordium.keyboard.app.Routes$**$* { *; }
+-keepclassmembers class com.noxquill.rewordium.keyboard.app.Routes$** {
+    public static ** INSTANCE;
+    public static ** Companion;
+    kotlinx.serialization.KSerializer serializer(...);
+    ** $$serializer;
+}
+
+# Keep generated serializers
+-keepclassmembers class **$$serializer {
+    *** serialDescriptor;
+    public static ** INSTANCE;
+}
+
+# Keep all @Serializable classes and their generated serializers
+-keep,includedescriptorclasses @kotlinx.serialization.Serializable class * { *; }
+-keepclassmembers class * {
+    @kotlinx.serialization.Serializable <fields>;
+}
+
+# ==============================================================================
+# AI MANAGER AND KEYBOARD AI FEATURES (CRITICAL FOR RELEASE MODE)
+# ==============================================================================
+
+# Keep AI-related classes in the keyboard module
+-keep class com.noxquill.rewordium.keyboard.ime.ai.** { *; }
+-keep interface com.noxquill.rewordium.keyboard.ime.ai.** { *; }
+-keepclassmembers class com.noxquill.rewordium.keyboard.ime.ai.** {
+    <fields>;
+    <methods>;
+}
+
+# Keep AIManager and its inner classes
+-keep class com.noxquill.rewordium.keyboard.ime.ai.AIManager { *; }
+-keep class com.noxquill.rewordium.keyboard.ime.ai.AIManager$* { *; }
+-keep class com.noxquill.rewordium.keyboard.ime.ai.AIPersona { *; }
+-keep class com.noxquill.rewordium.keyboard.ime.ai.AIAction { *; }
+-keep class com.noxquill.rewordium.keyboard.ime.ai.AIException { *; }
+
+# Keep AI request/response classes for GSON serialization
+-keep class com.noxquill.rewordium.keyboard.ime.ai.*Request { *; }
+-keep class com.noxquill.rewordium.keyboard.ime.ai.*Response { *; }
+-keep class com.noxquill.rewordium.keyboard.ime.ai.*Message { *; }
+-keep class com.noxquill.rewordium.keyboard.ime.ai.*Choice { *; }
+
+# Keep BuildConfig for API keys
+-keep class com.noxquill.rewordium.keyboard.BuildConfig { *; }
+-keep class com.noxquill.rewordium.BuildConfig { *; }
+-keepclassmembers class com.noxquill.rewordium.keyboard.BuildConfig {
+    public static <fields>;
+}
+-keepclassmembers class com.noxquill.rewordium.BuildConfig {
+    public static <fields>;
+}

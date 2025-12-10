@@ -1,0 +1,22 @@
+{
+  "$": "ime.extension.theme",
+  "meta": {
+    "id": "io.github.violetstorm.krystal_void.flex",
+    "version": "3.0.1",
+    "title": "Krystal: Void",
+    "description": "Krystal Kollection - FlorisBoard\nStyle: Void\n\nRequests | Feedback | Support\nvioletstorm@duck.com",
+    "maintainers": [
+      "Local"
+    ],
+    "license": "(none specified)"
+  },
+  "themes": [
+    {
+      "id": "krystal_void",
+      "label": "Krystal: Void",
+      "authors": [
+        "VioletStorm"
+      ]
+    }
+  ]
+}

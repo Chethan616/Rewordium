@@ -161,12 +161,12 @@ class _KeyboardStatusCardState extends State<KeyboardStatusCard>
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      "Enable Personas",
+                      "Enable AI",
                       style: AppTheme.bodyMedium,
                     ),
                     const SizedBox(height: 4),
                     Text(
-                      "Enhance your writing with AI personas",
+                      "Smart writing assistance",
                       style: AppTheme.bodySmall,
                     ),
                   ],

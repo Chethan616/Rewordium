@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart';
 
 class AppTheme {
   // Light mode colors
@@ -46,46 +45,53 @@ class AppTheme {
     _isDarkMode = isDark;
   }
 
-  // Text styles
-  static TextStyle get headingLarge => GoogleFonts.poppins(
+  // Text styles using bundled custom fonts - now theme-aware
+  static TextStyle get headingLarge => TextStyle(
+        fontFamily: 'Roboto',
         fontSize: 28,
         fontWeight: FontWeight.bold,
         color: textPrimaryColor,
         letterSpacing: -0.5,
       );
 
-  static TextStyle get headingMedium => GoogleFonts.poppins(
+  static TextStyle get headingMedium => TextStyle(
+        fontFamily: 'Roboto',
         fontSize: 24,
         fontWeight: FontWeight.bold,
         color: textPrimaryColor,
         letterSpacing: -0.5,
       );
 
-  static TextStyle get headingSmall => GoogleFonts.poppins(
+  static TextStyle get headingSmall => TextStyle(
+        fontFamily: 'Roboto',
         fontSize: 20,
         fontWeight: FontWeight.w600,
         color: textPrimaryColor,
       );
 
-  static TextStyle get bodyLarge => GoogleFonts.inter(
+  static TextStyle get bodyLarge => TextStyle(
+        fontFamily: 'Roboto',
         fontSize: 16,
         fontWeight: FontWeight.w400,
         color: textPrimaryColor,
       );
 
-  static TextStyle get bodyMedium => GoogleFonts.inter(
+  static TextStyle get bodyMedium => TextStyle(
+        fontFamily: 'Roboto',
         fontSize: 14,
         fontWeight: FontWeight.w400,
         color: textPrimaryColor,
       );
 
-  static TextStyle get bodySmall => GoogleFonts.inter(
+  static TextStyle get bodySmall => TextStyle(
+        fontFamily: 'Roboto',
         fontSize: 12,
         fontWeight: FontWeight.w400,
         color: textSecondaryColor,
       );
 
-  static TextStyle get buttonText => GoogleFonts.inter(
+  static TextStyle get buttonText => const TextStyle(
+        fontFamily: 'Roboto',
         fontSize: 16,
         fontWeight: FontWeight.w600,
         color: Colors.white,
@@ -96,7 +102,8 @@ class AppTheme {
         backgroundColor: MaterialStateProperty.all(primaryColor),
         foregroundColor: MaterialStateProperty.all(Colors.white),
         elevation: MaterialStateProperty.all(0),
-        padding: MaterialStateProperty.all(const EdgeInsets.symmetric(horizontal: 24, vertical: 12)),
+        padding: MaterialStateProperty.all(
+            const EdgeInsets.symmetric(horizontal: 24, vertical: 12)),
         shape: MaterialStateProperty.all(RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(16),
         )),
@@ -105,7 +112,8 @@ class AppTheme {
   static ButtonStyle get secondaryButtonStyle => ButtonStyle(
         foregroundColor: MaterialStateProperty.all(primaryColor),
         side: MaterialStateProperty.all(const BorderSide(color: primaryColor)),
-        padding: MaterialStateProperty.all(const EdgeInsets.symmetric(horizontal: 24, vertical: 12)),
+        padding: MaterialStateProperty.all(
+            const EdgeInsets.symmetric(horizontal: 24, vertical: 12)),
         shape: MaterialStateProperty.all(RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(16),
         )),

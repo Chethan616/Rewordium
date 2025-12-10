@@ -444,12 +444,12 @@ class _JadeChatScreenState extends State<JadeChatScreen>
                               style: TextStyle(fontSize: 16),
                             ),
                           )
-                        : Container(
-                            margin: const EdgeInsets.all(2),
-                            decoration: BoxDecoration(
-                              color: Colors.white,
-                              borderRadius: BorderRadius.circular(16),
-                            ),
+                          : Container(
+                              margin: const EdgeInsets.all(2),
+                              decoration: BoxDecoration(
+                                color: AppTheme.cardColor,
+                                borderRadius: BorderRadius.circular(16),
+                              ),
                             child: const Center(
                               child: AnimatedJadeAvatar(
                                 size: 32,
@@ -483,8 +483,8 @@ class _JadeChatScreenState extends State<JadeChatScreen>
                                   Colors.red.withOpacity(0.05)
                                 ]
                               : [
-                                  Colors.white,
-                                  const Color(0xFFF8F9FF),
+                                  AppTheme.cardColor,
+                                  AppTheme.cardColor.withOpacity(0.9),
                                 ],
                     ),
                     borderRadius: BorderRadius.only(
@@ -501,7 +501,7 @@ class _JadeChatScreenState extends State<JadeChatScreen>
                         ? Border.all(color: Colors.red.withOpacity(0.3))
                         : message.isUser
                             ? null
-                            : Border.all(color: Colors.grey.withOpacity(0.1)),
+                            : Border.all(color: AppTheme.textSecondaryColor.withOpacity(0.1)),
                     boxShadow: [
                       BoxShadow(
                         color: message.isUser
@@ -589,8 +589,8 @@ class _JadeChatScreenState extends State<JadeChatScreen>
                   begin: Alignment.topLeft,
                   end: Alignment.bottomRight,
                   colors: [
-                    Colors.grey.withOpacity(0.1),
-                    Colors.grey.withOpacity(0.05)
+                    AppTheme.textSecondaryColor.withOpacity(0.1),
+                    AppTheme.textSecondaryColor.withOpacity(0.05)
                   ],
                 ),
                 borderRadius: BorderRadius.circular(20),
@@ -659,8 +659,8 @@ class _JadeChatScreenState extends State<JadeChatScreen>
                       begin: Alignment.topLeft,
                       end: Alignment.bottomRight,
                       colors: [
-                        Colors.white,
-                        const Color(0xFFF8F9FF),
+                        AppTheme.cardColor,
+                        AppTheme.cardColor.withOpacity(0.95),
                       ],
                     ),
                     borderRadius: BorderRadius.circular(25),

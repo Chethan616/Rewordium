@@ -18,6 +18,7 @@ object KeyboardConstants {
     const val KEY_CLIPBOARD_FAVORITES = "flutter.clipboardFavorites" // For storing favorite clipboard items
     const val KEY_GLIDE_TYPING_ENABLED = "flutter.glideTypingEnabled" // FlorisBoard glide typing
     const val KEY_SPACEBAR_NAVIGATION_ENABLED = "flutter.spacebarNavigationEnabled" // FlorisBoard spacebar navigation
+    const val KEY_AI_ENABLED = "flutter.paraphraser_enabled" // Controls AI features visibility
     
     const val ACTION_SETTINGS_UPDATED = "com.noxquill.rewordium.SETTINGS_UPDATED"
     const val ACTION_FORCE_THEME_REFRESH = "com.noxquill.rewordium.FORCE_THEME_REFRESH"

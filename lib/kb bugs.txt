@@ -1,0 +1,316 @@
+import 'package:flutter/material.dart';
+import 'package:flutter/cupertino.dart';
+import 'package:rewordium/theme/app_theme.dart';
+import 'package:rewordium/widgets/custom_button.dart';
+
+// Enum to manage plan selection cleanly
+enum PlanType { monthly, yearly, onetime }
+
+class PaymentScreen extends StatefulWidget {
+  const PaymentScreen({super.key});
+
+  @override
+  State<PaymentScreen> createState() => _PaymentScreenState();
+}
+
+class _PaymentScreenState extends State<PaymentScreen> {
+  // State variable to track the selected plan. Default to the best value.
+  PlanType _selectedPlan = PlanType.yearly;
+
+  // Helper function to get the dynamic text for the payment button
+  String _getButtonText() {
+    switch (_selectedPlan) {
+      case PlanType.monthly:
+        return 'Subscribe & Pay \$2.99';
+      case PlanType.yearly:
+        return 'Subscribe & Pay \$12.99';
+      case PlanType.onetime:
+        return 'Pay Once \$24.99';
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
+      appBar: AppBar(
+        leading: IconButton(
+          icon: const Icon(CupertinoIcons.back),
+          onPressed: () => Navigator.of(context).pop(),
+          tooltip: 'Back',
+        ),
+        // REMOVED 'const' because AppTheme.headingSmall is not constant
+        title: Text("Upgrade to Pro", style: AppTheme.headingSmall),
+        backgroundColor: Theme.of(context).scaffoldBackgroundColor,
+        elevation: 0,
+        centerTitle: true,
+      ),
+      body: SafeArea(
+        child: SingleChildScrollView(
+          physics: const BouncingScrollPhysics(),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const SizedBox(height: 16),
+              
+              _buildHeader(),
+
+              // --- "PRO FEATURES" SECTION ADDED HERE ---
+              Padding(
+                padding: const EdgeInsets.fromLTRB(16, 24, 16, 8),
+                child: Text("Pro Features", style: AppTheme.headingSmall),
+              ),
+              _buildFeatureRow(
+                icon: CupertinoIcons.sparkles,
+                title: "Unlimited AI Usage",
+                subtitle: "No more limits on paraphrasing or grammar checks.",
+                color: Colors.amber,
+              ),
+              _buildFeatureRow(
+                icon: CupertinoIcons.keyboard_chevron_compact_down,
+                title: "Advanced Keyboard Personas",
+                subtitle: "Access exclusive and specialized writing styles.",
+                color: Colors.blue,
+              ),
+              _buildFeatureRow(
+                icon: CupertinoIcons.lock_shield,
+                title: "Enhanced Privacy",
+                subtitle: "Your data is never used for model training.",
+                color: Colors.green,
+              ),
+              _buildFeatureRow(
+                icon: CupertinoIcons.bolt_fill,
+                title: "Priority Support",
+                subtitle: "Get faster assistance from our support team.",
+                color: Colors.purple,
+              ),
+
+              // --- "SELECT YOUR PLAN" SECTION ---
+              Padding(
+                padding: const EdgeInsets.fromLTRB(16, 24, 16, 8),
+                child: Text("Select Your Plan", style: AppTheme.headingSmall),
+              ),
+              _buildPlanOptionCard(
+                planType: PlanType.monthly,
+                title: 'Monthly',
+                price: '\$2.99 / month',
+                subtitle: 'Billed every month.',
+              ),
+              _buildPlanOptionCard(
+                planType: PlanType.yearly,
+                title: 'Yearly',
+                price: '\$8.99 / year',
+                subtitle: 'Save 75%! Billed once a year.',
+                isBestValue: true,
+              ),
+              _buildPlanOptionCard(
+                planType: PlanType.onetime,
+                title: 'Lifetime',
+                price: '\$24.99 one-time',
+                subtitle: 'Pay once, own it forever.',
+              ),
+
+              // --- Payment Button ---
+              Padding(
+                padding: const EdgeInsets.all(16.0),
+                child: CustomButton(
+                  text: _getButtonText(),
+                  onPressed: () {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(content: Text('Processing ${_selectedPlan.name} plan...')),
+                    );
+                  },
+                  type: ButtonType.primary,
+                  height: 55,
+                  icon: CupertinoIcons.creditcard_fill,
+                ),
+              ),
+
+              // --- Footer Text ---
+              // REMOVED 'const' because AppTheme.bodySmall is not constant
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
+                child: Text(
+                  'Subscriptions will auto-renew until canceled. You can manage your subscription in your account settings after purchase.',
+                  textAlign: TextAlign.center,
+                  style: AppTheme.bodySmall,
+                ),
+              ),
+              const SizedBox(height: 20),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  // --- WIDGET BUILDER HELPERS ---
+
+  Widget _buildHeader() {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16.0),
+      child: Column(
+        children: [
+          Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: AppTheme.primaryColor.withOpacity(0.1),
+              shape: BoxShape.circle,
+            ),
+            child: Icon(
+              CupertinoIcons.rocket_fill,
+              color: AppTheme.primaryColor,
+              size: 40,
+            ),
+          ),
+          const SizedBox(height: 16),
+          Text(
+            "Unlock Your Full Potential",
+            textAlign: TextAlign.center,
+            style: AppTheme.headingMedium.copyWith(fontWeight: FontWeight.bold),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            "Get unlimited access to all Rewordium Pro features and take your writing to the next level.",
+            textAlign: TextAlign.center,
+            style: AppTheme.bodyMedium,
+          ),
+        ],
+      ),
+    );
+  }
+  
+  // A helper widget for feature rows, matching your settings screen style
+  Widget _buildFeatureRow({
+    required IconData icon,
+    required String title,
+    required String subtitle,
+    required Color color,
+  }) {
+    return Container(
+      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      padding: const EdgeInsets.all(16),
+      decoration: AppTheme.cardDecoration,
+      child: Row(
+        children: [
+          Container(
+            width: 40,
+            height: 40,
+            decoration: BoxDecoration(
+              color: color.withOpacity(0.1),
+              borderRadius: BorderRadius.circular(10),
+            ),
+            child: Icon(icon, color: color, size: 22),
+          ),
+          const SizedBox(width: 16),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(title, style: AppTheme.bodyLarge.copyWith(fontWeight: FontWeight.w600)),
+                const SizedBox(height: 4),
+                Text(subtitle, style: AppTheme.bodySmall),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildPlanOptionCard({
+    required PlanType planType,
+    required String title,
+    required String price,
+    required String subtitle,
+    bool isBestValue = false,
+  }) {
+    final bool isSelected = _selectedPlan == planType;
+
+    Widget card = Container(
+      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      decoration: BoxDecoration(
+        color: AppTheme.cardColor,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(
+          color: isSelected ? AppTheme.primaryColor : Colors.grey.withOpacity(0.2),
+          width: isSelected ? 2.0 : 1.0,
+        ),
+        boxShadow: isSelected ? [
+          BoxShadow(
+            color: AppTheme.primaryColor.withOpacity(0.1),
+            blurRadius: 10,
+            spreadRadius: 2
+          )
+        ] : null,
+      ),
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: () {
+            setState(() {
+              _selectedPlan = planType;
+            });
+          },
+          borderRadius: BorderRadius.circular(16),
+          child: Padding(
+            padding: const EdgeInsets.all(16.0),
+            child: Row(
+              children: [
+                Icon(
+                  isSelected
+                      ? CupertinoIcons.checkmark_circle_fill
+                      : CupertinoIcons.circle,
+                  color: isSelected ? AppTheme.primaryColor : Colors.grey,
+                  size: 24,
+                ),
+                const SizedBox(width: 16),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(title, style: AppTheme.bodyLarge.copyWith(fontWeight: FontWeight.w600)),
+                      const SizedBox(height: 4),
+                      Text(subtitle, style: AppTheme.bodySmall),
+                    ],
+                  ),
+                ),
+                Text(price, style: AppTheme.bodyLarge.copyWith(fontWeight: FontWeight.bold)),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+
+    if (isBestValue) {
+      return Stack(
+        clipBehavior: Clip.none,
+        children: [
+          card,
+          Positioned(
+            top: 0,
+            right: 10,
+            child: _buildBestValueBanner(),
+          ),
+        ],
+      );
+    }
+    return card;
+  }
+  
+  Widget _buildBestValueBanner() {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      decoration: BoxDecoration(
+        color: Colors.orange,
+        borderRadius: BorderRadius.circular(8)
+      ),
+      // REMOVED 'const' because AppTheme.bodySmall is not constant
+      child: Text(
+        'BEST VALUE',
+        style: AppTheme.bodySmall.copyWith(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 10),
+      ),
+    );
+  }
+}

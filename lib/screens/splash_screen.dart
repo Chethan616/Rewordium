@@ -10,7 +10,6 @@ import '../services/firebase_service.dart';
 import '../services/force_update_service.dart';
 import '../providers/auth_provider.dart';
 import '../screens/auth/login_screen.dart';
-import 'package:google_fonts/google_fonts.dart';
 
 class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});
@@ -193,13 +192,12 @@ class _SplashScreenState extends State<SplashScreen>
               duration: const Duration(milliseconds: 500),
               child: Text(
                 'Rewordium',
-                style: GoogleFonts.pacifico(
-                  textStyle: TextStyle(
-                    fontSize: 42,
-                    fontWeight: FontWeight.w400,
-                    color: AppTheme.primaryColor,
-                    letterSpacing: 0.5,
-                  ),
+                style: TextStyle(
+                  fontFamily: 'Pacifico',
+                  fontSize: 42,
+                  fontWeight: FontWeight.bold,
+                  color: AppTheme.primaryColor,
+                  letterSpacing: 0.5,
                 ),
               ),
             ),

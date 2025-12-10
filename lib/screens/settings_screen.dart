@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:provider/provider.dart';
-import 'package:rewordium/screens/keyboard_settings_screen.dart';
+import 'package:android_intent_plus/android_intent.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 import '../providers/keyboard_provider.dart';
@@ -15,6 +15,7 @@ import '../widgets/custom_app_bar.dart';
 import '../widgets/custom_button.dart';
 import '../screens/auth/login_screen.dart';
 import '../screens/auth/signup_screen.dart';
+import '../screens/licenses_screen.dart';
 import '../providers/auth_provider.dart';
 import 'admin_panel.dart';
 
@@ -142,6 +143,15 @@ class _SettingsScreenState extends State<SettingsScreen> {
     );
   }
 
+  /// Opens the native ReBoard keyboard settings activity
+  Future<void> _openReboardSettings() async {
+    final intent = AndroidIntent(
+      action: 'android.intent.action.VIEW',
+      data: 'ui://ReBoard/settings/home',
+    );
+    await intent.launch();
+  }
+
   void _showIOSStyleKeyboardActivationDialog(BuildContext context) {
     showDialog(
       context: context,
@@ -250,11 +260,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
             ),
             AnimatedCard(
               padding: EdgeInsets.zero,
-              onTap: () => Navigator.push(
-                context,
-                MaterialPageRoute(
-                    builder: (context) => const KeyboardSettingsScreen()),
-              ),
+              onTap: () => _openReboardSettings(),
               child: Padding(
                 padding: const EdgeInsets.all(16.0),
                 child: Row(
@@ -298,6 +304,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 ),
               ),
             ),
+            // OLD KEYBOARD PERSONA SELECTOR - COMMENTED OUT (Now using ReBoard native settings)
+            /*
             Padding(
               padding:
                   const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
@@ -448,6 +456,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 );
               },
             ),
+            */
+            // END OF OLD KEYBOARD PERSONA SELECTOR
             if (!isLoggedIn)
               AnimatedCard(
                 child: Column(
@@ -492,6 +502,12 @@ class _SettingsScreenState extends State<SettingsScreen> {
               child: Text("App Information", style: AppTheme.headingSmall),
             ),
             _buildAppInfoSection(context),
+            // Credits Section
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
+              child: Text("Credits", style: AppTheme.headingSmall),
+            ),
+            _buildCreditsSection(context),
             const SizedBox(height: 20),
           ],
         ),
@@ -866,6 +882,89 @@ class _SettingsScreenState extends State<SettingsScreen> {
           ],
         );
       },
+    );
+  }
+
+  Widget _buildCreditsSection(BuildContext context) {
+    return AnimatedCard(
+      onTap: () {
+        Navigator.push(
+          context,
+          MaterialPageRoute(builder: (context) => const LicensesScreen()),
+        );
+      },
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Header
+          Row(
+            children: [
+              Container(
+                width: 40,
+                height: 40,
+                decoration: BoxDecoration(
+                  color: Colors.green.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: const Icon(
+                  CupertinoIcons.heart_fill,
+                  color: Colors.green,
+                  size: 20,
+                ),
+              ),
+              const SizedBox(width: 16),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      "Credits & Licenses",
+                      style: AppTheme.bodyLarge.copyWith(
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      "View open source licenses and attributions",
+                      style: AppTheme.bodySmall,
+                    ),
+                  ],
+                ),
+              ),
+              Icon(
+                CupertinoIcons.chevron_right,
+                color: AppTheme.textSecondaryColor,
+                size: 18,
+              ),
+            ],
+          ),
+          const SizedBox(height: 16),
+          const Divider(height: 1),
+          const SizedBox(height: 16),
+          // License Notice Text
+          Container(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: AppTheme.textSecondaryColor.withOpacity(0.1),
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: Row(
+              children: [
+                const Icon(CupertinoIcons.keyboard, color: Colors.green, size: 18),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Text(
+                    "Based on FlorisBoard • Apache License 2.0",
+                    style: AppTheme.bodySmall.copyWith(
+                      fontSize: 11,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
     );
   }
 }
