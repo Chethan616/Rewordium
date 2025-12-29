@@ -32,7 +32,7 @@
       <div class="grid">
         <div class="section">
           <h2>Status</h2>
-          <div class="kv"><div class="k">Compliance</div><div class="v">Fully compliant (NDK r28 + uncompressed JNI libs)</div></div>
+          <div class="kv"><div class="k">Compliance</div><div class="v">Fully compliant (NDK r27 + uncompressed JNI libs)</div></div>
           <div class="kv"><div class="k">Deadline</div><div class="v">Before November 1, 2025 (met)</div></div>
           <div class="kv"><div class="k">Supported ABIs</div><div class="v">arm64-v8a (primary), backward-compatible with 4 KB pages</div></div>
         </div>
@@ -40,7 +40,7 @@
           <h2>Technical Implementation</h2>
           <p>The Android build is configured to support 16 KB page size devices by:</p>
           <ul>
-            <li>Using <strong>NDK 28.0.12433566 (r28)</strong> which adds 16 KB compatibility.</li>
+            <li>Using <strong>NDK 27.0.12077973 (r27)</strong> which adds 16 KB compatibility.</li>
             <li>Setting <strong>useLegacyPackaging = false</strong> for <em>jniLibs</em> to store native libraries uncompressed and properly aligned.</li>
             <li>Configuring <em>abiFilters</em> for <strong>arm64-v8a</strong> and <em>debugSymbolLevel</em> to <strong>SYMBOL_TABLE</strong>.</li>
           </ul>
