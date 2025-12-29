@@ -125,6 +125,13 @@ android {
         compose = true
     }
 
+    // 16 KB page size support - ensure uncompressed native libraries
+    packagingOptions {
+        jniLibs {
+            useLegacyPackaging = false
+        }
+    }
+
     buildTypes {
         named("debug") {
             isJniDebuggable = false
