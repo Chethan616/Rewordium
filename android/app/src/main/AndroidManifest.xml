@@ -123,28 +123,8 @@
         <!-- =================================================================== -->
         <!-- START OF SERVICE DECLARATIONS -->
         <!-- =================================================================== -->
-        <!--
-            NOTE: The <activity> for BottomSheetActivity has been REMOVED
-            because it is no longer needed in this architecture.
-        -->
 
-        <!-- 1. Custom Keyboard Service (InputMethodService) - DISABLED -->
-        <!-- 
-        <service
-            android:name=".keyboard.RewordiumAIKeyboardService"
-            android:label="@string/keyboard_name"
-            android:permission="android.permission.BIND_INPUT_METHOD"
-            android:exported="true">
-            <intent-filter>
-                <action android:name="android.view.InputMethod" />
-            </intent-filter>
-            <meta-data
-                android:name="android.view.im"
-                android:resource="@xml/method" />
-        </service>
-        -->
-
-        <!-- 2. Floating Assistant Service (AccessibilityService) -->
+        <!-- Floating Assistant Service (AccessibilityService) -->
         <service
             android:name=".service.MyAccessibilityService"
             android:label="@string/app_name"

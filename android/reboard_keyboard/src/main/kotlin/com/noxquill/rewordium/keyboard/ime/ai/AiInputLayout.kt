@@ -91,20 +91,13 @@ import com.noxquill.rewordium.keyboard.ime.text.keyboard.TextKeyData
 import com.noxquill.rewordium.keyboard.ime.theme.FlorisImeUi
 import com.noxquill.rewordium.keyboard.keyboardManager
 import kotlinx.coroutines.launch
+import org.florisboard.lib.snygg.ui.rememberSnyggThemeQuery
 import org.florisboard.lib.snygg.ui.SnyggBox
 import org.florisboard.lib.snygg.ui.SnyggColumn
 import org.florisboard.lib.snygg.ui.SnyggRow
 import org.florisboard.lib.snygg.ui.SnyggText
-import org.florisboard.lib.snygg.ui.rememberSnyggThemeQuery
 
-// Meta AI-style colors
-private val AiPanelBackground = Color(0xFF2A2F32)
-private val AiChipBackground = Color(0xFF3A3F43)
-private val AiChipBackgroundSelected = Color(0xFF4A5054)
-private val AiTextColor = Color.White
-private val AiTextColorSecondary = Color(0xFFB0B5B9)
-
-// Gradient colors for selected chip outline
+// Gradient colors for selected chip outline (accent colors)
 private val GradientStart = Color(0xFF6366F1) // Purple
 private val GradientMiddle = Color(0xFF8B5CF6) // Violet
 private val GradientEnd = Color(0xFFEC4899) // Pink
@@ -121,7 +114,7 @@ data class AiSuggestionChip(
 
 /**
  * AI Input Layout - A keyboard panel for AI writing assistance
- * Styled like Meta AI with suggestion chips carousel
+ * Themed to match the current keyboard theme
  */
 @Composable
 fun AiInputLayout(
@@ -132,6 +125,19 @@ fun AiInputLayout(
     val editorInstance by context.editorInstance()
     val aiManager by context.aiManager()
     val scope = rememberCoroutineScope()
+    
+    // Get theme colors from keyboard theme
+    val windowStyle = rememberSnyggThemeQuery(FlorisImeUi.Window.elementName)
+    val keyStyle = rememberSnyggThemeQuery(FlorisImeUi.Key.elementName)
+    val smartbarStyle = rememberSnyggThemeQuery(FlorisImeUi.Smartbar.elementName)
+    
+    // Dynamic theme colors
+    val backgroundColor = windowStyle.background()
+    val surfaceColor = keyStyle.background()
+    val textColor = keyStyle.foreground()
+    val secondaryTextColor = textColor.copy(alpha = 0.7f)
+    val chipBackgroundColor = surfaceColor.copy(alpha = 0.8f)
+    val chipSelectedColor = surfaceColor
     
     var isGenerating by remember { mutableStateOf(false) }
     var selectedAction by remember { mutableStateOf<AIAction?>(null) }
@@ -220,7 +226,7 @@ fun AiInputLayout(
             modifier = modifier
                 .fillMaxWidth()
                 .height(FlorisImeSizing.imeUiHeight())
-                .background(AiPanelBackground)
+                .background(backgroundColor)
         ) {
             Column(
                 modifier = Modifier.fillMaxSize()
@@ -235,13 +241,13 @@ fun AiInputLayout(
                     Icon(
                         imageVector = Icons.Default.AutoAwesome,
                         contentDescription = null,
-                        tint = AiTextColor,
+                        tint = textColor,
                         modifier = Modifier.size(20.dp)
                     )
                     Spacer(modifier = Modifier.width(8.dp))
                     Text(
                         text = stringResource(R.string.ai__panel_title),
-                        color = AiTextColor,
+                        color = textColor,
                         fontSize = 16.sp,
                         fontWeight = FontWeight.SemiBold
                     )
@@ -292,14 +298,14 @@ fun AiInputLayout(
                                 Spacer(modifier = Modifier.height(16.dp))
                                 Text(
                                     text = "Generating...",
-                                    color = AiTextColor,
+                                    color = textColor,
                                     fontSize = 14.sp,
                                     fontWeight = FontWeight.Medium
                                 )
                                 Spacer(modifier = Modifier.height(4.dp))
                                 Text(
                                     text = "AI is working on your text",
-                                    color = AiTextColorSecondary,
+                                    color = secondaryTextColor,
                                     fontSize = 12.sp
                                 )
                             }
@@ -317,7 +323,7 @@ fun AiInputLayout(
                                         .weight(1f)
                                         .fillMaxWidth()
                                         .clip(RoundedCornerShape(12.dp))
-                                        .background(AiChipBackground.copy(alpha = 0.5f))
+                                        .background(chipBackgroundColor.copy(alpha = 0.5f))
                                         .padding(12.dp)
                                 ) {
                                     Column(
@@ -327,7 +333,7 @@ fun AiInputLayout(
                                     ) {
                                         Text(
                                             text = generatedText!!,
-                                            color = AiTextColor,
+                                            color = textColor,
                                             fontSize = 15.sp,
                                             lineHeight = 22.sp
                                         )
@@ -346,7 +352,7 @@ fun AiInputLayout(
                                         modifier = Modifier
                                             .weight(1f)
                                             .clip(RoundedCornerShape(12.dp))
-                                            .background(AiChipBackground)
+                                            .background(chipBackgroundColor)
                                             .clickable {
                                                 // Regenerate with same settings
                                                 scope.launch {
@@ -410,13 +416,13 @@ fun AiInputLayout(
                                             Icon(
                                                 imageVector = Icons.Default.Refresh,
                                                 contentDescription = "Regenerate",
-                                                tint = AiTextColor,
+                                                tint = textColor,
                                                 modifier = Modifier.size(18.dp)
                                             )
                                             Spacer(modifier = Modifier.width(6.dp))
                                             Text(
                                                 text = "Regenerate",
-                                                color = AiTextColor,
+                                                color = textColor,
                                                 fontSize = 13.sp,
                                                 fontWeight = FontWeight.Medium
                                             )
@@ -447,7 +453,7 @@ fun AiInputLayout(
                                     ) {
                                         Text(
                                             text = "New Prompt",
-                                            color = AiTextColor,
+                                            color = textColor,
                                             fontSize = 13.sp,
                                             fontWeight = FontWeight.Medium
                                         )
@@ -471,13 +477,13 @@ fun AiInputLayout(
                                 Box(
                                     modifier = Modifier
                                         .clip(RoundedCornerShape(12.dp))
-                                        .background(AiChipBackground)
+                                        .background(chipBackgroundColor)
                                         .clickable { errorMessage = null }
                                         .padding(horizontal = 16.dp, vertical = 8.dp)
                                 ) {
                                     Text(
                                         text = "Try Again",
-                                        color = AiTextColor,
+                                        color = textColor,
                                         fontSize = 13.sp
                                     )
                                 }
@@ -491,13 +497,13 @@ fun AiInputLayout(
                             ) {
                                 Text(
                                     text = "Select options below",
-                                    color = AiTextColorSecondary,
+                                    color = secondaryTextColor,
                                     fontSize = 14.sp
                                 )
                                 Spacer(modifier = Modifier.height(4.dp))
                                 Text(
                                     text = "then tap Generate to enhance your text",
-                                    color = AiTextColorSecondary.copy(alpha = 0.7f),
+                                    color = secondaryTextColor.copy(alpha = 0.7f),
                                     fontSize = 12.sp
                                 )
                             }
@@ -520,7 +526,10 @@ fun AiInputLayout(
                             selectedChip = selectedPersona,
                             onChipSelected = { chip ->
                                 selectedPersona = if (selectedPersona == chip) null else chip
-                            }
+                            },
+                            chipBackground = chipBackgroundColor,
+                            chipSelectedBackground = chipSelectedColor,
+                            textColor = textColor
                         )
 
                         // Row 2 — Writing Task (Infinite Scroll)
@@ -529,7 +538,10 @@ fun AiInputLayout(
                             selectedChip = selectedTask,
                             onChipSelected = { chip ->
                                 selectedTask = if (selectedTask == chip) null else chip
-                            }
+                            },
+                            chipBackground = chipBackgroundColor,
+                            chipSelectedBackground = chipSelectedColor,
+                            textColor = textColor
                         )
 
                         // Row 3 — Output Length (Infinite Scroll)
@@ -538,7 +550,10 @@ fun AiInputLayout(
                             selectedChip = selectedLength,
                             onChipSelected = { chip ->
                                 selectedLength = if (selectedLength == chip) null else chip
-                            }
+                            },
+                            chipBackground = chipBackgroundColor,
+                            chipSelectedBackground = chipSelectedColor,
+                            textColor = textColor
                         )
                         
                         // Generate Button Row
@@ -644,7 +659,7 @@ fun AiInputLayout(
                     modifier = Modifier
                         .fillMaxWidth()
                         .height(FlorisImeSizing.keyboardRowBaseHeight * 0.85f)
-                        .background(AiChipBackground.copy(alpha = 0.5f))
+                        .background(chipBackgroundColor.copy(alpha = 0.5f))
                         .padding(horizontal = 8.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
@@ -657,7 +672,7 @@ fun AiInputLayout(
                     ) {
                         Text(
                             text = "ABC",
-                            color = AiTextColor,
+                            color = textColor,
                             fontWeight = FontWeight.Bold,
                             fontSize = 14.sp
                         )
@@ -712,7 +727,7 @@ fun AiInputLayout(
                             modifier = Modifier
                                 .fillMaxHeight()
                                 .clip(RoundedCornerShape(8.dp))
-                                .background(AiChipBackground)
+                                .background(chipBackgroundColor)
                                 .clickable {
                                     generatedText = null
                                     errorMessage = null
@@ -724,7 +739,7 @@ fun AiInputLayout(
                             Icon(
                                 imageVector = Icons.Default.Refresh,
                                 contentDescription = "Reset",
-                                tint = AiTextColor,
+                                tint = textColor,
                                 modifier = Modifier.size(18.dp)
                             )
                         }
@@ -742,7 +757,7 @@ fun AiInputLayout(
                         Icon(
                             imageVector = Icons.AutoMirrored.Outlined.Backspace,
                             contentDescription = null,
-                            tint = AiTextColor
+                            tint = textColor
                         )
                     }
                 }
@@ -752,14 +767,17 @@ fun AiInputLayout(
 }
 
 /**
- * Meta AI-style suggestion chip with gradient outline when selected
+ * Theme-aware suggestion chip with gradient outline when selected
  */
 @Composable
 private fun MetaAiSuggestionChip(
     emoji: String,
     text: String,
     isSelected: Boolean,
-    onClick: () -> Unit
+    onClick: () -> Unit,
+    chipBackground: Color,
+    chipSelectedBackground: Color,
+    textColor: Color
 ) {
     val gradientBrush = Brush.horizontalGradient(
         listOf(GradientStart, GradientMiddle, GradientEnd)
@@ -779,13 +797,13 @@ private fun MetaAiSuggestionChip(
                     Modifier
                 }
             )
-            .background(if (isSelected) AiChipBackgroundSelected else AiChipBackground)
+            .background(if (isSelected) chipSelectedBackground else chipBackground)
             .clickable(onClick = onClick)
             .padding(horizontal = 12.dp, vertical = 8.dp)
     ) {
         Text(
             text = text,
-            color = if (isSelected) Color.White else AiTextColor,
+            color = textColor,
             fontSize = 12.sp,
             fontWeight = if (isSelected) FontWeight.SemiBold else FontWeight.Medium,
             maxLines = 1
@@ -801,7 +819,10 @@ private fun MetaAiSuggestionChip(
 private fun InfiniteScrollChipRow(
     chips: List<String>,
     selectedChip: String?,
-    onChipSelected: (String) -> Unit
+    onChipSelected: (String) -> Unit,
+    chipBackground: Color,
+    chipSelectedBackground: Color,
+    textColor: Color
 ) {
     // Create a large list by repeating the chips many times for infinite scroll effect
     val repeatCount = 100 // Repeat enough times for seamless scrolling
@@ -829,7 +850,10 @@ private fun InfiniteScrollChipRow(
                 emoji = "",
                 text = chip,
                 isSelected = selectedChip == chip,
-                onClick = { onChipSelected(chip) }
+                onClick = { onChipSelected(chip) },
+                chipBackground = chipBackground,
+                chipSelectedBackground = chipSelectedBackground,
+                textColor = textColor
             )
         }
     }

@@ -302,7 +302,20 @@ class MyAccessibilityService : AccessibilityService(), BubbleInteractionListener
             "com.yahoo.mobile.client.android.mail",
             "com.facebook.katana",
             "com.instagram.android",
-            packageName
+            packageName,
+            // Reddit, Indeed, LinkedIn
+            "com.reddit.frontpage",
+            "com.indeed.android.jobsearch",
+            "com.linkedin.android",
+            // Keyboard packages - prevent dialog dismissal when keyboard appears
+            "com.noxquill.rewordium.keyboard",
+            "com.google.android.inputmethod.latin",
+            "com.samsung.android.honeyboard",
+            "com.swiftkey.swiftkeyaccessibility",
+            "com.touchtype.swiftkey",
+            "com.microsoft.swiftkey",
+            // Github
+            "com.github.android"
         )
     }
 
@@ -375,15 +388,45 @@ class MyAccessibilityService : AccessibilityService(), BubbleInteractionListener
             AccessibilityEvent.TYPE_VIEW_FOCUSED -> {
                 if (BuildConfig.DEBUG) Log.d(TAG, "Accessibility event: ${event.eventType}, package: ${event.packageName}")
                 
-                // Check if user navigated away from allowed apps - dismiss dialog if so
+                // Android 16+ (API 36) has more frequent window state changes that can interfere
+                // with dialogs - be more conservative about dismissing dialogs
                 val currentPackage = event.packageName?.toString()
-                if (customPersonaDialog?.isShowing == true && 
-                    currentPackage != null && 
-                    !allowedPackageNames.contains(currentPackage) &&
-                    currentPackage != packageName) { // Not in our own app either
-                    if (BuildConfig.DEBUG) Log.d(TAG, "User navigated away from allowed apps, dismissing dialog")
-                    customPersonaDialog?.dismiss()
-                    customPersonaDialog = null
+                
+                // On Android 16+, only dismiss dialog if user definitely navigated away
+                // (not for internal window state changes which happen more frequently)
+                if (customPersonaDialog?.isShowing == true) {
+                    // Check if this is a keyboard/input method package
+                    val isKeyboardPackage = currentPackage?.let {
+                        it.contains("inputmethod") || 
+                        it.contains("keyboard") || 
+                        it.contains("swiftkey") ||
+                        it.contains("honeyboard") ||
+                        it == "com.android.inputmethod.latin"
+                    } ?: false
+                    
+                    // Skip dismissal on Android 16+ for TYPE_WINDOWS_CHANGED as it's too sensitive
+                    val shouldDismiss = if (Build.VERSION.SDK_INT >= 36) {
+                        // On Android 16, only dismiss on explicit app switch (TYPE_WINDOW_STATE_CHANGED)
+                        // Never dismiss for keyboard-related packages
+                        event.eventType == AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED &&
+                        currentPackage != null &&
+                        !isKeyboardPackage &&
+                        !allowedPackageNames.contains(currentPackage) &&
+                        currentPackage != packageName &&
+                        currentPackage != "com.android.systemui" // Don't dismiss for system UI
+                    } else {
+                        // Pre-Android 16 behavior
+                        currentPackage != null &&
+                        !isKeyboardPackage &&
+                        !allowedPackageNames.contains(currentPackage) &&
+                        currentPackage != packageName
+                    }
+                    
+                    if (shouldDismiss) {
+                        if (BuildConfig.DEBUG) Log.d(TAG, "User navigated away from allowed apps, dismissing dialog")
+                        customPersonaDialog?.dismiss()
+                        customPersonaDialog = null
+                    }
                 }
                 
                 serviceScope.launch {
@@ -1173,7 +1216,7 @@ class MyAccessibilityService : AccessibilityService(), BubbleInteractionListener
         
         dialog.window?.setBackgroundDrawableResource(android.R.color.transparent)
         
-        // Enhanced window configuration for stability
+        // Enhanced window configuration for stability - Android 16+ compatible
         dialog.window?.apply {
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
                 setType(WindowManager.LayoutParams.TYPE_ACCESSIBILITY_OVERLAY)
@@ -1182,21 +1225,37 @@ class MyAccessibilityService : AccessibilityService(), BubbleInteractionListener
                 setType(WindowManager.LayoutParams.TYPE_SYSTEM_ALERT)
             }
             
-            // Use flags that allow input while preventing dismissal
-            addFlags(WindowManager.LayoutParams.FLAG_WATCH_OUTSIDE_TOUCH or
-                     WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL or
-                     WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
+            // Android 16+ (API 36) has stricter window management
+            // IMPORTANT: Do NOT use FLAG_ALT_FOCUSABLE_IM as it blocks keyboard input
+            if (Build.VERSION.SDK_INT >= 36) {
+                // Android 16+ specific flags - allow keyboard input
+                addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON or
+                         WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN)
+                // Explicitly clear flags that might block input
+                clearFlags(WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or
+                          WindowManager.LayoutParams.FLAG_ALT_FOCUSABLE_IM or
+                          WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL)
+            } else {
+                // Pre-Android 16 flags
+                addFlags(WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL or
+                         WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
+                // Remove flags that block input
+                clearFlags(WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE)
+            }
             
-            // Remove flags that block input
-            clearFlags(WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE)
-            
-            // Ensure proper layout parameters
+            // Ensure proper layout parameters with Android 16+ compatibility
             attributes = attributes?.apply {
                 width = WindowManager.LayoutParams.MATCH_PARENT
                 height = WindowManager.LayoutParams.WRAP_CONTENT
                 gravity = Gravity.CENTER
-                softInputMode = WindowManager.LayoutParams.SOFT_INPUT_STATE_VISIBLE or 
-                               WindowManager.LayoutParams.SOFT_INPUT_ADJUST_RESIZE
+                // Android 16+ needs different soft input handling
+                softInputMode = if (Build.VERSION.SDK_INT >= 36) {
+                    WindowManager.LayoutParams.SOFT_INPUT_STATE_ALWAYS_VISIBLE or
+                    WindowManager.LayoutParams.SOFT_INPUT_ADJUST_PAN
+                } else {
+                    WindowManager.LayoutParams.SOFT_INPUT_STATE_VISIBLE or 
+                    WindowManager.LayoutParams.SOFT_INPUT_ADJUST_RESIZE
+                }
             }
         }
         

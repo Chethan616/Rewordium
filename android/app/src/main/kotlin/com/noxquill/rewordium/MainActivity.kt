@@ -13,7 +13,7 @@ import android.util.Log
 import android.view.accessibility.AccessibilityManager
 import android.view.inputmethod.InputMethodManager
 import androidx.annotation.NonNull
-import com.noxquill.rewordium.keyboard.util.KeyboardConstants
+import com.noxquill.rewordium.util.KeyboardConstants
 import com.noxquill.rewordium.service.KeyboardSettingsBroadcastReceiver
 import io.flutter.embedding.android.FlutterActivity
 import io.flutter.embedding.engine.FlutterEngine
@@ -165,8 +165,8 @@ class MainActivity : FlutterActivity() {
                 "isKeyboardEnabled" -> {
                     result.success(isKeyboardEnabled())
                 }
-                "isRewordiumAIKeyboardEnabled" -> {
-                    result.success(isMyKeyboardEnabled())
+                "isReboardKeyboardEnabled" -> {
+                    result.success(isReboardEnabled())
                 }
                 "openKeyboardSettings" -> {
                     openKeyboardSettings()
@@ -568,12 +568,12 @@ class MainActivity : FlutterActivity() {
         return enabledMethods.any { it.packageName == packageName }
     }
 
-    private fun isMyKeyboardEnabled(): Boolean {
+    private fun isReboardEnabled(): Boolean {
         val inputMethodManager = getSystemService(Context.INPUT_METHOD_SERVICE) as InputMethodManager
         val enabledMethods = inputMethodManager.enabledInputMethodList
+        // Check for Reboard keyboard (the main keyboard from reboard_keyboard module)
         return enabledMethods.any { 
-            it.packageName == packageName && 
-            it.serviceName == "com.noxquill.rewordium.keyboard.RewordiumAIKeyboardService" 
+            it.packageName == packageName
         }
     }
 

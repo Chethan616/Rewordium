@@ -47,7 +47,6 @@ import androidx.compose.material3.FilterChip
 import androidx.compose.material3.FilterChipDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -71,12 +70,14 @@ import com.noxquill.rewordium.keyboard.R
 import com.noxquill.rewordium.keyboard.aiManager
 import com.noxquill.rewordium.keyboard.editorInstance
 import com.noxquill.rewordium.keyboard.ime.keyboard.FlorisImeSizing
+import com.noxquill.rewordium.keyboard.ime.theme.FlorisImeUi
 import com.noxquill.rewordium.keyboard.keyboardManager
 import kotlinx.coroutines.launch
+import org.florisboard.lib.snygg.ui.rememberSnyggThemeQuery
 
 /**
  * AI Panel composable that shows AI writing assistance options
- * within the keyboard interface.
+ * within the keyboard interface. Uses keyboard theme colors.
  */
 @Composable
 fun AiPanel(
@@ -88,6 +89,17 @@ fun AiPanel(
     val keyboardManager by context.keyboardManager()
     val editorInstance by context.editorInstance()
     val aiManager by context.aiManager()
+    
+    // Get theme colors from keyboard theme
+    val windowStyle = rememberSnyggThemeQuery(FlorisImeUi.Window.elementName)
+    val keyStyle = rememberSnyggThemeQuery(FlorisImeUi.Key.elementName)
+    val smartbarStyle = rememberSnyggThemeQuery(FlorisImeUi.Smartbar.elementName)
+    
+    // Dynamic theme colors
+    val backgroundColor = windowStyle.background()
+    val surfaceColor = keyStyle.background()
+    val textColor = keyStyle.foreground()
+    val secondaryTextColor = textColor.copy(alpha = 0.7f)
     
     var isGenerating by remember { mutableStateOf(false) }
     var selectedPersona by remember { mutableStateOf(AIPersona.CASUAL) }
@@ -108,7 +120,7 @@ fun AiPanel(
             modifier = Modifier
                 .fillMaxWidth()
                 .height(FlorisImeSizing.smartbarHeight * 4),
-            color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.95f),
+            color = backgroundColor.copy(alpha = 0.98f),
             shape = RoundedCornerShape(topStart = 16.dp, topEnd = 16.dp)
         ) {
             Column(
@@ -126,7 +138,7 @@ fun AiPanel(
                         Icon(
                             imageVector = Icons.Default.Stars,
                             contentDescription = null,
-                            tint = MaterialTheme.colorScheme.primary,
+                            tint = textColor,
                             modifier = Modifier.size(20.dp)
                         )
                         Spacer(modifier = Modifier.width(8.dp))
@@ -134,7 +146,7 @@ fun AiPanel(
                             text = stringResource(R.string.ai__panel_title),
                             fontWeight = FontWeight.SemiBold,
                             fontSize = 14.sp,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                            color = textColor
                         )
                     }
                     IconButton(
@@ -147,7 +159,7 @@ fun AiPanel(
                         Icon(
                             imageVector = Icons.Default.Close,
                             contentDescription = "Close",
-                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                            tint = textColor,
                             modifier = Modifier.size(18.dp)
                         )
                     }
@@ -169,7 +181,9 @@ fun AiPanel(
                             onClick = {
                                 selectedPersona = persona
                                 aiManager.setPersona(persona)
-                            }
+                            },
+                            selectedColor = textColor,
+                            textColor = textColor
                         )
                     }
                 }
@@ -187,7 +201,9 @@ fun AiPanel(
                         ActionChip(
                             action = action,
                             isSelected = selectedAction == action,
-                            onClick = { selectedAction = action }
+                            onClick = { selectedAction = action },
+                            selectedColor = textColor,
+                            textColor = textColor
                         )
                     }
                 }
@@ -203,13 +219,14 @@ fun AiPanel(
                     if (isGenerating) {
                         CircularProgressIndicator(
                             modifier = Modifier.size(24.dp),
-                            strokeWidth = 2.dp
+                            strokeWidth = 2.dp,
+                            color = textColor
                         )
                         Spacer(modifier = Modifier.width(8.dp))
                         Text(
                             text = stringResource(R.string.ai__generating),
                             fontSize = 13.sp,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                            color = secondaryTextColor
                         )
                     } else if (generatedText != null) {
                         // Show generated text preview
@@ -217,7 +234,7 @@ fun AiPanel(
                             modifier = Modifier
                                 .weight(1f)
                                 .clip(RoundedCornerShape(8.dp))
-                                .background(MaterialTheme.colorScheme.surface)
+                                .background(surfaceColor)
                                 .padding(8.dp)
                         ) {
                             Text(
@@ -225,7 +242,7 @@ fun AiPanel(
                                 fontSize = 12.sp,
                                 maxLines = 2,
                                 overflow = TextOverflow.Ellipsis,
-                                color = MaterialTheme.colorScheme.onSurface
+                                color = textColor
                             )
                         }
                         Spacer(modifier = Modifier.width(8.dp))
@@ -248,14 +265,14 @@ fun AiPanel(
                             Icon(
                                 imageVector = Icons.Default.Check,
                                 contentDescription = "Insert",
-                                tint = MaterialTheme.colorScheme.primary
+                                tint = Color(0xFF4CAF50) // Green accent for confirm
                             )
                         }
                     } else if (errorMessage != null) {
                         Text(
                             text = errorMessage!!,
                             fontSize = 12.sp,
-                            color = MaterialTheme.colorScheme.error,
+                            color = Color(0xFFFF6B6B), // Error red
                             textAlign = TextAlign.Center
                         )
                     } else {
@@ -297,7 +314,7 @@ fun AiPanel(
                                 }
                             },
                             shape = RoundedCornerShape(20.dp),
-                            color = MaterialTheme.colorScheme.primary,
+                            color = textColor.copy(alpha = 0.9f),
                             modifier = Modifier.height(36.dp)
                         ) {
                             Row(
@@ -307,13 +324,13 @@ fun AiPanel(
                                 Icon(
                                     imageVector = Icons.Default.Stars,
                                     contentDescription = null,
-                                    tint = MaterialTheme.colorScheme.onPrimary,
+                                    tint = backgroundColor,
                                     modifier = Modifier.size(16.dp)
                                 )
                                 Spacer(modifier = Modifier.width(6.dp))
                                 Text(
                                     text = getActionLabel(selectedAction),
-                                    color = MaterialTheme.colorScheme.onPrimary,
+                                    color = backgroundColor,
                                     fontSize = 13.sp,
                                     fontWeight = FontWeight.Medium
                                 )
@@ -334,7 +351,7 @@ fun AiPanel(
                             Icon(
                                 imageVector = Icons.Default.Refresh,
                                 contentDescription = "Reset",
-                                tint = MaterialTheme.colorScheme.onSurfaceVariant
+                                tint = secondaryTextColor
                             )
                         }
                     }
@@ -348,7 +365,9 @@ fun AiPanel(
 private fun PersonaChip(
     persona: AIPersona,
     isSelected: Boolean,
-    onClick: () -> Unit
+    onClick: () -> Unit,
+    selectedColor: Color = Color(0xFF4A9EFF),
+    textColor: Color = Color.White
 ) {
     FilterChip(
         selected = isSelected,
@@ -360,8 +379,8 @@ private fun PersonaChip(
             )
         },
         colors = FilterChipDefaults.filterChipColors(
-            selectedContainerColor = MaterialTheme.colorScheme.primaryContainer,
-            selectedLabelColor = MaterialTheme.colorScheme.onPrimaryContainer
+            selectedContainerColor = selectedColor.copy(alpha = 0.3f),
+            selectedLabelColor = textColor
         ),
         modifier = Modifier.height(28.dp)
     )
@@ -371,7 +390,9 @@ private fun PersonaChip(
 private fun ActionChip(
     action: AIAction,
     isSelected: Boolean,
-    onClick: () -> Unit
+    onClick: () -> Unit,
+    selectedColor: Color = Color(0xFF4A9EFF),
+    textColor: Color = Color.White
 ) {
     FilterChip(
         selected = isSelected,
@@ -383,8 +404,8 @@ private fun ActionChip(
             )
         },
         colors = FilterChipDefaults.filterChipColors(
-            selectedContainerColor = MaterialTheme.colorScheme.secondaryContainer,
-            selectedLabelColor = MaterialTheme.colorScheme.onSecondaryContainer
+            selectedContainerColor = selectedColor.copy(alpha = 0.3f),
+            selectedLabelColor = textColor
         ),
         modifier = Modifier.height(28.dp)
     )

@@ -16,7 +16,7 @@ import android.view.WindowManager
 import android.widget.LinearLayout
 import android.widget.Switch
 import android.widget.TextView
-import com.noxquill.rewordium.keyboard.util.KeyboardConstants
+import com.noxquill.rewordium.util.KeyboardConstants
 
 class KeyboardSettingsActivity : Activity() {
     

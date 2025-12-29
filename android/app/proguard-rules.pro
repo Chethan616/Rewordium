@@ -29,13 +29,8 @@
     public <init>();
 }
 
-# 3. Keep the Keyboard Service (Input Method)
--keep public class com.noxquill.rewordium.keyboard.RewordiumAIKeyboardService {
-    public <init>();
-}
--keep public class * extends android.inputmethodservice.InputMethodService {
-    public <init>();
-}
+# 3. Keep the Keyboard Service (Input Method) - Now using reboard_keyboard module
+# The RewordiumAIKeyboardService has been removed, Reboard is the primary keyboard
 
 # ==============================================================================
 # CRITICAL FIX FOR NETWORKING IN RELEASE MODE
