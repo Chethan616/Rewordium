@@ -26,6 +26,7 @@ class MainActivity : FlutterActivity() {
         private const val ACCESSIBILITY_CHANNEL = "com.noxquill.rewordium/accessibility"
         private const val KEYBOARD_CHANNEL = "com.noxquill.rewordium/rewordium_keyboard"
         private const val SWIPE_GESTURE_CHANNEL = "com.noxquill.rewordium/swipe_gestures"
+        private const val AI_SETTINGS_CHANNEL = "com.noxquill.rewordium/ai_settings"
         
         // <-- ADDED: A new channel specifically for syncing user status and credits.
         private const val USER_STATUS_CHANNEL = "com.noxquill.rewordium/user_status"
@@ -357,6 +358,68 @@ class MainActivity : FlutterActivity() {
                     Log.w(TAG, "Method not implemented on keyboard channel: ${call.method}")
                     result.notImplemented()
                 }
+            }
+        }
+
+        // --- AI SETTINGS CHANNEL (NEW) ---
+        // This channel syncs AI settings from Flutter to native Android services
+        val aiSettingsChannel = MethodChannel(flutterEngine.dartExecutor.binaryMessenger, AI_SETTINGS_CHANNEL)
+        aiSettingsChannel.setMethodCallHandler { call, result ->
+            Log.d(TAG, "AI Settings method called: ${call.method}")
+            when (call.method) {
+                "updateAISettings" -> {
+                    try {
+                        val enabled = call.argument<Boolean>("enabled") ?: false
+                        val provider = call.argument<String>("provider") ?: "groq"
+                        val apiKey = call.argument<String>("apiKey") ?: ""
+                        val model = call.argument<String>("model") ?: "llama-3.1-8b-instant"
+                        val maxTokens = call.argument<Int>("maxTokens") ?: 8192
+                        val customEndpoint = call.argument<String>("customEndpoint") ?: ""
+                        
+                        // Store AI settings in SharedPreferences for native services
+                        val prefs = getSharedPreferences("ai_settings", Context.MODE_PRIVATE)
+                        prefs.edit().apply {
+                            putBoolean("advanced_ai_enabled", enabled)
+                            putString("ai_provider", provider)
+                            putString("ai_api_key", apiKey)
+                            putString("ai_model", model)
+                            putInt("ai_max_tokens", maxTokens)
+                            putString("ai_custom_endpoint", customEndpoint)
+                            apply()
+                        }
+                        
+                        // Broadcast to native services (Accessibility + Keyboard)
+                        val intent = Intent("com.noxquill.rewordium.AI_SETTINGS_CHANGED")
+                        intent.putExtra("enabled", enabled)
+                        intent.putExtra("provider", provider)
+                        intent.putExtra("model", model)
+                        sendBroadcast(intent)
+                        
+                        Log.d(TAG, "🤖 AI Settings synced: provider=$provider, enabled=$enabled")
+                        result.success(true)
+                    } catch (e: Exception) {
+                        Log.e(TAG, "Error updating AI settings: ${e.message}")
+                        result.success(false)
+                    }
+                }
+                "getAISettings" -> {
+                    try {
+                        val prefs = getSharedPreferences("ai_settings", Context.MODE_PRIVATE)
+                        val settings = mapOf(
+                            "enabled" to prefs.getBoolean("advanced_ai_enabled", false),
+                            "provider" to (prefs.getString("ai_provider", "groq") ?: "groq"),
+                            "apiKey" to (prefs.getString("ai_api_key", "") ?: ""),
+                            "model" to (prefs.getString("ai_model", "llama-3.1-8b-instant") ?: "llama-3.1-8b-instant"),
+                            "maxTokens" to prefs.getInt("ai_max_tokens", 8192),
+                            "customEndpoint" to (prefs.getString("ai_custom_endpoint", "") ?: "")
+                        )
+                        result.success(settings)
+                    } catch (e: Exception) {
+                        Log.e(TAG, "Error getting AI settings: ${e.message}")
+                        result.error("ERROR", "Error getting AI settings", null)
+                    }
+                }
+                else -> result.notImplemented()
             }
         }
 

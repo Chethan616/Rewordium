@@ -231,6 +231,12 @@ class JadeSettingsController {
   // Main intelligent command processor with advanced NLP
   static Future<String> processCommand(
       String message, BuildContext context) async {
+    // First check if this is likely a question vs a command
+    // Questions about settings should NOT trigger settings changes
+    if (_isQuestionNotCommand(message)) {
+      return ''; // Not a command, let AI handle it
+    }
+
     // Enhanced pattern matching with priority order
     final patterns = [
       {
@@ -313,6 +319,11 @@ class JadeSettingsController {
       BuildContext context, String message) async {
     final lowerMessage = message.toLowerCase();
 
+    // Check if it's a question first
+    if (_isQuestionNotCommand(message)) {
+      return ''; // Not a command
+    }
+
     if (lowerMessage.contains('theme') ||
         lowerMessage.contains('mode') ||
         lowerMessage.contains('appearance')) {
@@ -342,6 +353,80 @@ class JadeSettingsController {
     }
 
     return ''; // No settings command found
+  }
+
+  /// Determine if the message is a question about settings vs a command to change settings
+  static bool _isQuestionNotCommand(String message) {
+    final lowerMessage = message.toLowerCase().trim();
+
+    // Question indicators
+    final questionWords = [
+      'what',
+      'how',
+      'why',
+      'when',
+      'where',
+      'which',
+      'who',
+      'is',
+      'are',
+      'do',
+      'does',
+      'can',
+      'could',
+      'would',
+      'should',
+      'will',
+      'tell me',
+      'explain',
+      'describe',
+      'show me',
+    ];
+
+    // Check if message starts with question words or contains question patterns
+    for (final word in questionWords) {
+      if (lowerMessage.startsWith(word)) {
+        return true; // It's a question
+      }
+    }
+
+    // Check for question mark
+    if (lowerMessage.contains('?')) {
+      return true;
+    }
+
+    // Check for specific question patterns
+    final questionPatterns = [
+      RegExp(r'\b(what|which)\s+(is|are)\s+', caseSensitive: false),
+      RegExp(r'\b(tell|show)\s+me\b', caseSensitive: false),
+      RegExp(r'\bhow\s+(do|can|to)\b', caseSensitive: false),
+      RegExp(r'\bwhat.*about\b', caseSensitive: false),
+      RegExp(r'\bexplain\b', caseSensitive: false),
+    ];
+
+    for (final pattern in questionPatterns) {
+      if (pattern.hasMatch(lowerMessage)) {
+        return true;
+      }
+    }
+
+    // Special case: If they're just mentioning "theme" without action verbs, it's likely a question
+    final hasActionVerb = RegExp(
+      r'\b(change|switch|turn|enable|disable|set|make|go to|activate|toggle)\b',
+      caseSensitive: false,
+    ).hasMatch(lowerMessage);
+
+    final hasSettingsKeyword = RegExp(
+      r'\b(theme|mode|dark|light|vibration|haptic|notification|sound)\b',
+      caseSensitive: false,
+    ).hasMatch(lowerMessage);
+
+    if (hasSettingsKeyword && !hasActionVerb) {
+      // They mentioned a setting but no action verb, likely a question
+      return true;
+    }
+
+    return false; // It's a command
   }
 
   // Legacy method for backward compatibility

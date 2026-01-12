@@ -4,7 +4,8 @@ service cloud.firestore {
     // Admin function - check if user is admin
     function isAdmin() {
       return request.auth != null && 
-             request.auth.token.email == 'chethankrishna2022@gmail.com';
+             (request.auth.token.email == 'chethankrishna2022@gmail.com' ||
+              request.auth.token.email == 'rupakbabu1994@gmail.com');
     }
     
     // App configuration - allow anyone to read version info for updates

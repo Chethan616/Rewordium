@@ -10,8 +10,9 @@ import '../widgets/custom_app_bar.dart';
 import '../widgets/custom_button.dart';
 import '../utils/lottie_assets.dart';
 import '../providers/auth_provider.dart';
-import '../services/groq_service.dart';
+import '../services/unified_ai_service.dart';
 import '../models/persona_model.dart';
+import '../utils/ai_error_handler.dart';
 
 // Import your login screen here; adjust path as needed
 import 'auth/login_screen.dart';
@@ -38,7 +39,7 @@ class _ParaphraserPageState extends State<ParaphraserPage> {
   void initState() {
     super.initState();
     // Initialize Groq service
-    GroqService.initialize();
+    UnifiedAIService.initialize();
   }
 
   @override
@@ -282,8 +283,19 @@ class _ParaphraserPageState extends State<ParaphraserPage> {
     });
 
     try {
-      final result = await GroqService.paraphraseWithPersona(
+      final result = await UnifiedAIService.paraphraseWithPersona(
           text, _selectedPersona!.prompt);
+
+      // Handle API errors with snackbar
+      if (result.containsKey('error')) {
+        setState(() {
+          _isLoading = false;
+        });
+        if (mounted) {
+          AIErrorHandler.showErrorSnackBar(context, result);
+        }
+        return;
+      }
 
       setState(() {
         _resultController.text = result['paraphrased_text'] ?? text;
@@ -338,7 +350,18 @@ class _ParaphraserPageState extends State<ParaphraserPage> {
 
         // Use custom prompt for paraphrasing
         final result =
-            await GroqService.paraphraseWithCustomPrompt(text, _customPrompt!);
+            await UnifiedAIService.paraphraseWithCustomPrompt(text, _customPrompt!);
+
+        // Handle API errors with snackbar
+        if (result.containsKey('error')) {
+          setState(() {
+            _isLoading = false;
+          });
+          if (mounted) {
+            AIErrorHandler.showErrorSnackBar(context, result);
+          }
+          return;
+        }
 
         setState(() {
           _resultController.text = result['paraphrased_text'] ?? text;
@@ -348,7 +371,18 @@ class _ParaphraserPageState extends State<ParaphraserPage> {
       } else {
         // Use standard mode paraphrasing
         final tone = _getToneFromMode(_selectedMode);
-        final result = await GroqService.paraphraseText(text, tone);
+        final result = await UnifiedAIService.paraphraseText(text, tone);
+
+        // Handle API errors with snackbar
+        if (result.containsKey('error')) {
+          setState(() {
+            _isLoading = false;
+          });
+          if (mounted) {
+            AIErrorHandler.showErrorSnackBar(context, result);
+          }
+          return;
+        }
 
         setState(() {
           _resultController.text = result['paraphrased_text'] ?? text;

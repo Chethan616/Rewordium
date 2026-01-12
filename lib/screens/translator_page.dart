@@ -10,7 +10,8 @@ import '../widgets/custom_app_bar.dart';
 import '../widgets/custom_button.dart';
 import '../utils/lottie_assets.dart';
 import '../providers/auth_provider.dart';
-import '../services/groq_service.dart';
+import '../services/unified_ai_service.dart';
+import '../utils/ai_error_handler.dart';
 
 // Import your login screen here; adjust path as needed
 import 'auth/login_screen.dart';
@@ -83,7 +84,18 @@ class _TranslatorPageState extends State<TranslatorPage> {
     });
 
     try {
-      final result = await GroqService.translateText(text, _selectedLanguage);
+      final result = await UnifiedAIService.translateText(text, _selectedLanguage);
+
+      // Handle API errors with snackbar
+      if (result.containsKey('error')) {
+        setState(() {
+          _isLoading = false;
+        });
+        if (mounted) {
+          AIErrorHandler.showErrorSnackBar(context, result);
+        }
+        return;
+      }
 
       setState(() {
         _translationResult = result;

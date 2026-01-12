@@ -4,6 +4,7 @@ import 'package:animate_do/animate_do.dart';
 
 import '../theme/app_theme.dart';
 import '../services/groq_service.dart';
+import '../services/unified_ai_service.dart';
 import '../services/jade_settings_controller.dart';
 import '../widgets/custom_app_bar.dart';
 import '../widgets/animated_card.dart';
@@ -129,31 +130,25 @@ class _JadeChatScreenState extends State<JadeChatScreen>
         // It was a settings command
         response = settingsResponse;
       } else {
-        // Regular AI chat response
+        // Regular AI chat response using unified service
         await GroqService.initialize();
 
         try {
-          final result = await GroqService.paraphraseWithCustomPrompt(
+          final result = await UnifiedAIService.chatWithCustomPrompt(
             message,
-            "You are Jade, Rewordium's advanced AI writing assistant. Be helpful, encouraging, and conversational. Use emojis naturally and provide actionable advice. Respond naturally to the user's message without mentioning JSON format.",
+            "You are Jade, Rewordium's advanced AI writing assistant. Be helpful, encouraging, and conversational. Use emojis naturally and provide actionable advice. When users ask about app settings or themes without clear action verbs (like 'change', 'switch', 'enable'), provide information about the current settings rather than changing them. Respond naturally to the user's message.",
           );
 
-          // The paraphraseWithCustomPrompt method returns direct response, not wrapped in success/data
-          if (result.containsKey('paraphrased_text') &&
-              result['paraphrased_text'] != null) {
-            response = result['paraphrased_text'].toString().trim();
+          // Extract content from the unified service response
+          if (result.containsKey('content') && result['content'] != null) {
+            response = result['content'].toString().trim();
           } else if (result.containsKey('error')) {
             // API returned an error
             response =
                 "I'm experiencing some technical difficulties. Let me try to help you anyway! 💪\n\nCould you please rephrase your question or try asking something else?";
           } else {
-            // Try to get any string value from the result
-            final content = result.values.firstWhere(
-              (value) => value is String && value.trim().isNotEmpty,
-              orElse: () => null,
-            );
-            response = content?.toString().trim() ??
-                "I'm sorry, I couldn't process that request right now. Please try again! 🔄";
+            response =
+                "Hi there! I'm here to help you with writing, editing, and app settings. What would you like to do today? ✨";
           }
 
           // Ensure we have a valid response
@@ -254,7 +249,7 @@ class _JadeChatScreenState extends State<JadeChatScreen>
             colors: [
               AppTheme.backgroundColor,
               AppTheme.backgroundColor.withOpacity(0.95),
-              Colors.purple.withOpacity(0.05),
+              AppTheme.primaryColor.withOpacity(0.05),
             ],
           ),
         ),
@@ -290,10 +285,10 @@ class _JadeChatScreenState extends State<JadeChatScreen>
                     begin: Alignment.topLeft,
                     end: Alignment.bottomRight,
                     colors: [
-                      Colors.purple.withOpacity(0.02),
-                      Colors.blue.withOpacity(0.02),
-                      Colors.teal.withOpacity(0.02),
-                      Colors.purple.withOpacity(0.02),
+                      AppTheme.primaryColor.withOpacity(0.02),
+                      AppTheme.primaryColor.withOpacity(0.015),
+                      AppTheme.primaryColor.withOpacity(0.01),
+                      AppTheme.primaryColor.withOpacity(0.02),
                     ],
                     stops: const [0.0, 0.3, 0.7, 1.0],
                   ),
@@ -420,10 +415,10 @@ class _JadeChatScreenState extends State<JadeChatScreen>
                                 Colors.red.withOpacity(0.6)
                               ]
                             : [
-                                const Color(0xFF6B73FF).withOpacity(0.9),
-                                const Color(0xFF9B59B6).withOpacity(0.9),
-                                const Color(0xFFE91E63).withOpacity(0.9),
-                                const Color(0xFF4ECDC4).withOpacity(0.9),
+                                AppTheme.primaryColor.withOpacity(0.9),
+                                AppTheme.primaryColor.withOpacity(0.7),
+                                AppTheme.primaryColor.withOpacity(0.8),
+                                AppTheme.primaryColor.withOpacity(0.6),
                               ],
                       ),
                       borderRadius: BorderRadius.circular(18),
@@ -431,7 +426,7 @@ class _JadeChatScreenState extends State<JadeChatScreen>
                         BoxShadow(
                           color: message.isError
                               ? Colors.red.withOpacity(0.3)
-                              : const Color(0xFF6B73FF).withOpacity(0.3),
+                              : AppTheme.primaryColor.withOpacity(0.3),
                           blurRadius: 8,
                           offset: const Offset(0, 4),
                         ),
@@ -474,8 +469,8 @@ class _JadeChatScreenState extends State<JadeChatScreen>
                       end: Alignment.bottomRight,
                       colors: message.isUser
                           ? [
-                              const Color(0xFF6B73FF),
-                              const Color(0xFF9B59B6),
+                              AppTheme.primaryColor,
+                              AppTheme.primaryColor.withOpacity(0.8),
                             ]
                           : message.isError
                               ? [
@@ -505,7 +500,7 @@ class _JadeChatScreenState extends State<JadeChatScreen>
                     boxShadow: [
                       BoxShadow(
                         color: message.isUser
-                            ? const Color(0xFF6B73FF).withOpacity(0.2)
+                            ? AppTheme.primaryColor.withOpacity(0.2)
                             : Colors.black.withOpacity(0.05),
                         blurRadius: 8,
                         offset: const Offset(0, 2),
@@ -666,15 +661,15 @@ class _JadeChatScreenState extends State<JadeChatScreen>
                     borderRadius: BorderRadius.circular(25),
                     border: Border.all(
                       color: _messageFocusNode.hasFocus
-                          ? const Color(0xFF6B73FF).withOpacity(0.3)
-                          : const Color(0xFF6B73FF).withOpacity(0.1),
+                          ? AppTheme.primaryColor.withOpacity(0.3)
+                          : AppTheme.primaryColor.withOpacity(0.1),
                       width: _messageFocusNode.hasFocus ? 2.0 : 1.5,
                     ),
                     boxShadow: [
                       BoxShadow(
                         color: _messageFocusNode.hasFocus
-                            ? const Color(0xFF6B73FF).withOpacity(0.2)
-                            : const Color(0xFF6B73FF).withOpacity(0.1),
+                            ? AppTheme.primaryColor.withOpacity(0.2)
+                            : AppTheme.primaryColor.withOpacity(0.1),
                         blurRadius: _messageFocusNode.hasFocus ? 15 : 10,
                         offset: const Offset(0, 2),
                       ),
@@ -724,9 +719,9 @@ class _JadeChatScreenState extends State<JadeChatScreen>
                                     Colors.grey.withOpacity(0.4)
                                   ]
                                 : [
-                                    const Color(0xFF6B73FF),
-                                    const Color(0xFF9B59B6),
-                                    const Color(0xFFE91E63),
+                                    AppTheme.primaryColor,
+                                    AppTheme.primaryColor.withOpacity(0.8),
+                                    AppTheme.primaryColor.withOpacity(0.7),
                                   ],
                           ),
                           borderRadius: BorderRadius.circular(24),
@@ -734,7 +729,7 @@ class _JadeChatScreenState extends State<JadeChatScreen>
                             BoxShadow(
                               color: _isTyping
                                   ? Colors.grey.withOpacity(0.2)
-                                  : const Color(0xFF6B73FF).withOpacity(0.4),
+                                  : AppTheme.primaryColor.withOpacity(0.4),
                               blurRadius: 12,
                               offset: const Offset(0, 4),
                             ),

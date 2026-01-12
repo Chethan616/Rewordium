@@ -4,7 +4,7 @@ import 'dart:async';
 import '../../providers/keyboard_provider.dart';
 import '../../theme/app_theme.dart';
 import '../../screens/paraphraser_page.dart';
-import '../../services/groq_service.dart';
+import '../../services/unified_ai_service.dart';
 
 class SystemKeyboardOverlay extends StatefulWidget {
   final Function(bool) onVisibilityChanged;
@@ -59,8 +59,8 @@ class _SystemKeyboardOverlayState extends State<SystemKeyboardOverlay> {
     });
     
     try {
-      // Use Groq service for paraphrasing (it has its own timeout handling)
-      final result = await GroqService.paraphraseText(text, 'natural');
+      // Use Unified AI service for paraphrasing (it has its own timeout handling)
+      final result = await UnifiedAIService.paraphraseText(text, 'natural');
       
       // Check if there was an error in the response
       if (result.containsKey('error')) {

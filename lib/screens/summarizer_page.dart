@@ -10,7 +10,7 @@ import '../widgets/custom_app_bar.dart';
 import '../widgets/custom_button.dart';
 import '../utils/lottie_assets.dart';
 import '../providers/auth_provider.dart';
-import '../services/groq_service.dart';
+import '../services/unified_ai_service.dart';
 
 // Import your login screen here; adjust path as needed
 import 'auth/login_screen.dart';
@@ -60,7 +60,7 @@ class _SummarizerPageState extends State<SummarizerPage> {
     });
 
     try {
-      final result = await GroqService.summarizeText(text, length: _selectedLength.toLowerCase());
+      final result = await UnifiedAIService.summarizeText(text, length: _selectedLength.toLowerCase());
 
       setState(() {
         _summaryResult = result;

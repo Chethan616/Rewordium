@@ -16,6 +16,7 @@ import '../widgets/custom_button.dart';
 import '../screens/auth/login_screen.dart';
 import '../screens/auth/signup_screen.dart';
 import '../screens/licenses_screen.dart';
+import '../screens/advanced_ai_settings_screen.dart';
 import '../providers/auth_provider.dart';
 import 'admin_panel.dart';
 
@@ -254,6 +255,66 @@ class _SettingsScreenState extends State<SettingsScreen> {
             _buildSettingToggle("Dark Mode", isDarkMode, (value) {
               themeProvider.toggleTheme();
             }),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
+              child: Text("AI Settings", style: AppTheme.headingSmall),
+            ),
+            AnimatedCard(
+              padding: EdgeInsets.zero,
+              onTap: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => const AdvancedAISettingsScreen(),
+                  ),
+                );
+              },
+              child: Padding(
+                padding: const EdgeInsets.all(16.0),
+                child: Row(
+                  children: [
+                    Container(
+                      width: 40,
+                      height: 40,
+                      decoration: BoxDecoration(
+                        gradient: LinearGradient(
+                          colors: [AppTheme.primaryColor, AppTheme.primaryColor.withOpacity(0.7)],
+                        ),
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      child: const Icon(
+                        Icons.psychology,
+                        color: Colors.white,
+                      ),
+                    ),
+                    const SizedBox(width: 16),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            "Advanced AI Settings",
+                            style: AppTheme.bodyLarge.copyWith(
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                          const SizedBox(height: 4),
+                          Text(
+                            "Use your own LLM API key",
+                            style: AppTheme.bodySmall,
+                          ),
+                        ],
+                      ),
+                    ),
+                    const Icon(
+                      CupertinoIcons.chevron_right,
+                      color: Colors.grey,
+                      size: 20,
+                    ),
+                  ],
+                ),
+              ),
+            ),
             Padding(
               padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
               child: Text("Keyboard", style: AppTheme.headingSmall),

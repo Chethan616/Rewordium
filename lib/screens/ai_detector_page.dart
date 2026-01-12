@@ -10,7 +10,7 @@ import '../widgets/custom_app_bar.dart';
 import '../widgets/custom_button.dart';
 import '../utils/lottie_assets.dart';
 import '../providers/auth_provider.dart';
-import '../services/groq_service.dart';
+import '../services/unified_ai_service.dart';
 
 // Import your login screen here; adjust path as needed
 import 'auth/login_screen.dart';
@@ -48,7 +48,7 @@ class _AIDetectorPageState extends State<AIDetectorPage> {
     });
 
     try {
-      final result = await GroqService.detectAIText(text);
+      final result = await UnifiedAIService.detectAIText(text);
 
       setState(() {
         _result = result;
@@ -71,11 +71,37 @@ class _AIDetectorPageState extends State<AIDetectorPage> {
   void _showResultDialog() {
     if (_result == null) return;
 
-    final double probability = _result!['ai_probability'] ?? 0.5;
-    final String confidence = _result!['confidence'] ?? 'low';
-    final String reasoning = _result!['reasoning'] ?? 'No reasoning provided';
+    // Check for errors first
+    if (_result!.containsKey('error')) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Error: ${_result!['error']}')),
+      );
+      return;
+    }
+
+    // Handle both old and new API response formats
+    // New format uses 'is_ai_generated' and 'confidence', old uses 'ai_probability'
+    double probability;
+    final rawProbability = _result!['ai_probability'] ?? _result!['confidence'];
+    if (rawProbability is double) {
+      probability = rawProbability;
+    } else if (rawProbability is int) {
+      probability = rawProbability.toDouble();
+    } else if (rawProbability is String) {
+      probability = double.tryParse(rawProbability) ?? 0.5;
+    } else {
+      // If is_ai_generated is true, set high probability
+      probability = (_result!['is_ai_generated'] == true) ? 0.85 : 0.15;
+    }
+    
+    // Ensure probability is between 0 and 1
+    if (probability > 1) probability = probability / 100;
+    probability = probability.clamp(0.0, 1.0);
+    
+    final String confidence = _result!['confidence']?.toString() ?? 'low';
+    final String reasoning = _result!['reasoning'] ?? _result!['explanation'] ?? 'No reasoning provided';
     final List<dynamic> humanIndicators = _result!['human_indicators'] ?? [];
-    final List<dynamic> aiIndicators = _result!['ai_indicators'] ?? [];
+    final List<dynamic> aiIndicators = _result!['ai_indicators'] ?? _result!['indicators'] ?? [];
 
     showDialog(
       context: context,

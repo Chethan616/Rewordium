@@ -11,6 +11,7 @@ import '../widgets/custom_button.dart';
 import '../utils/lottie_assets.dart';
 import '../providers/auth_provider.dart';
 import '../services/groq_service.dart';
+import '../services/unified_ai_service.dart';
 import 'auth/login_screen.dart';
 
 class GrammarPage extends StatefulWidget {
@@ -32,8 +33,8 @@ class _GrammarPageState extends State<GrammarPage> {
   @override
   void initState() {
     super.initState();
-    // Initialize Groq service
-    GroqService.initialize();
+    // Initialize Unified AI service
+    UnifiedAIService.initialize();
   }
 
   @override
@@ -64,7 +65,32 @@ class _GrammarPageState extends State<GrammarPage> {
     });
 
     try {
-      final result = await GroqService.checkGrammar(text);
+      final result = await UnifiedAIService.checkGrammar(text);
+      
+      // Check for API errors first
+      if (result.containsKey('error') || result.containsKey('errorType')) {
+        setState(() => _isChecking = false);
+        final errorType = result['errorType'] as String? ?? 'UNKNOWN';
+        String errorMessage;
+        switch (errorType) {
+          case 'MISSING_API_KEY':
+            errorMessage = 'API key not configured. Please set up in Advanced AI Settings.';
+            break;
+          case 'RATE_LIMIT':
+            errorMessage = 'Rate limit exceeded. Please wait and try again.';
+            break;
+          case 'INVALID_API_KEY':
+            errorMessage = 'Invalid API key. Please check your settings.';
+            break;
+          default:
+            errorMessage = result['error']?.toString() ?? 'An error occurred';
+        }
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(errorMessage)),
+        );
+        return;
+      }
+      
       setState(() {
         _correctedText = result['corrected_text'] ?? text;
         _errorCount = result['error_count'] ?? 0;

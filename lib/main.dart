@@ -19,8 +19,10 @@ import 'utils/frame_rate_controller.dart';
 import 'services/firebase_service.dart';
 import 'services/firebase_messaging_service.dart';
 import 'services/groq_service.dart';
+import 'services/unified_ai_service.dart';
 import 'services/cache_manager.dart';
 import 'services/admin_service.dart';
+import 'services/ai_settings_bridge.dart';
 import 'widgets/tool_popup.dart';
 import 'admin.dart';
 
@@ -87,9 +89,14 @@ void main() async {
 
   // Initialize Groq in the background
   isGroqInitialized = false;
-  unawaited(GroqService.initialize().then((_) {
+  unawaited(UnifiedAIService.initialize().then((_) {
     isGroqInitialized = true;
     debugPrint('Groq service initialized successfully');
+    
+    // Initialize AI Settings Bridge for Android native services
+    AISettingsBridge.initialize();
+    unawaited(AISettingsBridge.syncSettingsToAndroid());
+    debugPrint('AI Settings Bridge initialized');
   }).catchError((e) {
     debugPrint('Error initializing Groq service: $e');
     // Continue with app launch but some features may be limited

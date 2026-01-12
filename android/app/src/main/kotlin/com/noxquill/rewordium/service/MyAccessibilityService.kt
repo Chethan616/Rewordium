@@ -177,7 +177,21 @@ class MyAccessibilityService : AccessibilityService(), BubbleInteractionListener
         private val BUTTERY_INTERPOLATOR = android.view.animation.PathInterpolator(0.25f, 0.1f, 0.25f, 1.0f) // Cubic bezier for ultimate smoothness
     }
     
-    private val GROQ_API_KEY = "Bearer ${BuildConfig.GROQ_API_KEY}"
+    // Dynamic AI configuration - loaded from SharedPreferences (set by Flutter app)
+    private var aiConfig: AIConfigProvider.AIConfig? = null
+    
+    // AI settings change receiver
+    private val aiSettingsReceiver = object : BroadcastReceiver() {
+        override fun onReceive(context: Context?, intent: Intent?) {
+            if (intent?.action == "com.noxquill.rewordium.AI_SETTINGS_CHANGED") {
+                if (BuildConfig.DEBUG) Log.d(TAG, "AI settings changed - reloading configuration")
+                context?.let {
+                    aiConfig = AIConfigProvider.reloadConfig(it)
+                    Log.i(TAG, "AI config reloaded: provider=${aiConfig?.provider}, hasKey=${aiConfig?.hasValidApiKey()}")
+                }
+            }
+        }
+    }
 
     private lateinit var windowManager: WindowManager
     private var floatingBubbleView: FloatingBubbleView? = null
@@ -350,6 +364,22 @@ class MyAccessibilityService : AccessibilityService(), BubbleInteractionListener
             registerReceiver(userStatusReceiver, userStatusFilter, Context.RECEIVER_NOT_EXPORTED)
         } else {
             registerReceiver(userStatusReceiver, userStatusFilter)
+        }
+        
+        // Register AI settings receiver for dynamic API configuration
+        val aiSettingsFilter = IntentFilter().apply {
+            addAction("com.noxquill.rewordium.AI_SETTINGS_CHANGED")
+        }
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            registerReceiver(aiSettingsReceiver, aiSettingsFilter, Context.RECEIVER_NOT_EXPORTED)
+        } else {
+            registerReceiver(aiSettingsReceiver, aiSettingsFilter)
+        }
+        
+        // Load initial AI configuration
+        aiConfig = AIConfigProvider.getConfig(this)
+        if (BuildConfig.DEBUG) {
+            Log.d(TAG, "Initial AI config loaded: provider=${aiConfig?.provider}, hasKey=${aiConfig?.hasValidApiKey()}")
         }
         
         // Check current screen state
@@ -1067,6 +1097,27 @@ class MyAccessibilityService : AccessibilityService(), BubbleInteractionListener
 
         generationJob = serviceScope.launch {
             try {
+                // ALWAYS reload AI configuration to get the latest settings
+                // This ensures any changes made in the app are immediately applied
+                aiConfig = AIConfigProvider.reloadConfig(this@MyAccessibilityService)
+                val config = aiConfig!!
+                
+                if (BuildConfig.DEBUG) {
+                    Log.d(TAG, "Fresh AI config loaded: provider=${config.provider}, model=${config.getEffectiveModel()}, hasKey=${config.hasValidApiKey()}")
+                }
+                
+                // Check if we have a valid API key - show minimal Toast
+                if (!config.hasValidApiKey()) {
+                    withContext(Dispatchers.Main) {
+                        Toast.makeText(
+                            this@MyAccessibilityService,
+                            "⚠️ No API key. Go to Settings → Advanced AI",
+                            Toast.LENGTH_SHORT
+                        ).show()
+                    }
+                    return@launch
+                }
+                
                 // Send intent to MainActivity to consume credit via Flutter
                 if (BuildConfig.DEBUG) Log.d(TAG, "Requesting credit consumption via Flutter...")
                 val consumeCreditIntent = Intent("com.noxquill.rewordium.CONSUME_CREDIT_REQUEST")
@@ -1076,11 +1127,13 @@ class MyAccessibilityService : AccessibilityService(), BubbleInteractionListener
                 // Small delay to allow credit consumption to process
                 delay(API_DELAY)
 
-                if (BuildConfig.DEBUG) Log.d(TAG, "Making API request...")
-                val request = GroqRequest(model = "llama-3.1-8b-instant", messages = listOf(Message("user", finalPrompt)))
+                if (BuildConfig.DEBUG) {
+                    Log.d(TAG, "Making API request with provider=${config.provider}, model=${config.getEffectiveModel()}")
+                }
+                
                 val response = withContext(Dispatchers.IO) { 
                     try {
-                        RetrofitClient.instance.getGroqCompletion(GROQ_API_KEY, request)
+                        DynamicRetrofitClient.makeCompletionRequest(config, finalPrompt)
                     } catch (e: Exception) {
                         Log.e(TAG, "API request failed", e)
                         throw e
@@ -1101,8 +1154,18 @@ class MyAccessibilityService : AccessibilityService(), BubbleInteractionListener
                         displaySuggestions(suggestions, bottomSheetView!!.findViewById(R.id.suggestions_container), bottomSheetView!!.findViewById(R.id.suggestion_layout), activeSourceNode, isGenerationTask)
                     }
                 } else {
-                     withContext(Dispatchers.Main) {
-                        Toast.makeText(this@MyAccessibilityService, "API Error: ${response.errorBody()?.string()}", Toast.LENGTH_LONG).show()
+                    // Enhanced error handling for different API error types - compact messages
+                    val errorCode = response.code()
+                    val errorMessage = when (errorCode) {
+                        401 -> "⚠️ Invalid API key"
+                        429 -> "⏳ Rate limit - wait a moment"
+                        403 -> "🚫 API access forbidden"
+                        500, 502, 503, 504 -> "🔧 AI service unavailable"
+                        else -> "❌ Error $errorCode"
+                    }
+                    Log.e(TAG, "API error: code=$errorCode, provider=${config.provider}")
+                    withContext(Dispatchers.Main) {
+                        Toast.makeText(this@MyAccessibilityService, errorMessage, Toast.LENGTH_SHORT).show()
                     }
                 }
             } catch (e: Exception) {
@@ -1110,8 +1173,17 @@ class MyAccessibilityService : AccessibilityService(), BubbleInteractionListener
                      Log.i(TAG, "Generation job was cancelled.")
                 } else {
                     Log.e(TAG, "Generation error", e)
-                     withContext(Dispatchers.Main) {
-                        Toast.makeText(this@MyAccessibilityService, "Network Error: ${e.message}", Toast.LENGTH_LONG).show()
+                    val errorMessage = when {
+                        e.message?.contains("timeout", ignoreCase = true) == true -> 
+                            "⏱️ Request timed out"
+                        e.message?.contains("Unable to resolve host", ignoreCase = true) == true ->
+                            "📶 No internet connection"
+                        e.message?.contains("Connection refused", ignoreCase = true) == true ->
+                            "🔌 Cannot connect to AI"
+                        else -> "❌ Network error"
+                    }
+                    withContext(Dispatchers.Main) {
+                        Toast.makeText(this@MyAccessibilityService, errorMessage, Toast.LENGTH_SHORT).show()
                     }
                 }
             } finally {
@@ -3081,6 +3153,11 @@ class MyAccessibilityService : AccessibilityService(), BubbleInteractionListener
         }
         try {
             unregisterReceiver(userStatusReceiver)
+        } catch (e: IllegalArgumentException) {
+            // Receiver was not registered, ignore
+        }
+        try {
+            unregisterReceiver(aiSettingsReceiver)
         } catch (e: IllegalArgumentException) {
             // Receiver was not registered, ignore
         }

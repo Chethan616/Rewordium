@@ -16,7 +16,10 @@ class AdminService {
   }
 
   // Admin credentials - this would be in a secure config in production
-  static const String adminEmail = 'chethankrishna2022@gmail.com';
+  static const List<String> adminEmails = [
+    'chethankrishna2022@gmail.com',
+    'rupakbabu1994@gmail.com',
+  ];
   static const String adminPassword = 'sendpushnotis';
 
   // FCM Server Key - REPLACE THIS WITH YOUR ACTUAL SERVER KEY
@@ -26,7 +29,7 @@ class AdminService {
   // Check if current user is admin
   static bool isAdmin() {
     final user = _auth.currentUser;
-    return user?.email == adminEmail;
+    return user?.email != null && adminEmails.contains(user!.email);
   }
 
   // Verify admin password

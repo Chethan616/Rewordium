@@ -6,6 +6,7 @@ import 'package:provider/provider.dart';
 import '../theme/app_theme.dart';
 import '../main.dart';
 import '../services/groq_service.dart';
+import '../services/unified_ai_service.dart';
 import '../services/firebase_service.dart';
 import '../services/force_update_service.dart';
 import '../providers/auth_provider.dart';
@@ -73,7 +74,7 @@ class _SplashScreenState extends State<SplashScreen>
       // Initialize Groq service
       if (!isGroqInitialized) {
         try {
-          await GroqService.initialize();
+          await UnifiedAIService.initialize();
           isGroqInitialized = true;
           debugPrint('Groq service initialized successfully');
         } catch (e) {

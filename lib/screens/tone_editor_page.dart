@@ -10,7 +10,7 @@ import '../theme/app_theme.dart';
 import '../widgets/custom_app_bar.dart';
 import '../widgets/custom_button.dart';
 import '../providers/auth_provider.dart';
-import '../services/groq_service.dart';
+import '../services/unified_ai_service.dart';
 
 // Import your login screen here; adjust path as needed
 import 'auth/login_screen.dart';
@@ -88,7 +88,7 @@ class _ToneEditorPageState extends State<ToneEditorPage> {
           ? _customToneController.text 
           : _selectedTone.toLowerCase();
           
-      final result = await GroqService.editTone(text, targetTone);
+      final result = await UnifiedAIService.editTone(text, targetTone);
 
       setState(() {
         _toneResult = result;
