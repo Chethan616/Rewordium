@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'package:flutter/foundation.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:http/http.dart' as http;
@@ -33,7 +34,7 @@ class GroqService {
   // Initialize the service by loading .env and storing the API key securely
   static Future<void> initialize() async {
     if (_isInitialized) {
-      print('Groq service already initialized, skipping');
+      if (kDebugMode) print('Groq service already initialized, skipping');
       return;
     }
 
@@ -41,7 +42,7 @@ class GroqService {
       // Add a timeout to prevent hanging
       Timer(const Duration(seconds: 5), () {
         if (!_isInitialized) {
-          print('Groq service initialization timed out');
+          if (kDebugMode) print('Groq service initialization timed out');
           _isInitialized = true;
         }
       });
@@ -51,8 +52,9 @@ class GroqService {
 
       // Get the API key from .env
       final envApiKey = dotenv.env['GROQ_API_KEY'] ?? '';
-      print(
-          'Initializing Groq service with key starting with: ${envApiKey.isNotEmpty ? envApiKey.substring(0, 5) : "empty"}...');
+      if (kDebugMode) {
+        print('Initializing Groq service with key starting with: ${envApiKey.isNotEmpty ? envApiKey.substring(0, 5) : "empty"}...');
+      }
 
       // Store API key securely
       final existingKey = await storage.read(key: _apiKeyStorageKey);
@@ -61,7 +63,7 @@ class GroqService {
           existingKey != _defaultApiKey) {
         // Update the stored key if it's different from the .env key
         await storage.write(key: _apiKeyStorageKey, value: _defaultApiKey);
-        print('Updated Groq API key in secure storage');
+        if (kDebugMode) print('Updated Groq API key in secure storage');
         // Clear cached API key when it changes
         _cachedApiKey = null;
       }
@@ -69,10 +71,11 @@ class GroqService {
       // Validate API key works
       final apiKey = await getApiKey();
       if (apiKey.isEmpty) {
-        print('Warning: Groq API key is empty');
+        if (kDebugMode) print('Warning: Groq API key is empty');
       } else if (!apiKey.startsWith('gsk_')) {
-        print(
-            'Warning: Groq API key format may be incorrect. Keys should start with "gsk_"');
+        if (kDebugMode) {
+          print('Warning: Groq API key format may be incorrect. Keys should start with "gsk_"');
+        }
       }
 
       // Pre-warm the cache with the API key

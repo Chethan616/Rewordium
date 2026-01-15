@@ -18,6 +18,7 @@ import '../screens/auth/signup_screen.dart';
 import '../screens/licenses_screen.dart';
 import '../screens/advanced_ai_settings_screen.dart';
 import '../providers/auth_provider.dart';
+import '../widgets/upgrade_dialog.dart';
 import 'admin_panel.dart';
 
 class SettingsScreen extends StatefulWidget {
@@ -64,45 +65,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
         MaterialPageRoute(builder: (context) => const AdminPanel()),
       );
     }
-  }
-
-  // Launch web portal for payment/subscription management
-  Future<void> _launchWebPortal() async {
-    const url =
-        'https://www.rewordium.tech/payments'; // Rewordium payments portal
-    if (await canLaunchUrl(Uri.parse(url))) {
-      await launchUrl(Uri.parse(url), mode: LaunchMode.externalApplication);
-    } else {
-      throw 'Could not launch $url';
-    }
-  }
-
-  void _showPortalRedirectDialog(BuildContext context,
-      {bool isUpgrade = true}) {
-    showCupertinoDialog(
-      context: context,
-      builder: (context) => CupertinoAlertDialog(
-        title: Text(isUpgrade ? 'Upgrade to Pro' : 'Manage Subscription'),
-        content: Text(
-          isUpgrade
-              ? 'You will be redirected to our secure payment portal to upgrade your account.'
-              : 'You will be redirected to our portal to manage your subscription.',
-        ),
-        actions: [
-          CupertinoDialogAction(
-            child: const Text('Cancel'),
-            onPressed: () => Navigator.of(context).pop(),
-          ),
-          CupertinoDialogAction(
-            child: const Text('Continue'),
-            onPressed: () {
-              Navigator.of(context).pop();
-              _launchWebPortal();
-            },
-          ),
-        ],
-      ),
-    );
   }
 
   void _navigateToLogin() {
@@ -640,7 +602,11 @@ class _SettingsScreenState extends State<SettingsScreen> {
             CustomButton(
               text: "Manage Subscription",
               onPressed: () {
-                _showPortalRedirectDialog(context, isUpgrade: false);
+                // Open Google Play subscription management
+                launchUrl(
+                  Uri.parse('https://play.google.com/store/account/subscriptions'),
+                  mode: LaunchMode.externalApplication,
+                );
               },
               type: ButtonType.secondary,
               icon: CupertinoIcons.settings,
@@ -675,7 +641,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
           CustomButton(
             text: "Upgrade to Pro",
             onPressed: () {
-              _showPortalRedirectDialog(context, isUpgrade: true);
+              showUpgradeDialog(context); // Use Google Play Billing
             },
             type: ButtonType.primary,
             width: double.infinity,

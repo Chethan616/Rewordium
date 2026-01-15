@@ -27,22 +27,22 @@ class AnimationOptimizer {
       unawaited(_preloadCommonAnimations());
       _isInitialized = true;
     } catch (e) {
-      debugPrint('Error initializing animation optimizer: $e');
+      // Only log in debug mode
+      if (kDebugMode) {
+        debugPrint('Error initializing animation optimizer: $e');
+      }
     }
   }
   
   /// Apply global performance optimizations
   static void _applyGlobalOptimizations() {
     // Enable hardware acceleration where available
-    if (useHardwareAcceleration) {
-      // This is handled by Flutter automatically, but we can ensure
-      // that we're using the most optimal settings
+    if (useHardwareAcceleration && kDebugMode) {
       debugPrint('Hardware acceleration enabled for animations');
     }
     
     // Optimize compositing layers
-    if (useCompositingOptimization) {
-      // Reduce unnecessary compositing layers
+    if (useCompositingOptimization && kDebugMode) {
       debugPrint('Compositing optimization enabled');
     }
   }
@@ -80,9 +80,14 @@ class AnimationOptimizer {
       }
       
       _isPreloadingComplete = true;
-      debugPrint('Preloaded ${_preloadedAnimations.length} animations');
+      if (kDebugMode) {
+        debugPrint('Preloaded ${_preloadedAnimations.length} animations');
+      }
     } catch (e) {
-      debugPrint('Error preloading animations: $e');
+      // Silently fail in release mode - animations will load on demand
+      if (kDebugMode) {
+        debugPrint('Error preloading animations: $e');
+      }
     }
   }
   
@@ -93,7 +98,8 @@ class AnimationOptimizer {
       final data = await rootBundle.load(assetPath);
       return data;
     } catch (e) {
-      debugPrint('Error preloading animation $assetPath: $e');
+      // Silently fail - animation will load on demand
+      // No need to log missing assets in release mode
       return null;
     }
   }

@@ -1,25 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:animate_do/animate_do.dart';
-import 'package:url_launcher/url_launcher.dart';
 
 import '../providers/auth_provider.dart';
 import '../theme/app_theme.dart';
 import '../widgets/custom_button.dart';
+import '../widgets/upgrade_dialog.dart';
 
 class ProfileDropdown extends StatelessWidget {
   const ProfileDropdown({super.key});
-
-  // Launch web portal for payment/subscription management
-  Future<void> _launchWebPortal() async {
-    const url =
-        'https://www.rewordium.tech/payments'; // Rewordium payments portal
-    if (await canLaunchUrl(Uri.parse(url))) {
-      await launchUrl(Uri.parse(url), mode: LaunchMode.externalApplication);
-    } else {
-      throw 'Could not launch $url';
-    }
-  }
 
   @override
   Widget build(BuildContext context) {
@@ -90,14 +79,13 @@ class ProfileDropdown extends StatelessWidget {
             const SizedBox(height: 16),
             const Divider(),
             const SizedBox(height: 8),
-            // Upgrade button for non-pro users
-            // Inside the build method in profile_dropdown.dart
+            // Upgrade button for non-pro users - uses Google Play Billing
             if (!isPro)
               CustomButton(
                 text: 'Upgrade to Pro',
                 onPressed: () {
                   Navigator.pop(context); // Close the dropdown first
-                  _launchWebPortal();
+                  showUpgradeDialog(context); // Show Google Play Billing dialog
                 },
                 type: ButtonType.primary,
                 width: double.infinity,

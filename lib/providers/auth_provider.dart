@@ -156,6 +156,55 @@ class AuthProvider extends ChangeNotifier {
     }
   }
 
+  /// Refresh subscription status from Firestore
+  /// Called when a Google Play purchase is completed
+  Future<void> refreshSubscriptionStatus() async {
+    debugPrint('🔄 Refreshing subscription status...');
+    await _loadUserData();
+  }
+
+  /// Activate Pro subscription from Google Play purchase
+  /// Called by BillingService when purchase is verified
+  Future<void> activateProSubscription({
+    required String planType,
+    required String purchaseToken,
+    DateTime? expiryDate,
+  }) async {
+    if (_user == null) return;
+
+    try {
+      final now = DateTime.now();
+      final expiry = expiryDate ?? 
+          (planType == 'yearly' 
+              ? now.add(const Duration(days: 365))
+              : now.add(const Duration(days: 30)));
+
+      await _firestore.collection('users').doc(_user!.uid).update({
+        'isPro': true,
+        'planType': planType,
+        'subscription': {
+          'planType': planType,
+          'status': 'active',
+          'purchaseToken': purchaseToken,
+          'platform': 'google_play',
+          'startDate': Timestamp.fromDate(now),
+          'expiryDate': Timestamp.fromDate(expiry),
+        },
+        'upgradedAt': FieldValue.serverTimestamp(),
+      });
+
+      _isPro = true;
+      _planType = planType;
+      _credits = null; // Pro users have unlimited
+      await _updateNativeServiceStatus();
+      notifyListeners();
+      
+      debugPrint('✅ Pro subscription activated: $planType');
+    } catch (e) {
+      debugPrint('❌ Error activating Pro subscription: $e');
+    }
+  }
+
   Future<bool> signUpWithEmailAndPassword(
       String email, String password, String name) async {
     _isLoading = true;

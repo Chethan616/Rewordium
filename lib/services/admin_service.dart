@@ -205,6 +205,204 @@ class AdminService {
     }
   }
 
+  // Get revenue statistics (from subscription data)
+  // Optional 'from' baseline will only count subscriptions upgraded after this time
+  static Future<Map<String, dynamic>> getRevenueStats({DateTime? from}) async {
+    try {
+      debugPrint('Fetching revenue statistics from Firestore...');
+
+      if (!isAdmin()) {
+        debugPrint('Access denied: User is not admin');
+        return _emptyRevenueStats();
+      }
+
+      // Get all pro users with subscription data
+      final proUsersSnapshot = await _firestore
+          .collection('users')
+          .where('isPro', isEqualTo: true)
+          .get();
+
+      double totalRevenue = 0;
+      double monthlyRevenue = 0;
+      double yearlyRevenue = 0;
+      int monthlySubscribers = 0;
+      int yearlySubscribers = 0;
+      int onetimeSubscribers = 0;
+      int activeSubscriptions = 0;
+      int expiredSubscriptions = 0;
+      int filteredProCount = 0;
+      
+      final now = DateTime.now();
+      final startOfMonth = DateTime(now.year, now.month, 1);
+      final startOfLastMonth = DateTime(now.year, now.month - 1, 1);
+      double thisMonthRevenue = 0;
+      double lastMonthRevenue = 0;
+      int newSubscribersThisMonth = 0;
+
+      // Pricing (should match Google Play Console prices)
+      const double monthlyPrice = 4.99;
+      const double yearlyPrice = 29.99;
+      const double onetimePrice = 49.99;
+
+      for (final doc in proUsersSnapshot.docs) {
+        final data = doc.data();
+        final subscription = data['subscription'] as Map<String, dynamic>?;
+        final planType = data['planType'] as String? ?? subscription?['planType'] as String?;
+        final upgradedAt = data['upgradedAt'] as Timestamp?;
+        final expiryDate = subscription?['expiryDate'] as Timestamp?;
+
+        // If a baseline 'from' is provided, only count subscriptions after this time
+        if (from != null) {
+          if (upgradedAt == null || upgradedAt.toDate().isBefore(from)) {
+            // Skip counting this user towards revenue and subscriber totals
+            // Still allow other non-revenue aggregates if needed in future
+            continue;
+          }
+        }
+
+        filteredProCount++;
+        
+        // Count by plan type
+        if (planType == 'monthly') {
+          monthlySubscribers++;
+          monthlyRevenue += monthlyPrice;
+        } else if (planType == 'yearly') {
+          yearlySubscribers++;
+          yearlyRevenue += yearlyPrice;
+        } else if (planType == 'onetime' || planType == 'lifetime') {
+          onetimeSubscribers++;
+          totalRevenue += onetimePrice;
+        }
+
+        // Check if subscription is active
+        if (expiryDate != null) {
+          if (expiryDate.toDate().isAfter(now)) {
+            activeSubscriptions++;
+          } else {
+            expiredSubscriptions++;
+          }
+        } else {
+          // No expiry means lifetime or active
+          activeSubscriptions++;
+        }
+
+        // Calculate this month's new revenue
+        if (upgradedAt != null) {
+          final upgradeDate = upgradedAt.toDate();
+          if (upgradeDate.isAfter(startOfMonth)) {
+            newSubscribersThisMonth++;
+            if (planType == 'monthly') {
+              thisMonthRevenue += monthlyPrice;
+            } else if (planType == 'yearly') {
+              thisMonthRevenue += yearlyPrice;
+            } else if (planType == 'onetime' || planType == 'lifetime') {
+              thisMonthRevenue += onetimePrice;
+            }
+          } else if (upgradeDate.isAfter(startOfLastMonth) && upgradeDate.isBefore(startOfMonth)) {
+            if (planType == 'monthly') {
+              lastMonthRevenue += monthlyPrice;
+            } else if (planType == 'yearly') {
+              lastMonthRevenue += yearlyPrice;
+            } else if (planType == 'onetime' || planType == 'lifetime') {
+              lastMonthRevenue += onetimePrice;
+            }
+          }
+        }
+      }
+
+      // Calculate total revenue (recurring). If 'from' is provided, totals represent revenue since 'from'
+      totalRevenue += monthlyRevenue + yearlyRevenue;
+
+      // Estimate MRR (Monthly Recurring Revenue)
+      final mrr = (monthlySubscribers * monthlyPrice) + (yearlySubscribers * (yearlyPrice / 12));
+
+      // Calculate revenue growth
+      final revenueGrowth = lastMonthRevenue > 0 
+          ? ((thisMonthRevenue - lastMonthRevenue) / lastMonthRevenue * 100)
+          : (thisMonthRevenue > 0 ? 100.0 : 0.0);
+
+      debugPrint('Revenue stats: Total: \$$totalRevenue, MRR: \$$mrr, This Month: \$$thisMonthRevenue');
+
+      return {
+        'totalRevenue': totalRevenue,
+        'monthlyRevenue': monthlyRevenue,
+        'yearlyRevenue': yearlyRevenue,
+        'mrr': mrr,
+        'thisMonthRevenue': thisMonthRevenue,
+        'lastMonthRevenue': lastMonthRevenue,
+        'revenueGrowth': revenueGrowth,
+        'monthlySubscribers': monthlySubscribers,
+        'yearlySubscribers': yearlySubscribers,
+        'onetimeSubscribers': onetimeSubscribers,
+        'activeSubscriptions': activeSubscriptions,
+        'expiredSubscriptions': expiredSubscriptions,
+        'newSubscribersThisMonth': newSubscribersThisMonth,
+        // Conversion rate based on filtered pro count when baseline is provided
+        'conversionRate': filteredProCount > 0 
+        ? (filteredProCount / (await _firestore.collection('users').get()).size * 100)
+        : 0.0,
+      };
+    } catch (e) {
+      debugPrint('Error getting revenue stats: $e');
+      return _emptyRevenueStats();
+    }
+  }
+
+  static Map<String, dynamic> _emptyRevenueStats() {
+    return {
+      'totalRevenue': 0.0,
+      'monthlyRevenue': 0.0,
+      'yearlyRevenue': 0.0,
+      'mrr': 0.0,
+      'thisMonthRevenue': 0.0,
+      'lastMonthRevenue': 0.0,
+      'revenueGrowth': 0.0,
+      'monthlySubscribers': 0,
+      'yearlySubscribers': 0,
+      'onetimeSubscribers': 0,
+      'activeSubscriptions': 0,
+      'expiredSubscriptions': 0,
+      'newSubscribersThisMonth': 0,
+      'conversionRate': 0.0,
+    };
+  }
+
+  // Get recent subscription transactions
+  // Optional 'from' baseline will only include transactions after this time
+  static Future<List<Map<String, dynamic>>> getRecentTransactions({int limit = 20, DateTime? from}) async {
+    try {
+      if (!isAdmin()) return [];
+
+      final snapshot = await _firestore
+          .collection('users')
+          .where('isPro', isEqualTo: true)
+          .orderBy('upgradedAt', descending: true)
+          .limit(limit)
+          .get();
+
+      final docs = snapshot.docs.where((doc) {
+        if (from == null) return true;
+        final ts = doc.data()['upgradedAt'] as Timestamp?;
+        return ts != null && ts.toDate().isAfter(from);
+      }).toList();
+
+      return docs.map((doc) {
+        final data = doc.data();
+        return {
+          'userId': doc.id,
+          'userName': data['name'] ?? 'Unknown',
+          'email': data['email'] ?? '',
+          'planType': data['planType'] ?? data['subscription']?['planType'] ?? 'unknown',
+          'upgradedAt': data['upgradedAt'],
+          'status': data['subscription']?['status'] ?? 'active',
+        };
+      }).toList();
+    } catch (e) {
+      debugPrint('Error getting recent transactions: $e');
+      return [];
+    }
+  }
+
   // Send FCM notification using OAuth2 HTTP v1 API (production ready)
   static Future<bool> _sendFCMNotification({
     String? token,

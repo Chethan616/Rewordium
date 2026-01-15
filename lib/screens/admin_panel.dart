@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import '../services/admin_service.dart';
 import '../models/user_model.dart';
 
@@ -24,11 +25,14 @@ class _AdminPanelState extends State<AdminPanel> with TickerProviderStateMixin {
   List<UserModel> _users = [];
   List<UserModel> _filteredUsers = [];
   Map<String, int> _userStats = {'total': 0, 'pro': 0, 'free': 0};
+  Map<String, dynamic> _revenueStats = {};
+  List<Map<String, dynamic>> _recentTransactions = [];
+  DateTime? _revenueBaseline;
 
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 4, vsync: this);
+    _tabController = TabController(length: 5, vsync: this);
     _checkAdminAccess();
   }
 
@@ -57,17 +61,35 @@ class _AdminPanelState extends State<AdminPanel> with TickerProviderStateMixin {
     try {
       final users = await AdminService.getAllUsers();
       final stats = await AdminService.getUserStats();
+      final revenueStats = await AdminService.getRevenueStats(from: _revenueBaseline);
+      final transactions = await AdminService.getRecentTransactions(from: _revenueBaseline);
 
       setState(() {
         _users = users;
         _filteredUsers = users;
         _userStats = stats;
+        _revenueStats = revenueStats;
+        _recentTransactions = transactions;
       });
     } catch (e) {
       _showStatus('Error loading data: $e', isError: true);
     } finally {
       setState(() => _isLoading = false);
     }
+  }
+
+  void _setRevenueBaselineNow() {
+    setState(() {
+      _revenueBaseline = DateTime.now();
+    });
+    _loadData();
+  }
+
+  void _clearRevenueBaseline() {
+    setState(() {
+      _revenueBaseline = null;
+    });
+    _loadData();
   }
 
   void _authenticate() {
@@ -319,8 +341,10 @@ class _AdminPanelState extends State<AdminPanel> with TickerProviderStateMixin {
         ],
         bottom: TabBar(
           controller: _tabController,
+          isScrollable: true,
           tabs: const [
             Tab(icon: Icon(Icons.dashboard), text: 'Overview'),
+            Tab(icon: Icon(Icons.attach_money), text: 'Revenue'),
             Tab(icon: Icon(Icons.send), text: 'Notifications'),
             Tab(icon: Icon(Icons.people), text: 'Users'),
             Tab(icon: Icon(Icons.history), text: 'History'),
@@ -331,6 +355,7 @@ class _AdminPanelState extends State<AdminPanel> with TickerProviderStateMixin {
         controller: _tabController,
         children: [
           _buildOverviewTab(),
+          _buildRevenueTab(),
           _buildNotificationsTab(),
           _buildUsersTab(),
           _buildHistoryTab(),
@@ -534,6 +559,447 @@ class _AdminPanelState extends State<AdminPanel> with TickerProviderStateMixin {
         ),
       ),
     );
+  }
+
+  Widget _buildRevenueTab() {
+    final totalRevenue = _revenueStats['totalRevenue'] ?? 0.0;
+    final mrr = _revenueStats['mrr'] ?? 0.0;
+    final thisMonthRevenue = _revenueStats['thisMonthRevenue'] ?? 0.0;
+    final lastMonthRevenue = _revenueStats['lastMonthRevenue'] ?? 0.0;
+    final revenueGrowth = _revenueStats['revenueGrowth'] ?? 0.0;
+    final monthlySubscribers = _revenueStats['monthlySubscribers'] ?? 0;
+    final yearlySubscribers = _revenueStats['yearlySubscribers'] ?? 0;
+    final onetimeSubscribers = _revenueStats['onetimeSubscribers'] ?? 0;
+    final activeSubscriptions = _revenueStats['activeSubscriptions'] ?? 0;
+    final expiredSubscriptions = _revenueStats['expiredSubscriptions'] ?? 0;
+    final newSubscribersThisMonth = _revenueStats['newSubscribersThisMonth'] ?? 0;
+    final conversionRate = _revenueStats['conversionRate'] ?? 0.0;
+
+    return SingleChildScrollView(
+      padding: const EdgeInsets.all(16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Header with refresh
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                '💰 Revenue Analytics',
+                style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                      fontWeight: FontWeight.bold,
+                    ),
+              ),
+              ElevatedButton.icon(
+                onPressed: _loadData,
+                icon: _isLoading
+                    ? const SizedBox(
+                        width: 16,
+                        height: 16,
+                        child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                      )
+                    : const Icon(Icons.refresh, size: 16),
+                label: const Text('Refresh'),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.green,
+                  foregroundColor: Colors.white,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          // Baseline filter controls
+          Row(
+            children: [
+              ElevatedButton.icon(
+                onPressed: _setRevenueBaselineNow,
+                icon: const Icon(Icons.flag),
+                label: const Text('Count From Now'),
+              ),
+              const SizedBox(width: 8),
+              OutlinedButton.icon(
+                onPressed: _clearRevenueBaseline,
+                icon: const Icon(Icons.clear),
+                label: const Text('Clear Filter'),
+              ),
+              const SizedBox(width: 12),
+              if (_revenueBaseline != null)
+                Chip(
+                  avatar: const Icon(Icons.schedule, size: 16),
+                  label: Text('Since ${_formatDate(_revenueBaseline!)}'),
+                ),
+            ],
+          ),
+          const SizedBox(height: 20),
+
+          if (_isLoading)
+            const Center(child: CircularProgressIndicator())
+          else ...[
+            // Key Revenue Metrics
+            Row(
+              children: [
+                Expanded(
+                  child: _buildRevenueCard(
+                    'Total Revenue',
+                    '\$${totalRevenue.toStringAsFixed(2)}',
+                    Icons.account_balance_wallet,
+                    Colors.green,
+                    subtitle: 'All time earnings',
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: _buildRevenueCard(
+                    'MRR',
+                    '\$${mrr.toStringAsFixed(2)}',
+                    Icons.trending_up,
+                    Colors.blue,
+                    subtitle: 'Monthly Recurring',
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 12),
+            Row(
+              children: [
+                Expanded(
+                  child: _buildRevenueCard(
+                    'This Month',
+                    '\$${thisMonthRevenue.toStringAsFixed(2)}',
+                    Icons.calendar_today,
+                    Colors.orange,
+                    subtitle: '$newSubscribersThisMonth new subscribers',
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: _buildRevenueCard(
+                    'Last Month',
+                    '\$${lastMonthRevenue.toStringAsFixed(2)}',
+                    Icons.history,
+                    Colors.purple,
+                    subtitle: '${revenueGrowth >= 0 ? '+' : ''}${revenueGrowth.toStringAsFixed(1)}% growth',
+                  ),
+                ),
+              ],
+            ),
+            
+            const SizedBox(height: 24),
+            
+            // Subscription Breakdown
+            Text(
+              '📊 Subscription Breakdown',
+              style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                    fontWeight: FontWeight.bold,
+                  ),
+            ),
+            const SizedBox(height: 12),
+            
+            Card(
+              child: Padding(
+                padding: const EdgeInsets.all(16),
+                child: Column(
+                  children: [
+                    _buildSubscriptionRow('Monthly Subscribers', monthlySubscribers, Colors.blue, '\$4.99/mo'),
+                    const Divider(),
+                    _buildSubscriptionRow('Yearly Subscribers', yearlySubscribers, Colors.green, '\$29.99/yr'),
+                    const Divider(),
+                    _buildSubscriptionRow('Lifetime/One-time', onetimeSubscribers, Colors.purple, '\$49.99'),
+                    const Divider(thickness: 2),
+                    _buildSubscriptionRow('Active Subscriptions', activeSubscriptions, Colors.teal, ''),
+                    const Divider(),
+                    _buildSubscriptionRow('Expired', expiredSubscriptions, Colors.red, ''),
+                  ],
+                ),
+              ),
+            ),
+            
+            const SizedBox(height: 24),
+            
+            // Conversion & Performance
+            Text(
+              '🎯 Performance Metrics',
+              style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                    fontWeight: FontWeight.bold,
+                  ),
+            ),
+            const SizedBox(height: 12),
+            
+            Row(
+              children: [
+                Expanded(
+                  child: _buildMetricCard(
+                    'Conversion Rate',
+                    '${conversionRate.toStringAsFixed(1)}%',
+                    Icons.pie_chart,
+                    Colors.indigo,
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: _buildMetricCard(
+                    'ARPU',
+                    '\$${(activeSubscriptions > 0 ? totalRevenue / activeSubscriptions : 0).toStringAsFixed(2)}',
+                    Icons.person_pin,
+                    Colors.teal,
+                  ),
+                ),
+              ],
+            ),
+            
+            const SizedBox(height: 24),
+            
+            // Recent Transactions
+            Text(
+              '📝 Recent Transactions',
+              style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                    fontWeight: FontWeight.bold,
+                  ),
+            ),
+            const SizedBox(height: 12),
+            
+            if (_recentTransactions.isEmpty)
+              Card(
+                child: Padding(
+                  padding: const EdgeInsets.all(32),
+                  child: Center(
+                    child: Text(
+                      'No transactions yet',
+                      style: TextStyle(color: Colors.grey[600]),
+                    ),
+                  ),
+                ),
+              )
+            else
+              Card(
+                child: ListView.separated(
+                  shrinkWrap: true,
+                  physics: const NeverScrollableScrollPhysics(),
+                  itemCount: _recentTransactions.length,
+                  separatorBuilder: (_, __) => const Divider(height: 1),
+                  itemBuilder: (context, index) {
+                    final tx = _recentTransactions[index];
+                    final planType = tx['planType'] as String? ?? 'unknown';
+                    final timestamp = tx['upgradedAt'] as Timestamp?;
+                    final date = timestamp?.toDate();
+                    
+                    return ListTile(
+                      leading: CircleAvatar(
+                        backgroundColor: _getPlanColor(planType).withOpacity(0.2),
+                        child: Icon(
+                          _getPlanIcon(planType),
+                          color: _getPlanColor(planType),
+                          size: 20,
+                        ),
+                      ),
+                      title: Text(tx['userName'] ?? 'Unknown'),
+                      subtitle: Text(tx['email'] ?? ''),
+                      trailing: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        crossAxisAlignment: CrossAxisAlignment.end,
+                        children: [
+                          Text(
+                            _getPlanDisplayName(planType),
+                            style: TextStyle(
+                              color: _getPlanColor(planType),
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                          if (date != null)
+                            Text(
+                              _formatDate(date),
+                              style: TextStyle(
+                                fontSize: 12,
+                                color: Colors.grey[600],
+                              ),
+                            ),
+                        ],
+                      ),
+                    );
+                  },
+                ),
+              ),
+          ],
+        ],
+      ),
+    );
+  }
+
+  Widget _buildRevenueCard(String title, String value, IconData icon, Color color, {String? subtitle}) {
+    return Card(
+      elevation: 4,
+      child: Container(
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(12),
+          gradient: LinearGradient(
+            colors: [color.withOpacity(0.1), color.withOpacity(0.05)],
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+          ),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Icon(icon, color: color, size: 24),
+                const Spacer(),
+              ],
+            ),
+            const SizedBox(height: 12),
+            Text(
+              value,
+              style: TextStyle(
+                fontSize: 24,
+                fontWeight: FontWeight.bold,
+                color: color,
+              ),
+            ),
+            const SizedBox(height: 4),
+            Text(
+              title,
+              style: TextStyle(
+                fontSize: 14,
+                color: Colors.grey[700],
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+            if (subtitle != null) ...[
+              const SizedBox(height: 2),
+              Text(
+                subtitle,
+                style: TextStyle(
+                  fontSize: 11,
+                  color: Colors.grey[500],
+                ),
+              ),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildSubscriptionRow(String label, int count, Color color, String price) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 8),
+      child: Row(
+        children: [
+          Container(
+            width: 12,
+            height: 12,
+            decoration: BoxDecoration(
+              color: color,
+              shape: BoxShape.circle,
+            ),
+          ),
+          const SizedBox(width: 12),
+          Expanded(child: Text(label)),
+          if (price.isNotEmpty)
+            Text(
+              price,
+              style: TextStyle(color: Colors.grey[600], fontSize: 12),
+            ),
+          const SizedBox(width: 12),
+          Text(
+            count.toString(),
+            style: TextStyle(
+              fontWeight: FontWeight.bold,
+              color: color,
+              fontSize: 16,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildMetricCard(String title, String value, IconData icon, Color color) {
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          children: [
+            Icon(icon, color: color, size: 32),
+            const SizedBox(height: 8),
+            Text(
+              value,
+              style: TextStyle(
+                fontSize: 22,
+                fontWeight: FontWeight.bold,
+                color: color,
+              ),
+            ),
+            const SizedBox(height: 4),
+            Text(
+              title,
+              style: TextStyle(
+                fontSize: 13,
+                color: Colors.grey[600],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Color _getPlanColor(String planType) {
+    switch (planType.toLowerCase()) {
+      case 'monthly':
+        return Colors.blue;
+      case 'yearly':
+        return Colors.green;
+      case 'onetime':
+      case 'lifetime':
+        return Colors.purple;
+      default:
+        return Colors.grey;
+    }
+  }
+
+  IconData _getPlanIcon(String planType) {
+    switch (planType.toLowerCase()) {
+      case 'monthly':
+        return Icons.calendar_month;
+      case 'yearly':
+        return Icons.calendar_today;
+      case 'onetime':
+      case 'lifetime':
+        return Icons.all_inclusive;
+      default:
+        return Icons.help_outline;
+    }
+  }
+
+  String _getPlanDisplayName(String planType) {
+    switch (planType.toLowerCase()) {
+      case 'monthly':
+        return 'Monthly';
+      case 'yearly':
+        return 'Yearly';
+      case 'onetime':
+      case 'lifetime':
+        return 'Lifetime';
+      default:
+        return planType;
+    }
+  }
+
+  String _formatDate(DateTime date) {
+    final now = DateTime.now();
+    final diff = now.difference(date);
+    
+    if (diff.inDays == 0) {
+      return 'Today';
+    } else if (diff.inDays == 1) {
+      return 'Yesterday';
+    } else if (diff.inDays < 7) {
+      return '${diff.inDays} days ago';
+    } else {
+      return '${date.day}/${date.month}/${date.year}';
+    }
   }
 
   Widget _buildNotificationsTab() {

@@ -103,7 +103,7 @@ We do not use your personal information for advertising or marketing to third pa
 • Complex AI operations may require secure cloud processing
 • Text is encrypted during transmission and processing
 • Processed text is immediately deleted after generating suggestions
-• We use enterprise-grade AI services (OpenAI, Groq) with strict privacy controls
+• We use secure third-party AI services to process text content in accordance with strict privacy and security standards
 
 4.3 Data Retention:
 • Text content is not permanently stored on our servers
@@ -165,9 +165,14 @@ To exercise these rights, contact us at noxquilltech@gmail.com''',
             _buildSection(
               title: '9. Children\'s Privacy',
               content:
-                  '''Rewordium is not intended for users under 13 years of age. We do not knowingly collect personal information from children under 13. If we discover that we have collected information from a child under 13, we will delete that information immediately.
+                '''Rewordium is not intended for users under the minimum age required by applicable laws in their region. We do not knowingly collect personal information from children who do not meet the minimum age requirement. If we discover that we have collected information from a user below the applicable age threshold, we will delete that information immediately.
 
-Parents and guardians should monitor their children's online activities and app usage.''',
+      Parents and guardians should monitor their children's online activities and app usage.''',
+            ),
+            _buildSection(
+              title: 'No Professional Advice',
+              content:
+                '''AI-generated content is provided for assistance purposes only and should not be considered professional, legal, academic, medical, or financial advice. Users are responsible for reviewing and validating AI-generated suggestions before use.''',
             ),
             _buildSection(
               title: '10. International Data Transfers',

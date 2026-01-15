@@ -103,13 +103,21 @@ You may register using your email address or through Google Sign-In integration.
               content:
                   '''Rewordium offers both free and premium subscription tiers:
 • Free users receive limited daily credits for text processing
-• Premium subscribers enjoy unlimited usage and advanced features
-• Subscriptions and payments are processed through our secure web portal
-• Payment processing is handled by third-party payment providers (Stripe/Razorpay)
-• Subscriptions automatically renew unless cancelled through the web portal
-• Refunds may be available according to payment provider policies
-• Pricing may change with advance notice to existing subscribers
-• The app does not directly process payments to comply with platform policies''',
+• Premium subscribers enjoy advanced features and higher limits
+
+Payments and subscriptions are processed securely through Google Play Billing:
+• Subscriptions are managed by Google Play, including payments, renewals, cancellations, and refunds
+• We do not collect or store any payment information
+• Subscriptions automatically renew unless cancelled via Google Play settings
+• Pricing may change for future billing periods, with advance notice where required
+• Refunds are subject to Google Play’s refund policies''',
+            ),
+            _buildSection(
+              title: 'Feature Availability Disclaimer',
+              content:
+                  '''Features described in the App, including premium or experimental features, may change, be modified, limited, or discontinued at any time without prior notice.
+
+We do not guarantee uninterrupted access, specific feature availability, or permanent inclusion of any feature.''',
             ),
             _buildSection(
               title: '7. Intellectual Property',

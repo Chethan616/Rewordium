@@ -887,17 +887,11 @@ class MyAccessibilityService : AccessibilityService(), BubbleInteractionListener
         }
         
         if (!creditManager.isUserLoggedIn()) {
-            try {
-                val snackbarView = bottomSheetView?.findViewById<View>(R.id.bottom_sheet_root) ?: run {
-                    Toast.makeText(this, "Please log in to use Rewordium", Toast.LENGTH_LONG).show()
-                    return
-                }
-
-                // Create standard Snackbar first
-                val snackbar = Snackbar.make(snackbarView, "Please log in to use Rewordium", Snackbar.LENGTH_LONG)
-                
-                // Set action to open the app
-                snackbar.setAction("LOG IN") {
+            // Use custom overlay snackbar that displays above all WindowManager overlays
+            showOverlaySnackbar(
+                message = "Please log in to use Rewordium",
+                actionText = "LOG IN",
+                onAction = {
                     try {
                         val intent = packageManager.getLaunchIntentForPackage(packageName)
                         intent?.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP)
@@ -905,23 +899,9 @@ class MyAccessibilityService : AccessibilityService(), BubbleInteractionListener
                     } catch (e: Exception) {
                         Log.e(TAG, "Error launching app", e)
                     }
-                }
-                
-                // Set custom styling and ensure it appears on top
-                snackbar.view.apply {
-                    setBackgroundResource(R.drawable.snackbar_background)
-                    elevation = 16f // High elevation to appear above bottom sheet
-                    translationZ = 16f // Additional z-translation for older devices
-                }
-                snackbar.setActionTextColor(resources.getColor(android.R.color.white, null))
-                
-                // Show the snackbar
-                snackbar.show()
-                
-            } catch (e: Exception) {
-                Log.e(TAG, "Error showing login prompt", e)
-                Toast.makeText(this, "Please log in to use Rewordium", Toast.LENGTH_LONG).show()
-            }
+                },
+                duration = 5000L
+            )
             Log.w(TAG, "Action blocked: User is not logged in.")
             isPerformingManualTransition = false
             isGenerating = false
@@ -930,7 +910,20 @@ class MyAccessibilityService : AccessibilityService(), BubbleInteractionListener
 
         // --- The Credit Check Gate ---
         if (!creditManager.canPerformAction()) {
-            Toast.makeText(this, "Out of credits. Please open the Rewordium app to upgrade.", Toast.LENGTH_LONG).show()
+            showOverlaySnackbar(
+                message = "Out of credits. Please upgrade to continue.",
+                actionText = "UPGRADE",
+                onAction = {
+                    try {
+                        val intent = packageManager.getLaunchIntentForPackage(packageName)
+                        intent?.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP)
+                        startActivity(intent)
+                    } catch (e: Exception) {
+                        Log.e(TAG, "Error launching app", e)
+                    }
+                },
+                duration = 5000L
+            )
             Log.w(TAG, "Action blocked: User is out of credits.")
             isPerformingManualTransition = false
             isGenerating = false
@@ -1820,6 +1813,9 @@ class MyAccessibilityService : AccessibilityService(), BubbleInteractionListener
             // Cancel any ongoing generation
             generationJob?.cancel()
             
+            // Dismiss any overlay snackbar
+            dismissOverlaySnackbar()
+            
             // Safely remove focused editor view
             focusedEditorView?.let { view ->
                 try {
@@ -2242,6 +2238,142 @@ class MyAccessibilityService : AccessibilityService(), BubbleInteractionListener
             Log.e(TAG, "Error hiding floating bubble", e)
         } finally {
             floatingBubbleView = null
+        }
+    }
+
+    // Custom overlay snackbar for WindowManager - displays above all overlays
+    private var overlaySnackbarView: View? = null
+    private var overlaySnackbarHandler: Handler? = null
+    
+    /**
+     * Shows a custom overlay snackbar that appears above all WindowManager overlays.
+     * Material Snackbar doesn't work correctly with accessibility overlays, so we use
+     * a custom implementation that adds a separate window on top.
+     */
+    private fun showOverlaySnackbar(
+        message: String,
+        actionText: String? = null,
+        onAction: (() -> Unit)? = null,
+        duration: Long = 4000L
+    ) {
+        try {
+            // Dismiss any existing overlay snackbar
+            dismissOverlaySnackbar()
+
+            val themedContext = ContextThemeWrapper(this, R.style.Theme_App_Translucent)
+            val inflater = LayoutInflater.from(themedContext)
+
+            overlaySnackbarView = inflater.inflate(R.layout.layout_overlay_snackbar, null)
+
+            // Set message
+            overlaySnackbarView?.findViewById<TextView>(R.id.snackbar_message)?.text = message
+
+            // Setup action button
+            val actionButton = overlaySnackbarView?.findViewById<TextView>(R.id.snackbar_action)
+            if (actionText != null && onAction != null) {
+                actionButton?.text = actionText
+                actionButton?.visibility = View.VISIBLE
+                actionButton?.setOnClickListener {
+                    onAction()
+                    dismissOverlaySnackbar()
+                }
+            } else {
+                actionButton?.visibility = View.GONE
+            }
+
+            // Use TYPE_ACCESSIBILITY_OVERLAY which is guaranteed to work in accessibility service
+            // This is the same type used by the bottom sheet, but we add it AFTER the bottom sheet
+            // so it appears on top in the window manager stack
+            val overlayType = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                WindowManager.LayoutParams.TYPE_ACCESSIBILITY_OVERLAY
+            } else {
+                @Suppress("DEPRECATION")
+                WindowManager.LayoutParams.TYPE_SYSTEM_ALERT
+            }
+
+            // Convert a small top offset to px - position at top of screen above bottom sheet
+            val yOffsetPx = (48 * resources.displayMetrics.density).toInt()
+
+            // Create window params - must be above the bottom sheet overlay
+            val params = WindowManager.LayoutParams(
+                WindowManager.LayoutParams.MATCH_PARENT,
+                WindowManager.LayoutParams.WRAP_CONTENT,
+                overlayType,
+                WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or
+                    WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL or
+                    WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN,
+                PixelFormat.TRANSLUCENT
+            ).apply {
+                gravity = Gravity.TOP or Gravity.CENTER_HORIZONTAL
+                y = yOffsetPx
+                windowAnimations = android.R.style.Animation_Toast
+            }
+
+            // Add to window manager - adding AFTER bottom sheet puts it on top in z-order
+            windowManager.addView(overlaySnackbarView, params)
+
+            // Animate in
+            overlaySnackbarView?.alpha = 0f
+            overlaySnackbarView?.translationY = -50f
+            overlaySnackbarView?.animate()
+                ?.alpha(1f)
+                ?.translationY(0f)
+                ?.setDuration(250)
+                ?.setInterpolator(android.view.animation.DecelerateInterpolator())
+                ?.start()
+
+            // Auto dismiss after duration
+            overlaySnackbarHandler = Handler(Looper.getMainLooper())
+            overlaySnackbarHandler?.postDelayed({
+                dismissOverlaySnackbar()
+            }, duration)
+
+            if (BuildConfig.DEBUG) Log.d(TAG, "Overlay snackbar shown: $message")
+
+        } catch (e: Exception) {
+            Log.e(TAG, "Error showing overlay snackbar", e)
+            // Fallback: Show a system Toast with the message
+            // Also trigger the action if provided (e.g., open app)
+            Toast.makeText(this, message + (if (actionText != null) " - Tap app icon to $actionText" else ""), Toast.LENGTH_LONG).show()
+            // If there's an action and the snackbar failed, still perform it after a delay
+            if (onAction != null) {
+                Handler(Looper.getMainLooper()).postDelayed({
+                    // Don't auto-trigger, user needs to manually open app
+                }, 100)
+            }
+        }
+    }
+    
+    /**
+     * Dismisses the overlay snackbar with animation
+     */
+    private fun dismissOverlaySnackbar() {
+        try {
+            overlaySnackbarHandler?.removeCallbacksAndMessages(null)
+            overlaySnackbarHandler = null
+            
+            overlaySnackbarView?.let { view ->
+                if (view.isAttachedToWindow) {
+                    view.animate()
+                        .alpha(0f)
+                        .translationY(-30f)
+                        .setDuration(200)
+                        .setInterpolator(android.view.animation.AccelerateInterpolator())
+                        .withEndAction {
+                            try {
+                                if (view.isAttachedToWindow) {
+                                    windowManager.removeView(view)
+                                }
+                            } catch (e: Exception) {
+                                Log.e(TAG, "Error removing overlay snackbar", e)
+                            }
+                        }
+                        .start()
+                }
+            }
+            overlaySnackbarView = null
+        } catch (e: Exception) {
+            Log.e(TAG, "Error dismissing overlay snackbar", e)
         }
     }
 

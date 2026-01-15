@@ -152,6 +152,23 @@ enum AIProvider {
     }
   }
 
+  /// Path to the actual AI provider SVG icon
+  String get iconPath {
+    switch (this) {
+      case AIProvider.groq:
+        return 'assets/images/ai_icons/groq_icon.svg';
+      case AIProvider.gemini:
+        return 'assets/images/ai_icons/gemini_icon.svg';
+      case AIProvider.openai:
+        return 'assets/images/ai_icons/openai_icon.svg';
+      case AIProvider.anthropic:
+        return 'assets/images/ai_icons/claude_icon.svg';
+      case AIProvider.custom:
+        return 'assets/images/ai_icons/custom_icon.svg';
+    }
+  }
+
+  /// Fallback icon for cases where SVG cannot be loaded
   IconData get icon {
     switch (this) {
       case AIProvider.groq:
@@ -164,6 +181,22 @@ enum AIProvider {
         return Icons.smart_toy;
       case AIProvider.custom:
         return Icons.settings_ethernet;
+    }
+  }
+
+  /// Brand color for each AI provider
+  Color get brandColor {
+    switch (this) {
+      case AIProvider.groq:
+        return const Color(0xFFF55036); // Groq orange-red
+      case AIProvider.gemini:
+        return const Color(0xFF4285F4); // Google blue
+      case AIProvider.openai:
+        return const Color(0xFF10A37F); // OpenAI green
+      case AIProvider.anthropic:
+        return const Color(0xFFD97706); // Claude orange
+      case AIProvider.custom:
+        return const Color(0xFF6B7280); // Gray
     }
   }
 }

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:animate_do/animate_do.dart';
 import 'package:provider/provider.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 
 import '../models/advanced_ai_settings.dart';
 import '../theme/app_theme.dart';
@@ -82,7 +83,7 @@ class _AdvancedAISettingsScreenState extends State<AdvancedAISettingsScreen> {
       );
 
       await AdvancedAISettingsService.saveSettings(newSettings);
-      
+
       // Sync settings to Android native services (Accessibility & Keyboard)
       await AISettingsBridge.syncSettingsToAndroid();
 
@@ -266,9 +267,25 @@ class _AdvancedAISettingsScreenState extends State<AdvancedAISettingsScreen> {
           ...AIProvider.values.map((provider) {
             final isSelected = _settings.provider == provider;
             return ListTile(
-              leading: Icon(
-                provider.icon,
-                color: isSelected ? AppTheme.primaryColor : Colors.grey,
+              leading: Container(
+                width: 40,
+                height: 40,
+                decoration: BoxDecoration(
+                  color: isSelected
+                      ? provider.brandColor.withOpacity(0.15)
+                      : Colors.grey.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: Center(
+                  child: SvgPicture.asset(
+                    provider.iconPath,
+                    width: 24,
+                    height: 24,
+                    colorFilter: isSelected
+                        ? null // Use original colors when selected
+                        : ColorFilter.mode(Colors.grey, BlendMode.srcIn),
+                  ),
+                ),
               ),
               title: Text(
                 provider.displayName,
@@ -281,7 +298,7 @@ class _AdvancedAISettingsScreenState extends State<AdvancedAISettingsScreen> {
                 style: AppTheme.bodySmall,
               ),
               trailing: isSelected
-                  ? Icon(Icons.check_circle, color: AppTheme.primaryColor)
+                  ? Icon(Icons.check_circle, color: provider.brandColor)
                   : null,
               selected: isSelected,
               onTap: () {

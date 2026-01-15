@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter/foundation.dart';
 import 'package:provider/provider.dart';
 import 'dart:async';
 
@@ -16,6 +17,7 @@ import 'theme/app_theme.dart';
 import 'utils/permission_handler.dart';
 import 'utils/animation_optimizer.dart';
 import 'utils/frame_rate_controller.dart';
+import 'utils/app_logger.dart';
 import 'services/firebase_service.dart';
 import 'services/firebase_messaging_service.dart';
 import 'services/groq_service.dart';
@@ -23,6 +25,7 @@ import 'services/unified_ai_service.dart';
 import 'services/cache_manager.dart';
 import 'services/admin_service.dart';
 import 'services/ai_settings_bridge.dart';
+import 'services/billing_service.dart';
 import 'widgets/tool_popup.dart';
 import 'admin.dart';
 
@@ -44,21 +47,21 @@ void main() async {
   try {
     await FirebaseService.initialize();
     isFirebaseInitialized = true;
-    debugPrint('Firebase initialized successfully');
+    AppLogger.init('Firebase');
 
     // Initialize Firebase Messaging after core Firebase is ready
     try {
       await FirebaseMessagingService().initialize();
-      debugPrint('Firebase Messaging initialized');
+      AppLogger.init('Firebase Messaging');
     } catch (e) {
-      debugPrint('Firebase Messaging initialization error: $e');
+      AppLogger.warning('Firebase Messaging initialization error: $e');
     }
 
     // Initialize AdminService for Cloud Functions
     AdminService.init();
-    debugPrint('AdminService initialized');
+    AppLogger.init('AdminService');
   } catch (e) {
-    debugPrint('Error initializing Firebase: $e');
+    AppLogger.error('Error initializing Firebase', e);
     // Continue with app launch but some features may be limited
     isFirebaseInitialized = true;
   }
@@ -91,14 +94,14 @@ void main() async {
   isGroqInitialized = false;
   unawaited(UnifiedAIService.initialize().then((_) {
     isGroqInitialized = true;
-    debugPrint('Groq service initialized successfully');
+    AppLogger.init('Groq service');
     
     // Initialize AI Settings Bridge for Android native services
     AISettingsBridge.initialize();
     unawaited(AISettingsBridge.syncSettingsToAndroid());
-    debugPrint('AI Settings Bridge initialized');
+    AppLogger.init('AI Settings Bridge');
   }).catchError((e) {
-    debugPrint('Error initializing Groq service: $e');
+    AppLogger.warning('Error initializing Groq service: $e');
     // Continue with app launch but some features may be limited
     isGroqInitialized = true;
   }));
@@ -108,11 +111,22 @@ void main() async {
   try {
     await keyboardProvider.initializeFromPrefs();
   } catch (e) {
-    debugPrint('Error initializing keyboard provider: $e');
+    AppLogger.warning('Error initializing keyboard provider: $e');
   }
 
   // Create auth provider after Firebase is initialized
   final authProvider = AuthProvider();
+
+  // Create billing service and set up subscription callback
+  final billingService = BillingService();
+  billingService.onSubscriptionActive = (String productId, String? purchaseToken) {
+    // Update auth provider when subscription is activated
+    final planType = productId.contains('yearly') ? 'yearly' : 'monthly';
+    authProvider.activateProSubscription(
+      planType: planType,
+      purchaseToken: purchaseToken ?? productId,
+    );
+  };
 
   // Allow frame to be drawn now that critical initialization is complete
   binding.allowFirstFrame();
@@ -124,6 +138,7 @@ void main() async {
         ChangeNotifierProvider(create: (context) => ThemeProvider()),
         ChangeNotifierProvider.value(value: authProvider),
         ChangeNotifierProvider.value(value: keyboardProvider),
+        ChangeNotifierProvider.value(value: billingService),
       ],
       child: const MyApp(),
     ),
@@ -131,21 +146,25 @@ void main() async {
 
   // Initialize remaining services in the background
   void initializeServices() {
+    // Initialize billing service for Google Play In-App Purchases
+    billingService.initialize();
+    AppLogger.init('Billing service');
+
     // Initialize cache manager
     try {
       CacheManager.initialize();
-      debugPrint('Cache manager initialized');
+      AppLogger.init('Cache manager');
     } catch (e) {
-      debugPrint('Error initializing cache manager: $e');
+      AppLogger.warning('Error initializing cache manager: $e');
     }
 
     // Initialize animation optimizer in a separate microtask
     Future.microtask(() async {
       try {
         await AnimationOptimizer.initialize();
-        debugPrint('Animation optimizer initialized');
+        AppLogger.init('Animation optimizer');
       } catch (e) {
-        debugPrint('Error initializing animation optimizer: $e');
+        AppLogger.warning('Error initializing animation optimizer: $e');
       }
     });
   }

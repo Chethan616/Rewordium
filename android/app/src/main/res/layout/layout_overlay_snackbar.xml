@@ -1,0 +1,81 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Custom Snackbar for WindowManager Overlays -->
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:id="@+id/overlay_snackbar_root"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:layout_gravity="top"
+    android:paddingHorizontal="16dp"
+    android:paddingTop="48dp"
+    android:clipChildren="false"
+    android:clipToPadding="false">
+
+    <com.google.android.material.card.MaterialCardView
+        android:id="@+id/snackbar_card"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_gravity="top|center_horizontal"
+        android:minHeight="56dp"
+        app:cardCornerRadius="12dp"
+        app:cardElevation="12dp"
+        app:cardBackgroundColor="#323232"
+        app:strokeWidth="0dp">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:gravity="center_vertical"
+            android:paddingHorizontal="16dp"
+            android:paddingVertical="14dp">
+
+            <!-- Icon -->
+            <ImageView
+                android:id="@+id/snackbar_icon"
+                android:layout_width="24dp"
+                android:layout_height="24dp"
+                android:src="@drawable/ic_info"
+                android:visibility="gone"
+                app:tint="@android:color/white"
+                android:contentDescription="Info"/>
+
+            <!-- Message Text -->
+            <TextView
+                android:id="@+id/snackbar_message"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:layout_marginStart="12dp"
+                android:text="Please log in to use Rewordium"
+                android:textColor="@android:color/white"
+                android:textSize="14sp"
+                android:fontFamily="sans-serif-medium"
+                android:maxLines="2"
+                android:ellipsize="end"
+                tools:text="Please log in to use Rewordium"/>
+
+            <!-- Action Button -->
+            <TextView
+                android:id="@+id/snackbar_action"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="16dp"
+                android:paddingHorizontal="8dp"
+                android:paddingVertical="8dp"
+                android:text="LOG IN"
+                android:textColor="#BB86FC"
+                android:textSize="14sp"
+                android:fontFamily="sans-serif-bold"
+                android:textAllCaps="true"
+                android:background="?attr/selectableItemBackgroundBorderless"
+                android:clickable="true"
+                android:focusable="true"
+                tools:text="LOG IN"/>
+
+        </LinearLayout>
+
+    </com.google.android.material.card.MaterialCardView>
+
+</FrameLayout>

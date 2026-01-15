@@ -16,13 +16,12 @@
 
 package com.noxquill.rewordium.keyboard.ime.ai
 
+import android.content.Intent
 import android.widget.Toast
 import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutVertically
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -39,7 +38,6 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Close
-import androidx.compose.material.icons.filled.ContentCopy
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Stars
 import androidx.compose.material3.CircularProgressIndicator
@@ -50,6 +48,7 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -90,6 +89,9 @@ fun AiPanel(
     val editorInstance by context.editorInstance()
     val aiManager by context.aiManager()
     
+    // State for triggering API key error toast
+    var showApiKeySnackbar by remember { mutableStateOf(false) }
+    
     // Get theme colors from keyboard theme
     val windowStyle = rememberSnyggThemeQuery(FlorisImeUi.Window.elementName)
     val keyStyle = rememberSnyggThemeQuery(FlorisImeUi.Key.elementName)
@@ -108,6 +110,29 @@ fun AiPanel(
     var errorMessage by remember { mutableStateOf<String?>(null) }
     var wasUsingAllText by remember { mutableStateOf(false) }  // Track if we should replace all text
     
+    // Handle showing message for API key error - use Toast directly since Compose Snackbar 
+    // doesn't work well in IME context (keyboard service window)
+    LaunchedEffect(showApiKeySnackbar) {
+        if (showApiKeySnackbar) {
+            // Show toast with actionable message
+            Toast.makeText(
+                context, 
+                "⚠️ No API key configured. Open Rewordium app → Settings → Advanced AI", 
+                Toast.LENGTH_LONG
+            ).show()
+            
+            // Also try to open the app
+            try {
+                val intent = context.packageManager.getLaunchIntentForPackage(context.packageName)
+                intent?.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP)
+                context.startActivity(intent)
+            } catch (e: Exception) {
+                // Ignore - user saw the toast
+            }
+            showApiKeySnackbar = false
+        }
+    }
+    
     val isVisible = keyboardManager.activeState.isAiPanelVisible
     
     AnimatedVisibility(
@@ -116,10 +141,11 @@ fun AiPanel(
         exit = slideOutVertically(targetOffsetY = { it }),
         modifier = modifier
     ) {
-        Surface(
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(FlorisImeSizing.smartbarHeight * 4),
+        Box(modifier = Modifier.fillMaxWidth()) {
+            Surface(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(FlorisImeSizing.smartbarHeight * 4),
             color = backgroundColor.copy(alpha = 0.98f),
             shape = RoundedCornerShape(topStart = 16.dp, topEnd = 16.dp)
         ) {
@@ -308,7 +334,14 @@ fun AiPanel(
                                             generatedText = text
                                         },
                                         onFailure = { e ->
-                                            errorMessage = e.message ?: context.getString(R.string.ai__error_api)
+                                            val errorMsg = e.message ?: context.getString(R.string.ai__error_api)
+                                            // Check if it's an API key error - show snackbar with action
+                                            if (errorMsg.contains("No API key", ignoreCase = true)) {
+                                                showApiKeySnackbar = true
+                                                errorMessage = null // Don't show error text for this case
+                                            } else {
+                                                errorMessage = errorMsg
+                                            }
                                         }
                                     )
                                 }
@@ -357,6 +390,8 @@ fun AiPanel(
                     }
                 }
             }
+        }
+        // Note: Using Toast instead of SnackbarHost for IME context compatibility
         }
     }
 }
