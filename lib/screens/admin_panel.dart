@@ -79,7 +79,7 @@ class _AdminPanelState extends State<AdminPanel> with TickerProviderStateMixin {
     }
   }
 
-  // Revenue baseline is hardcoded to January 15, 2026 - no dynamic controls needed
+  // Revenue baseline is hardcoded to January 16, 2026 - no dynamic controls needed
 
   void _authenticate() {
     final password = _passwordController.text.trim();
@@ -597,7 +597,7 @@ class _AdminPanelState extends State<AdminPanel> with TickerProviderStateMixin {
             ],
           ),
           const SizedBox(height: 8),
-          // Baseline indicator - revenue counted from January 15, 2026
+          // Baseline indicator - revenue counted from January 16, 2026
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
             decoration: BoxDecoration(
@@ -611,7 +611,7 @@ class _AdminPanelState extends State<AdminPanel> with TickerProviderStateMixin {
                 const Icon(Icons.flag, size: 16, color: Colors.blue),
                 const SizedBox(width: 8),
                 Text(
-                  'Revenue counted from: January 15, 2026',
+                  'Revenue counted from: January 16, 2026',
                   style: TextStyle(color: Colors.blue[700], fontWeight: FontWeight.w500),
                 ),
               ],
