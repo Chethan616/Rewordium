@@ -127,7 +127,20 @@ We do not guarantee uninterrupted access, specific feature availability, or perm
 You grant us a limited license to process your text for the purpose of providing our services.''',
             ),
             _buildSection(
-              title: '8. Data Privacy and Security',
+              title: '8. Open Source Components',
+              content:
+                  '''Rewordium incorporates open source software components, which are used in accordance with their respective licenses:
+
+• FlorisBoard Keyboard: The keyboard component is based on FlorisBoard, an open-source keyboard for Android developed by Patrick Goldinger and contributors. FlorisBoard is licensed under the Apache License 2.0.
+
+• Apache License 2.0: You may obtain a copy of this license at https://www.apache.org/licenses/LICENSE-2.0
+
+We acknowledge and thank the open source community for their contributions. A full list of open source licenses is available within the App under Settings > Open Source Licenses.
+
+The use of open source components does not affect your rights or obligations under these Terms regarding the proprietary portions of Rewordium.''',
+            ),
+            _buildSection(
+              title: '9. Data Privacy and Security',
               content:
                   '''We are committed to protecting your privacy and data security:
 • Text processing occurs locally when possible to minimize data transmission
@@ -137,7 +150,7 @@ You grant us a limited license to process your text for the purpose of providing
 • We do not store your text content longer than necessary to provide the service''',
             ),
             _buildSection(
-              title: '9. Service Availability',
+              title: '10. Service Availability',
               content:
                   '''We strive to maintain high service availability, but cannot guarantee uninterrupted access. The service may be temporarily unavailable due to:
 • Scheduled maintenance and updates
@@ -148,7 +161,7 @@ You grant us a limited license to process your text for the purpose of providing
 We will make reasonable efforts to notify users of planned maintenance.''',
             ),
             _buildSection(
-              title: '10. Limitation of Liability',
+              title: '11. Limitation of Liability',
               content:
                   '''To the maximum extent permitted by law, Rewordium and its developers shall not be liable for:
 • Any indirect, incidental, or consequential damages
@@ -159,7 +172,7 @@ We will make reasonable efforts to notify users of planned maintenance.''',
 Your sole remedy for dissatisfaction with the service is to stop using the App.''',
             ),
             _buildSection(
-              title: '11. AI Content Disclaimer',
+              title: '12. AI Content Disclaimer',
               content:
                   '''Rewordium uses artificial intelligence to generate text suggestions and improvements. Please note:
 • AI-generated content may not always be accurate or appropriate
@@ -169,7 +182,7 @@ Your sole remedy for dissatisfaction with the service is to stop using the App.'
 • Users should exercise judgment when using AI suggestions in professional or academic contexts''',
             ),
             _buildSection(
-              title: '12. Updates and Modifications',
+              title: '13. Updates and Modifications',
               content:
                   '''We reserve the right to modify these Terms and Conditions at any time. When we make changes:
 • Updated terms will be posted in the App
@@ -178,7 +191,7 @@ Your sole remedy for dissatisfaction with the service is to stop using the App.'
 • If you disagree with changes, you may discontinue using the service''',
             ),
             _buildSection(
-              title: '13. Termination',
+              title: '14. Termination',
               content: '''Either party may terminate this agreement at any time:
 • You may stop using the App and delete your account
 • We may suspend or terminate accounts for violations of these terms
@@ -186,7 +199,7 @@ Your sole remedy for dissatisfaction with the service is to stop using the App.'
 • Certain provisions of these terms will survive termination''',
             ),
             _buildSection(
-              title: '14. Contact Information',
+              title: '15. Contact Information',
               content:
                   '''If you have questions about these Terms and Conditions, please contact us at:
 

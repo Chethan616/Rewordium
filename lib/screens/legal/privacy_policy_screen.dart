@@ -139,7 +139,18 @@ We do not use your personal information for advertising or marketing to third pa
 All third-party services are carefully vetted for privacy compliance.''',
             ),
             _buildSection(
-              title: '7. Data Security',
+              title: '7. Open Source Software',
+              content:
+                  '''Rewordium incorporates open source software components:
+
+• FlorisBoard: The keyboard component is based on FlorisBoard, an open-source Android keyboard by Patrick Goldinger and contributors, licensed under Apache License 2.0.
+
+Open source components are used in accordance with their respective licenses. The use of these components does not affect your privacy rights. Open source code processes data locally on your device and does not transmit data independently of the App.
+
+For a full list of open source licenses, see Settings > Open Source Licenses within the App.''',
+            ),
+            _buildSection(
+              title: '8. Data Security',
               content: '''We implement comprehensive security measures:
 • End-to-end encryption for sensitive data transmission
 • Secure cloud infrastructure with regular security audits
@@ -150,20 +161,18 @@ All third-party services are carefully vetted for privacy compliance.''',
 • Device-level security recommendations for users''',
             ),
             _buildSection(
-              title: '8. Your Privacy Rights',
+              title: '9. Your Privacy Rights',
               content: '''You have the right to:
 • Access your personal information and account data
 • Correct or update inaccurate information
 • Delete your account and associated data
-• Export your account information
 • Withdraw consent for data processing
 • Disable the accessibility service at any time
-• Request information about data processing activities
 
 To exercise these rights, contact us at noxquilltech@gmail.com''',
             ),
             _buildSection(
-              title: '9. Children\'s Privacy',
+              title: '10. Children\'s Privacy',
               content:
                 '''Rewordium is not intended for users under the minimum age required by applicable laws in their region. We do not knowingly collect personal information from children who do not meet the minimum age requirement. If we discover that we have collected information from a user below the applicable age threshold, we will delete that information immediately.
 
@@ -175,18 +184,17 @@ To exercise these rights, contact us at noxquilltech@gmail.com''',
                 '''AI-generated content is provided for assistance purposes only and should not be considered professional, legal, academic, medical, or financial advice. Users are responsible for reviewing and validating AI-generated suggestions before use.''',
             ),
             _buildSection(
-              title: '10. International Data Transfers',
+              title: '11. Third-Party Services',
               content:
-                  '''Your information may be processed and stored in countries other than your own. We ensure that:
-• All data transfers comply with applicable privacy laws
-• Adequate protection measures are in place
-• Third-party processors meet international privacy standards
-• You are informed of any cross-border data processing
+                  '''Our App uses the following third-party services that may process data:
+• Google Play Services (for billing and authentication)
+• Firebase (for user accounts and app functionality)
+• AI service providers (for text processing - text is not stored)
 
-We primarily use servers located in secure, privacy-compliant jurisdictions.''',
+Each service operates under their own privacy policies. We only share the minimum data necessary for these services to function.''',
             ),
             _buildSection(
-              title: '11. Cookies and Tracking',
+              title: '12. Cookies and Tracking',
               content: '''Rewordium uses minimal tracking technologies:
 • Essential cookies for app functionality and user sessions
 • Analytics cookies to understand app performance (anonymized)
@@ -197,7 +205,7 @@ We primarily use servers located in secure, privacy-compliant jurisdictions.''',
 We prioritize functionality over data collection.''',
             ),
             _buildSection(
-              title: '12. Privacy Policy Updates',
+              title: '13. Privacy Policy Updates',
               content:
                   '''We may update this Privacy Policy occasionally to reflect:
 • Changes in our data practices
@@ -212,7 +220,7 @@ When we make significant changes:
 • Users may delete their accounts if they disagree with updates''',
             ),
             _buildSection(
-              title: '13. Contact Us',
+              title: '14. Contact Us',
               content: '''For privacy-related questions, concerns, or requests:
 
 Email: noxquilltech@gmail.com
@@ -223,14 +231,14 @@ Website: rewordium.tech
 We are committed to addressing privacy concerns promptly and transparently. Responses are typically provided within 48 hours.''',
             ),
             _buildSection(
-              title: '14. Regional Privacy Rights',
-              content: '''14.1 GDPR (European Union):
+              title: '15. Regional Privacy Rights',
+              content: '''15.1 GDPR (European Union):
 EU users have additional rights under GDPR, including data portability, right to be forgotten, and the right to object to processing.
 
-14.2 CCPA (California):
+15.2 CCPA (California):
 California residents have rights to know about personal information collection, deletion rights, and opt-out rights.
 
-14.3 Other Jurisdictions:
+15.3 Other Jurisdictions:
 We comply with applicable privacy laws in all regions where Rewordium is available.''',
             ),
             const SizedBox(height: 32),

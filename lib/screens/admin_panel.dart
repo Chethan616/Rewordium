@@ -27,7 +27,8 @@ class _AdminPanelState extends State<AdminPanel> with TickerProviderStateMixin {
   Map<String, int> _userStats = {'total': 0, 'pro': 0, 'free': 0};
   Map<String, dynamic> _revenueStats = {};
   List<Map<String, dynamic>> _recentTransactions = [];
-  DateTime? _revenueBaseline;
+  // Hardcoded baseline: Only count revenue from January 16, 2026 onwards
+  final DateTime _revenueBaseline = DateTime(2026, 1, 16);
 
   @override
   void initState() {
@@ -78,19 +79,7 @@ class _AdminPanelState extends State<AdminPanel> with TickerProviderStateMixin {
     }
   }
 
-  void _setRevenueBaselineNow() {
-    setState(() {
-      _revenueBaseline = DateTime.now();
-    });
-    _loadData();
-  }
-
-  void _clearRevenueBaseline() {
-    setState(() {
-      _revenueBaseline = null;
-    });
-    _loadData();
-  }
+  // Revenue baseline is hardcoded to January 15, 2026 - no dynamic controls needed
 
   void _authenticate() {
     final password = _passwordController.text.trim();
@@ -608,27 +597,25 @@ class _AdminPanelState extends State<AdminPanel> with TickerProviderStateMixin {
             ],
           ),
           const SizedBox(height: 8),
-          // Baseline filter controls
-          Row(
-            children: [
-              ElevatedButton.icon(
-                onPressed: _setRevenueBaselineNow,
-                icon: const Icon(Icons.flag),
-                label: const Text('Count From Now'),
-              ),
-              const SizedBox(width: 8),
-              OutlinedButton.icon(
-                onPressed: _clearRevenueBaseline,
-                icon: const Icon(Icons.clear),
-                label: const Text('Clear Filter'),
-              ),
-              const SizedBox(width: 12),
-              if (_revenueBaseline != null)
-                Chip(
-                  avatar: const Icon(Icons.schedule, size: 16),
-                  label: Text('Since ${_formatDate(_revenueBaseline!)}'),
+          // Baseline indicator - revenue counted from January 15, 2026
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+            decoration: BoxDecoration(
+              color: Colors.blue.withOpacity(0.1),
+              borderRadius: BorderRadius.circular(8),
+              border: Border.all(color: Colors.blue.withOpacity(0.3)),
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Icon(Icons.flag, size: 16, color: Colors.blue),
+                const SizedBox(width: 8),
+                Text(
+                  'Revenue counted from: January 15, 2026',
+                  style: TextStyle(color: Colors.blue[700], fontWeight: FontWeight.w500),
                 ),
-            ],
+              ],
+            ),
           ),
           const SizedBox(height: 20),
 
