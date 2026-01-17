@@ -97,10 +97,7 @@ import org.florisboard.lib.snygg.ui.SnyggColumn
 import org.florisboard.lib.snygg.ui.SnyggRow
 import org.florisboard.lib.snygg.ui.SnyggText
 
-// Gradient colors for selected chip outline (accent colors)
-private val GradientStart = Color(0xFF6366F1) // Purple
-private val GradientMiddle = Color(0xFF8B5CF6) // Violet
-private val GradientEnd = Color(0xFFEC4899) // Pink
+// NOTE: No hardcoded colors - all colors come from snygg theme
 
 /**
  * AI Suggestion Chip data
@@ -135,6 +132,7 @@ fun AiInputLayout(
     val backgroundColor = windowStyle.background()
     val surfaceColor = keyStyle.background()
     val textColor = keyStyle.foreground()
+    val accentColor = smartbarStyle.foreground().takeIf { it.alpha > 0f } ?: textColor
     val secondaryTextColor = textColor.copy(alpha = 0.7f)
     val chipBackgroundColor = surfaceColor.copy(alpha = 0.8f)
     val chipSelectedColor = surfaceColor
@@ -284,14 +282,7 @@ fun AiInputLayout(
                                         .rotate(rotation)
                                         .border(
                                             width = 3.dp,
-                                            brush = Brush.sweepGradient(
-                                                listOf(
-                                                    GradientStart,
-                                                    GradientMiddle,
-                                                    GradientEnd,
-                                                    GradientStart
-                                                )
-                                            ),
+                                            color = accentColor,
                                             shape = RoundedCornerShape(50)
                                         )
                                 )
@@ -436,9 +427,7 @@ fun AiInputLayout(
                                             .clip(RoundedCornerShape(12.dp))
                                             .border(
                                                 width = 1.dp,
-                                                brush = Brush.horizontalGradient(
-                                                    listOf(GradientStart, GradientMiddle, GradientEnd)
-                                                ),
+                                                color = accentColor,
                                                 shape = RoundedCornerShape(12.dp)
                                             )
                                             .clickable {
@@ -529,7 +518,8 @@ fun AiInputLayout(
                             },
                             chipBackground = chipBackgroundColor,
                             chipSelectedBackground = chipSelectedColor,
-                            textColor = textColor
+                            textColor = textColor,
+                            accentColor = accentColor
                         )
 
                         // Row 2 — Writing Task (Infinite Scroll)
@@ -541,7 +531,8 @@ fun AiInputLayout(
                             },
                             chipBackground = chipBackgroundColor,
                             chipSelectedBackground = chipSelectedColor,
-                            textColor = textColor
+                            textColor = textColor,
+                            accentColor = accentColor
                         )
 
                         // Row 3 — Output Length (Infinite Scroll)
@@ -553,7 +544,8 @@ fun AiInputLayout(
                             },
                             chipBackground = chipBackgroundColor,
                             chipSelectedBackground = chipSelectedColor,
-                            textColor = textColor
+                            textColor = textColor,
+                            accentColor = accentColor
                         )
                         
                         // Generate Button Row
@@ -566,11 +558,7 @@ fun AiInputLayout(
                             Box(
                                 modifier = Modifier
                                     .clip(RoundedCornerShape(20.dp))
-                                    .background(
-                                        Brush.horizontalGradient(
-                                            listOf(GradientStart, GradientMiddle, GradientEnd)
-                                        )
-                                    )
+                                    .background(accentColor)
                                     .clickable {
                                         scope.launch {
                                             val selectedText = editorInstance.activeContent.selectedText
@@ -637,13 +625,13 @@ fun AiInputLayout(
                                 Icon(
                                     imageVector = Icons.Default.AutoAwesome,
                                     contentDescription = null,
-                                    tint = Color.White,
+                                    tint = backgroundColor,
                                     modifier = Modifier.size(16.dp)
                                 )
                                 Spacer(modifier = Modifier.width(6.dp))
                                 Text(
                                     text = "Generate",
-                                    color = Color.White,
+                                    color = backgroundColor,
                                     fontSize = 14.sp,
                                     fontWeight = FontWeight.SemiBold
                                 )
@@ -685,7 +673,7 @@ fun AiInputLayout(
                             modifier = Modifier
                                 .fillMaxHeight()
                                 .clip(RoundedCornerShape(8.dp))
-                                .background(Color(0xFF4CAF50))
+                                .background(accentColor)
                                 .clickable {
                                     generatedText?.let { text ->
                                         // Select all text first if we were rewriting all text,
@@ -708,13 +696,13 @@ fun AiInputLayout(
                                 Icon(
                                     imageVector = Icons.Default.Check,
                                     contentDescription = "Insert",
-                                    tint = Color.White,
+                                    tint = backgroundColor,
                                     modifier = Modifier.size(16.dp)
                                 )
                                 Spacer(modifier = Modifier.width(4.dp))
                                 Text(
                                     text = "Replace",
-                                    color = Color.White,
+                                    color = backgroundColor,
                                     fontSize = 13.sp,
                                     fontWeight = FontWeight.Medium
                                 )
@@ -767,7 +755,7 @@ fun AiInputLayout(
 }
 
 /**
- * Theme-aware suggestion chip with gradient outline when selected
+ * Theme-aware suggestion chip with accent border when selected
  */
 @Composable
 private fun MetaAiSuggestionChip(
@@ -777,12 +765,9 @@ private fun MetaAiSuggestionChip(
     onClick: () -> Unit,
     chipBackground: Color,
     chipSelectedBackground: Color,
-    textColor: Color
+    textColor: Color,
+    accentColor: Color = textColor
 ) {
-    val gradientBrush = Brush.horizontalGradient(
-        listOf(GradientStart, GradientMiddle, GradientEnd)
-    )
-    
     Box(
         modifier = Modifier
             .clip(RoundedCornerShape(20.dp))
@@ -790,7 +775,7 @@ private fun MetaAiSuggestionChip(
                 if (isSelected) {
                     Modifier.border(
                         width = 2.dp,
-                        brush = gradientBrush,
+                        color = accentColor,
                         shape = RoundedCornerShape(20.dp)
                     )
                 } else {
@@ -803,7 +788,7 @@ private fun MetaAiSuggestionChip(
     ) {
         Text(
             text = text,
-            color = textColor,
+            color = if (isSelected) accentColor else textColor,
             fontSize = 12.sp,
             fontWeight = if (isSelected) FontWeight.SemiBold else FontWeight.Medium,
             maxLines = 1
@@ -822,7 +807,8 @@ private fun InfiniteScrollChipRow(
     onChipSelected: (String) -> Unit,
     chipBackground: Color,
     chipSelectedBackground: Color,
-    textColor: Color
+    textColor: Color,
+    accentColor: Color = textColor
 ) {
     // Create a large list by repeating the chips many times for infinite scroll effect
     val repeatCount = 100 // Repeat enough times for seamless scrolling
@@ -853,7 +839,8 @@ private fun InfiniteScrollChipRow(
                 onClick = { onChipSelected(chip) },
                 chipBackground = chipBackground,
                 chipSelectedBackground = chipSelectedBackground,
-                textColor = textColor
+                textColor = textColor,
+                accentColor = accentColor
             )
         }
     }

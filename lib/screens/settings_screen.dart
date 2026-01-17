@@ -4,15 +4,18 @@ import 'package:provider/provider.dart';
 import 'package:android_intent_plus/android_intent.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:package_info_plus/package_info_plus.dart';
+import 'dart:math';
 import '../providers/keyboard_provider.dart';
 import '../theme/app_theme.dart';
 import '../services/rewordium_keyboard_service.dart';
 import '../services/force_update_service.dart';
+import '../services/billing_service.dart';
 import '../theme/theme_provider.dart';
 import '../utils/lottie_assets.dart';
 import '../widgets/animated_card.dart';
 import '../widgets/custom_app_bar.dart';
 import '../widgets/custom_button.dart';
+import '../widgets/broken_screen.dart';
 import '../screens/auth/login_screen.dart';
 import '../screens/auth/signup_screen.dart';
 import '../screens/licenses_screen.dart';
@@ -20,6 +23,23 @@ import '../screens/advanced_ai_settings_screen.dart';
 import '../providers/auth_provider.dart';
 import '../widgets/upgrade_dialog.dart';
 import 'admin_panel.dart';
+
+// In-memory state for thunder Easter egg (resets on app restart)
+int _thunderTapCount = 0;
+int _lastMessageIndex = -1;
+
+// Funny messages for thunder button (exactly 9)
+const List<String> _thunderMessages = [
+  '⚡ You pressed it again. We\'re judging. Gently.',
+  '⚡ Nothing happened. But something almost did.',
+  '⚡ AI status: confident. Results: questionable.',
+  '⚡ Somewhere, a semicolon just moved.',
+  '⚡ The code is fine. Probably.',
+  '⚡ This feature exists purely because we could.',
+  '⚡ If this works, don\'t touch anything.',
+  '⚡ Achievement unlocked: Unnecessary Interaction.',
+  '⚡ ok ur doomed.',
+];
 
 class SettingsScreen extends StatefulWidget {
   const SettingsScreen({super.key});
@@ -32,6 +52,48 @@ class _SettingsScreenState extends State<SettingsScreen> {
   // Admin access state
   int _adminTapCount = 0;
   DateTime? _lastTapTime;
+  
+  // Random generator for thunder messages
+  final Random _random = Random();
+
+  /// Thunder button Easter egg handler
+  void _onThunderTap() {
+    _thunderTapCount++;
+    
+    if (_thunderTapCount >= 10) {
+      // Activate Broken Code Mode on 10th tap - navigate to full-screen
+      Navigator.of(context).push(
+        MaterialPageRoute(
+          builder: (context) => const BrokenScreen(),
+        ),
+      );
+    } else {
+      // Show random funny message (taps 1-9)
+      // Try to avoid repeating the last message
+      int newIndex;
+      do {
+        newIndex = _random.nextInt(_thunderMessages.length);
+      } while (newIndex == _lastMessageIndex && _thunderMessages.length > 1);
+      
+      _lastMessageIndex = newIndex;
+      
+      ScaffoldMessenger.of(context).clearSnackBars();
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            _thunderMessages[newIndex],
+            style: const TextStyle(fontSize: 14),
+          ),
+          duration: const Duration(seconds: 2),
+          behavior: SnackBarBehavior.floating,
+          backgroundColor: Colors.grey[850],
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(10),
+          ),
+        ),
+      );
+    }
+  }
 
   void _checkAdminAccess() {
     final BuildContext context = this.context;
@@ -95,8 +157,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
               await authProvider.signOut();
 
               if (context.mounted) {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('You have been signed out')),
+                // Navigate to login screen and clear all routes
+                Navigator.of(context).pushAndRemoveUntil(
+                  MaterialPageRoute(builder: (context) => const LoginScreen()),
+                  (route) => false,
                 );
               }
             },
@@ -104,6 +168,45 @@ class _SettingsScreenState extends State<SettingsScreen> {
         ],
       ),
     );
+  }
+
+  /// Restore previous purchases
+  Future<void> _restorePurchases(BuildContext context) async {
+    // Show loading indicator
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => const Center(
+        child: CircularProgressIndicator(),
+      ),
+    );
+
+    try {
+      final billingService = Provider.of<BillingService>(context, listen: false);
+      await billingService.restorePurchases();
+
+      if (context.mounted) {
+        Navigator.of(context).pop(); // Close loading
+
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Purchases restored! If you had a subscription, it will be reflected shortly.'),
+            duration: Duration(seconds: 3),
+          ),
+        );
+      }
+    } catch (e) {
+      if (context.mounted) {
+        Navigator.of(context).pop(); // Close loading
+
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error restoring purchases: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
   }
 
   /// Opens the native ReBoard keyboard settings activity
@@ -196,7 +299,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
               actions: [
                 IconButton(
                   icon: const Icon(CupertinoIcons.bolt),
-                  onPressed: () {},
+                  onPressed: _onThunderTap,
                   color: AppTheme.primaryColor,
                 ),
               ],
@@ -610,7 +713,14 @@ class _SettingsScreenState extends State<SettingsScreen> {
               },
               type: ButtonType.secondary,
               icon: CupertinoIcons.settings,
-            )
+            ),
+          const SizedBox(height: 12),
+          CustomButton(
+            text: "Restore Purchases",
+            onPressed: () => _restorePurchases(context),
+            type: ButtonType.secondary,
+            icon: CupertinoIcons.arrow_counterclockwise,
+          ),
         ] else ...[
           // Show current credits for free users
           Container(
@@ -645,6 +755,14 @@ class _SettingsScreenState extends State<SettingsScreen> {
             },
             type: ButtonType.primary,
             width: double.infinity,
+          ),
+          const SizedBox(height: 12),
+          // Restore purchases button for free users who previously purchased
+          CustomButton(
+            text: "Restore Purchases",
+            onPressed: () => _restorePurchases(context),
+            type: ButtonType.secondary,
+            icon: CupertinoIcons.arrow_counterclockwise,
           ),
         ],
         if ((isPro && planType != 'onetime') || !isPro)

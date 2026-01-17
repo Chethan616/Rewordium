@@ -1,0 +1,26 @@
+# Flutter Native Splash Configuration
+# Simple white splash that transitions quickly to Flutter splash
+
+flutter_native_splash:
+  # White background
+  color: "#FFFFFF"
+  
+  # Dark mode background  
+  color_dark: "#1E1E1E"
+
+  # No image - just plain white/dark background for fastest transition
+  # The jellyfish and "Rewordium" text will show in the Flutter splash screen
+  # This avoids the Android 12+ image cropping issues
+  
+  # Android 12+ specific settings
+  android_12:
+    color: "#FFFFFF"
+    color_dark: "#1E1E1E"
+
+  # Platform specific settings
+  android: true
+  ios: true
+  web: false
+  
+  # Fullscreen for immersive experience
+  fullscreen: true

@@ -206,7 +206,7 @@ class AuthProvider extends ChangeNotifier {
   }
 
   Future<bool> signUpWithEmailAndPassword(
-      String email, String password, String name) async {
+      String email, String password, String name, {bool subscribedToNews = false}) async {
     _isLoading = true;
     _error = null;
     notifyListeners();
@@ -229,7 +229,7 @@ class AuthProvider extends ChangeNotifier {
       }
 
       _user = await FirebaseService.signUpWithEmailAndPassword(
-          email.trim(), password, name.trim());
+          email.trim(), password, name.trim(), subscribedToNews: subscribedToNews);
 
       if (_user != null) {
         await _loadUserData();

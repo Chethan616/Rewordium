@@ -9,6 +9,8 @@ class UserModel {
   final String signInMethod;
   final String? fcmToken;
   final bool isActive;
+  final bool subscribedToNews;
+  final String? planType;
 
   UserModel({
     required this.uid,
@@ -21,6 +23,8 @@ class UserModel {
     required this.signInMethod,
     this.fcmToken,
     this.isActive = true,
+    this.subscribedToNews = false,
+    this.planType,
   });
 
   factory UserModel.fromMap(String uid, Map<String, dynamic> data) {
@@ -35,6 +39,8 @@ class UserModel {
       signInMethod: data['signInMethod'] ?? 'unknown',
       fcmToken: data['fcmToken'],
       isActive: data['isActive'] ?? true,
+      subscribedToNews: data['subscribedToNews'] ?? false,
+      planType: data['planType'],
     );
   }
 
@@ -54,6 +60,8 @@ class UserModel {
       'signInMethod': signInMethod,
       'fcmToken': fcmToken,
       'isActive': isActive,
+      'subscribedToNews': subscribedToNews,
+      'planType': planType,
     };
   }
 
@@ -67,6 +75,8 @@ class UserModel {
     String? signInMethod,
     String? fcmToken,
     bool? isActive,
+    bool? subscribedToNews,
+    String? planType,
   }) {
     return UserModel(
       uid: uid,
@@ -79,6 +89,8 @@ class UserModel {
       signInMethod: signInMethod ?? this.signInMethod,
       fcmToken: fcmToken ?? this.fcmToken,
       isActive: isActive ?? this.isActive,
+      subscribedToNews: subscribedToNews ?? this.subscribedToNews,
+      planType: planType ?? this.planType,
     );
   }
 

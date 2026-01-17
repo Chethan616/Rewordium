@@ -6,6 +6,7 @@ import '../providers/auth_provider.dart';
 import '../theme/app_theme.dart';
 import '../widgets/custom_button.dart';
 import '../widgets/upgrade_dialog.dart';
+import '../screens/auth/login_screen.dart';
 
 class ProfileDropdown extends StatelessWidget {
   const ProfileDropdown({super.key});
@@ -94,9 +95,16 @@ class ProfileDropdown extends StatelessWidget {
             // Sign out button
             CustomButton(
               text: 'Sign Out',
-              onPressed: () {
-                authProvider.signOut();
-                Navigator.pop(context);
+              onPressed: () async {
+                Navigator.pop(context); // Close the dropdown first
+                await authProvider.signOut();
+                if (context.mounted) {
+                  // Navigate to login screen and clear all routes
+                  Navigator.of(context).pushAndRemoveUntil(
+                    MaterialPageRoute(builder: (context) => const LoginScreen()),
+                    (route) => false,
+                  );
+                }
               },
               type: ButtonType.secondary,
               width: double.infinity,

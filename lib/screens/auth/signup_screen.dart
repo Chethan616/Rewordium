@@ -25,6 +25,7 @@ class _SignupScreenState extends State<SignupScreen> {
   final _formKey = GlobalKey<FormState>();
   bool _passwordVisible = false;
   bool _confirmPasswordVisible = false;
+  bool _subscribedToNews = false;
 
   @override
   void dispose() {
@@ -85,6 +86,7 @@ class _SignupScreenState extends State<SignupScreen> {
         _emailController.text.trim(),
         _passwordController.text,
         _nameController.text.trim(),
+        subscribedToNews: _subscribedToNews,
       );
 
       if (!success && mounted && authProvider.error != null) {
@@ -295,7 +297,45 @@ class _SignupScreenState extends State<SignupScreen> {
                     ),
                   ),
                 ),
-                const SizedBox(height: 32),
+                const SizedBox(height: 20),
+
+                // Newsletter subscription checkbox
+                Container(
+                  decoration: BoxDecoration(
+                    color: AppTheme.primaryColor.withOpacity(0.05),
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(
+                      color: AppTheme.primaryColor.withOpacity(0.2),
+                    ),
+                  ),
+                  child: CheckboxListTile(
+                    value: _subscribedToNews,
+                    onChanged: (value) {
+                      setState(() {
+                        _subscribedToNews = value ?? false;
+                      });
+                    },
+                    title: Text(
+                      'Subscribe to news & updates',
+                      style: AppTheme.bodyMedium.copyWith(
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                    subtitle: Text(
+                      'Get notified about new features, tips, and special offers',
+                      style: AppTheme.bodySmall.copyWith(
+                        color: AppTheme.textSecondaryColor,
+                      ),
+                    ),
+                    activeColor: AppTheme.primaryColor,
+                    checkboxShape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(4),
+                    ),
+                    contentPadding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                    controlAffinity: ListTileControlAffinity.leading,
+                  ),
+                ),
+                const SizedBox(height: 24),
 
                 // Sign up button
                 CustomButton(

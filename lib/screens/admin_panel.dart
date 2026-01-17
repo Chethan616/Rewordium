@@ -1,7 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'dart:io';
+import 'package:path_provider/path_provider.dart';
+import 'package:share_plus/share_plus.dart';
 import '../services/admin_service.dart';
 import '../models/user_model.dart';
+import '../theme/app_theme.dart';
 
 class AdminPanel extends StatefulWidget {
   const AdminPanel({super.key});
@@ -29,6 +33,11 @@ class _AdminPanelState extends State<AdminPanel> with TickerProviderStateMixin {
   List<Map<String, dynamic>> _recentTransactions = [];
   // Hardcoded baseline: Only count revenue from January 16, 2026 onwards
   final DateTime _revenueBaseline = DateTime(2026, 1, 16);
+
+  // Filter and sort state
+  String _filterBy = 'all'; // 'all', 'pro', 'free', 'news_subscribers'
+  String _sortBy = 'createdAt'; // 'name', 'email', 'createdAt', 'credits'
+  bool _sortAscending = false;
 
   @override
   void initState() {
@@ -309,34 +318,54 @@ class _AdminPanelState extends State<AdminPanel> with TickerProviderStateMixin {
   }
 
   Widget _buildAdminDashboard() {
+    final isDark = AppTheme.isDarkMode;
     return Scaffold(
+      backgroundColor: isDark ? AppTheme.darkBackgroundColor : AppTheme.lightBackgroundColor,
       appBar: AppBar(
-        title: const Text('Admin Dashboard'),
+        title: Row(
+          children: [
+            const Icon(Icons.admin_panel_settings, size: 24, color: Colors.white),
+            const SizedBox(width: 12),
+            const Text('Admin Dashboard', style: TextStyle(color: Colors.white)),
+          ],
+        ),
         elevation: 0,
+        backgroundColor: AppTheme.primaryColor,
+        foregroundColor: Colors.white,
+        iconTheme: const IconThemeData(color: Colors.white),
+        actionsIconTheme: const IconThemeData(color: Colors.white),
         actions: [
           IconButton(
-            icon: const Icon(Icons.refresh),
+            icon: const Icon(Icons.refresh, color: Colors.white),
             onPressed: _loadData,
+            tooltip: 'Refresh Data',
           ),
           IconButton(
-            icon: const Icon(Icons.logout),
+            icon: const Icon(Icons.logout, color: Colors.white),
             onPressed: () {
               setState(() {
                 _isAuthenticated = false;
                 _passwordController.clear();
               });
             },
+            tooltip: 'Sign Out',
           ),
         ],
         bottom: TabBar(
           controller: _tabController,
           isScrollable: true,
+          indicatorColor: Colors.white,
+          indicatorWeight: 3,
+          labelColor: Colors.white,
+          unselectedLabelColor: Colors.white70,
+          labelStyle: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13, color: Colors.white),
+          unselectedLabelStyle: const TextStyle(fontWeight: FontWeight.w400, color: Colors.white70),
           tabs: const [
-            Tab(icon: Icon(Icons.dashboard), text: 'Overview'),
-            Tab(icon: Icon(Icons.attach_money), text: 'Revenue'),
-            Tab(icon: Icon(Icons.send), text: 'Notifications'),
-            Tab(icon: Icon(Icons.people), text: 'Users'),
-            Tab(icon: Icon(Icons.history), text: 'History'),
+            Tab(icon: Icon(Icons.dashboard_rounded, color: Colors.white), text: 'Overview'),
+            Tab(icon: Icon(Icons.attach_money_rounded, color: Colors.white), text: 'Revenue'),
+            Tab(icon: Icon(Icons.send_rounded, color: Colors.white), text: 'Notifications'),
+            Tab(icon: Icon(Icons.people_rounded, color: Colors.white), text: 'Users'),
+            Tab(icon: Icon(Icons.history_rounded, color: Colors.white), text: 'History'),
           ],
         ),
       ),
@@ -354,36 +383,75 @@ class _AdminPanelState extends State<AdminPanel> with TickerProviderStateMixin {
   }
 
   Widget _buildOverviewTab() {
+    final isDark = AppTheme.isDarkMode;
     return SingleChildScrollView(
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.all(20),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Text(
-                'User Statistics',
-                style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                      fontWeight: FontWeight.bold,
-                    ),
-              ),
-              ElevatedButton.icon(
-                onPressed: _loadData,
-                icon: _isLoading
-                    ? const SizedBox(
-                        width: 16,
-                        height: 16,
-                        child: CircularProgressIndicator(strokeWidth: 2),
-                      )
-                    : const Icon(Icons.refresh, size: 16),
-                label: Text(_isLoading ? 'Refreshing...' : 'Refresh Data'),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.blue,
-                  foregroundColor: Colors.white,
+          // Welcome Header Card
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.all(24),
+            decoration: BoxDecoration(
+              color: AppTheme.primaryColor,
+              borderRadius: BorderRadius.circular(16),
+            ),
+            child: Row(
+              children: [
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        '👋 Welcome, Admin',
+                        style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                              fontWeight: FontWeight.bold,
+                              color: Colors.white,
+                            ),
+                      ),
+                      const SizedBox(height: 8),
+                      Text(
+                        'Here\'s your app overview for today',
+                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                              color: Colors.white.withOpacity(0.85),
+                            ),
+                      ),
+                    ],
+                  ),
                 ),
-              ),
-            ],
+                ElevatedButton.icon(
+                  onPressed: _loadData,
+                  icon: _isLoading
+                      ? const SizedBox(
+                          width: 16,
+                          height: 16,
+                          child: CircularProgressIndicator(strokeWidth: 2, color: Colors.green),
+                        )
+                      : const Icon(Icons.refresh, size: 18),
+                  label: Text(_isLoading ? 'Loading...' : 'Refresh'),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.white,
+                    foregroundColor: AppTheme.primaryColor,
+                    elevation: 0,
+                    padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 24),
+          
+          // Section Title
+          Text(
+            '📊 User Statistics',
+            style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                  fontWeight: FontWeight.bold,
+                  color: isDark ? AppTheme.darkTextPrimaryColor : AppTheme.lightTextPrimaryColor,
+                ),
           ),
           const SizedBox(height: 16),
           if (_isLoading)
@@ -429,7 +497,7 @@ class _AdminPanelState extends State<AdminPanel> with TickerProviderStateMixin {
                     'Free Users',
                     _userStats['free'].toString(),
                     Icons.person,
-                    Colors.green,
+                    AppTheme.primaryColor,
                   ),
                 ),
                 const SizedBox(width: 16),
@@ -445,33 +513,34 @@ class _AdminPanelState extends State<AdminPanel> with TickerProviderStateMixin {
             ),
             const SizedBox(height: 32),
             Text(
-              'Quick Actions',
+              '⚡ Quick Actions',
               style: Theme.of(context).textTheme.headlineSmall?.copyWith(
                     fontWeight: FontWeight.bold,
+                    color: isDark ? AppTheme.darkTextPrimaryColor : AppTheme.lightTextPrimaryColor,
                   ),
             ),
             const SizedBox(height: 16),
-            Wrap(
-              spacing: 16,
-              runSpacing: 16,
+            Row(
               children: [
                 _buildQuickActionCard(
-                  'Broadcast to All',
+                  'Broadcast',
                   Icons.campaign,
                   Colors.purple,
-                  () => _tabController.animateTo(1),
-                ),
-                _buildQuickActionCard(
-                  'Manage Users',
-                  Icons.manage_accounts,
-                  Colors.teal,
                   () => _tabController.animateTo(2),
                 ),
+                const SizedBox(width: 12),
                 _buildQuickActionCard(
-                  'View History',
-                  Icons.history,
-                  Colors.indigo,
+                  'Users',
+                  Icons.manage_accounts,
+                  Colors.teal,
                   () => _tabController.animateTo(3),
+                ),
+                const SizedBox(width: 12),
+                _buildQuickActionCard(
+                  'History',
+                  Icons.history,
+                  AppTheme.primaryColor,
+                  () => _tabController.animateTo(4),
                 ),
               ],
             ),
@@ -483,31 +552,41 @@ class _AdminPanelState extends State<AdminPanel> with TickerProviderStateMixin {
 
   Widget _buildStatCard(
       String title, String value, IconData icon, Color color) {
-    return Card(
-      elevation: 2,
+    final isDark = AppTheme.isDarkMode;
+    return Container(
+      decoration: BoxDecoration(
+        color: isDark ? AppTheme.darkCardColor : Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: isDark ? Colors.grey.shade800 : Colors.grey.shade200),
+      ),
       child: Padding(
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.all(20),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Icon(icon, color: color, size: 32),
-                Text(
-                  value,
-                  style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-                        fontWeight: FontWeight.bold,
-                        color: color,
-                      ),
-                ),
-              ],
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: color.withOpacity(0.15),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Icon(icon, color: color, size: 28),
             ),
-            const SizedBox(height: 8),
+            const SizedBox(height: 16),
+            Text(
+              value,
+              style: Theme.of(context).textTheme.headlineMedium?.copyWith(
+                    fontWeight: FontWeight.bold,
+                    color: color,
+                    letterSpacing: -0.5,
+                  ),
+            ),
+            const SizedBox(height: 4),
             Text(
               title,
               style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                    fontWeight: FontWeight.w500,
+                    fontWeight: FontWeight.w600,
+                    color: isDark ? AppTheme.darkTextSecondaryColor : AppTheme.lightTextSecondaryColor,
                   ),
             ),
           ],
@@ -522,24 +601,37 @@ class _AdminPanelState extends State<AdminPanel> with TickerProviderStateMixin {
     Color color,
     VoidCallback onTap,
   ) {
-    return SizedBox(
-      width: 150,
-      child: Card(
-        elevation: 2,
+    final isDark = AppTheme.isDarkMode;
+    return Expanded(
+      child: Material(
+        color: Colors.transparent,
         child: InkWell(
           onTap: onTap,
-          borderRadius: BorderRadius.circular(12),
-          child: Padding(
-            padding: const EdgeInsets.all(16),
+          borderRadius: BorderRadius.circular(16),
+          child: Container(
+            padding: const EdgeInsets.symmetric(vertical: 24, horizontal: 16),
+            decoration: BoxDecoration(
+              color: isDark ? AppTheme.darkCardColor : Colors.white,
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(color: isDark ? Colors.grey.shade800 : Colors.grey.shade200),
+            ),
             child: Column(
               children: [
-                Icon(icon, color: color, size: 48),
-                const SizedBox(height: 12),
+                Container(
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: color.withOpacity(0.15),
+                    borderRadius: BorderRadius.circular(14),
+                  ),
+                  child: Icon(icon, color: color, size: 32),
+                ),
+                const SizedBox(height: 16),
                 Text(
                   title,
                   textAlign: TextAlign.center,
                   style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                        fontWeight: FontWeight.w500,
+                        fontWeight: FontWeight.w600,
+                        color: isDark ? AppTheme.darkTextPrimaryColor : AppTheme.lightTextPrimaryColor,
                       ),
                 ),
               ],
@@ -551,6 +643,7 @@ class _AdminPanelState extends State<AdminPanel> with TickerProviderStateMixin {
   }
 
   Widget _buildRevenueTab() {
+    final isDark = AppTheme.isDarkMode;
     final totalRevenue = _revenueStats['totalRevenue'] ?? 0.0;
     final mrr = _revenueStats['mrr'] ?? 0.0;
     final thisMonthRevenue = _revenueStats['thisMonthRevenue'] ?? 0.0;
@@ -565,59 +658,77 @@ class _AdminPanelState extends State<AdminPanel> with TickerProviderStateMixin {
     final conversionRate = _revenueStats['conversionRate'] ?? 0.0;
 
     return SingleChildScrollView(
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.all(20),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Header with refresh
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Text(
-                '💰 Revenue Analytics',
-                style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                      fontWeight: FontWeight.bold,
-                    ),
-              ),
-              ElevatedButton.icon(
-                onPressed: _loadData,
-                icon: _isLoading
-                    ? const SizedBox(
-                        width: 16,
-                        height: 16,
-                        child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
-                      )
-                    : const Icon(Icons.refresh, size: 16),
-                label: const Text('Refresh'),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.green,
-                  foregroundColor: Colors.white,
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 8),
-          // Baseline indicator - revenue counted from January 16, 2026
+          // Revenue Header Card
           Container(
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+            width: double.infinity,
+            padding: const EdgeInsets.all(24),
             decoration: BoxDecoration(
-              color: Colors.blue.withOpacity(0.1),
-              borderRadius: BorderRadius.circular(8),
-              border: Border.all(color: Colors.blue.withOpacity(0.3)),
+              color: AppTheme.primaryColor,
+              borderRadius: BorderRadius.circular(16),
             ),
             child: Row(
-              mainAxisSize: MainAxisSize.min,
               children: [
-                const Icon(Icons.flag, size: 16, color: Colors.blue),
-                const SizedBox(width: 8),
-                Text(
-                  'Revenue counted from: January 16, 2026',
-                  style: TextStyle(color: Colors.blue[700], fontWeight: FontWeight.w500),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        '💰 Revenue Analytics',
+                        style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                              fontWeight: FontWeight.bold,
+                              color: Colors.white,
+                            ),
+                      ),
+                      const SizedBox(height: 8),
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                        decoration: BoxDecoration(
+                          color: Colors.white.withOpacity(0.2),
+                          borderRadius: BorderRadius.circular(20),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(Icons.flag, size: 14, color: Colors.white.withOpacity(0.9)),
+                            const SizedBox(width: 6),
+                            Text(
+                              'From: Jan 16, 2026',
+                              style: TextStyle(color: Colors.white.withOpacity(0.9), fontSize: 12, fontWeight: FontWeight.w500),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                ElevatedButton.icon(
+                  onPressed: _loadData,
+                  icon: _isLoading
+                      ? const SizedBox(
+                          width: 16,
+                          height: 16,
+                          child: CircularProgressIndicator(strokeWidth: 2, color: Colors.green),
+                        )
+                      : const Icon(Icons.refresh, size: 18),
+                  label: Text(_isLoading ? 'Loading...' : 'Refresh'),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.white,
+                    foregroundColor: AppTheme.primaryColor,
+                    elevation: 0,
+                    padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                  ),
                 ),
               ],
             ),
           ),
-          const SizedBox(height: 20),
+          const SizedBox(height: 24),
 
           if (_isLoading)
             const Center(child: CircularProgressIndicator())
@@ -630,7 +741,7 @@ class _AdminPanelState extends State<AdminPanel> with TickerProviderStateMixin {
                     'Total Revenue',
                     '\$${totalRevenue.toStringAsFixed(2)}',
                     Icons.account_balance_wallet,
-                    Colors.green,
+                    AppTheme.primaryColor,
                     subtitle: 'All time earnings',
                   ),
                 ),
@@ -678,23 +789,29 @@ class _AdminPanelState extends State<AdminPanel> with TickerProviderStateMixin {
               '📊 Subscription Breakdown',
               style: Theme.of(context).textTheme.titleLarge?.copyWith(
                     fontWeight: FontWeight.bold,
+                    color: isDark ? AppTheme.darkTextPrimaryColor : AppTheme.lightTextPrimaryColor,
                   ),
             ),
             const SizedBox(height: 12),
             
-            Card(
+            Container(
+              decoration: BoxDecoration(
+                color: isDark ? AppTheme.darkCardColor : Colors.white,
+                borderRadius: BorderRadius.circular(16),
+                border: Border.all(color: isDark ? Colors.grey.shade800 : Colors.grey.shade200),
+              ),
               child: Padding(
-                padding: const EdgeInsets.all(16),
+                padding: const EdgeInsets.all(20),
                 child: Column(
                   children: [
-                    _buildSubscriptionRow('Monthly Subscribers', monthlySubscribers, Colors.blue, '\$4.99/mo'),
-                    const Divider(),
-                    _buildSubscriptionRow('Yearly Subscribers', yearlySubscribers, Colors.green, '\$29.99/yr'),
-                    const Divider(),
+                    _buildSubscriptionRow('Monthly Subscribers', monthlySubscribers, Colors.blue, '\$2.98/mo'),
+                    Divider(color: isDark ? Colors.grey.shade700 : Colors.grey.shade200),
+                    _buildSubscriptionRow('Yearly Subscribers', yearlySubscribers, AppTheme.primaryColor, '\$19.00/yr'),
+                    Divider(color: isDark ? Colors.grey.shade700 : Colors.grey.shade200),
                     _buildSubscriptionRow('Lifetime/One-time', onetimeSubscribers, Colors.purple, '\$49.99'),
-                    const Divider(thickness: 2),
+                    Divider(color: isDark ? Colors.grey.shade600 : Colors.grey.shade300, thickness: 2),
                     _buildSubscriptionRow('Active Subscriptions', activeSubscriptions, Colors.teal, ''),
-                    const Divider(),
+                    Divider(color: isDark ? Colors.grey.shade700 : Colors.grey.shade200),
                     _buildSubscriptionRow('Expired', expiredSubscriptions, Colors.red, ''),
                   ],
                 ),
@@ -708,6 +825,7 @@ class _AdminPanelState extends State<AdminPanel> with TickerProviderStateMixin {
               '🎯 Performance Metrics',
               style: Theme.of(context).textTheme.titleLarge?.copyWith(
                     fontWeight: FontWeight.bold,
+                    color: isDark ? AppTheme.darkTextPrimaryColor : AppTheme.lightTextPrimaryColor,
                   ),
             ),
             const SizedBox(height: 12),
@@ -719,7 +837,7 @@ class _AdminPanelState extends State<AdminPanel> with TickerProviderStateMixin {
                     'Conversion Rate',
                     '${conversionRate.toStringAsFixed(1)}%',
                     Icons.pie_chart,
-                    Colors.indigo,
+                    AppTheme.secondaryColor,
                   ),
                 ),
                 const SizedBox(width: 12),
@@ -741,24 +859,27 @@ class _AdminPanelState extends State<AdminPanel> with TickerProviderStateMixin {
               '📝 Recent Transactions',
               style: Theme.of(context).textTheme.titleLarge?.copyWith(
                     fontWeight: FontWeight.bold,
+                    color: isDark ? AppTheme.darkTextPrimaryColor : AppTheme.lightTextPrimaryColor,
                   ),
             ),
             const SizedBox(height: 12),
             
             if (_recentTransactions.isEmpty)
               Card(
+                color: isDark ? AppTheme.darkCardColor : Colors.white,
                 child: Padding(
                   padding: const EdgeInsets.all(32),
                   child: Center(
                     child: Text(
                       'No transactions yet',
-                      style: TextStyle(color: Colors.grey[600]),
+                      style: TextStyle(color: isDark ? AppTheme.darkTextSecondaryColor : Colors.grey[600]),
                     ),
                   ),
                 ),
               )
             else
               Card(
+                color: isDark ? AppTheme.darkCardColor : Colors.white,
                 child: ListView.separated(
                   shrinkWrap: true,
                   physics: const NeverScrollableScrollPhysics(),
@@ -779,8 +900,14 @@ class _AdminPanelState extends State<AdminPanel> with TickerProviderStateMixin {
                           size: 20,
                         ),
                       ),
-                      title: Text(tx['userName'] ?? 'Unknown'),
-                      subtitle: Text(tx['email'] ?? ''),
+                      title: Text(
+                        tx['userName'] ?? 'Unknown',
+                        style: TextStyle(color: isDark ? AppTheme.darkTextPrimaryColor : AppTheme.lightTextPrimaryColor),
+                      ),
+                      subtitle: Text(
+                        tx['email'] ?? '',
+                        style: TextStyle(color: isDark ? AppTheme.darkTextSecondaryColor : AppTheme.lightTextSecondaryColor),
+                      ),
                       trailing: Column(
                         mainAxisAlignment: MainAxisAlignment.center,
                         crossAxisAlignment: CrossAxisAlignment.end,
@@ -797,7 +924,7 @@ class _AdminPanelState extends State<AdminPanel> with TickerProviderStateMixin {
                               _formatDate(date),
                               style: TextStyle(
                                 fontSize: 12,
-                                color: Colors.grey[600],
+                                color: isDark ? AppTheme.darkTextSecondaryColor : Colors.grey[600],
                               ),
                             ),
                         ],
@@ -813,28 +940,154 @@ class _AdminPanelState extends State<AdminPanel> with TickerProviderStateMixin {
   }
 
   Widget _buildRevenueCard(String title, String value, IconData icon, Color color, {String? subtitle}) {
-    return Card(
-      elevation: 4,
-      child: Container(
-        padding: const EdgeInsets.all(16),
-        decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(12),
-          gradient: LinearGradient(
-            colors: [color.withOpacity(0.1), color.withOpacity(0.05)],
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-          ),
-        ),
+    final isDark = AppTheme.isDarkMode;
+    return Container(
+      decoration: BoxDecoration(
+        color: isDark ? AppTheme.darkCardColor : Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: isDark ? Colors.grey.shade800 : Colors.grey.shade200),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(20),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Row(
+            Container(
+              padding: const EdgeInsets.all(10),
+              decoration: BoxDecoration(
+                color: color.withOpacity(0.15),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Icon(icon, color: color, size: 22),
+            ),
+            const SizedBox(height: 16),
+            Text(
+              value,
+              style: TextStyle(
+                fontSize: 26,
+                fontWeight: FontWeight.bold,
+                color: color,
+                letterSpacing: -0.5,
+              ),
+            ),
+            const SizedBox(height: 6),
+            Text(
+              title,
+              style: TextStyle(
+                fontSize: 14,
+                color: isDark ? AppTheme.darkTextSecondaryColor : AppTheme.lightTextSecondaryColor,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+            if (subtitle != null) ...[
+              const SizedBox(height: 4),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                decoration: BoxDecoration(
+                  color: color.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Text(
+                  subtitle,
+                  style: TextStyle(
+                    fontSize: 11,
+                    color: color,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+              ),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildSubscriptionRow(String label, int count, Color color, String price) {
+    final isDark = AppTheme.isDarkMode;
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 12),
+      child: Row(
+        children: [
+          Container(
+            width: 40,
+            height: 40,
+            decoration: BoxDecoration(
+              color: color.withOpacity(0.15),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Center(
+              child: Container(
+                width: 12,
+                height: 12,
+                decoration: BoxDecoration(
+                  color: color,
+                  shape: BoxShape.circle,
+                ),
+              ),
+            ),
+          ),
+          const SizedBox(width: 16),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Icon(icon, color: color, size: 24),
-                const Spacer(),
+                Text(
+                  label,
+                  style: TextStyle(
+                    fontWeight: FontWeight.w600,
+                    color: isDark ? AppTheme.darkTextPrimaryColor : AppTheme.lightTextPrimaryColor,
+                  ),
+                ),
+                if (price.isNotEmpty)
+                  Text(
+                    price,
+                    style: TextStyle(color: isDark ? AppTheme.darkTextSecondaryColor : Colors.grey[500], fontSize: 12),
+                  ),
               ],
             ),
-            const SizedBox(height: 12),
+          ),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+            decoration: BoxDecoration(
+              color: color.withOpacity(0.1),
+              borderRadius: BorderRadius.circular(20),
+            ),
+            child: Text(
+              count.toString(),
+              style: TextStyle(
+                fontWeight: FontWeight.bold,
+                color: color,
+                fontSize: 16,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildMetricCard(String title, String value, IconData icon, Color color) {
+    final isDark = AppTheme.isDarkMode;
+    return Container(
+      decoration: BoxDecoration(
+        color: isDark ? AppTheme.darkCardColor : Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: isDark ? Colors.grey.shade800 : Colors.grey.shade200),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(20),
+        child: Column(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(14),
+              decoration: BoxDecoration(
+                color: color.withOpacity(0.15),
+                borderRadius: BorderRadius.circular(14),
+              ),
+              child: Icon(icon, color: color, size: 26),
+            ),
+            const SizedBox(height: 16),
             Text(
               value,
               style: TextStyle(
@@ -847,83 +1100,9 @@ class _AdminPanelState extends State<AdminPanel> with TickerProviderStateMixin {
             Text(
               title,
               style: TextStyle(
-                fontSize: 14,
-                color: Colors.grey[700],
-                fontWeight: FontWeight.w500,
-              ),
-            ),
-            if (subtitle != null) ...[
-              const SizedBox(height: 2),
-              Text(
-                subtitle,
-                style: TextStyle(
-                  fontSize: 11,
-                  color: Colors.grey[500],
-                ),
-              ),
-            ],
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildSubscriptionRow(String label, int count, Color color, String price) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 8),
-      child: Row(
-        children: [
-          Container(
-            width: 12,
-            height: 12,
-            decoration: BoxDecoration(
-              color: color,
-              shape: BoxShape.circle,
-            ),
-          ),
-          const SizedBox(width: 12),
-          Expanded(child: Text(label)),
-          if (price.isNotEmpty)
-            Text(
-              price,
-              style: TextStyle(color: Colors.grey[600], fontSize: 12),
-            ),
-          const SizedBox(width: 12),
-          Text(
-            count.toString(),
-            style: TextStyle(
-              fontWeight: FontWeight.bold,
-              color: color,
-              fontSize: 16,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildMetricCard(String title, String value, IconData icon, Color color) {
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          children: [
-            Icon(icon, color: color, size: 32),
-            const SizedBox(height: 8),
-            Text(
-              value,
-              style: TextStyle(
-                fontSize: 22,
-                fontWeight: FontWeight.bold,
-                color: color,
-              ),
-            ),
-            const SizedBox(height: 4),
-            Text(
-              title,
-              style: TextStyle(
                 fontSize: 13,
-                color: Colors.grey[600],
+                fontWeight: FontWeight.w500,
+                color: isDark ? AppTheme.darkTextSecondaryColor : AppTheme.lightTextSecondaryColor,
               ),
             ),
           ],
@@ -1194,24 +1373,236 @@ class _AdminPanelState extends State<AdminPanel> with TickerProviderStateMixin {
     );
   }
 
+  // Apply current filter and sort to users
+  void _applyFilterAndSort() async {
+    setState(() => _isLoading = true);
+    
+    try {
+      List<UserModel> result;
+      
+      if (_searchController.text.isNotEmpty) {
+        // If searching, use search results
+        result = await AdminService.searchUsers(_searchController.text);
+      } else {
+        // Otherwise use filter
+        result = await AdminService.getFilteredUsers(
+          filterBy: _filterBy,
+          sortBy: _sortBy,
+          ascending: _sortAscending,
+        );
+      }
+      
+      setState(() {
+        _filteredUsers = result;
+      });
+    } catch (e) {
+      _showStatus('Error filtering users: $e', isError: true);
+    } finally {
+      setState(() => _isLoading = false);
+    }
+  }
+
+  // Export users to CSV
+  Future<void> _exportUsersToCsv() async {
+    setState(() => _isLoading = true);
+    
+    try {
+      // Use currently filtered users
+      final usersToExport = _filteredUsers.isNotEmpty ? _filteredUsers : _users;
+      
+      if (usersToExport.isEmpty) {
+        _showStatus('No users to export', isError: true);
+        return;
+      }
+      
+      final csvData = AdminService.generateUsersCsv(usersToExport);
+      
+      // Get temp directory
+      final directory = await getTemporaryDirectory();
+      final timestamp = DateTime.now().millisecondsSinceEpoch;
+      final filterSuffix = _filterBy == 'all' ? '' : '_$_filterBy';
+      final file = File('${directory.path}/rewordium_users${filterSuffix}_$timestamp.csv');
+      
+      await file.writeAsString(csvData);
+      
+      // Share the file
+      await Share.shareXFiles(
+        [XFile(file.path)],
+        subject: 'Rewordium Users Export',
+        text: 'Exported ${usersToExport.length} users (Filter: $_filterBy)',
+      );
+      
+      _showStatus('Exported ${usersToExport.length} users successfully!');
+    } catch (e) {
+      _showStatus('Error exporting users: $e', isError: true);
+    } finally {
+      setState(() => _isLoading = false);
+    }
+  }
+
   Widget _buildUsersTab() {
     return Column(
       children: [
+        // Search and Filter Controls
         Padding(
           padding: const EdgeInsets.all(16),
           child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
+              // Search bar
               TextField(
                 controller: _searchController,
-                decoration: const InputDecoration(
+                decoration: InputDecoration(
                   labelText: 'Search users by name or email',
-                  border: OutlineInputBorder(),
-                  prefixIcon: Icon(Icons.search),
+                  border: const OutlineInputBorder(),
+                  prefixIcon: const Icon(Icons.search),
+                  suffixIcon: _searchController.text.isNotEmpty
+                      ? IconButton(
+                          icon: const Icon(Icons.clear),
+                          onPressed: () {
+                            _searchController.clear();
+                            _applyFilterAndSort();
+                          },
+                        )
+                      : null,
                 ),
                 onChanged: _filterUsers,
               ),
               const SizedBox(height: 16),
-              if (_users.isEmpty && !_isLoading)
+              
+              // Filter and Sort Row
+              SingleChildScrollView(
+                scrollDirection: Axis.horizontal,
+                child: Row(
+                  children: [
+                    // Filter dropdown
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 12),
+                      decoration: BoxDecoration(
+                        border: Border.all(color: Colors.grey.shade400),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: DropdownButtonHideUnderline(
+                        child: DropdownButton<String>(
+                          value: _filterBy,
+                          icon: const Icon(Icons.filter_list),
+                          hint: const Text('Filter'),
+                          items: const [
+                            DropdownMenuItem(value: 'all', child: Text('All Users')),
+                            DropdownMenuItem(value: 'pro', child: Text('Pro Users')),
+                            DropdownMenuItem(value: 'free', child: Text('Free Users')),
+                            DropdownMenuItem(value: 'news_subscribers', child: Text('📧 News Subscribers')),
+                          ],
+                          onChanged: (value) {
+                            setState(() => _filterBy = value ?? 'all');
+                            _applyFilterAndSort();
+                          },
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    
+                    // Sort dropdown
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 12),
+                      decoration: BoxDecoration(
+                        border: Border.all(color: Colors.grey.shade400),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: DropdownButtonHideUnderline(
+                        child: DropdownButton<String>(
+                          value: _sortBy,
+                          icon: const Icon(Icons.sort),
+                          hint: const Text('Sort By'),
+                          items: const [
+                            DropdownMenuItem(value: 'createdAt', child: Text('Date Joined')),
+                            DropdownMenuItem(value: 'name', child: Text('Name')),
+                            DropdownMenuItem(value: 'email', child: Text('Email')),
+                            DropdownMenuItem(value: 'credits', child: Text('Credits')),
+                          ],
+                          onChanged: (value) {
+                            setState(() => _sortBy = value ?? 'createdAt');
+                            _applyFilterAndSort();
+                          },
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    
+                    // Sort direction toggle
+                    IconButton(
+                      icon: Icon(
+                        _sortAscending ? Icons.arrow_upward : Icons.arrow_downward,
+                        color: Colors.blue,
+                      ),
+                      tooltip: _sortAscending ? 'Ascending' : 'Descending',
+                      onPressed: () {
+                        setState(() => _sortAscending = !_sortAscending);
+                        _applyFilterAndSort();
+                      },
+                    ),
+                    const SizedBox(width: 12),
+                    
+                    // Export button
+                    ElevatedButton.icon(
+                      onPressed: _isLoading ? null : _exportUsersToCsv,
+                      icon: _isLoading 
+                          ? const SizedBox(
+                              width: 16,
+                              height: 16,
+                              child: CircularProgressIndicator(strokeWidth: 2),
+                            )
+                          : const Icon(Icons.download, size: 18),
+                      label: const Text('Export CSV'),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.green,
+                        foregroundColor: Colors.white,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 12),
+              
+              // Results summary
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                decoration: BoxDecoration(
+                  color: Colors.blue.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const Icon(Icons.people, size: 16, color: Colors.blue),
+                    const SizedBox(width: 8),
+                    Text(
+                      'Showing ${_filteredUsers.length} users',
+                      style: const TextStyle(
+                        color: Colors.blue,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                    if (_filterBy != 'all') ...[
+                      const SizedBox(width: 8),
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                        decoration: BoxDecoration(
+                          color: Colors.blue,
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: Text(
+                          _filterBy == 'news_subscribers' ? '📧 News' : _filterBy.toUpperCase(),
+                          style: const TextStyle(color: Colors.white, fontSize: 11),
+                        ),
+                      ),
+                    ],
+                  ],
+                ),
+              ),
+              
+              if (_users.isEmpty && !_isLoading) ...[
+                const SizedBox(height: 16),
                 Container(
                   padding: const EdgeInsets.all(16),
                   decoration: BoxDecoration(
@@ -1221,7 +1612,7 @@ class _AdminPanelState extends State<AdminPanel> with TickerProviderStateMixin {
                   ),
                   child: Row(
                     children: [
-                      Icon(Icons.info_outline, color: Colors.orange),
+                      const Icon(Icons.info_outline, color: Colors.orange),
                       const SizedBox(width: 12),
                       Expanded(
                         child: Column(
@@ -1248,6 +1639,7 @@ class _AdminPanelState extends State<AdminPanel> with TickerProviderStateMixin {
                     ],
                   ),
                 ),
+              ],
             ],
           ),
         ),
@@ -1291,19 +1683,55 @@ class _AdminPanelState extends State<AdminPanel> with TickerProviderStateMixin {
     return Card(
       margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       child: ExpansionTile(
-        leading: CircleAvatar(
-          backgroundColor: user.isPro ? Colors.orange : Colors.grey,
-          child: Icon(
-            user.isPro ? Icons.star : Icons.person,
-            color: Colors.white,
-          ),
+        leading: Stack(
+          children: [
+            CircleAvatar(
+              backgroundColor: user.isPro ? Colors.orange : Colors.grey,
+              child: Icon(
+                user.isPro ? Icons.star : Icons.person,
+                color: Colors.white,
+              ),
+            ),
+            if (user.subscribedToNews)
+              Positioned(
+                right: -2,
+                bottom: -2,
+                child: Container(
+                  padding: const EdgeInsets.all(2),
+                  decoration: BoxDecoration(
+                    color: Colors.green,
+                    shape: BoxShape.circle,
+                    border: Border.all(color: Colors.white, width: 1.5),
+                  ),
+                  child: const Icon(Icons.mail, size: 10, color: Colors.white),
+                ),
+              ),
+          ],
         ),
         title: Text(user.name),
         subtitle: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(user.email),
-            Text('${user.userType} • ${user.credits} credits'),
+            Row(
+              children: [
+                Text('${user.userType} • ${user.credits} credits'),
+                if (user.subscribedToNews) ...[
+                  const SizedBox(width: 8),
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                    decoration: BoxDecoration(
+                      color: Colors.green.withOpacity(0.2),
+                      borderRadius: BorderRadius.circular(4),
+                    ),
+                    child: const Text(
+                      '📧 News',
+                      style: TextStyle(fontSize: 10, color: Colors.green),
+                    ),
+                  ),
+                ],
+              ],
+            ),
           ],
         ),
         children: [

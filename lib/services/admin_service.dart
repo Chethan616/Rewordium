@@ -240,8 +240,8 @@ class AdminService {
       int newSubscribersThisMonth = 0;
 
       // Pricing (should match Google Play Console prices)
-      const double monthlyPrice = 4.99;
-      const double yearlyPrice = 29.99;
+      const double monthlyPrice = 2.98;
+      const double yearlyPrice = 19.00;
       const double onetimePrice = 49.99;
 
       for (final doc in proUsersSnapshot.docs) {
@@ -747,5 +747,139 @@ class AdminService {
       debugPrint('Error updating user status: $e');
       return false;
     }
+  }
+
+  // Get users who subscribed to news/promotions
+  static Future<List<UserModel>> getNewsSubscribers() async {
+    try {
+      debugPrint('Fetching news subscribers from Firestore...');
+      final snapshot = await _firestore
+          .collection('users')
+          .where('subscribedToNews', isEqualTo: true)
+          .get();
+
+      debugPrint('Found ${snapshot.docs.length} news subscribers');
+      return snapshot.docs
+          .map((doc) => UserModel.fromDocumentSnapshot(doc.id, doc.data()))
+          .toList();
+    } catch (e) {
+      debugPrint('Error getting news subscribers: $e');
+      return [];
+    }
+  }
+
+  // Get filtered users with sorting
+  static Future<List<UserModel>> getFilteredUsers({
+    String? filterBy, // 'all', 'pro', 'free', 'news_subscribers'
+    String? sortBy, // 'name', 'email', 'createdAt', 'credits'
+    bool ascending = true,
+  }) async {
+    try {
+      debugPrint('Fetching filtered users: filter=$filterBy, sort=$sortBy');
+
+      Query query = _firestore.collection('users');
+
+      // Apply filter
+      if (filterBy == 'pro') {
+        query = query.where('isPro', isEqualTo: true);
+      } else if (filterBy == 'free') {
+        query = query.where('isPro', isEqualTo: false);
+      } else if (filterBy == 'news_subscribers') {
+        query = query.where('subscribedToNews', isEqualTo: true);
+      }
+
+      // Apply sorting (Firestore requires orderBy for filtered queries)
+      if (sortBy != null && sortBy.isNotEmpty) {
+        query = query.orderBy(sortBy, descending: !ascending);
+      }
+
+      final snapshot = await query.get();
+      debugPrint('Found ${snapshot.docs.length} users matching filter');
+
+      return snapshot.docs
+          .map((doc) => UserModel.fromDocumentSnapshot(doc.id, doc.data()))
+          .toList();
+    } catch (e) {
+      debugPrint('Error getting filtered users: $e');
+      // Fallback: get all users and filter/sort in memory
+      return await _getFilteredUsersInMemory(
+        filterBy: filterBy,
+        sortBy: sortBy,
+        ascending: ascending,
+      );
+    }
+  }
+
+  // Fallback method to filter/sort in memory
+  static Future<List<UserModel>> _getFilteredUsersInMemory({
+    String? filterBy,
+    String? sortBy,
+    bool ascending = true,
+  }) async {
+    try {
+      final allUsers = await getAllUsers(limit: 1000);
+      var filtered = allUsers;
+
+      // Apply filter
+      if (filterBy == 'pro') {
+        filtered = filtered.where((u) => u.isPro).toList();
+      } else if (filterBy == 'free') {
+        filtered = filtered.where((u) => !u.isPro).toList();
+      } else if (filterBy == 'news_subscribers') {
+        filtered = filtered.where((u) => u.subscribedToNews).toList();
+      }
+
+      // Apply sorting
+      if (sortBy != null) {
+        filtered.sort((a, b) {
+          int compare;
+          switch (sortBy) {
+            case 'name':
+              compare = a.name.toLowerCase().compareTo(b.name.toLowerCase());
+              break;
+            case 'email':
+              compare = a.email.toLowerCase().compareTo(b.email.toLowerCase());
+              break;
+            case 'createdAt':
+              compare = a.createdAt.compareTo(b.createdAt);
+              break;
+            case 'credits':
+              compare = a.credits.compareTo(b.credits);
+              break;
+            default:
+              compare = 0;
+          }
+          return ascending ? compare : -compare;
+        });
+      }
+
+      return filtered;
+    } catch (e) {
+      debugPrint('Error in memory filtering: $e');
+      return [];
+    }
+  }
+
+  // Generate CSV data for users
+  static String generateUsersCsv(List<UserModel> users) {
+    final buffer = StringBuffer();
+    
+    // CSV Header
+    buffer.writeln('UID,Name,Email,User Type,Plan Type,Credits,Sign-in Method,Created At,Subscribed to News,Status');
+    
+    // CSV Rows
+    for (final user in users) {
+      final createdAtStr = '${user.createdAt.year}-${user.createdAt.month.toString().padLeft(2, '0')}-${user.createdAt.day.toString().padLeft(2, '0')}';
+      buffer.writeln(
+        '"${user.uid}","${_escapeCsv(user.name)}","${_escapeCsv(user.email)}","${user.userType}","${user.planType ?? 'N/A'}",${user.credits},"${user.signInMethod}","$createdAtStr",${user.subscribedToNews},"${user.status}"'
+      );
+    }
+    
+    return buffer.toString();
+  }
+
+  // Helper to escape CSV values
+  static String _escapeCsv(String value) {
+    return value.replaceAll('"', '""');
   }
 }

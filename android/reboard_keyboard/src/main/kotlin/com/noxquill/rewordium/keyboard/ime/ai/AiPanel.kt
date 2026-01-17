@@ -73,6 +73,7 @@ import com.noxquill.rewordium.keyboard.ime.theme.FlorisImeUi
 import com.noxquill.rewordium.keyboard.keyboardManager
 import kotlinx.coroutines.launch
 import org.florisboard.lib.snygg.ui.rememberSnyggThemeQuery
+import androidx.compose.foundation.BorderStroke
 
 /**
  * AI Panel composable that shows AI writing assistance options
@@ -99,9 +100,11 @@ fun AiPanel(
     
     // Dynamic theme colors
     val backgroundColor = windowStyle.background()
-    val surfaceColor = keyStyle.background()
+    val surfaceColor = smartbarStyle.background()
     val textColor = keyStyle.foreground()
+    val accentColor = smartbarStyle.foreground().takeIf { it.alpha > 0f } ?: textColor
     val secondaryTextColor = textColor.copy(alpha = 0.7f)
+    val borderColor = accentColor.copy(alpha = 0.12f)
     
     var isGenerating by remember { mutableStateOf(false) }
     var selectedPersona by remember { mutableStateOf(AIPersona.CASUAL) }
@@ -146,9 +149,11 @@ fun AiPanel(
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(FlorisImeSizing.smartbarHeight * 4),
-            color = backgroundColor.copy(alpha = 0.98f),
-            shape = RoundedCornerShape(topStart = 16.dp, topEnd = 16.dp)
-        ) {
+                color = backgroundColor.copy(alpha = 0.97f),
+                shape = RoundedCornerShape(topStart = 18.dp, topEnd = 18.dp),
+                border = BorderStroke(1.dp, borderColor),
+                shadowElevation = 6.dp,
+            ) {
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -208,8 +213,10 @@ fun AiPanel(
                                 selectedPersona = persona
                                 aiManager.setPersona(persona)
                             },
-                            selectedColor = textColor,
-                            textColor = textColor
+                            selectedColor = accentColor,
+                            textColor = textColor,
+                            chipBackground = surfaceColor.copy(alpha = 0.9f),
+                            chipBorder = borderColor
                         )
                     }
                 }
@@ -228,8 +235,10 @@ fun AiPanel(
                             action = action,
                             isSelected = selectedAction == action,
                             onClick = { selectedAction = action },
-                            selectedColor = textColor,
-                            textColor = textColor
+                            selectedColor = accentColor,
+                            textColor = textColor,
+                            chipBackground = surfaceColor.copy(alpha = 0.9f),
+                            chipBorder = borderColor
                         )
                     }
                 }
@@ -260,7 +269,7 @@ fun AiPanel(
                             modifier = Modifier
                                 .weight(1f)
                                 .clip(RoundedCornerShape(8.dp))
-                                .background(surfaceColor)
+                                .background(surfaceColor.copy(alpha = 0.95f))
                                 .padding(8.dp)
                         ) {
                             Text(
@@ -291,14 +300,14 @@ fun AiPanel(
                             Icon(
                                 imageVector = Icons.Default.Check,
                                 contentDescription = "Insert",
-                                tint = Color(0xFF4CAF50) // Green accent for confirm
+                                tint = accentColor
                             )
                         }
                     } else if (errorMessage != null) {
                         Text(
                             text = errorMessage!!,
                             fontSize = 12.sp,
-                            color = Color(0xFFFF6B6B), // Error red
+                            color = accentColor.copy(alpha = 0.9f),
                             textAlign = TextAlign.Center
                         )
                     } else {
@@ -347,7 +356,7 @@ fun AiPanel(
                                 }
                             },
                             shape = RoundedCornerShape(20.dp),
-                            color = textColor.copy(alpha = 0.9f),
+                            color = accentColor.copy(alpha = 0.92f),
                             modifier = Modifier.height(36.dp)
                         ) {
                             Row(
@@ -402,7 +411,9 @@ private fun PersonaChip(
     isSelected: Boolean,
     onClick: () -> Unit,
     selectedColor: Color = Color(0xFF4A9EFF),
-    textColor: Color = Color.White
+    textColor: Color = Color.White,
+    chipBackground: Color = Color.Black,
+    chipBorder: Color = Color.Transparent,
 ) {
     FilterChip(
         selected = isSelected,
@@ -414,8 +425,17 @@ private fun PersonaChip(
             )
         },
         colors = FilterChipDefaults.filterChipColors(
-            selectedContainerColor = selectedColor.copy(alpha = 0.3f),
-            selectedLabelColor = textColor
+            containerColor = chipBackground,
+            labelColor = textColor,
+            selectedContainerColor = selectedColor.copy(alpha = 0.18f),
+            selectedLabelColor = selectedColor
+        ),
+        border = FilterChipDefaults.filterChipBorder(
+            enabled = true,
+            selected = isSelected,
+            borderWidth = 1.dp,
+            borderColor = chipBorder,
+            selectedBorderColor = selectedColor.copy(alpha = 0.35f)
         ),
         modifier = Modifier.height(28.dp)
     )
@@ -427,7 +447,9 @@ private fun ActionChip(
     isSelected: Boolean,
     onClick: () -> Unit,
     selectedColor: Color = Color(0xFF4A9EFF),
-    textColor: Color = Color.White
+    textColor: Color = Color.White,
+    chipBackground: Color = Color.Black,
+    chipBorder: Color = Color.Transparent,
 ) {
     FilterChip(
         selected = isSelected,
@@ -439,8 +461,17 @@ private fun ActionChip(
             )
         },
         colors = FilterChipDefaults.filterChipColors(
-            selectedContainerColor = selectedColor.copy(alpha = 0.3f),
-            selectedLabelColor = textColor
+            containerColor = chipBackground,
+            labelColor = textColor,
+            selectedContainerColor = selectedColor.copy(alpha = 0.18f),
+            selectedLabelColor = selectedColor
+        ),
+        border = FilterChipDefaults.filterChipBorder(
+            enabled = true,
+            selected = isSelected,
+            borderWidth = 1.dp,
+            borderColor = chipBorder,
+            selectedBorderColor = selectedColor.copy(alpha = 0.35f)
         ),
         modifier = Modifier.height(28.dp)
     )
