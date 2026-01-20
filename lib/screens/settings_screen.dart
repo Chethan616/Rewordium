@@ -52,14 +52,14 @@ class _SettingsScreenState extends State<SettingsScreen> {
   // Admin access state
   int _adminTapCount = 0;
   DateTime? _lastTapTime;
-  
+
   // Random generator for thunder messages
   final Random _random = Random();
 
   /// Thunder button Easter egg handler
   void _onThunderTap() {
     _thunderTapCount++;
-    
+
     if (_thunderTapCount >= 10) {
       // Activate Broken Code Mode on 10th tap - navigate to full-screen
       Navigator.of(context).push(
@@ -74,9 +74,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
       do {
         newIndex = _random.nextInt(_thunderMessages.length);
       } while (newIndex == _lastMessageIndex && _thunderMessages.length > 1);
-      
+
       _lastMessageIndex = newIndex;
-      
+
       ScaffoldMessenger.of(context).clearSnackBars();
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
@@ -98,15 +98,16 @@ class _SettingsScreenState extends State<SettingsScreen> {
   void _checkAdminAccess() {
     final BuildContext context = this.context;
     final now = DateTime.now();
-    
+
     // Reset counter if more than 2 seconds have passed since last tap
-    if (_lastTapTime != null && now.difference(_lastTapTime!) > const Duration(seconds: 2)) {
+    if (_lastTapTime != null &&
+        now.difference(_lastTapTime!) > const Duration(seconds: 2)) {
       _adminTapCount = 0;
     }
-    
+
     _lastTapTime = now;
     _adminTapCount++;
-    
+
     // Show remaining taps needed
     final remainingTaps = 5 - _adminTapCount;
     if (remainingTaps > 0) {
@@ -117,10 +118,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
         ),
       );
     }
-    
+
     if (_adminTapCount >= 5) {
       _adminTapCount = 0;
-      
+
       // Navigate to admin panel
       Navigator.push(
         context,
@@ -172,28 +173,79 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
   /// Restore previous purchases
   Future<void> _restorePurchases(BuildContext context) async {
-    // Show loading indicator
+    // Show loading dialog with message
     showDialog(
       context: context,
       barrierDismissible: false,
-      builder: (context) => const Center(
-        child: CircularProgressIndicator(),
+      builder: (context) => AlertDialog(
+        content: Row(
+          children: [
+            const CircularProgressIndicator(),
+            const SizedBox(width: 20),
+            Text('Restoring purchases...', style: AppTheme.bodyMedium),
+          ],
+        ),
       ),
     );
 
     try {
-      final billingService = Provider.of<BillingService>(context, listen: false);
-      await billingService.restorePurchases();
+      final billingService =
+          Provider.of<BillingService>(context, listen: false);
+      final authProvider = Provider.of<AuthProvider>(context, listen: false);
+
+      // Call restore purchases and wait for result
+      final success = await billingService.restorePurchases();
+
+      // Give a moment for the auth provider to update if purchase was restored
+      if (success) {
+        await authProvider.refreshSubscriptionStatus();
+      }
 
       if (context.mounted) {
-        Navigator.of(context).pop(); // Close loading
+        Navigator.of(context).pop(); // Close loading dialog
 
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Purchases restored! If you had a subscription, it will be reflected shortly.'),
-            duration: Duration(seconds: 3),
-          ),
-        );
+        if (success &&
+            (billingService.purchaseState == PurchaseState.success ||
+                billingService.purchaseState == PurchaseState.alreadyOwned ||
+                billingService.hasActiveSubscription)) {
+          // Purchase was restored successfully
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Row(
+                children: [
+                  const Icon(Icons.check_circle, color: Colors.white),
+                  const SizedBox(width: 12),
+                  const Expanded(
+                    child: Text(
+                        'Pro subscription restored successfully! Enjoy unlimited access.'),
+                  ),
+                ],
+              ),
+              backgroundColor: Colors.green.shade700,
+              duration: const Duration(seconds: 4),
+              behavior: SnackBarBehavior.floating,
+            ),
+          );
+        } else {
+          // No purchases found to restore
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Row(
+                children: [
+                  const Icon(Icons.info_outline, color: Colors.white),
+                  const SizedBox(width: 12),
+                  const Expanded(
+                    child: Text(
+                        'No previous purchases found. If you believe this is an error, please contact support.'),
+                  ),
+                ],
+              ),
+              backgroundColor: Colors.orange.shade700,
+              duration: const Duration(seconds: 4),
+              behavior: SnackBarBehavior.floating,
+            ),
+          );
+        }
       }
     } catch (e) {
       if (context.mounted) {
@@ -201,8 +253,16 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Error restoring purchases: $e'),
+            content: Row(
+              children: [
+                const Icon(Icons.error_outline, color: Colors.white),
+                const SizedBox(width: 12),
+                Expanded(child: Text('Error restoring purchases: $e')),
+              ],
+            ),
             backgroundColor: Colors.red,
+            duration: const Duration(seconds: 4),
+            behavior: SnackBarBehavior.floating,
           ),
         );
       }
@@ -343,7 +403,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
                       height: 40,
                       decoration: BoxDecoration(
                         gradient: LinearGradient(
-                          colors: [AppTheme.primaryColor, AppTheme.primaryColor.withOpacity(0.7)],
+                          colors: [
+                            AppTheme.primaryColor,
+                            AppTheme.primaryColor.withOpacity(0.7)
+                          ],
                         ),
                         borderRadius: BorderRadius.circular(10),
                       ),
@@ -707,7 +770,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
               onPressed: () {
                 // Open Google Play subscription management
                 launchUrl(
-                  Uri.parse('https://play.google.com/store/account/subscriptions'),
+                  Uri.parse(
+                      'https://play.google.com/store/account/subscriptions'),
                   mode: LaunchMode.externalApplication,
                 );
               },
@@ -924,7 +988,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
   Widget _buildAppInfoSection(BuildContext context) {
     String appVersion = '1.0.0';
     String buildNumber = '1';
-    
+
     return FutureBuilder<PackageInfo>(
       future: PackageInfo.fromPlatform(),
       builder: (context, snapshot) {
@@ -932,7 +996,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
           appVersion = snapshot.data!.version;
           buildNumber = snapshot.data!.buildNumber;
         }
-        
+
         return Column(
           children: [
             // App Version with admin access (tap 5 times)
@@ -1095,7 +1159,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
             ),
             child: Row(
               children: [
-                const Icon(CupertinoIcons.keyboard, color: Colors.green, size: 18),
+                const Icon(CupertinoIcons.keyboard,
+                    color: Colors.green, size: 18),
                 const SizedBox(width: 12),
                 Expanded(
                   child: Text(

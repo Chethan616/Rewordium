@@ -31,7 +31,7 @@ class _ProUpgradeScreenState extends State<ProUpgradeScreen> {
     return Consumer2<AuthProvider, BillingService>(
       builder: (context, authProvider, billingService, child) {
         final state = billingService.purchaseState;
-        
+
         // Show result screens for terminal states
         if (state == PurchaseState.success) {
           return _buildSuccessScreen(context, billingService);
@@ -39,13 +39,14 @@ class _ProUpgradeScreenState extends State<ProUpgradeScreen> {
         if (state == PurchaseState.alreadyOwned) {
           return _buildAlreadyOwnedScreen(context, billingService);
         }
-        if (state == PurchaseState.error || state == PurchaseState.billingUnavailable) {
+        if (state == PurchaseState.error ||
+            state == PurchaseState.billingUnavailable) {
           return _buildErrorScreen(context, billingService);
         }
         if (state == PurchaseState.processing) {
           return _buildProcessingScreen(context, billingService);
         }
-        
+
         // Default: show plan selection
         return _buildPlanSelectionScreen(context, authProvider, billingService);
       },
@@ -88,11 +89,11 @@ class _ProUpgradeScreenState extends State<ProUpgradeScreen> {
                     // Hero section
                     _buildHeroSection(),
                     const SizedBox(height: 32),
-                    
+
                     // Features list
                     _buildFeaturesSection(),
                     const SizedBox(height: 32),
-                    
+
                     // Plan selection
                     if (!billingService.isAvailable)
                       _buildUnavailableCard()
@@ -105,7 +106,7 @@ class _ProUpgradeScreenState extends State<ProUpgradeScreen> {
                         textAlign: TextAlign.center,
                       ),
                       const SizedBox(height: 16),
-                      
+
                       // Monthly Plan
                       if (monthlyProduct != null)
                         _buildPlanCard(
@@ -114,11 +115,12 @@ class _ProUpgradeScreenState extends State<ProUpgradeScreen> {
                           period: 'per month',
                           description: 'Flexibility to cancel anytime',
                           isSelected: _selectedPlan == 'monthly',
-                          onTap: () => setState(() => _selectedPlan = 'monthly'),
+                          onTap: () =>
+                              setState(() => _selectedPlan = 'monthly'),
                         ),
-                      
+
                       const SizedBox(height: 12),
-                      
+
                       // Yearly Plan
                       if (yearlyProduct != null)
                         _buildPlanCard(
@@ -130,24 +132,26 @@ class _ProUpgradeScreenState extends State<ProUpgradeScreen> {
                           isSelected: _selectedPlan == 'yearly',
                           onTap: () => setState(() => _selectedPlan = 'yearly'),
                         ),
-                      
+
                       const SizedBox(height: 24),
-                      
+
                       // Subscribe button
                       _buildSubscribeButton(billingService),
                     ],
-                    
+
                     const SizedBox(height: 24),
-                    
+
                     // Terms
                     _buildTermsText(),
-                    
+
                     const SizedBox(height: 16),
-                    
+
                     // Restore purchases
                     TextButton.icon(
-                      onPressed: () => _handleRestorePurchases(context, billingService),
-                      icon: Icon(Icons.restore, color: AppTheme.primaryColor, size: 18),
+                      onPressed: () =>
+                          _handleRestorePurchases(context, billingService),
+                      icon: Icon(Icons.restore,
+                          color: AppTheme.primaryColor, size: 18),
                       label: Text(
                         'Restore Purchases',
                         style: TextStyle(color: AppTheme.primaryColor),
@@ -207,9 +211,22 @@ class _ProUpgradeScreenState extends State<ProUpgradeScreen> {
 
   Widget _buildFeaturesSection() {
     final features = [
-        ('Unlimited AI rewrites (default model)', Icons.all_inclusive, 'No daily limits'),
-        ('Priority support', Icons.support_agent, 'Get faster help from our support team'),
-        ('Access to experimental features', Icons.new_releases, 'Selected features may be available for testing'),];
+      (
+        'Unlimited AI rewrites (default model)',
+        Icons.all_inclusive,
+        'No daily limits'
+      ),
+      (
+        'Priority support',
+        Icons.support_agent,
+        'Get faster help from our support team'
+      ),
+      (
+        'Access to experimental features',
+        Icons.new_releases,
+        'Selected features may be available for testing'
+      ),
+    ];
 
     final isDark = AppTheme.isDarkMode;
 
@@ -218,7 +235,8 @@ class _ProUpgradeScreenState extends State<ProUpgradeScreen> {
       decoration: BoxDecoration(
         color: AppTheme.cardColor,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: isDark ? Colors.grey.shade700 : Colors.grey.shade300),
+        border: Border.all(
+            color: isDark ? Colors.grey.shade700 : Colors.grey.shade300),
       ),
       child: Column(
         children: features.map((feature) {
@@ -230,12 +248,15 @@ class _ProUpgradeScreenState extends State<ProUpgradeScreen> {
                   width: 40,
                   height: 40,
                   decoration: BoxDecoration(
-                    color: isDark ? Colors.green.shade900.withOpacity(0.3) : Colors.green.shade50,
+                    color: isDark
+                        ? Colors.green.shade900.withOpacity(0.3)
+                        : Colors.green.shade50,
                     borderRadius: BorderRadius.circular(10),
                   ),
                   child: Icon(
                     feature.$2,
-                    color: isDark ? Colors.green.shade400 : Colors.green.shade600,
+                    color:
+                        isDark ? Colors.green.shade400 : Colors.green.shade600,
                     size: 22,
                   ),
                 ),
@@ -261,7 +282,9 @@ class _ProUpgradeScreenState extends State<ProUpgradeScreen> {
                 ),
                 Icon(
                   Icons.check_circle,
-                  color: AppTheme.isDarkMode ? Colors.green.shade400 : Colors.green.shade600,
+                  color: AppTheme.isDarkMode
+                      ? Colors.green.shade400
+                      : Colors.green.shade600,
                   size: 22,
                 ),
               ],
@@ -288,12 +311,16 @@ class _ProUpgradeScreenState extends State<ProUpgradeScreen> {
         duration: const Duration(milliseconds: 200),
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
-          color: isSelected 
-              ? (isDark ? Colors.green.shade900.withOpacity(0.3) : Colors.green.shade50) 
+          color: isSelected
+              ? (isDark
+                  ? Colors.green.shade900.withOpacity(0.3)
+                  : Colors.green.shade50)
               : AppTheme.cardColor,
           borderRadius: BorderRadius.circular(16),
           border: Border.all(
-            color: isSelected ? Colors.green : (isDark ? Colors.grey.shade700 : Colors.grey.shade300),
+            color: isSelected
+                ? Colors.green
+                : (isDark ? Colors.grey.shade700 : Colors.grey.shade300),
             width: isSelected ? 2 : 1,
           ),
           boxShadow: isSelected
@@ -368,7 +395,9 @@ class _ProUpgradeScreenState extends State<ProUpgradeScreen> {
                 Text(
                   price,
                   style: AppTheme.headingSmall.copyWith(
-                    color: AppTheme.isDarkMode ? Colors.green.shade400 : Colors.green.shade700,
+                    color: AppTheme.isDarkMode
+                        ? Colors.green.shade400
+                        : Colors.green.shade700,
                   ),
                 ),
                 Text(
@@ -387,9 +416,8 @@ class _ProUpgradeScreenState extends State<ProUpgradeScreen> {
 
   Widget _buildSubscribeButton(BillingService billingService) {
     return ElevatedButton(
-      onPressed: _selectedPlan == null
-          ? null
-          : () => _handlePurchase(billingService),
+      onPressed:
+          _selectedPlan == null ? null : () => _handlePurchase(billingService),
       style: ElevatedButton.styleFrom(
         backgroundColor: Colors.green,
         foregroundColor: Colors.white,
@@ -426,13 +454,18 @@ class _ProUpgradeScreenState extends State<ProUpgradeScreen> {
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: isDark ? Colors.orange.shade900.withOpacity(0.3) : Colors.orange.shade50,
+        color: isDark
+            ? Colors.orange.shade900.withOpacity(0.3)
+            : Colors.orange.shade50,
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: isDark ? Colors.orange.shade700 : Colors.orange.shade200),
+        border: Border.all(
+            color: isDark ? Colors.orange.shade700 : Colors.orange.shade200),
       ),
       child: Column(
         children: [
-          Icon(Icons.cloud_off, color: isDark ? Colors.orange.shade400 : Colors.orange.shade700, size: 48),
+          Icon(Icons.cloud_off,
+              color: isDark ? Colors.orange.shade400 : Colors.orange.shade700,
+              size: 48),
           const SizedBox(height: 12),
           Text(
             'Store Unavailable',
@@ -455,7 +488,10 @@ class _ProUpgradeScreenState extends State<ProUpgradeScreen> {
       decoration: BoxDecoration(
         color: AppTheme.cardColor,
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: AppTheme.isDarkMode ? Colors.grey.shade700 : Colors.grey.shade300),
+        border: Border.all(
+            color: AppTheme.isDarkMode
+                ? Colors.grey.shade700
+                : Colors.grey.shade300),
       ),
       child: Column(
         children: [
@@ -471,7 +507,8 @@ class _ProUpgradeScreenState extends State<ProUpgradeScreen> {
   }
 
   /// Processing screen - blocks navigation
-  Widget _buildProcessingScreen(BuildContext context, BillingService billingService) {
+  Widget _buildProcessingScreen(
+      BuildContext context, BillingService billingService) {
     return PopScope(
       canPop: false,
       onPopInvokedWithResult: (didPop, result) {
@@ -502,7 +539,8 @@ class _ProUpgradeScreenState extends State<ProUpgradeScreen> {
                         height: 50,
                         child: CircularProgressIndicator(
                           strokeWidth: 4,
-                          valueColor: AlwaysStoppedAnimation<Color>(Colors.green),
+                          valueColor:
+                              AlwaysStoppedAnimation<Color>(Colors.green),
                         ),
                       ),
                     ),
@@ -544,7 +582,8 @@ class _ProUpgradeScreenState extends State<ProUpgradeScreen> {
   }
 
   /// Success screen
-  Widget _buildSuccessScreen(BuildContext context, BillingService billingService) {
+  Widget _buildSuccessScreen(
+      BuildContext context, BillingService billingService) {
     final isDark = AppTheme.isDarkMode;
     return Scaffold(
       backgroundColor: AppTheme.backgroundColor,
@@ -559,7 +598,9 @@ class _ProUpgradeScreenState extends State<ProUpgradeScreen> {
                 width: 120,
                 height: 120,
                 decoration: BoxDecoration(
-                  color: isDark ? Colors.green.shade900.withOpacity(0.3) : Colors.green.shade50,
+                  color: isDark
+                      ? Colors.green.shade900.withOpacity(0.3)
+                      : Colors.green.shade50,
                   shape: BoxShape.circle,
                 ),
                 child: Icon(
@@ -615,7 +656,8 @@ class _ProUpgradeScreenState extends State<ProUpgradeScreen> {
   }
 
   /// Already owned screen
-  Widget _buildAlreadyOwnedScreen(BuildContext context, BillingService billingService) {
+  Widget _buildAlreadyOwnedScreen(
+      BuildContext context, BillingService billingService) {
     final isDark = AppTheme.isDarkMode;
     return Scaffold(
       backgroundColor: AppTheme.backgroundColor,
@@ -640,7 +682,9 @@ class _ProUpgradeScreenState extends State<ProUpgradeScreen> {
                 width: 120,
                 height: 120,
                 decoration: BoxDecoration(
-                  color: isDark ? Colors.blue.shade900.withOpacity(0.3) : Colors.blue.shade50,
+                  color: isDark
+                      ? Colors.blue.shade900.withOpacity(0.3)
+                      : Colors.blue.shade50,
                   shape: BoxShape.circle,
                 ),
                 child: Icon(
@@ -669,7 +713,8 @@ class _ProUpgradeScreenState extends State<ProUpgradeScreen> {
                 child: ElevatedButton(
                   onPressed: () {
                     launchUrl(
-                      Uri.parse('https://play.google.com/store/account/subscriptions'),
+                      Uri.parse(
+                          'https://play.google.com/store/account/subscriptions'),
                       mode: LaunchMode.externalApplication,
                     );
                   },
@@ -706,7 +751,8 @@ class _ProUpgradeScreenState extends State<ProUpgradeScreen> {
   }
 
   /// Error screen
-  Widget _buildErrorScreen(BuildContext context, BillingService billingService) {
+  Widget _buildErrorScreen(
+      BuildContext context, BillingService billingService) {
     final isDark = AppTheme.isDarkMode;
     return Scaffold(
       backgroundColor: AppTheme.backgroundColor,
@@ -731,7 +777,9 @@ class _ProUpgradeScreenState extends State<ProUpgradeScreen> {
                 width: 120,
                 height: 120,
                 decoration: BoxDecoration(
-                  color: isDark ? Colors.red.shade900.withOpacity(0.3) : Colors.red.shade50,
+                  color: isDark
+                      ? Colors.red.shade900.withOpacity(0.3)
+                      : Colors.red.shade50,
                   shape: BoxShape.circle,
                 ),
                 child: Icon(
@@ -830,7 +878,8 @@ class _ProUpgradeScreenState extends State<ProUpgradeScreen> {
   }
 
   /// Handle restore purchases with loading indicator and feedback
-  Future<void> _handleRestorePurchases(BuildContext context, BillingService billingService) async {
+  Future<void> _handleRestorePurchases(
+      BuildContext context, BillingService billingService) async {
     // Show loading dialog
     showDialog(
       context: context,
@@ -847,27 +896,56 @@ class _ProUpgradeScreenState extends State<ProUpgradeScreen> {
     );
 
     try {
-      await billingService.restorePurchases();
-      
-      // Wait a bit for the purchase stream to process
-      await Future.delayed(const Duration(seconds: 2));
-      
+      final authProvider = context.read<AuthProvider>();
+
+      // Call restore purchases and wait for result
+      final success = await billingService.restorePurchases();
+
+      // Refresh auth status to reflect any restored purchases
+      if (success) {
+        await authProvider.refreshSubscriptionStatus();
+      }
+
       if (context.mounted) {
         Navigator.of(context).pop(); // Close loading dialog
-        
+
         // Check if any purchase was restored
-        if (billingService.purchaseState == PurchaseState.success || 
-            billingService.purchaseState == PurchaseState.alreadyOwned) {
-          // Purchase was restored successfully - the state will handle showing success
+        if (success &&
+            (billingService.purchaseState == PurchaseState.success ||
+                billingService.purchaseState == PurchaseState.alreadyOwned ||
+                billingService.hasActiveSubscription)) {
+          // Purchase was restored successfully - show success message
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Row(
+                children: [
+                  const Icon(Icons.check_circle, color: Colors.white),
+                  const SizedBox(width: 12),
+                  const Expanded(
+                    child: Text('Pro subscription restored successfully!'),
+                  ),
+                ],
+              ),
+              backgroundColor: Colors.green.shade700,
+              duration: const Duration(seconds: 3),
+              behavior: SnackBarBehavior.floating,
+            ),
+          );
+
+          // Close the upgrade screen after a brief delay since user is now Pro
+          await Future.delayed(const Duration(seconds: 1));
+          if (context.mounted) {
+            Navigator.of(context).pop(true); // Return true to indicate success
+          }
         } else {
           // No purchases found to restore
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
               content: Row(
                 children: [
-                  Icon(Icons.info_outline, color: Colors.white),
+                  const Icon(Icons.info_outline, color: Colors.white),
                   const SizedBox(width: 12),
-                  Expanded(
+                  const Expanded(
                     child: Text(
                       'No previous purchases found. If you believe this is an error, please contact support.',
                     ),
@@ -884,7 +962,7 @@ class _ProUpgradeScreenState extends State<ProUpgradeScreen> {
     } catch (e) {
       if (context.mounted) {
         Navigator.of(context).pop(); // Close loading dialog
-        
+
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Row(
