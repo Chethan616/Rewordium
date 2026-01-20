@@ -27,11 +27,14 @@ class MainActivity : FlutterActivity() {
         private const val KEYBOARD_CHANNEL = "com.noxquill.rewordium/rewordium_keyboard"
         private const val SWIPE_GESTURE_CHANNEL = "com.noxquill.rewordium/swipe_gestures"
         private const val AI_SETTINGS_CHANNEL = "com.noxquill.rewordium/ai_settings"
+        private const val DEEP_LINK_CHANNEL = "com.noxquill.rewordium/deep_link"
         
         // <-- ADDED: A new channel specifically for syncing user status and credits.
         private const val USER_STATUS_CHANNEL = "com.noxquill.rewordium/user_status"
     }
 
+    private var deepLinkChannel: MethodChannel? = null
+    private var pendingDeepLink: String? = null
     private var userStatusMethodChannel: MethodChannel? = null
     private val creditConsumptionReceiver = object : BroadcastReceiver() {
         override fun onReceive(context: Context?, intent: Intent?) {
@@ -45,6 +48,9 @@ class MainActivity : FlutterActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         initializeDefaultSettings()
+        
+        // Handle deep link from app shortcut
+        handleDeepLink(intent)
         
         // Register broadcast receiver for credit consumption requests
         val filter = IntentFilter("com.noxquill.rewordium.CONSUME_CREDIT_REQUEST")
@@ -73,6 +79,27 @@ class MainActivity : FlutterActivity() {
             Log.d(TAG, "Unregistered keyboard settings broadcast receiver")
         } catch (e: Exception) {
             Log.w(TAG, "Error unregistering keyboard settings broadcast receiver", e)
+        }
+    }
+
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        handleDeepLink(intent)
+    }
+
+    private fun handleDeepLink(intent: Intent?) {
+        val data = intent?.data
+        if (data != null && data.scheme == "rewordium") {
+            val host = data.host
+            Log.d(TAG, "Deep link received: scheme=${data.scheme}, host=$host")
+            
+            when (host) {
+                "ai_settings" -> {
+                    pendingDeepLink = "ai_settings"
+                    // If Flutter engine is ready, send immediately
+                    deepLinkChannel?.invokeMethod("navigateTo", mapOf("route" to "ai_settings"))
+                }
+            }
         }
     }
 
@@ -132,6 +159,26 @@ class MainActivity : FlutterActivity() {
     override fun configureFlutterEngine(@NonNull flutterEngine: FlutterEngine) {
         super.configureFlutterEngine(flutterEngine)
         Log.d(TAG, "Configuring Flutter engine and all method channels.")
+
+        // --- DEEP LINK CHANNEL ---
+        deepLinkChannel = MethodChannel(flutterEngine.dartExecutor.binaryMessenger, DEEP_LINK_CHANNEL)
+        deepLinkChannel?.setMethodCallHandler { call, result ->
+            when (call.method) {
+                "getPendingDeepLink" -> {
+                    val link = pendingDeepLink
+                    pendingDeepLink = null // Clear after reading
+                    result.success(link)
+                }
+                else -> result.notImplemented()
+            }
+        }
+        
+        // Send pending deep link if exists
+        pendingDeepLink?.let { link ->
+            Handler(Looper.getMainLooper()).postDelayed({
+                deepLinkChannel?.invokeMethod("navigateTo", mapOf("route" to link))
+            }, 500) // Small delay to ensure Flutter is ready
+        }
 
         // --- ACCESSIBILITY CHANNEL (Unchanged) ---
         val accessibilityChannel = MethodChannel(flutterEngine.dartExecutor.binaryMessenger, ACCESSIBILITY_CHANNEL)

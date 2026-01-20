@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="utf-8"?>
+<shortcuts xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <!-- Manage Keyboard Shortcut - Opens native ReBoard Settings -->
+    <shortcut
+        android:shortcutId="manage_keyboard"
+        android:enabled="true"
+        android:icon="@drawable/ic_settings"
+        android:shortcutShortLabel="@string/shortcut_keyboard_short"
+        android:shortcutLongLabel="@string/shortcut_keyboard_long">
+        <intent
+            android:action="android.intent.action.VIEW"
+            android:targetPackage="com.noxquill.rewordium"
+            android:targetClass="com.noxquill.rewordium.keyboard.app.FlorisAppActivity" />
+        <categories android:name="android.shortcut.conversation" />
+    </shortcut>
+
+    <!-- Manage AI Preferences Shortcut - Opens Advanced AI Settings -->
+    <shortcut
+        android:shortcutId="manage_ai_preferences"
+        android:enabled="true"
+        android:icon="@drawable/ic_ai_sparkle"
+        android:shortcutShortLabel="@string/shortcut_ai_short"
+        android:shortcutLongLabel="@string/shortcut_ai_long">
+        <intent
+            android:action="android.intent.action.VIEW"
+            android:targetPackage="com.noxquill.rewordium"
+            android:targetClass="com.noxquill.rewordium.MainActivity"
+            android:data="rewordium://ai_settings" />
+        <categories android:name="android.shortcut.conversation" />
+    </shortcut>
+
+</shortcuts>

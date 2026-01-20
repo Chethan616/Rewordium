@@ -13,12 +13,15 @@ class NewsSubscriptionService {
   static bool _isCheckingSubscription = false;
   static bool _hasInitialized = false;
   static DateTime? _lastCheckTime;
-  static const Duration _checkInterval = Duration(hours: 24); // Check once per day
-  
+  static const Duration _checkInterval =
+      Duration(hours: 24); // Check once per day
+
   // SharedPreferences keys
   static const String _keyDontShowAgain = 'news_subscription_dont_show_again';
-  static const String _keyRemindLaterTimestamp = 'news_subscription_remind_later';
-  static const Duration _remindLaterDelay = Duration(days: 3); // Remind after 3 days
+  static const String _keyRemindLaterTimestamp =
+      'news_subscription_remind_later';
+  static const Duration _remindLaterDelay =
+      Duration(days: 3); // Remind after 3 days
 
   /// Initialize news subscription checking
   static Future<void> initialize() async {
@@ -34,14 +37,16 @@ class NewsSubscriptionService {
   }
 
   /// Check if user should be prompted for news subscription
-  static Future<void> checkAndPromptSubscription({bool forceCheck = false}) async {
+  static Future<void> checkAndPromptSubscription(
+      {bool forceCheck = false}) async {
     if (_isCheckingSubscription && !forceCheck) return;
 
     // Don't check too frequently unless forced
     if (!forceCheck && _lastCheckTime != null) {
       final timeSinceLastCheck = DateTime.now().difference(_lastCheckTime!);
       if (timeSinceLastCheck < _checkInterval) {
-        debugPrint('Skipping news subscription check - too soon since last check');
+        debugPrint(
+            'Skipping news subscription check - too soon since last check');
         return;
       }
     }
@@ -60,7 +65,7 @@ class NewsSubscriptionService {
       // Check SharedPreferences for "Don't show again"
       final prefs = await SharedPreferences.getInstance();
       final dontShowAgain = prefs.getBool(_keyDontShowAgain) ?? false;
-      
+
       if (dontShowAgain) {
         debugPrint('User opted to not show news subscription prompt again');
         return;
@@ -69,7 +74,8 @@ class NewsSubscriptionService {
       // Check "Remind me later" timestamp
       final remindLaterTimestamp = prefs.getInt(_keyRemindLaterTimestamp);
       if (remindLaterTimestamp != null) {
-        final remindDate = DateTime.fromMillisecondsSinceEpoch(remindLaterTimestamp);
+        final remindDate =
+            DateTime.fromMillisecondsSinceEpoch(remindLaterTimestamp);
         if (DateTime.now().isBefore(remindDate)) {
           debugPrint('Remind later period not passed yet');
           return;
@@ -95,13 +101,11 @@ class NewsSubscriptionService {
   /// Check if user is already subscribed to news in Firebase
   static Future<bool> _checkUserSubscriptionStatus(String uid) async {
     try {
-      final doc = await FirebaseFirestore.instance
-          .collection('users')
-          .doc(uid)
-          .get();
-      
+      final doc =
+          await FirebaseFirestore.instance.collection('users').doc(uid).get();
+
       if (!doc.exists) return false;
-      
+
       final data = doc.data();
       return data?['subscribedToNews'] ?? false;
     } catch (e) {
@@ -110,8 +114,33 @@ class NewsSubscriptionService {
     }
   }
 
+  /// Public method to check if current user is subscribed to news
+  static Future<bool> isUserSubscribedToNews() async {
+    final currentUser = FirebaseAuth.instance.currentUser;
+    if (currentUser == null) return false;
+    return _checkUserSubscriptionStatus(currentUser.uid);
+  }
+
+  /// Public method to toggle user's news subscription
+  static Future<bool> toggleNewsSubscription(bool subscribed) async {
+    final currentUser = FirebaseAuth.instance.currentUser;
+    if (currentUser == null) return false;
+
+    final success = await updateSubscriptionStatus(currentUser.uid, subscribed);
+    if (success) {
+      // If user subscribes, reset the "don't show again" flag
+      if (subscribed) {
+        final prefs = await SharedPreferences.getInstance();
+        await prefs.remove(_keyDontShowAgain);
+        await prefs.remove(_keyRemindLaterTimestamp);
+      }
+    }
+    return success;
+  }
+
   /// Update user's news subscription status in Firebase
-  static Future<bool> updateSubscriptionStatus(String uid, bool subscribed) async {
+  static Future<bool> updateSubscriptionStatus(
+      String uid, bool subscribed) async {
     try {
       await FirebaseFirestore.instance
           .collection('users')
@@ -166,7 +195,8 @@ class NewsSubscriptionService {
   static Future<void> remindLater() async {
     final prefs = await SharedPreferences.getInstance();
     final remindDate = DateTime.now().add(_remindLaterDelay);
-    await prefs.setInt(_keyRemindLaterTimestamp, remindDate.millisecondsSinceEpoch);
+    await prefs.setInt(
+        _keyRemindLaterTimestamp, remindDate.millisecondsSinceEpoch);
     debugPrint('News subscription reminder set for: $remindDate');
   }
 
@@ -298,7 +328,8 @@ class _NewsSubscriptionDialogState extends State<NewsSubscriptionDialog> {
               style: ElevatedButton.styleFrom(
                 backgroundColor: Colors.blue,
                 foregroundColor: Colors.white,
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
               ),
               icon: _isLoading
                   ? const SizedBox(
@@ -347,11 +378,13 @@ class _NewsSubscriptionDialogState extends State<NewsSubscriptionDialog> {
 
       if (mounted) {
         Navigator.of(context).pop();
-        
+
         if (success) {
-          _showSnackBar('🎉 Thanks for subscribing! You\'ll receive our updates.');
+          _showSnackBar(
+              '🎉 Thanks for subscribing! You\'ll receive our updates.');
         } else {
-          _showSnackBar('Failed to subscribe. Please try again.', isError: true);
+          _showSnackBar('Failed to subscribe. Please try again.',
+              isError: true);
         }
       }
     } catch (e) {

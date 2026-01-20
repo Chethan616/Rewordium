@@ -26,6 +26,7 @@ import 'services/cache_manager.dart';
 import 'services/admin_service.dart';
 import 'services/ai_settings_bridge.dart';
 import 'services/billing_service.dart';
+import 'services/deep_link_service.dart';
 import 'widgets/tool_popup.dart';
 import 'admin.dart';
 
@@ -100,6 +101,10 @@ void main() async {
     AISettingsBridge.initialize();
     unawaited(AISettingsBridge.syncSettingsToAndroid());
     AppLogger.init('AI Settings Bridge');
+    
+    // Initialize Deep Link Service for app shortcuts
+    DeepLinkService.initialize();
+    AppLogger.init('Deep Link Service');
   }).catchError((e) {
     AppLogger.warning('Error initializing Groq service: $e');
     // Continue with app launch but some features may be limited

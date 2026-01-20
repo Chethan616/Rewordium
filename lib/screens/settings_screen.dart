@@ -6,6 +6,7 @@ import 'package:url_launcher/url_launcher.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 import 'dart:math';
 import '../providers/keyboard_provider.dart';
+import '../services/news_subscription_service.dart';
 import '../theme/app_theme.dart';
 import '../services/rewordium_keyboard_service.dart';
 import '../services/force_update_service.dart';
@@ -55,6 +56,72 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
   // Random generator for thunder messages
   final Random _random = Random();
+
+  // News subscription state
+  bool _isNewsSubscribed = false;
+  bool _isLoadingNewsSubscription = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadNewsSubscriptionStatus();
+  }
+
+  Future<void> _loadNewsSubscriptionStatus() async {
+    try {
+      final isSubscribed =
+          await NewsSubscriptionService.isUserSubscribedToNews();
+      if (mounted) {
+        setState(() {
+          _isNewsSubscribed = isSubscribed;
+          _isLoadingNewsSubscription = false;
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _isLoadingNewsSubscription = false;
+        });
+      }
+    }
+  }
+
+  Future<void> _toggleNewsSubscription(bool value) async {
+    setState(() {
+      _isLoadingNewsSubscription = true;
+    });
+
+    final success = await NewsSubscriptionService.toggleNewsSubscription(value);
+
+    if (mounted) {
+      if (success) {
+        setState(() {
+          _isNewsSubscribed = value;
+          _isLoadingNewsSubscription = false;
+        });
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(value
+                ? 'Subscribed to news updates!'
+                : 'Unsubscribed from news updates'),
+            duration: const Duration(seconds: 2),
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+      } else {
+        setState(() {
+          _isLoadingNewsSubscription = false;
+        });
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Failed to update subscription. Please try again.'),
+            duration: Duration(seconds: 2),
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+      }
+    }
+  }
 
   /// Thunder button Easter egg handler
   void _onThunderTap() {
@@ -674,6 +741,64 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 ),
               ),
             const SizedBox(height: 20),
+            // User Preferences Section
+            if (isLoggedIn) ...[
+              Padding(
+                padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
+                child: Text("User Preferences", style: AppTheme.headingSmall),
+              ),
+              AnimatedCard(
+                child: Row(
+                  children: [
+                    Container(
+                      width: 40,
+                      height: 40,
+                      decoration: BoxDecoration(
+                        color: AppTheme.primaryColor.withOpacity(0.1),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: Icon(
+                        CupertinoIcons.mail,
+                        color: AppTheme.primaryColor,
+                        size: 20,
+                      ),
+                    ),
+                    const SizedBox(width: 16),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'News & Updates',
+                            style: AppTheme.bodyMedium.copyWith(
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                          const SizedBox(height: 4),
+                          Text(
+                            'Receive product news, feature announcements and more!',
+                            style: AppTheme.bodySmall,
+                          ),
+                        ],
+                      ),
+                    ),
+                    if (_isLoadingNewsSubscription)
+                      const SizedBox(
+                        width: 24,
+                        height: 24,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      )
+                    else
+                      CupertinoSwitch(
+                        value: _isNewsSubscribed,
+                        onChanged: _toggleNewsSubscription,
+                        activeTrackColor: AppTheme.primaryColor,
+                      ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 20),
+            ],
             if (isLoggedIn)
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 16.0),

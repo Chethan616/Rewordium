@@ -10,4 +10,10 @@
     <string name="keyboard_settings">Keyboard Settings</string>
     <string name="process_text_action_name">Process with AI</string>
     <string name="settings">Settings</string>
+    
+    <!-- App Shortcuts -->
+    <string name="shortcut_keyboard_short">Manage Keyboard</string>
+    <string name="shortcut_keyboard_long">Manage Keyboard Settings</string>
+    <string name="shortcut_ai_short">AI Preferences</string>
+    <string name="shortcut_ai_long">Manage AI Preferences</string>
 </resources>
