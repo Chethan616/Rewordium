@@ -431,401 +431,382 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 ),
               ],
             ),
-            Padding(
-              padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
-              child: Text("Account", style: AppTheme.headingSmall),
+
+            // ============================================
+            // ACCOUNT SECTION
+            // ============================================
+            _buildSectionHeader(
+              icon: CupertinoIcons.person_circle,
+              title: "Account",
+              color: AppTheme.primaryColor,
             ),
             AnimatedCard(
               child: isLoggedIn
                   ? _buildUserProfile(context, userName, isPro, authProvider)
                   : _buildLoginPrompt(context),
             ),
-            Padding(
-              padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
-              child: Text("Appearance", style: AppTheme.headingSmall),
-            ),
-            _buildSettingToggle("Dark Mode", isDarkMode, (value) {
-              themeProvider.toggleTheme();
-            }),
-            Padding(
-              padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
-              child: Text("AI Settings", style: AppTheme.headingSmall),
+
+            // ============================================
+            // GENERAL SETTINGS SECTION
+            // ============================================
+            _buildSectionHeader(
+              icon: CupertinoIcons.slider_horizontal_3,
+              title: "General",
+              color: Colors.blue,
             ),
             AnimatedCard(
               padding: EdgeInsets.zero,
-              onTap: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (context) => const AdvancedAISettingsScreen(),
-                  ),
-                );
-              },
-              child: Padding(
-                padding: const EdgeInsets.all(16.0),
-                child: Row(
-                  children: [
-                    Container(
-                      width: 40,
-                      height: 40,
-                      decoration: BoxDecoration(
-                        gradient: LinearGradient(
-                          colors: [
-                            AppTheme.primaryColor,
-                            AppTheme.primaryColor.withOpacity(0.7)
-                          ],
-                        ),
-                        borderRadius: BorderRadius.circular(10),
-                      ),
-                      child: const Icon(
-                        Icons.psychology,
-                        color: Colors.white,
-                      ),
-                    ),
-                    const SizedBox(width: 16),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            "Advanced AI Settings",
-                            style: AppTheme.bodyLarge.copyWith(
-                              fontWeight: FontWeight.w600,
-                            ),
-                          ),
-                          const SizedBox(height: 4),
-                          Text(
-                            "Use your own LLM API key",
-                            style: AppTheme.bodySmall,
-                          ),
-                        ],
-                      ),
-                    ),
-                    const Icon(
-                      CupertinoIcons.chevron_right,
-                      color: Colors.grey,
-                      size: 20,
-                    ),
-                  ],
-                ),
-              ),
-            ),
-            Padding(
-              padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
-              child: Text("Keyboard", style: AppTheme.headingSmall),
-            ),
-            AnimatedCard(
-              padding: EdgeInsets.zero,
-              onTap: () => _openReboardSettings(),
-              child: Padding(
-                padding: const EdgeInsets.all(16.0),
-                child: Row(
-                  children: [
-                    Container(
-                      width: 40,
-                      height: 40,
-                      decoration: BoxDecoration(
-                        color: AppTheme.primaryColor.withOpacity(0.1),
-                        borderRadius: BorderRadius.circular(10),
-                      ),
-                      child: Icon(
-                        CupertinoIcons.keyboard,
-                        color: AppTheme.primaryColor,
-                      ),
-                    ),
-                    const SizedBox(width: 16),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            "Rewordium AI Keyboard",
-                            style: AppTheme.bodyLarge.copyWith(
-                              fontWeight: FontWeight.w600,
-                            ),
-                          ),
-                          const SizedBox(height: 4),
-                          Text(
-                            "Customize appearance and behavior",
-                            style: AppTheme.bodySmall,
-                          ),
-                        ],
-                      ),
-                    ),
-                    const Icon(
-                      CupertinoIcons.chevron_right,
-                      color: Colors.grey,
-                    ),
-                  ],
-                ),
-              ),
-            ),
-            // OLD KEYBOARD PERSONA SELECTOR - COMMENTED OUT (Now using ReBoard native settings)
-            /*
-            Padding(
-              padding:
-                  const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
               child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(
-                    "Select up to 3 personas for your keyboard",
-                    style: AppTheme.bodyMedium,
+                  // Dark Mode Toggle
+                  _buildSettingItem(
+                    icon: isDarkMode
+                        ? CupertinoIcons.moon_fill
+                        : CupertinoIcons.sun_max_fill,
+                    iconColor: isDarkMode ? Colors.indigo : Colors.orange,
+                    title: "Dark Mode",
+                    subtitle: isDarkMode
+                        ? "Dark theme enabled"
+                        : "Light theme enabled",
+                    trailing: CupertinoSwitch(
+                      value: isDarkMode,
+                      onChanged: (value) => themeProvider.toggleTheme(),
+                      activeTrackColor: AppTheme.primaryColor,
+                    ),
                   ),
-                  const SizedBox(height: 4),
-                  Row(
-                    children: [
-                      const Icon(Icons.info_outline,
-                          size: 16, color: Colors.orange),
-                      const SizedBox(width: 4),
-                      GestureDetector(
-                        onTap: () =>
-                            _showIOSStyleKeyboardActivationDialog(context),
-                        child: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Text(
-                              'Tap here to reactivate',
-                              style: AppTheme.bodySmall.copyWith(
-                                color: Colors.blue,
-                                fontStyle: FontStyle.italic,
-                                decoration: TextDecoration.underline,
-                              ),
+                  if (isLoggedIn) ...[
+                    const Divider(height: 1, indent: 72),
+                    // News & Updates Toggle
+                    _buildSettingItem(
+                      icon: CupertinoIcons.bell_fill,
+                      iconColor: Colors.pink,
+                      title: "News & Updates",
+                      subtitle: "Product news and feature announcements",
+                      trailing: _isLoadingNewsSubscription
+                          ? const SizedBox(
+                              width: 24,
+                              height: 24,
+                              child: CircularProgressIndicator(strokeWidth: 2),
+                            )
+                          : CupertinoSwitch(
+                              value: _isNewsSubscribed,
+                              onChanged: _toggleNewsSubscription,
+                              activeTrackColor: AppTheme.primaryColor,
                             ),
-                            const SizedBox(width: 4),
-                            const Icon(Icons.open_in_new,
-                                size: 14, color: Colors.blue),
-                          ],
+                    ),
+                  ],
+                ],
+              ),
+            ),
+
+            // ============================================
+            // KEYBOARD & AI SECTION
+            // ============================================
+            _buildSectionHeader(
+              icon: CupertinoIcons.sparkles,
+              title: "Keyboard & AI",
+              color: Colors.purple,
+            ),
+            AnimatedCard(
+              padding: EdgeInsets.zero,
+              child: Column(
+                children: [
+                  // Keyboard Settings
+                  _buildSettingItem(
+                    icon: CupertinoIcons.keyboard,
+                    iconColor: AppTheme.primaryColor,
+                    title: "Rewordium AI Keyboard",
+                    subtitle: "Customize appearance and behavior",
+                    trailing: const Icon(CupertinoIcons.chevron_right,
+                        color: Colors.grey, size: 18),
+                    onTap: () => _openReboardSettings(),
+                  ),
+                  const Divider(height: 1, indent: 72),
+                  // Advanced AI Settings
+                  _buildSettingItem(
+                    icon: Icons.psychology_rounded,
+                    iconColor: Colors.deepPurple,
+                    iconGradient: true,
+                    title: "Advanced AI Settings",
+                    subtitle: "Use your own LLM API key",
+                    trailing: const Icon(CupertinoIcons.chevron_right,
+                        color: Colors.grey, size: 18),
+                    onTap: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) =>
+                              const AdvancedAISettingsScreen(),
                         ),
-                      ),
-                      const SizedBox(width: 4),
-                      Text(
-                        "for changes to take effect",
-                        style: AppTheme.bodySmall.copyWith(
-                          color: Colors.orange,
-                          fontSize: 10,
-                          fontStyle: FontStyle.italic,
-                        ),
-                      ),
-                    ],
+                      );
+                    },
                   ),
                 ],
               ),
             ),
-            const SizedBox(height: 4),
-            Consumer<KeyboardProvider>(
-              builder: (context, keyboardProvider, child) {
-                final personas = keyboardProvider.personas;
-                final selectedPersonas =
-                    keyboardProvider.selectedKeyboardPersonas;
-                final isParaphraserEnabled =
-                    keyboardProvider.isParaphraserEnabled;
 
-                return Column(
-                  children: [
-                    if (!isParaphraserEnabled)
-                      Padding(
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: 16.0, vertical: 8.0),
-                        child: Text(
-                          "Enable Paraphraser Persona in home screen to select personas",
-                          style: AppTheme.bodyMedium.copyWith(
-                            color: Colors.orange,
-                            fontWeight: FontWeight.w500,
-                          ),
-                        ),
-                      ),
-                    for (var persona in personas)
-                      AnimatedCard(
-                        padding: const EdgeInsets.fromLTRB(16, 8, 8, 8),
-                        child: Opacity(
-                          opacity: isParaphraserEnabled ? 1.0 : 0.5,
-                          child: Row(
-                            children: [
-                              Container(
-                                width: 40,
-                                height: 40,
-                                decoration: BoxDecoration(
-                                  color: selectedPersonas.contains(persona.name)
-                                      ? AppTheme.primaryColor
-                                      : AppTheme.primaryColor.withOpacity(0.1),
-                                  borderRadius: BorderRadius.circular(8),
-                                ),
-                                child: Icon(
-                                  _getPersonaIcon(persona.name),
-                                  color: selectedPersonas.contains(persona.name)
-                                      ? Colors.white
-                                      : AppTheme.primaryColor,
-                                  size: 20,
-                                ),
-                              ),
-                              const SizedBox(width: 16),
-                              Expanded(
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Text(
-                                      persona.name,
-                                      style: AppTheme.bodyMedium.copyWith(
-                                        fontWeight: FontWeight.w600,
-                                      ),
-                                    ),
-                                    const SizedBox(height: 4),
-                                    Text(
-                                      persona.description,
-                                      style: AppTheme.bodySmall,
-                                      maxLines: 2,
-                                      overflow: TextOverflow.ellipsis,
-                                    ),
-                                  ],
-                                ),
-                              ),
-                              Checkbox(
-                                value: selectedPersonas.contains(persona.name),
-                                onChanged: isParaphraserEnabled
-                                    ? (bool? checked) {
-                                        if (checked == true &&
-                                            !selectedPersonas
-                                                .contains(persona.name) &&
-                                            selectedPersonas.length >= 3) {
-                                          ScaffoldMessenger.of(context)
-                                              .showSnackBar(
-                                            const SnackBar(
-                                              content: Text(
-                                                  'You can only select up to 3 personas'),
-                                              duration: Duration(seconds: 2),
-                                            ),
-                                          );
-                                          return;
-                                        }
-                                        keyboardProvider.toggleKeyboardPersona(
-                                            persona.name);
-                                      }
-                                    : null,
-                                activeColor: AppTheme.primaryColor,
-                              ),
-                            ],
-                          ),
-                        ),
-                      ),
-                  ],
-                );
-              },
-            ),
-            */
-            // END OF OLD KEYBOARD PERSONA SELECTOR
+            // Personalize Keyboard prompt for non-logged-in users
             if (!isLoggedIn)
               AnimatedCard(
                 child: Column(
                   children: [
                     SizedBox(
-                      height: 100,
+                      height: 80,
                       child: LottieAssets.getKeyboardAnimation(),
                     ),
-                    const SizedBox(height: 16),
+                    const SizedBox(height: 12),
                     Text(
-                      "To personalize the Keyboard, open an account",
+                      "Create an account to personalize your keyboard",
                       textAlign: TextAlign.center,
                       style: AppTheme.bodyMedium.copyWith(
                         color: AppTheme.textSecondaryColor,
                       ),
                     ),
-                    const SizedBox(height: 16),
+                    const SizedBox(height: 12),
                     CustomButton(
                       text: "Create Account",
                       onPressed: _navigateToLogin,
                       type: ButtonType.primary,
-                      width: 200,
+                      width: 180,
+                      height: 44,
                     ),
                   ],
                 ),
               ),
-            const SizedBox(height: 20),
-            // User Preferences Section
+
+            // ============================================
+            // ABOUT SECTION
+            // ============================================
+            _buildSectionHeader(
+              icon: CupertinoIcons.info_circle,
+              title: "About",
+              color: Colors.teal,
+            ),
+            _buildAppInfoCard(context),
+
+            // ============================================
+            // DANGER ZONE (only logged in)
+            // ============================================
             if (isLoggedIn) ...[
-              Padding(
-                padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
-                child: Text("User Preferences", style: AppTheme.headingSmall),
+              _buildSectionHeader(
+                icon: CupertinoIcons.exclamationmark_triangle,
+                title: "Danger Zone",
+                color: Colors.red,
               ),
               AnimatedCard(
-                child: Row(
-                  children: [
-                    Container(
-                      width: 40,
-                      height: 40,
-                      decoration: BoxDecoration(
-                        color: AppTheme.primaryColor.withOpacity(0.1),
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                      child: Icon(
-                        CupertinoIcons.mail,
-                        color: AppTheme.primaryColor,
-                        size: 20,
-                      ),
-                    ),
-                    const SizedBox(width: 16),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            'News & Updates',
-                            style: AppTheme.bodyMedium.copyWith(
-                              fontWeight: FontWeight.w600,
-                            ),
-                          ),
-                          const SizedBox(height: 4),
-                          Text(
-                            'Receive product news, feature announcements and more!',
-                            style: AppTheme.bodySmall,
-                          ),
-                        ],
-                      ),
-                    ),
-                    if (_isLoadingNewsSubscription)
-                      const SizedBox(
-                        width: 24,
-                        height: 24,
-                        child: CircularProgressIndicator(strokeWidth: 2),
-                      )
-                    else
-                      CupertinoSwitch(
-                        value: _isNewsSubscribed,
-                        onChanged: _toggleNewsSubscription,
-                        activeTrackColor: AppTheme.primaryColor,
-                      ),
-                  ],
+                padding: EdgeInsets.zero,
+                child: _buildSettingItem(
+                  icon: CupertinoIcons.trash,
+                  iconColor: Colors.red,
+                  title: "Delete Account",
+                  subtitle: "Permanently delete your account and data",
+                  trailing: const Icon(CupertinoIcons.chevron_right,
+                      color: Colors.red, size: 18),
+                  onTap: () => _confirmDeleteAccount(context),
+                  isDanger: true,
                 ),
               ),
-              const SizedBox(height: 20),
             ],
-            if (isLoggedIn)
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 16.0),
-                child: CustomButton(
-                  text: 'Delete Account',
-                  type: ButtonType.secondary,
-                  customColor: Colors.red,
-                  onPressed: () => _confirmDeleteAccount(context),
-                ),
-              ),
-            const SizedBox(height: 20),
-            // App Information Section
-            Padding(
-              padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
-              child: Text("App Information", style: AppTheme.headingSmall),
-            ),
-            _buildAppInfoSection(context),
-            // Credits Section
-            Padding(
-              padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
-              child: Text("Credits", style: AppTheme.headingSmall),
-            ),
-            _buildCreditsSection(context),
-            const SizedBox(height: 20),
+
+            const SizedBox(height: 40),
           ],
         ),
       ),
+    );
+  }
+
+  /// Build a section header with icon
+  Widget _buildSectionHeader({
+    required IconData icon,
+    required String title,
+    required Color color,
+  }) {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 24, 16, 8),
+      child: Row(
+        children: [
+          Container(
+            width: 28,
+            height: 28,
+            decoration: BoxDecoration(
+              color: color.withOpacity(0.15),
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: Icon(icon, size: 16, color: color),
+          ),
+          const SizedBox(width: 10),
+          Text(
+            title,
+            style: AppTheme.bodyLarge.copyWith(
+              fontWeight: FontWeight.w700,
+              letterSpacing: 0.3,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  /// Build a setting item row
+  Widget _buildSettingItem({
+    required IconData icon,
+    required Color iconColor,
+    required String title,
+    required String subtitle,
+    required Widget trailing,
+    VoidCallback? onTap,
+    bool iconGradient = false,
+    bool isDanger = false,
+  }) {
+    final content = Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+      child: Row(
+        children: [
+          Container(
+            width: 40,
+            height: 40,
+            decoration: BoxDecoration(
+              gradient: iconGradient
+                  ? LinearGradient(
+                      colors: [iconColor, iconColor.withOpacity(0.7)],
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                    )
+                  : null,
+              color: iconGradient ? null : iconColor.withOpacity(0.12),
+              borderRadius: BorderRadius.circular(10),
+            ),
+            child: Icon(
+              icon,
+              color: iconGradient ? Colors.white : iconColor,
+              size: 20,
+            ),
+          ),
+          const SizedBox(width: 16),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  title,
+                  style: AppTheme.bodyMedium.copyWith(
+                    fontWeight: FontWeight.w600,
+                    color: isDanger ? Colors.red : null,
+                  ),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  subtitle,
+                  style: AppTheme.bodySmall.copyWith(
+                    color: isDanger
+                        ? Colors.red.withOpacity(0.7)
+                        : AppTheme.textSecondaryColor,
+                    fontSize: 12,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          trailing,
+        ],
+      ),
+    );
+
+    if (onTap != null) {
+      return InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(12),
+        child: content,
+      );
+    }
+    return content;
+  }
+
+  /// Build app info card with version and credits
+  Widget _buildAppInfoCard(BuildContext context) {
+    return FutureBuilder<PackageInfo>(
+      future: PackageInfo.fromPlatform(),
+      builder: (context, snapshot) {
+        String appVersion = '1.0.0';
+        String buildNumber = '1';
+        if (snapshot.hasData) {
+          appVersion = snapshot.data!.version;
+          buildNumber = snapshot.data!.buildNumber;
+        }
+
+        return AnimatedCard(
+          padding: EdgeInsets.zero,
+          child: Column(
+            children: [
+              // App Version
+              GestureDetector(
+                onTap: _checkAdminAccess,
+                child: _buildSettingItem(
+                  icon: CupertinoIcons.app_badge,
+                  iconColor: Colors.blue,
+                  title: "App Version",
+                  subtitle: "v$appVersion (Build $buildNumber)",
+                  trailing: const SizedBox.shrink(),
+                ),
+              ),
+              const Divider(height: 1, indent: 72),
+              // Check for Updates
+              _buildSettingItem(
+                icon: CupertinoIcons.arrow_down_circle,
+                iconColor: Colors.green,
+                title: "Check for Updates",
+                subtitle: "Download the latest version",
+                trailing: const Icon(CupertinoIcons.chevron_right,
+                    color: Colors.grey, size: 18),
+                onTap: () => ForceUpdateService.manualUpdateCheck(context),
+              ),
+              const Divider(height: 1, indent: 72),
+              // Credits & Licenses
+              _buildSettingItem(
+                icon: CupertinoIcons.heart_fill,
+                iconColor: Colors.pink,
+                title: "Credits & Licenses",
+                subtitle: "Open source attributions",
+                trailing: const Icon(CupertinoIcons.chevron_right,
+                    color: Colors.grey, size: 18),
+                onTap: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                        builder: (context) => const LicensesScreen()),
+                  );
+                },
+              ),
+              // FlorisBoard attribution
+              Container(
+                margin: const EdgeInsets.all(16),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                decoration: BoxDecoration(
+                  color: AppTheme.textSecondaryColor.withOpacity(0.08),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Row(
+                  children: [
+                    Icon(CupertinoIcons.keyboard,
+                        color: Colors.green.shade600, size: 16),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: Text(
+                        "Based on FlorisBoard • Apache License 2.0",
+                        style: AppTheme.bodySmall.copyWith(
+                          fontSize: 11,
+                          color: AppTheme.textSecondaryColor,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        );
+      },
     );
   }
 
@@ -1011,24 +992,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
     );
   }
 
-  Widget _buildSettingToggle(String title, bool isOn,
-      [Function(bool)? onChanged]) {
-    return AnimatedCard(
-      padding: const EdgeInsets.fromLTRB(16, 8, 8, 8),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          Text(title, style: AppTheme.bodyMedium),
-          Switch(
-            value: isOn,
-            onChanged: onChanged,
-            activeColor: AppTheme.primaryColor,
-          ),
-        ],
-      ),
-    );
-  }
-
   IconData _getPersonaIcon(String personaName) {
     switch (personaName.toLowerCase()) {
       case 'happy':
@@ -1107,199 +1070,4 @@ class _SettingsScreenState extends State<SettingsScreen> {
   }
 
   // Admin access state and method are already defined above
-
-  // Build method is already defined above, removing the duplicate
-
-  Widget _buildAppInfoSection(BuildContext context) {
-    String appVersion = '1.0.0';
-    String buildNumber = '1';
-
-    return FutureBuilder<PackageInfo>(
-      future: PackageInfo.fromPlatform(),
-      builder: (context, snapshot) {
-        if (snapshot.hasData) {
-          appVersion = snapshot.data!.version;
-          buildNumber = snapshot.data!.buildNumber;
-        }
-
-        return Column(
-          children: [
-            // App Version with admin access (tap 5 times)
-            GestureDetector(
-              onTap: _checkAdminAccess,
-              child: AnimatedCard(
-                child: Row(
-                  children: [
-                    Container(
-                      width: 40,
-                      height: 40,
-                      decoration: BoxDecoration(
-                        color: AppTheme.primaryColor.withOpacity(0.1),
-                        borderRadius: BorderRadius.circular(10),
-                      ),
-                      child: Icon(
-                        CupertinoIcons.info,
-                        color: AppTheme.primaryColor,
-                        size: 20,
-                      ),
-                    ),
-                    const SizedBox(width: 16),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            "App Version",
-                            style: AppTheme.bodyMedium.copyWith(
-                              fontWeight: FontWeight.w600,
-                            ),
-                          ),
-                          const SizedBox(height: 4),
-                          Text(
-                            "v$appVersion ($buildNumber)",
-                            style: AppTheme.bodySmall,
-                          ),
-                        ],
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-            // Check for Updates
-            AnimatedCard(
-              onTap: () {
-                ForceUpdateService.manualUpdateCheck(context);
-              },
-              child: Row(
-                children: [
-                  Container(
-                    width: 40,
-                    height: 40,
-                    decoration: BoxDecoration(
-                      color: AppTheme.primaryColor.withOpacity(0.1),
-                      borderRadius: BorderRadius.circular(10),
-                    ),
-                    child: Icon(
-                      CupertinoIcons.arrow_down_circle,
-                      color: AppTheme.primaryColor,
-                      size: 20,
-                    ),
-                  ),
-                  const SizedBox(width: 16),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          "Check for Updates",
-                          style: AppTheme.bodyMedium.copyWith(
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
-                        const SizedBox(height: 4),
-                        Text(
-                          "Tap to check for app updates",
-                          style: AppTheme.bodySmall,
-                        ),
-                      ],
-                    ),
-                  ),
-                  Icon(
-                    CupertinoIcons.chevron_right,
-                    color: AppTheme.textSecondaryColor,
-                    size: 16,
-                  ),
-                ],
-              ),
-            ),
-          ],
-        );
-      },
-    );
-  }
-
-  Widget _buildCreditsSection(BuildContext context) {
-    return AnimatedCard(
-      onTap: () {
-        Navigator.push(
-          context,
-          MaterialPageRoute(builder: (context) => const LicensesScreen()),
-        );
-      },
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // Header
-          Row(
-            children: [
-              Container(
-                width: 40,
-                height: 40,
-                decoration: BoxDecoration(
-                  color: Colors.green.withOpacity(0.1),
-                  borderRadius: BorderRadius.circular(10),
-                ),
-                child: const Icon(
-                  CupertinoIcons.heart_fill,
-                  color: Colors.green,
-                  size: 20,
-                ),
-              ),
-              const SizedBox(width: 16),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      "Credits & Licenses",
-                      style: AppTheme.bodyLarge.copyWith(
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      "View open source licenses and attributions",
-                      style: AppTheme.bodySmall,
-                    ),
-                  ],
-                ),
-              ),
-              Icon(
-                CupertinoIcons.chevron_right,
-                color: AppTheme.textSecondaryColor,
-                size: 18,
-              ),
-            ],
-          ),
-          const SizedBox(height: 16),
-          const Divider(height: 1),
-          const SizedBox(height: 16),
-          // License Notice Text
-          Container(
-            padding: const EdgeInsets.all(12),
-            decoration: BoxDecoration(
-              color: AppTheme.textSecondaryColor.withOpacity(0.1),
-              borderRadius: BorderRadius.circular(8),
-            ),
-            child: Row(
-              children: [
-                const Icon(CupertinoIcons.keyboard,
-                    color: Colors.green, size: 18),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Text(
-                    "Based on FlorisBoard • Apache License 2.0",
-                    style: AppTheme.bodySmall.copyWith(
-                      fontSize: 11,
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
 }
