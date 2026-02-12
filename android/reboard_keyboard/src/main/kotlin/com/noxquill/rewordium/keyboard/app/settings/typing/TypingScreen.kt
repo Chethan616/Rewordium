@@ -135,6 +135,11 @@ fun TypingScreen() = FlorisScreen {
                 title = stringRes(R.string.pref__correction__double_space_period__label),
                 summary = stringRes(R.string.pref__correction__double_space_period__summary),
             )
+            SwitchPreference(
+                prefs.correction.smartQuotes,
+                title = stringRes(R.string.pref__correction__smart_quotes__label),
+                summary = stringRes(R.string.pref__correction__smart_quotes__summary),
+            )
         }
 
         PreferenceGroup(title = stringRes(R.string.pref__spelling__title)) {

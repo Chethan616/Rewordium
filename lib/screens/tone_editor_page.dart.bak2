@@ -1,0 +1,460 @@
+import 'package:flutter/material.dart';
+import 'package:flutter/cupertino.dart';
+import 'package:animate_do/animate_do.dart';
+import 'package:flutter/services.dart';
+import 'package:provider/provider.dart';
+
+import '../theme/app_theme.dart';
+import '../widgets/custom_app_bar.dart';
+import '../widgets/custom_button.dart';
+import '../providers/auth_provider.dart';
+import '../services/unified_ai_service.dart';
+import '../utils/ai_error_handler.dart';
+import 'auth/login_screen.dart';
+
+class ToneEditorPage extends StatefulWidget {
+  const ToneEditorPage({super.key});
+
+  @override
+  State<ToneEditorPage> createState() => _ToneEditorPageState();
+}
+
+class _ToneEditorPageState extends State<ToneEditorPage> {
+  final TextEditingController _controller = TextEditingController();
+  final TextEditingController _resultController = TextEditingController();
+  bool _isLoading = false;
+  String _selectedTone = "Professional";
+  Map<String, dynamic>? _toneResult;
+
+  static const _accentColor = Color(0xFF14B8A6);
+  static const _accentDark = Color(0xFF0D9488);
+
+  final List<String> _tones = [
+    "Professional", "Casual", "Friendly", "Formal", "Persuasive",
+    "Confident", "Empathetic", "Humorous", "Inspirational", "Diplomatic",
+    "Direct", "Academic", "Creative", "Enthusiastic", "Neutral",
+    "Authoritative", "Conversational", "Poetic", "Sarcastic", "Custom"
+  ];
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    _resultController.dispose();
+    super.dispose();
+  }
+
+  Future<void> _editTone() async {
+    final text = _controller.text.trim();
+    if (text.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Please enter some text to edit')),
+      );
+      return;
+    }
+    if (_selectedTone == "Custom") {
+      await _showCustomToneDialog();
+      if (_selectedTone == "Custom") return;
+    }
+    setState(() => _isLoading = true);
+    try {
+      final result = await UnifiedAIService.editTone(text, _selectedTone);
+      if (result.containsKey('error')) {
+        setState(() => _isLoading = false);
+        if (mounted) AIErrorHandler.showErrorSnackBar(context, result);
+        return;
+      }
+      setState(() {
+        _toneResult = result;
+        _resultController.text = result['edited_text'] ?? text;
+        _isLoading = false;
+      });
+      _showResultSheet();
+    } catch (e) {
+      setState(() => _isLoading = false);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Error editing tone: $e')),
+      );
+    }
+  }
+
+  Future<void> _showCustomToneDialog() async {
+    final c = TextEditingController();
+    return showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: const Text('Custom Tone'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              "Describe the tone you want. Be specific for best results.",
+              style: AppTheme.bodySmall.copyWith(
+                  color: AppTheme.textSecondaryColor),
+            ),
+            const SizedBox(height: 12),
+            TextField(
+              controller: c,
+              maxLines: 2,
+              decoration: const InputDecoration(
+                hintText:
+                    'e.g., Warm and encouraging, like a mentor',
+                border: OutlineInputBorder(),
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+              onPressed: () => Navigator.pop(ctx),
+              child: const Text('Cancel')),
+          TextButton(
+            onPressed: () {
+              if (c.text.trim().isNotEmpty) {
+                setState(() => _selectedTone = c.text.trim());
+                Navigator.pop(ctx);
+              }
+            },
+            child: const Text('Apply'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showResultSheet() {
+    if (_toneResult == null) return;
+    final rawChanges = _toneResult!['changes_made'];
+    final changes = rawChanges is List
+        ? List<String>.from(rawChanges)
+        : <String>[];
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) => DraggableScrollableSheet(
+        initialChildSize: 0.6,
+        minChildSize: 0.3,
+        maxChildSize: 0.85,
+        builder: (context, sc) => Container(
+          decoration: BoxDecoration(
+            color: AppTheme.cardColor,
+            borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+          ),
+          child: Column(
+            children: [
+              Container(
+                margin: const EdgeInsets.only(top: 12),
+                width: 40, height: 4,
+                decoration: BoxDecoration(
+                  color: Colors.grey.withOpacity(0.3),
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+              Padding(
+                padding: const EdgeInsets.fromLTRB(20, 16, 20, 8),
+                child: Row(
+                  children: [
+                    Container(
+                      width: 36, height: 36,
+                      decoration: BoxDecoration(
+                        color: _accentColor.withOpacity(0.1),
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      child: const Icon(CupertinoIcons.wand_stars,
+                          color: _accentColor, size: 18),
+                    ),
+                    const SizedBox(width: 12),
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text("Tone Adjusted", style: AppTheme.headingSmall),
+                        Text(_selectedTone,
+                            style: AppTheme.bodySmall
+                                .copyWith(color: _accentColor)),
+                      ],
+                    ),
+                    const Spacer(),
+                    IconButton(
+                      icon: Icon(CupertinoIcons.doc_on_clipboard,
+                          color: _accentColor),
+                      onPressed: () {
+                        Clipboard.setData(
+                            ClipboardData(text: _resultController.text));
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(content: Text('Copied!')),
+                        );
+                      },
+                    ),
+                  ],
+                ),
+              ),
+              const Divider(),
+              Expanded(
+                child: SingleChildScrollView(
+                  controller: sc,
+                  padding: const EdgeInsets.all(20),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Container(
+                        width: double.infinity,
+                        padding: const EdgeInsets.all(16),
+                        decoration: BoxDecoration(
+                          color: _accentColor.withOpacity(0.05),
+                          borderRadius: BorderRadius.circular(14),
+                          border: Border.all(
+                              color: _accentColor.withOpacity(0.15)),
+                        ),
+                        child: SelectableText(
+                          _resultController.text,
+                          style: AppTheme.bodyMedium.copyWith(height: 1.5),
+                        ),
+                      ),
+                      if (changes.isNotEmpty) ...[
+                        const SizedBox(height: 20),
+                        Text('Changes Made',
+                            style: AppTheme.bodyLarge
+                                .copyWith(fontWeight: FontWeight.w700)),
+                        const SizedBox(height: 10),
+                        ...changes.map((c) => Padding(
+                          padding: const EdgeInsets.only(bottom: 8),
+                          child: Row(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Container(
+                                margin: const EdgeInsets.only(top: 4),
+                                width: 8, height: 8,
+                                decoration: BoxDecoration(
+                                  color: _accentColor,
+                                  shape: BoxShape.circle,
+                                ),
+                              ),
+                              const SizedBox(width: 10),
+                              Expanded(child: Text(c,
+                                  style: AppTheme.bodyMedium)),
+                            ],
+                          ),
+                        )),
+                      ],
+                    ],
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final screenSize = MediaQuery.of(context).size;
+    final isSmall = screenSize.width < 360;
+    final auth = Provider.of<AuthProvider>(context);
+
+    return Scaffold(
+      backgroundColor: AppTheme.backgroundColor,
+      body: SafeArea(
+        child: Column(
+          children: [
+            CustomAppBar(
+              title: "Tone Editor",
+              leadingIcon: const Icon(CupertinoIcons.wand_stars,
+                  color: _accentColor),
+              actions: [
+                if (!auth.isLoggedIn)
+                  CustomButton(
+                    text: "Log in",
+                    onPressed: () => Navigator.push(context,
+                        MaterialPageRoute(builder: (_) => const LoginScreen())),
+                    width: isSmall ? 70 : 90, height: 36,
+                    type: ButtonType.primary,
+                  ),
+                if (!auth.isLoggedIn) const SizedBox(width: 8),
+              ],
+            ),
+
+            // Text input
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
+              child: Container(
+                height: screenSize.height * 0.22,
+                decoration: BoxDecoration(
+                  color: AppTheme.cardColor,
+                  borderRadius: BorderRadius.circular(18),
+                  border: Border.all(color: _accentColor.withOpacity(0.15)),
+                  boxShadow: [
+                    BoxShadow(
+                      color: _accentColor.withOpacity(0.06),
+                      blurRadius: 12, offset: const Offset(0, 4),
+                    ),
+                  ],
+                ),
+                child: Column(
+                  children: [
+                    Expanded(
+                      child: TextField(
+                        controller: _controller,
+                        maxLines: null, expands: true,
+                        textAlignVertical: TextAlignVertical.top,
+                        style: AppTheme.bodyMedium,
+                        decoration: InputDecoration(
+                          hintText: "Enter text to adjust the tone...",
+                          hintStyle: AppTheme.bodyMedium.copyWith(
+                              color: AppTheme.textSecondaryColor
+                                  .withOpacity(0.6)),
+                          contentPadding: const EdgeInsets.all(16),
+                          border: InputBorder.none,
+                        ),
+                      ),
+                    ),
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 12, vertical: 8),
+                      decoration: BoxDecoration(
+                        border: Border(top: BorderSide(
+                            color: AppTheme.textSecondaryColor
+                                .withOpacity(0.1))),
+                      ),
+                      child: Row(
+                        children: [
+                          _chip(Icons.content_paste_rounded, "Paste", () async {
+                            final d =
+                                await Clipboard.getData(Clipboard.kTextPlain);
+                            if (d?.text != null) _controller.text = d!.text!;
+                          }),
+                          const SizedBox(width: 8),
+                          _chip(CupertinoIcons.clear_circled, "Clear",
+                              () => _controller.clear()),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+
+            const SizedBox(height: 12),
+
+            // Tone selector
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 4),
+                decoration: BoxDecoration(
+                  color: _accentColor.withOpacity(0.06),
+                  borderRadius: BorderRadius.circular(14),
+                  border: Border.all(color: _accentColor.withOpacity(0.15)),
+                ),
+                child: Row(
+                  children: [
+                    const Icon(CupertinoIcons.wand_stars,
+                        size: 16, color: _accentColor),
+                    const SizedBox(width: 8),
+                    Text("Tone:", style: AppTheme.bodySmall
+                        .copyWith(fontWeight: FontWeight.w600)),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: DropdownButtonHideUnderline(
+                        child: DropdownButton<String>(
+                          value: _tones.contains(_selectedTone)
+                              ? _selectedTone
+                              : "Custom",
+                          isExpanded: true,
+                          icon: Icon(CupertinoIcons.chevron_down,
+                              color: _accentColor, size: 14),
+                          borderRadius: BorderRadius.circular(12),
+                          dropdownColor: AppTheme.cardColor,
+                          style: AppTheme.bodyMedium.copyWith(
+                              color: _accentColor,
+                              fontWeight: FontWeight.w600),
+                          items: _tones.map((t) => DropdownMenuItem(
+                            value: t, child: Text(t),
+                          )).toList(),
+                          onChanged: (v) {
+                            if (v != null) setState(() => _selectedTone = v);
+                          },
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+
+            const Spacer(),
+
+            // Edit Tone button
+            FadeInUp(
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(20, 8, 20, 12),
+                child: SizedBox(
+                  width: double.infinity, height: 52,
+                  child: GestureDetector(
+                    onTap: _isLoading ? null : _editTone,
+                    child: Container(
+                      decoration: BoxDecoration(
+                        gradient: const LinearGradient(
+                            colors: [_accentColor, _accentDark]),
+                        borderRadius: BorderRadius.circular(16),
+                        boxShadow: [
+                          BoxShadow(color: _accentColor.withOpacity(0.35),
+                              blurRadius: 16, offset: const Offset(0, 6)),
+                        ],
+                      ),
+                      child: Center(
+                        child: _isLoading
+                            ? const SizedBox(width: 24, height: 24,
+                                child: CircularProgressIndicator(
+                                    strokeWidth: 2.5, color: Colors.white))
+                            : const Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Icon(CupertinoIcons.wand_stars,
+                                      color: Colors.white, size: 18),
+                                  SizedBox(width: 8),
+                                  Text("Adjust Tone",
+                                    style: TextStyle(color: Colors.white,
+                                        fontSize: 16,
+                                        fontWeight: FontWeight.w700)),
+                                ],
+                              ),
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _chip(IconData icon, String label, VoidCallback onTap) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+        decoration: BoxDecoration(
+          color: AppTheme.backgroundColor,
+          borderRadius: BorderRadius.circular(8),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(icon, size: 14, color: AppTheme.textSecondaryColor),
+            const SizedBox(width: 4),
+            Text(label, style: TextStyle(fontSize: 11,
+                color: AppTheme.textSecondaryColor,
+                fontWeight: FontWeight.w500)),
+          ],
+        ),
+      ),
+    );
+  }
+}

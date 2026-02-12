@@ -20,6 +20,11 @@ endif()
 
 add_library(fl_native SHARED src/lib.c)
 
+# 16 KB page size alignment for Android 15+
+set_target_properties(fl_native PROPERTIES
+    LINK_FLAGS "-Wl,-z,max-page-size=16384"
+)
+
 if(CMAKE_ANDROID_ARCH_ABI STREQUAL "armeabi-v7a")
     set(ANDROID_TARGET "armv7a-linux-androideabi")
     set(RUST_TARGET "armv7-linux-androideabi")

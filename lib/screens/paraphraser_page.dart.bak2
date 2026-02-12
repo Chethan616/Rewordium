@@ -1,0 +1,920 @@
+import 'package:flutter/material.dart';
+import 'package:flutter/cupertino.dart';
+import 'package:animate_do/animate_do.dart';
+import 'package:flutter/services.dart';
+
+import 'package:provider/provider.dart';
+
+import '../theme/app_theme.dart';
+import '../widgets/custom_app_bar.dart';
+import '../widgets/custom_button.dart';
+
+import '../providers/auth_provider.dart';
+import '../services/unified_ai_service.dart';
+import '../models/persona_model.dart';
+import '../utils/ai_error_handler.dart';
+
+import 'auth/login_screen.dart';
+
+class ParaphraserPage extends StatefulWidget {
+  const ParaphraserPage({super.key});
+
+  @override
+  State<ParaphraserPage> createState() => _ParaphraserPageState();
+}
+
+class _ParaphraserPageState extends State<ParaphraserPage> {
+  final TextEditingController _controller = TextEditingController();
+  final TextEditingController _resultController = TextEditingController();
+  final TextEditingController _customPromptController = TextEditingController();
+  String _selectedMode = "Standard";
+  bool _isLoading = false;
+  List<String> _alternatives = [];
+  Persona? _selectedPersona;
+  bool _usePersona = false;
+  String? _customPrompt;
+
+  @override
+  void initState() {
+    super.initState();
+    UnifiedAIService.initialize();
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    _resultController.dispose();
+    _customPromptController.dispose();
+    super.dispose();
+  }
+
+  String _getToneFromMode(String mode) {
+    switch (mode.toLowerCase()) {
+      case 'fluency':
+        return 'fluent and natural';
+      case 'academic':
+        return 'academic and scholarly';
+      case 'humanize':
+        return 'conversational and human-like';
+      case 'formal':
+        return 'formal and professional';
+      case 'simple':
+        return 'simple and easy to understand';
+      case 'creative':
+        return 'creative and imaginative';
+      case 'expand':
+        return 'detailed and expanded';
+      case 'shorten':
+        return 'concise and shortened';
+      case 'custom':
+        return 'unique and distinctive';
+      default:
+        return 'standard and clear';
+    }
+  }
+
+  void _showPersonaDialog() {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Select a Persona'),
+        content: SizedBox(
+          width: double.maxFinite,
+          child: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                ...PersonaManager.allPersonas
+                    .map((persona) => ListTile(
+                          leading: Text(persona.icon,
+                              style: const TextStyle(fontSize: 24)),
+                          title: Text(persona.name),
+                          subtitle: Text(persona.description),
+                          onTap: () {
+                            setState(() {
+                              _selectedPersona = persona;
+                            });
+                            Navigator.pop(context);
+                            if (_controller.text.isEmpty) {
+                              _controller.text =
+                                  "The quick brown fox jumps over the lazy dog. This is a sample text that demonstrates how the paraphraser works with different personas.";
+                            }
+                            _paraphraseWithPersona();
+                          },
+                        ))
+                    .toList(),
+                const Divider(),
+                ListTile(
+                  leading:
+                      const Text('✨', style: TextStyle(fontSize: 24)),
+                  title: const Text('Create Custom Persona'),
+                  subtitle: const Text(
+                      'Define your own paraphrasing instructions'),
+                  onTap: () {
+                    Navigator.pop(context);
+                    _showCustomPersonaDialog();
+                  },
+                ),
+              ],
+            ),
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancel'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showCustomPersonaDialog() {
+    _customPromptController.text = '';
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Create Custom Persona'),
+        content: SizedBox(
+          width: double.maxFinite,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text(
+                  'Enter instructions for how to paraphrase your text:'),
+              const SizedBox(height: 8),
+              TextField(
+                controller: _customPromptController,
+                maxLines: 5,
+                decoration: const InputDecoration(
+                  hintText:
+                      'E.g., Rewrite this as if it were written by Shakespeare',
+                  border: OutlineInputBorder(),
+                ),
+              ),
+            ],
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () {
+              final prompt = _customPromptController.text.trim();
+              if (prompt.isEmpty) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                      content: Text('Please enter custom instructions')),
+                );
+                return;
+              }
+              PersonaManager.setCustomPersona(prompt);
+              setState(() {
+                _selectedPersona = PersonaManager.customPersona;
+                _usePersona = true;
+              });
+              Navigator.pop(context);
+              if (_controller.text.isEmpty) {
+                _controller.text =
+                    "The quick brown fox jumps over the lazy dog. This is a sample text that demonstrates how the paraphraser works with different personas.";
+              }
+              _paraphraseWithPersona();
+            },
+            child: const Text('Create & Use'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _showCustomModeDialog() async {
+    _customPromptController.text = _customPrompt ?? '';
+    return showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Custom Paraphrasing Mode'),
+        content: SizedBox(
+          width: double.maxFinite,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text(
+                  'Enter instructions for how to paraphrase your text:'),
+              const SizedBox(height: 8),
+              TextField(
+                controller: _customPromptController,
+                maxLines: 5,
+                decoration: const InputDecoration(
+                  hintText:
+                      'E.g., Make this text more persuasive and engaging',
+                  border: OutlineInputBorder(),
+                ),
+              ),
+            ],
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () {
+              final prompt = _customPromptController.text.trim();
+              if (prompt.isEmpty) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                      content: Text('Please enter custom instructions')),
+                );
+                return;
+              }
+              setState(() {
+                _customPrompt = prompt;
+              });
+              Navigator.pop(context);
+            },
+            child: const Text('Apply'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _paraphraseWithPersona() async {
+    if (_selectedPersona == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Please select a persona first')),
+      );
+      return;
+    }
+    final text = _controller.text.trim();
+    if (text.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Please enter some text to paraphrase')),
+      );
+      return;
+    }
+    setState(() => _isLoading = true);
+    try {
+      final result = await UnifiedAIService.paraphraseWithPersona(
+          text, _selectedPersona!.prompt);
+      if (result.containsKey('error')) {
+        setState(() => _isLoading = false);
+        if (mounted) AIErrorHandler.showErrorSnackBar(context, result);
+        return;
+      }
+      setState(() {
+        _resultController.text = result['paraphrased_text'] ?? text;
+        _alternatives = List<String>.from(result['alternatives'] ?? []);
+        _isLoading = false;
+      });
+      _showResultDialog();
+    } catch (e) {
+      setState(() => _isLoading = false);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Error paraphrasing text: $e')),
+      );
+    }
+  }
+
+  Future<void> _paraphraseText() async {
+    if (_usePersona && _selectedPersona != null) {
+      await _paraphraseWithPersona();
+      return;
+    }
+    final text = _controller.text.trim();
+    if (text.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Please enter some text to paraphrase')),
+      );
+      return;
+    }
+    setState(() => _isLoading = true);
+    try {
+      if (_selectedMode == "Custom") {
+        if (_customPrompt == null || _customPrompt!.isEmpty) {
+          await _showCustomModeDialog();
+          if (_customPrompt == null || _customPrompt!.isEmpty) {
+            setState(() => _isLoading = false);
+            return;
+          }
+        }
+        final result =
+            await UnifiedAIService.paraphraseWithCustomPrompt(text, _customPrompt!);
+        if (result.containsKey('error')) {
+          setState(() => _isLoading = false);
+          if (mounted) AIErrorHandler.showErrorSnackBar(context, result);
+          return;
+        }
+        setState(() {
+          _resultController.text = result['paraphrased_text'] ?? text;
+          _alternatives = List<String>.from(result['alternatives'] ?? []);
+          _isLoading = false;
+        });
+      } else {
+        final tone = _getToneFromMode(_selectedMode);
+        final result = await UnifiedAIService.paraphraseText(text, tone);
+        if (result.containsKey('error')) {
+          setState(() => _isLoading = false);
+          if (mounted) AIErrorHandler.showErrorSnackBar(context, result);
+          return;
+        }
+        setState(() {
+          _resultController.text = result['paraphrased_text'] ?? text;
+          _alternatives = List<String>.from(result['alternatives'] ?? []);
+          _isLoading = false;
+        });
+      }
+      _showResultDialog();
+    } catch (e) {
+      setState(() => _isLoading = false);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Error paraphrasing text: $e')),
+      );
+    }
+  }
+
+  void _showResultDialog() {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) => DraggableScrollableSheet(
+        initialChildSize: 0.65,
+        minChildSize: 0.4,
+        maxChildSize: 0.9,
+        builder: (context, scrollController) => Container(
+          decoration: BoxDecoration(
+            color: AppTheme.cardColor,
+            borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+          ),
+          child: Column(
+            children: [
+              // Handle bar
+              Container(
+                margin: const EdgeInsets.only(top: 12),
+                width: 40,
+                height: 4,
+                decoration: BoxDecoration(
+                  color: Colors.grey.withOpacity(0.3),
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+              // Title row
+              Padding(
+                padding: const EdgeInsets.fromLTRB(20, 16, 20, 8),
+                child: Row(
+                  children: [
+                    Container(
+                      width: 36,
+                      height: 36,
+                      decoration: BoxDecoration(
+                        color: AppTheme.primaryColor.withOpacity(0.1),
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      child: Icon(CupertinoIcons.checkmark_seal_fill,
+                          color: AppTheme.primaryColor, size: 18),
+                    ),
+                    const SizedBox(width: 12),
+                    Text("Paraphrased Result",
+                        style: AppTheme.headingSmall),
+                    const Spacer(),
+                    IconButton(
+                      icon: Icon(CupertinoIcons.doc_on_clipboard,
+                          color: AppTheme.primaryColor),
+                      onPressed: () {
+                        Clipboard.setData(
+                            ClipboardData(text: _resultController.text));
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                              content: Text('Copied to clipboard')),
+                        );
+                      },
+                    ),
+                  ],
+                ),
+              ),
+              const Divider(),
+              // Result content
+              Expanded(
+                child: SingleChildScrollView(
+                  controller: scrollController,
+                  padding: const EdgeInsets.all(20),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Container(
+                        width: double.infinity,
+                        padding: const EdgeInsets.all(16),
+                        decoration: BoxDecoration(
+                          color: AppTheme.primaryColor.withOpacity(0.05),
+                          borderRadius: BorderRadius.circular(14),
+                          border: Border.all(
+                            color: AppTheme.primaryColor.withOpacity(0.15),
+                          ),
+                        ),
+                        child: SelectableText(
+                          _resultController.text,
+                          style: AppTheme.bodyMedium.copyWith(height: 1.5),
+                        ),
+                      ),
+                      if (_alternatives.isNotEmpty) ...[
+                        const SizedBox(height: 20),
+                        Text('Alternatives',
+                            style: AppTheme.bodyLarge
+                                .copyWith(fontWeight: FontWeight.w700)),
+                        const SizedBox(height: 10),
+                        ...List.generate(_alternatives.length, (index) {
+                          return Container(
+                            margin: const EdgeInsets.only(bottom: 10),
+                            padding: const EdgeInsets.all(14),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFF3B82F6).withOpacity(0.05),
+                              borderRadius: BorderRadius.circular(12),
+                              border: Border.all(
+                                color:
+                                    const Color(0xFF3B82F6).withOpacity(0.15),
+                              ),
+                            ),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Row(
+                                  children: [
+                                    Text('Option ${index + 1}',
+                                        style: AppTheme.bodySmall.copyWith(
+                                            fontWeight: FontWeight.w600,
+                                            color: const Color(0xFF3B82F6))),
+                                    const Spacer(),
+                                    GestureDetector(
+                                      onTap: () {
+                                        _resultController.text =
+                                            _alternatives[index];
+                                        Navigator.pop(context);
+                                        _showResultDialog();
+                                      },
+                                      child: Container(
+                                        padding: const EdgeInsets.symmetric(
+                                            horizontal: 10, vertical: 4),
+                                        decoration: BoxDecoration(
+                                          color: const Color(0xFF3B82F6)
+                                              .withOpacity(0.1),
+                                          borderRadius:
+                                              BorderRadius.circular(8),
+                                        ),
+                                        child: const Text('Use',
+                                            style: TextStyle(
+                                                fontSize: 11,
+                                                fontWeight: FontWeight.w600,
+                                                color: Color(0xFF3B82F6))),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                                const SizedBox(height: 8),
+                                Text(_alternatives[index],
+                                    style: AppTheme.bodyMedium),
+                              ],
+                            ),
+                          );
+                        }),
+                      ],
+                    ],
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final Size screenSize = MediaQuery.of(context).size;
+    final bool isSmallScreen = screenSize.width < 360;
+    final authProvider = Provider.of<AuthProvider>(context);
+    final bool isLoggedIn = authProvider.isLoggedIn;
+
+    return Scaffold(
+      backgroundColor: AppTheme.backgroundColor,
+      body: SafeArea(
+        child: Column(
+          children: [
+            // ─── APP BAR ───
+            CustomAppBar(
+              title: "Paraphraser",
+              leadingIcon: Icon(
+                CupertinoIcons.pencil_outline,
+                color: AppTheme.primaryColor,
+              ),
+              actions: [
+                if (!isLoggedIn)
+                  CustomButton(
+                    text: "Log in",
+                    onPressed: () => Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                          builder: (context) => const LoginScreen()),
+                    ),
+                    width: isSmallScreen ? 70 : 90,
+                    height: 36,
+                    type: ButtonType.primary,
+                  ),
+                if (!isLoggedIn) const SizedBox(width: 8),
+              ],
+            ),
+
+            // ─── TEXT INPUT AREA ───
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
+              child: Container(
+                height: screenSize.height * 0.22,
+                decoration: BoxDecoration(
+                  color: AppTheme.cardColor,
+                  borderRadius: BorderRadius.circular(18),
+                  border: Border.all(
+                    color: AppTheme.primaryColor.withOpacity(0.15),
+                    width: 1,
+                  ),
+                  boxShadow: [
+                    BoxShadow(
+                      color: AppTheme.primaryColor.withOpacity(0.06),
+                      blurRadius: 12,
+                      offset: const Offset(0, 4),
+                    ),
+                  ],
+                ),
+                child: Column(
+                  children: [
+                    Expanded(
+                      child: TextField(
+                        controller: _controller,
+                        maxLines: null,
+                        expands: true,
+                        textAlignVertical: TextAlignVertical.top,
+                        style: AppTheme.bodyMedium,
+                        decoration: InputDecoration(
+                          hintText: "Enter or paste text to paraphrase...",
+                          hintStyle: AppTheme.bodyMedium.copyWith(
+                            color: AppTheme.textSecondaryColor.withOpacity(0.6),
+                          ),
+                          contentPadding: const EdgeInsets.all(16),
+                          border: InputBorder.none,
+                        ),
+                      ),
+                    ),
+                    // Quick action bar inside text field
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 12, vertical: 8),
+                      decoration: BoxDecoration(
+                        border: Border(
+                          top: BorderSide(
+                            color: AppTheme.textSecondaryColor.withOpacity(0.1),
+                          ),
+                        ),
+                      ),
+                      child: Row(
+                        children: [
+                          _buildQuickAction(
+                            icon: Icons.content_paste_rounded,
+                            label: "Paste",
+                            onTap: () async {
+                              try {
+                                final data = await Clipboard.getData(
+                                    Clipboard.kTextPlain);
+                                if (data?.text != null) {
+                                  _controller.text = data!.text!;
+                                }
+                              } catch (e) {
+                                // ignore
+                              }
+                            },
+                          ),
+                          const SizedBox(width: 8),
+                          _buildQuickAction(
+                            icon: CupertinoIcons.person_2_fill,
+                            label: "Personas",
+                            onTap: _showPersonaDialog,
+                          ),
+                          const Spacer(),
+                          _buildQuickAction(
+                            icon: CupertinoIcons.clear_circled,
+                            label: "Clear",
+                            onTap: () => _controller.clear(),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+
+            const SizedBox(height: 12),
+
+            // ─── MODE SELECTOR ───
+            Expanded(
+              child: Column(
+                children: [
+                  // Tabs: Modes | Personas
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 16),
+                    child: Row(
+                      children: [
+                        _buildTabPill("Modes", !_usePersona, () {
+                          setState(() => _usePersona = false);
+                        }),
+                        const SizedBox(width: 8),
+                        _buildTabPill("Personas", _usePersona, () {
+                          setState(() => _usePersona = true);
+                        }),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 10),
+
+                  // Mode chips
+                  if (!_usePersona) _buildModeChips(isSmallScreen),
+
+                  // Persona chips
+                  if (_usePersona) _buildPersonaChips(isSmallScreen),
+                ],
+              ),
+            ),
+
+            // ─── PARAPHRASE BUTTON ───
+            FadeInUp(
+              child: Container(
+                padding: const EdgeInsets.fromLTRB(20, 8, 20, 12),
+                child: SizedBox(
+                  width: double.infinity,
+                  height: 52,
+                  child: GestureDetector(
+                    onTap: _isLoading ? null : _paraphraseText,
+                    child: Container(
+                      decoration: BoxDecoration(
+                        gradient: LinearGradient(
+                          colors: [
+                            AppTheme.primaryColor,
+                            const Color(0xFF00C9A7),
+                          ],
+                        ),
+                        borderRadius: BorderRadius.circular(16),
+                        boxShadow: [
+                          BoxShadow(
+                            color: AppTheme.primaryColor.withOpacity(0.35),
+                            blurRadius: 16,
+                            offset: const Offset(0, 6),
+                          ),
+                        ],
+                      ),
+                      child: Center(
+                        child: _isLoading
+                            ? const SizedBox(
+                                width: 24,
+                                height: 24,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2.5,
+                                  color: Colors.white,
+                                ),
+                              )
+                            : const Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Icon(CupertinoIcons.sparkles,
+                                      color: Colors.white, size: 18),
+                                  SizedBox(width: 8),
+                                  Text(
+                                    "Paraphrase",
+                                    style: TextStyle(
+                                      color: Colors.white,
+                                      fontSize: 16,
+                                      fontWeight: FontWeight.w700,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildQuickAction({
+    required IconData icon,
+    required String label,
+    required VoidCallback onTap,
+  }) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+        decoration: BoxDecoration(
+          color: AppTheme.backgroundColor,
+          borderRadius: BorderRadius.circular(8),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(icon, size: 14, color: AppTheme.textSecondaryColor),
+            const SizedBox(width: 4),
+            Text(
+              label,
+              style: TextStyle(
+                fontSize: 11,
+                color: AppTheme.textSecondaryColor,
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildTabPill(String label, bool isActive, VoidCallback onTap) {
+    return GestureDetector(
+      onTap: onTap,
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 200),
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+        decoration: BoxDecoration(
+          color: isActive
+              ? AppTheme.primaryColor.withOpacity(0.12)
+              : Colors.transparent,
+          borderRadius: BorderRadius.circular(10),
+          border: Border.all(
+            color: isActive
+                ? AppTheme.primaryColor.withOpacity(0.3)
+                : AppTheme.textSecondaryColor.withOpacity(0.2),
+          ),
+        ),
+        child: Text(
+          label,
+          style: TextStyle(
+            fontSize: 13,
+            fontWeight: isActive ? FontWeight.w700 : FontWeight.w500,
+            color: isActive ? AppTheme.primaryColor : AppTheme.textSecondaryColor,
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildModeChips(bool isSmallScreen) {
+    final modes = [
+      ("Standard", CupertinoIcons.textformat),
+      ("Fluency", CupertinoIcons.waveform),
+      ("Academic", CupertinoIcons.book),
+      ("Humanize", CupertinoIcons.person),
+      ("Formal", CupertinoIcons.briefcase),
+      ("Simple", CupertinoIcons.lightbulb),
+      ("Creative", CupertinoIcons.paintbrush),
+      ("Expand", CupertinoIcons.arrow_up_left_arrow_down_right),
+      ("Shorten", CupertinoIcons.minus_circle),
+      ("Custom", CupertinoIcons.slider_horizontal_3),
+    ];
+
+    return SizedBox(
+      height: 42,
+      child: ListView.separated(
+        scrollDirection: Axis.horizontal,
+        physics: const BouncingScrollPhysics(),
+        padding: const EdgeInsets.symmetric(horizontal: 16),
+        itemCount: modes.length,
+        separatorBuilder: (_, __) => const SizedBox(width: 8),
+        itemBuilder: (context, index) {
+          final mode = modes[index];
+          final isSelected = _selectedMode == mode.$1;
+          return GestureDetector(
+            onTap: () {
+              setState(() => _selectedMode = mode.$1);
+              if (mode.$1 == "Custom") _showCustomModeDialog();
+            },
+            child: AnimatedContainer(
+              duration: const Duration(milliseconds: 200),
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+              decoration: BoxDecoration(
+                color: isSelected
+                    ? AppTheme.primaryColor
+                    : AppTheme.cardColor,
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(
+                  color: isSelected
+                      ? AppTheme.primaryColor
+                      : AppTheme.textSecondaryColor.withOpacity(0.2),
+                ),
+                boxShadow: isSelected
+                    ? [
+                        BoxShadow(
+                          color: AppTheme.primaryColor.withOpacity(0.25),
+                          blurRadius: 8,
+                          offset: const Offset(0, 2),
+                        ),
+                      ]
+                    : [],
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(
+                    mode.$2,
+                    size: 14,
+                    color: isSelected ? Colors.white : AppTheme.textSecondaryColor,
+                  ),
+                  const SizedBox(width: 6),
+                  Text(
+                    mode.$1,
+                    style: TextStyle(
+                      fontSize: 12,
+                      fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
+                      color: isSelected
+                          ? Colors.white
+                          : AppTheme.textPrimaryColor,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          );
+        },
+      ),
+    );
+  }
+
+  Widget _buildPersonaChips(bool isSmallScreen) {
+    final personas = PersonaManager.personas;
+    return SizedBox(
+      height: 42,
+      child: ListView.separated(
+        scrollDirection: Axis.horizontal,
+        physics: const BouncingScrollPhysics(),
+        padding: const EdgeInsets.symmetric(horizontal: 16),
+        itemCount: personas.length,
+        separatorBuilder: (_, __) => const SizedBox(width: 8),
+        itemBuilder: (context, index) {
+          final persona = personas[index];
+          final isSelected = _selectedPersona?.name == persona.name;
+          return GestureDetector(
+            onTap: () => setState(() => _selectedPersona = persona),
+            child: AnimatedContainer(
+              duration: const Duration(milliseconds: 200),
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+              decoration: BoxDecoration(
+                color: isSelected
+                    ? AppTheme.primaryColor
+                    : AppTheme.cardColor,
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(
+                  color: isSelected
+                      ? AppTheme.primaryColor
+                      : AppTheme.textSecondaryColor.withOpacity(0.2),
+                ),
+                boxShadow: isSelected
+                    ? [
+                        BoxShadow(
+                          color: AppTheme.primaryColor.withOpacity(0.25),
+                          blurRadius: 8,
+                          offset: const Offset(0, 2),
+                        ),
+                      ]
+                    : [],
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(persona.icon, style: const TextStyle(fontSize: 14)),
+                  const SizedBox(width: 6),
+                  Text(
+                    persona.name,
+                    style: TextStyle(
+                      fontSize: 12,
+                      fontWeight:
+                          isSelected ? FontWeight.w700 : FontWeight.w500,
+                      color: isSelected
+                          ? Colors.white
+                          : AppTheme.textPrimaryColor,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          );
+        },
+      ),
+    );
+  }
+}

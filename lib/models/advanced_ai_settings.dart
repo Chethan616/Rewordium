@@ -67,7 +67,7 @@ class AdvancedAISettings {
   String getDefaultModelName() {
     switch (provider) {
       case AIProvider.gemini:
-        return 'gemini-1.5-pro';
+        return 'gemini-2.5-flash';
       case AIProvider.openai:
         return 'gpt-4-turbo-preview';
       case AIProvider.anthropic:

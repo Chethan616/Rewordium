@@ -1,0 +1,316 @@
+import 'package:flutter/material.dart';
+import 'package:flutter/cupertino.dart';
+import 'package:provider/provider.dart';
+import 'package:animate_do/animate_do.dart';
+import '../../theme/app_theme.dart';
+
+import '../custom_button.dart';
+import '../../providers/keyboard_provider.dart';
+import '../experimental_keyboard_dialog.dart';
+
+class KeyboardStatusCard extends StatefulWidget {
+  const KeyboardStatusCard({super.key});
+
+  @override
+  State<KeyboardStatusCard> createState() => _KeyboardStatusCardState();
+}
+
+class _KeyboardStatusCardState extends State<KeyboardStatusCard>
+    with WidgetsBindingObserver {
+  late final KeyboardProvider _keyboardProvider;
+  late final VoidCallback _onAppResume;
+
+  @override
+  void initState() {
+    super.initState();
+    _keyboardProvider = Provider.of<KeyboardProvider>(context, listen: false);
+
+    _onAppResume = () {
+      Future.delayed(const Duration(milliseconds: 500), () {
+        _keyboardProvider.checkKeyboardStatus();
+      });
+    };
+
+    WidgetsBinding.instance.addObserver(this);
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _keyboardProvider.startKeyboardStatusCheck();
+    });
+  }
+
+  @override
+  void dispose() {
+    _keyboardProvider.stopKeyboardStatusCheck();
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) {
+      _onAppResume();
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final keyboardProvider = Provider.of<KeyboardProvider>(context);
+    final isEnabled = keyboardProvider.isSystemKeyboardEnabled;
+
+    return FadeInLeft(
+      duration: const Duration(milliseconds: 500),
+      delay: const Duration(milliseconds: 100),
+      child: Container(
+        margin: const EdgeInsets.all(6),
+        padding: const EdgeInsets.all(14),
+        decoration: BoxDecoration(
+          color: AppTheme.cardColor,
+          borderRadius: BorderRadius.circular(18),
+          border: Border.all(
+            color: isEnabled
+                ? const Color(0xFF10B981).withOpacity(0.3)
+                : const Color(0xFFF59E0B).withOpacity(0.3),
+            width: 1,
+          ),
+          boxShadow: [
+            BoxShadow(
+              color: (isEnabled
+                      ? const Color(0xFF10B981)
+                      : const Color(0xFFF59E0B))
+                  .withOpacity(0.08),
+              blurRadius: 12,
+              offset: const Offset(0, 4),
+            ),
+          ],
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Status indicator row
+            Row(
+              children: [
+                Container(
+                  width: 32,
+                  height: 32,
+                  decoration: BoxDecoration(
+                    color: isEnabled
+                        ? const Color(0xFF10B981).withOpacity(0.12)
+                        : const Color(0xFFF59E0B).withOpacity(0.12),
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: Icon(
+                    CupertinoIcons.keyboard,
+                    size: 16,
+                    color: isEnabled
+                        ? const Color(0xFF10B981)
+                        : const Color(0xFFF59E0B),
+                  ),
+                ),
+                const Spacer(),
+                Container(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                  decoration: BoxDecoration(
+                    color: isEnabled
+                        ? const Color(0xFF10B981).withOpacity(0.1)
+                        : const Color(0xFFF59E0B).withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Container(
+                        width: 6,
+                        height: 6,
+                        decoration: BoxDecoration(
+                          color: isEnabled
+                              ? const Color(0xFF10B981)
+                              : const Color(0xFFF59E0B),
+                          shape: BoxShape.circle,
+                        ),
+                      ),
+                      const SizedBox(width: 4),
+                      Text(
+                        isEnabled ? "On" : "Off",
+                        style: TextStyle(
+                          fontSize: 10,
+                          fontWeight: FontWeight.w600,
+                          color: isEnabled
+                              ? const Color(0xFF10B981)
+                              : const Color(0xFFF59E0B),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+
+            const SizedBox(height: 12),
+
+            // Title
+            Text(
+              "Keyboard",
+              style: AppTheme.bodyLarge.copyWith(
+                fontWeight: FontWeight.w700,
+                fontSize: 15,
+              ),
+            ),
+            const SizedBox(height: 2),
+            Text(
+              isEnabled ? "Active & ready" : "Tap to enable",
+              style: AppTheme.bodySmall.copyWith(fontSize: 11),
+            ),
+
+            const SizedBox(height: 12),
+
+            // Action button
+            SizedBox(
+              width: double.infinity,
+              height: 34,
+              child: GestureDetector(
+                onTap: () async {
+                  final shouldProceed =
+                      await showExperimentalKeyboardDialog(context);
+                  if (shouldProceed) {
+                    keyboardProvider.openKeyboardSettings();
+                  }
+                },
+                behavior: HitTestBehavior.opaque,
+                child: Container(
+                  decoration: BoxDecoration(
+                    color: isEnabled
+                        ? AppTheme.primaryColor.withOpacity(0.1)
+                        : AppTheme.primaryColor,
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: Center(
+                    child: Text(
+                      isEnabled ? "Manage" : "Enable",
+                      style: TextStyle(
+                        color: isEnabled ? AppTheme.primaryColor : Colors.white,
+                        fontSize: 12,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+// Keep the KeyboardSettingsSheet for backward compatibility
+class KeyboardSettingsSheet extends StatelessWidget {
+  final KeyboardProvider provider;
+
+  const KeyboardSettingsSheet({super.key, required this.provider});
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.all(24),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Center(
+            child: Container(
+              width: 40,
+              height: 4,
+              decoration: BoxDecoration(
+                color: Colors.grey.withOpacity(0.3),
+                borderRadius: BorderRadius.circular(2),
+              ),
+            ),
+          ),
+          const SizedBox(height: 24),
+          Text("Keyboard Settings", style: AppTheme.headingMedium),
+          const SizedBox(height: 16),
+          _buildSettingItem(
+            title: "Keyboard Layout",
+            subtitle: "Select your preferred keyboard layout",
+            trailing: DropdownButton<KeyboardLayout>(
+              value: provider.layout,
+              onChanged: (layout) {
+                if (layout != null) {
+                  provider.setLayout(layout);
+                }
+              },
+              items: KeyboardLayout.values.map((layout) {
+                return DropdownMenuItem<KeyboardLayout>(
+                  value: layout,
+                  child: Text(provider.layoutName(layout)),
+                );
+              }).toList(),
+              underline: const SizedBox(),
+            ),
+          ),
+          const Divider(),
+          _buildSettingItem(
+            title: "Haptic Feedback",
+            subtitle: "Vibrate when typing",
+            trailing: Switch(
+              value: provider.soundOn,
+              onChanged: (_) => provider.toggleSound(),
+              activeColor: AppTheme.primaryColor,
+            ),
+          ),
+          const Divider(),
+          _buildSettingItem(
+            title: "Paraphraser Button",
+            subtitle: "Show paraphraser button on keyboard",
+            trailing: Switch(
+              value: provider.isParaphraserEnabled,
+              onChanged: (_) => provider.toggleParaphraser(),
+              activeColor: AppTheme.primaryColor,
+            ),
+          ),
+          const SizedBox(height: 24),
+          SizedBox(
+            width: double.infinity,
+            child: CustomButton(
+              text: "Close",
+              onPressed: () => Navigator.pop(context),
+              type: ButtonType.secondary,
+            ),
+          ),
+          const SizedBox(height: 16),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildSettingItem({
+    required String title,
+    required String subtitle,
+    required Widget trailing,
+  }) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 8),
+      child: Row(
+        children: [
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(title, style: AppTheme.bodyLarge),
+                const SizedBox(height: 4),
+                Text(
+                  subtitle,
+                  style: AppTheme.bodySmall.copyWith(
+                    color: AppTheme.textSecondaryColor,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          trailing,
+        ],
+      ),
+    );
+  }
+}

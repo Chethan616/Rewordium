@@ -60,7 +60,7 @@ fun getGroqApiKey(): String {
 android {
     namespace = "com.noxquill.rewordium"
     compileSdk = 36
-    ndkVersion = "27.0.12077973" // NDK r27 for 16 KB support without linking issues
+    ndkVersion = "27.0.12077973" // NDK r27 for 16 KB support with proper linker flags
 
     compileOptions {
         // Flag to enable support for the new language APIs

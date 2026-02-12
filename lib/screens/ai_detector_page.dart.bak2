@@ -1,0 +1,460 @@
+import 'package:flutter/material.dart';
+import 'package:flutter/cupertino.dart';
+import 'package:animate_do/animate_do.dart';
+import 'package:flutter/services.dart';
+import 'package:provider/provider.dart';
+
+import '../theme/app_theme.dart';
+import '../widgets/custom_app_bar.dart';
+import '../widgets/custom_button.dart';
+import '../providers/auth_provider.dart';
+import '../services/unified_ai_service.dart';
+import '../utils/ai_error_handler.dart';
+import 'auth/login_screen.dart';
+
+class AIDetectorPage extends StatefulWidget {
+  const AIDetectorPage({super.key});
+
+  @override
+  State<AIDetectorPage> createState() => _AIDetectorPageState();
+}
+
+class _AIDetectorPageState extends State<AIDetectorPage> {
+  final TextEditingController _controller = TextEditingController();
+  bool _isLoading = false;
+  Map<String, dynamic>? _detectionResult;
+
+  static const _accentColor = Color(0xFF8B5CF6);
+  static const _accentDark = Color(0xFF7C3AED);
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  Future<void> _detectAI() async {
+    final text = _controller.text.trim();
+    if (text.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Please enter some text to analyze')),
+      );
+      return;
+    }
+    setState(() => _isLoading = true);
+    try {
+      final result = await UnifiedAIService.detectAIText(text);
+      if (result.containsKey('error')) {
+        setState(() => _isLoading = false);
+        if (mounted) AIErrorHandler.showErrorSnackBar(context, result);
+        return;
+      }
+      setState(() {
+        _detectionResult = result;
+        _isLoading = false;
+      });
+      _showResultSheet();
+    } catch (e) {
+      setState(() => _isLoading = false);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Error detecting AI text: $e')),
+      );
+    }
+  }
+
+  Color _probabilityColor(double prob) {
+    if (prob < 0.4) return Colors.green;
+    if (prob < 0.7) return Colors.orange;
+    return Colors.red;
+  }
+
+  String _probabilityLabel(double prob) {
+    if (prob < 0.2) return "Very Likely Human";
+    if (prob < 0.4) return "Likely Human";
+    if (prob < 0.6) return "Uncertain";
+    if (prob < 0.8) return "Likely AI";
+    return "Very Likely AI";
+  }
+
+  void _showResultSheet() {
+    if (_detectionResult == null) return;
+
+    final rawProb = _detectionResult!['ai_probability'];
+    final double prob = rawProb is int
+        ? rawProb / 100.0
+        : (rawProb is double
+            ? (rawProb > 1 ? rawProb / 100.0 : rawProb)
+            : 0.5);
+    final confidence = _detectionResult!['confidence'] ?? 'Medium';
+    final reasoning = _detectionResult!['reasoning'] ?? '';
+    final humanIndicators = _detectionResult!['human_indicators'] is List
+        ? List<String>.from(_detectionResult!['human_indicators'])
+        : <String>[];
+    final aiIndicators = _detectionResult!['ai_indicators'] is List
+        ? List<String>.from(_detectionResult!['ai_indicators'])
+        : <String>[];
+
+    final probColor = _probabilityColor(prob);
+    final probLabel = _probabilityLabel(prob);
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) => DraggableScrollableSheet(
+        initialChildSize: 0.7,
+        minChildSize: 0.3,
+        maxChildSize: 0.9,
+        builder: (context, sc) => Container(
+          decoration: BoxDecoration(
+            color: AppTheme.cardColor,
+            borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+          ),
+          child: Column(
+            children: [
+              Container(
+                margin: const EdgeInsets.only(top: 12),
+                width: 40, height: 4,
+                decoration: BoxDecoration(
+                  color: Colors.grey.withOpacity(0.3),
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+              Padding(
+                padding: const EdgeInsets.fromLTRB(20, 16, 20, 8),
+                child: Row(
+                  children: [
+                    Container(
+                      width: 36, height: 36,
+                      decoration: BoxDecoration(
+                        color: _accentColor.withOpacity(0.1),
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      child: const Icon(CupertinoIcons.search_circle,
+                          color: _accentColor, size: 18),
+                    ),
+                    const SizedBox(width: 12),
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text("AI Detection", style: AppTheme.headingSmall),
+                        Text("Confidence: $confidence",
+                            style: AppTheme.bodySmall
+                                .copyWith(color: _accentColor)),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+              const Divider(),
+              Expanded(
+                child: SingleChildScrollView(
+                  controller: sc,
+                  padding: const EdgeInsets.all(20),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      // Probability meter
+                      Container(
+                        padding: const EdgeInsets.all(20),
+                        decoration: BoxDecoration(
+                          color: probColor.withOpacity(0.06),
+                          borderRadius: BorderRadius.circular(16),
+                          border: Border.all(color: probColor.withOpacity(0.2)),
+                        ),
+                        child: Column(
+                          children: [
+                            Text(probLabel,
+                                style: TextStyle(
+                                    fontSize: 16,
+                                    fontWeight: FontWeight.w700,
+                                    color: probColor)),
+                            const SizedBox(height: 12),
+                            Stack(
+                              children: [
+                                Container(
+                                  height: 10,
+                                  decoration: BoxDecoration(
+                                    color: Colors.grey.withOpacity(0.15),
+                                    borderRadius: BorderRadius.circular(5),
+                                  ),
+                                ),
+                                FractionallySizedBox(
+                                  widthFactor: prob.clamp(0.05, 1.0),
+                                  child: Container(
+                                    height: 10,
+                                    decoration: BoxDecoration(
+                                      gradient: LinearGradient(
+                                          colors: [probColor.withOpacity(0.7), probColor]),
+                                      borderRadius: BorderRadius.circular(5),
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 8),
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              children: [
+                                Text("Human", style: AppTheme.bodySmall
+                                    .copyWith(color: Colors.green)),
+                                Text("${(prob * 100).toInt()}%",
+                                    style: TextStyle(
+                                        fontWeight: FontWeight.w800,
+                                        fontSize: 18, color: probColor)),
+                                Text("AI", style: AppTheme.bodySmall
+                                    .copyWith(color: Colors.red)),
+                              ],
+                            ),
+                          ],
+                        ),
+                      ),
+
+                      if (reasoning.isNotEmpty) ...[
+                        const SizedBox(height: 20),
+                        Text('Reasoning',
+                            style: AppTheme.bodyLarge
+                                .copyWith(fontWeight: FontWeight.w700)),
+                        const SizedBox(height: 8),
+                        Text(reasoning, style: AppTheme.bodyMedium
+                            .copyWith(height: 1.5)),
+                      ],
+
+                      if (humanIndicators.isNotEmpty) ...[
+                        const SizedBox(height: 20),
+                        _indicatorSection("Human Indicators", humanIndicators,
+                            Colors.green, CupertinoIcons.person),
+                      ],
+
+                      if (aiIndicators.isNotEmpty) ...[
+                        const SizedBox(height: 16),
+                        _indicatorSection("AI Indicators", aiIndicators,
+                            Colors.red, CupertinoIcons.desktopcomputer),
+                      ],
+                    ],
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _indicatorSection(String title, List<String> items, Color color,
+      IconData icon) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            Icon(icon, size: 16, color: color),
+            const SizedBox(width: 6),
+            Text(title,
+                style: AppTheme.bodyMedium.copyWith(
+                    fontWeight: FontWeight.w700, color: color)),
+          ],
+        ),
+        const SizedBox(height: 8),
+        ...items.map((i) => Padding(
+          padding: const EdgeInsets.only(bottom: 4),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Container(
+                margin: const EdgeInsets.only(top: 6),
+                width: 6, height: 6,
+                decoration: BoxDecoration(
+                    color: color, shape: BoxShape.circle),
+              ),
+              const SizedBox(width: 8),
+              Expanded(child: Text(i, style: AppTheme.bodyMedium)),
+            ],
+          ),
+        )),
+      ],
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final screenSize = MediaQuery.of(context).size;
+    final isSmall = screenSize.width < 360;
+    final auth = Provider.of<AuthProvider>(context);
+
+    return Scaffold(
+      backgroundColor: AppTheme.backgroundColor,
+      body: SafeArea(
+        child: Column(
+          children: [
+            CustomAppBar(
+              title: "AI Detector",
+              leadingIcon: Icon(CupertinoIcons.search_circle,
+                  color: _accentColor),
+              actions: [
+                if (!auth.isLoggedIn)
+                  CustomButton(
+                    text: "Log in",
+                    onPressed: () => Navigator.push(context,
+                        MaterialPageRoute(builder: (_) => const LoginScreen())),
+                    width: isSmall ? 70 : 90, height: 36,
+                    type: ButtonType.primary,
+                  ),
+                if (!auth.isLoggedIn) const SizedBox(width: 8),
+              ],
+            ),
+
+            // Text input – taller for detector
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
+              child: Container(
+                height: screenSize.height * 0.30,
+                decoration: BoxDecoration(
+                  color: AppTheme.cardColor,
+                  borderRadius: BorderRadius.circular(18),
+                  border: Border.all(color: _accentColor.withOpacity(0.15)),
+                  boxShadow: [
+                    BoxShadow(
+                      color: _accentColor.withOpacity(0.06),
+                      blurRadius: 12, offset: const Offset(0, 4),
+                    ),
+                  ],
+                ),
+                child: Column(
+                  children: [
+                    Expanded(
+                      child: TextField(
+                        controller: _controller,
+                        maxLines: null, expands: true,
+                        textAlignVertical: TextAlignVertical.top,
+                        style: AppTheme.bodyMedium,
+                        decoration: InputDecoration(
+                          hintText:
+                              "Paste text here to check if it's AI-generated...",
+                          hintStyle: AppTheme.bodyMedium.copyWith(
+                              color: AppTheme.textSecondaryColor
+                                  .withOpacity(0.6)),
+                          contentPadding: const EdgeInsets.all(16),
+                          border: InputBorder.none,
+                        ),
+                      ),
+                    ),
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 12, vertical: 8),
+                      decoration: BoxDecoration(
+                        border: Border(top: BorderSide(
+                            color: AppTheme.textSecondaryColor
+                                .withOpacity(0.1))),
+                      ),
+                      child: Row(
+                        children: [
+                          _chip(Icons.content_paste_rounded, "Paste", () async {
+                            final d =
+                                await Clipboard.getData(Clipboard.kTextPlain);
+                            if (d?.text != null) _controller.text = d!.text!;
+                          }),
+                          const SizedBox(width: 8),
+                          _chip(CupertinoIcons.clear_circled, "Clear",
+                              () => _controller.clear()),
+                          const Spacer(),
+                          ValueListenableBuilder<TextEditingValue>(
+                            valueListenable: _controller,
+                            builder: (_, v, __) {
+                              final wc = v.text.trim().isEmpty
+                                  ? 0
+                                  : v.text.trim().split(RegExp(r'\s+')).length;
+                              return Container(
+                                padding: const EdgeInsets.symmetric(
+                                    horizontal: 8, vertical: 3),
+                                decoration: BoxDecoration(
+                                  color: _accentColor.withOpacity(0.1),
+                                  borderRadius: BorderRadius.circular(6),
+                                ),
+                                child: Text("$wc words",
+                                    style: TextStyle(fontSize: 10,
+                                        color: _accentColor,
+                                        fontWeight: FontWeight.w600)),
+                              );
+                            },
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+
+            const Spacer(),
+
+            // Detect button
+            FadeInUp(
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(20, 8, 20, 12),
+                child: SizedBox(
+                  width: double.infinity, height: 52,
+                  child: GestureDetector(
+                    onTap: _isLoading ? null : _detectAI,
+                    child: Container(
+                      decoration: BoxDecoration(
+                        gradient: const LinearGradient(
+                            colors: [_accentColor, _accentDark]),
+                        borderRadius: BorderRadius.circular(16),
+                        boxShadow: [
+                          BoxShadow(color: _accentColor.withOpacity(0.35),
+                              blurRadius: 16, offset: const Offset(0, 6)),
+                        ],
+                      ),
+                      child: Center(
+                        child: _isLoading
+                            ? const SizedBox(width: 24, height: 24,
+                                child: CircularProgressIndicator(
+                                    strokeWidth: 2.5, color: Colors.white))
+                            : const Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Icon(CupertinoIcons.search_circle,
+                                      color: Colors.white, size: 18),
+                                  SizedBox(width: 8),
+                                  Text("Analyze Text",
+                                    style: TextStyle(color: Colors.white,
+                                        fontSize: 16, fontWeight: FontWeight.w700)),
+                                ],
+                              ),
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _chip(IconData icon, String label, VoidCallback onTap) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+        decoration: BoxDecoration(
+          color: AppTheme.backgroundColor,
+          borderRadius: BorderRadius.circular(8),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(icon, size: 14, color: AppTheme.textSecondaryColor),
+            const SizedBox(width: 4),
+            Text(label, style: TextStyle(fontSize: 11,
+                color: AppTheme.textSecondaryColor,
+                fontWeight: FontWeight.w500)),
+          ],
+        ),
+      ),
+    );
+  }
+}

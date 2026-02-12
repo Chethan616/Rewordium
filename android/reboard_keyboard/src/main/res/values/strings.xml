@@ -134,6 +134,9 @@
     <string name="ai__error_api">AI service unavailable</string>
     <string name="ai__success_copied">Text copied</string>
     <string name="ai__text_replaced">Text replaced</string>
+    <string name="ai__text_inserted">Text inserted below</string>
+    <string name="ai__mode_rewrite">Rewrite</string>
+    <string name="ai__mode_add_below">Add Below</string>
 
     <!-- Incognito mode strings -->
     <string name="incognito_mode__toast_after_enabled">Incognito mode is now enabled\n\n{app_name} will not learn words from your input while this mode is active</string>
@@ -516,6 +519,8 @@
     <string name="pref__correction__remember_caps_lock_state__summary" comment="Preference summary">Caps lock will stay on when moving to another text field</string>
     <string name="pref__correction__double_space_period__label" comment="Preference title">Double-space period</string>
     <string name="pref__correction__double_space_period__summary" comment="Preference summary">Tapping twice on spacebar inserts a period followed by a space</string>
+    <string name="pref__correction__smart_quotes__label" comment="Preference title">Smart quotes</string>
+    <string name="pref__correction__smart_quotes__summary" comment="Preference summary">Automatically use curly quotes (“ ”) instead of straight quotes</string>
     <string name="pref__spelling__title" comment="Preference group title">Spelling</string>
     <string name="pref__spelling__active_spellchecker__summary_disabled">Disabled system-wide. No red lines will appear in text fields for incorrect words. Tap to change.</string>
     <string name="pref__spelling__active_spellchecker__summary_none">No inline text spell checker service set. Tap to change.</string>

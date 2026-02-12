@@ -324,3 +324,8 @@ flutter run
 This project is licensed under [Your License]. See `LICENSE` file for details.
 
 Contributions must follow the [Contributor License Agreement](CONTRIBUTING.md).
+
+
+
+## 16kb paging 
+flutter build appbundle --release --target-platform android-arm64

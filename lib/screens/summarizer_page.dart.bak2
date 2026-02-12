@@ -1,0 +1,472 @@
+import 'package:flutter/material.dart';
+import 'package:flutter/cupertino.dart';
+import 'package:animate_do/animate_do.dart';
+import 'package:flutter/services.dart';
+import 'package:provider/provider.dart';
+
+import '../theme/app_theme.dart';
+import '../widgets/custom_app_bar.dart';
+import '../widgets/custom_button.dart';
+import '../providers/auth_provider.dart';
+import '../services/unified_ai_service.dart';
+import '../utils/ai_error_handler.dart';
+import 'auth/login_screen.dart';
+
+class SummarizerPage extends StatefulWidget {
+  const SummarizerPage({super.key});
+
+  @override
+  State<SummarizerPage> createState() => _SummarizerPageState();
+}
+
+class _SummarizerPageState extends State<SummarizerPage> {
+  final TextEditingController _controller = TextEditingController();
+  bool _isLoading = false;
+  String _selectedLength = "Short";
+  Map<String, dynamic>? _summaryResult;
+
+  static const _accentColor = Color(0xFFF59E0B);
+  static const _accentDark = Color(0xFFD97706);
+
+  final List<String> _lengths = [
+    "Very Short", "Short", "Medium", "Long", "Detailed"
+  ];
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  Future<void> _summarize() async {
+    final text = _controller.text.trim();
+    if (text.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Please enter some text to summarize')),
+      );
+      return;
+    }
+    setState(() => _isLoading = true);
+    try {
+      final result = await UnifiedAIService.summarizeText(text, length: _selectedLength);
+      if (result.containsKey('error')) {
+        setState(() => _isLoading = false);
+        if (mounted) AIErrorHandler.showErrorSnackBar(context, result);
+        return;
+      }
+      setState(() {
+        _summaryResult = result;
+        _isLoading = false;
+      });
+      _showResultSheet();
+    } catch (e) {
+      setState(() => _isLoading = false);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Error summarizing: $e')),
+      );
+    }
+  }
+
+  void _showResultSheet() {
+    if (_summaryResult == null) return;
+    final summary = _summaryResult!['summary'] ?? '';
+    final rawKeyPoints = _summaryResult!['key_points'];
+    final keyPoints = rawKeyPoints is List
+        ? List<String>.from(rawKeyPoints)
+        : <String>[];
+
+    final originalWords = _controller.text.trim().split(RegExp(r'\s+')).length;
+    final summaryWords = summary.toString().trim().split(RegExp(r'\s+')).length;
+    final reduction =
+        originalWords > 0 ? ((1 - summaryWords / originalWords) * 100).toInt() : 0;
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) => DraggableScrollableSheet(
+        initialChildSize: 0.65,
+        minChildSize: 0.3,
+        maxChildSize: 0.9,
+        builder: (context, sc) => Container(
+          decoration: BoxDecoration(
+            color: AppTheme.cardColor,
+            borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+          ),
+          child: Column(
+            children: [
+              Container(
+                margin: const EdgeInsets.only(top: 12),
+                width: 40, height: 4,
+                decoration: BoxDecoration(
+                  color: Colors.grey.withOpacity(0.3),
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+              Padding(
+                padding: const EdgeInsets.fromLTRB(20, 16, 20, 8),
+                child: Row(
+                  children: [
+                    Container(
+                      width: 36, height: 36,
+                      decoration: BoxDecoration(
+                        color: _accentColor.withOpacity(0.1),
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      child: const Icon(CupertinoIcons.text_badge_minus,
+                          color: _accentDark, size: 18),
+                    ),
+                    const SizedBox(width: 12),
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text("Summary", style: AppTheme.headingSmall),
+                        Text("$reduction% shorter",
+                            style: AppTheme.bodySmall
+                                .copyWith(color: _accentDark)),
+                      ],
+                    ),
+                    const Spacer(),
+                    IconButton(
+                      icon: Icon(CupertinoIcons.doc_on_clipboard,
+                          color: _accentDark),
+                      onPressed: () {
+                        Clipboard.setData(ClipboardData(text: summary));
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(content: Text('Copied!')),
+                        );
+                      },
+                    ),
+                  ],
+                ),
+              ),
+              const Divider(),
+              Expanded(
+                child: SingleChildScrollView(
+                  controller: sc,
+                  padding: const EdgeInsets.all(20),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      // Stats row
+                      Row(
+                        children: [
+                          _statCard("Original", "$originalWords words",
+                              Colors.grey),
+                          const SizedBox(width: 8),
+                          _statCard("Summary", "$summaryWords words",
+                              _accentColor),
+                          const SizedBox(width: 8),
+                          _statCard("Reduced", "$reduction%", Colors.green),
+                        ],
+                      ),
+                      const SizedBox(height: 16),
+
+                      Container(
+                        width: double.infinity,
+                        padding: const EdgeInsets.all(16),
+                        decoration: BoxDecoration(
+                          color: _accentColor.withOpacity(0.05),
+                          borderRadius: BorderRadius.circular(14),
+                          border: Border.all(
+                              color: _accentColor.withOpacity(0.15)),
+                        ),
+                        child: SelectableText(
+                          summary,
+                          style: AppTheme.bodyMedium.copyWith(height: 1.5),
+                        ),
+                      ),
+
+                      if (keyPoints.isNotEmpty) ...[
+                        const SizedBox(height: 20),
+                        Text('Key Points',
+                            style: AppTheme.bodyLarge
+                                .copyWith(fontWeight: FontWeight.w700)),
+                        const SizedBox(height: 10),
+                        ...keyPoints.asMap().entries.map((e) => Padding(
+                          padding: const EdgeInsets.only(bottom: 8),
+                          child: Row(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Container(
+                                width: 22, height: 22,
+                                decoration: BoxDecoration(
+                                  color: _accentColor.withOpacity(0.12),
+                                  borderRadius: BorderRadius.circular(6),
+                                ),
+                                child: Center(
+                                  child: Text("${e.key + 1}",
+                                      style: TextStyle(fontSize: 11,
+                                          fontWeight: FontWeight.w700,
+                                          color: _accentDark)),
+                                ),
+                              ),
+                              const SizedBox(width: 10),
+                              Expanded(child: Text(e.value,
+                                  style: AppTheme.bodyMedium)),
+                            ],
+                          ),
+                        )),
+                      ],
+                    ],
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _statCard(String label, String value, Color color) {
+    return Expanded(
+      child: Container(
+        padding: const EdgeInsets.symmetric(vertical: 10),
+        decoration: BoxDecoration(
+          color: color.withOpacity(0.08),
+          borderRadius: BorderRadius.circular(10),
+        ),
+        child: Column(
+          children: [
+            Text(value,
+                style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700,
+                    color: color)),
+            const SizedBox(height: 2),
+            Text(label,
+                style: TextStyle(fontSize: 10, color: color.withOpacity(0.7))),
+          ],
+        ),
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final screenSize = MediaQuery.of(context).size;
+    final isSmall = screenSize.width < 360;
+    final auth = Provider.of<AuthProvider>(context);
+
+    return Scaffold(
+      backgroundColor: AppTheme.backgroundColor,
+      body: SafeArea(
+        child: Column(
+          children: [
+            CustomAppBar(
+              title: "Summarizer",
+              leadingIcon: Icon(CupertinoIcons.text_badge_minus,
+                  color: _accentDark),
+              actions: [
+                if (!auth.isLoggedIn)
+                  CustomButton(
+                    text: "Log in",
+                    onPressed: () => Navigator.push(context,
+                        MaterialPageRoute(builder: (_) => const LoginScreen())),
+                    width: isSmall ? 70 : 90, height: 36,
+                    type: ButtonType.primary,
+                  ),
+                if (!auth.isLoggedIn) const SizedBox(width: 8),
+              ],
+            ),
+
+            // Text input
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
+              child: Container(
+                height: screenSize.height * 0.22,
+                decoration: BoxDecoration(
+                  color: AppTheme.cardColor,
+                  borderRadius: BorderRadius.circular(18),
+                  border: Border.all(color: _accentColor.withOpacity(0.15)),
+                  boxShadow: [
+                    BoxShadow(
+                      color: _accentColor.withOpacity(0.06),
+                      blurRadius: 12, offset: const Offset(0, 4),
+                    ),
+                  ],
+                ),
+                child: Column(
+                  children: [
+                    Expanded(
+                      child: TextField(
+                        controller: _controller,
+                        maxLines: null, expands: true,
+                        textAlignVertical: TextAlignVertical.top,
+                        style: AppTheme.bodyMedium,
+                        decoration: InputDecoration(
+                          hintText: "Paste your text to summarize...",
+                          hintStyle: AppTheme.bodyMedium.copyWith(
+                              color: AppTheme.textSecondaryColor
+                                  .withOpacity(0.6)),
+                          contentPadding: const EdgeInsets.all(16),
+                          border: InputBorder.none,
+                        ),
+                      ),
+                    ),
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 12, vertical: 8),
+                      decoration: BoxDecoration(
+                        border: Border(top: BorderSide(
+                            color: AppTheme.textSecondaryColor
+                                .withOpacity(0.1))),
+                      ),
+                      child: Row(
+                        children: [
+                          _chip(Icons.content_paste_rounded, "Paste", () async {
+                            final d =
+                                await Clipboard.getData(Clipboard.kTextPlain);
+                            if (d?.text != null) _controller.text = d!.text!;
+                          }),
+                          const SizedBox(width: 8),
+                          _chip(CupertinoIcons.clear_circled, "Clear",
+                              () => _controller.clear()),
+                          const Spacer(),
+                          ValueListenableBuilder<TextEditingValue>(
+                            valueListenable: _controller,
+                            builder: (_, v, __) {
+                              final wc = v.text.trim().isEmpty
+                                  ? 0
+                                  : v.text.trim().split(RegExp(r'\s+')).length;
+                              return Container(
+                                padding: const EdgeInsets.symmetric(
+                                    horizontal: 8, vertical: 3),
+                                decoration: BoxDecoration(
+                                  color: _accentColor.withOpacity(0.1),
+                                  borderRadius: BorderRadius.circular(6),
+                                ),
+                                child: Text("$wc words",
+                                    style: TextStyle(fontSize: 10,
+                                        color: _accentDark,
+                                        fontWeight: FontWeight.w600)),
+                              );
+                            },
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+
+            const SizedBox(height: 12),
+
+            // Length selector
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 4),
+                decoration: BoxDecoration(
+                  color: _accentColor.withOpacity(0.06),
+                  borderRadius: BorderRadius.circular(14),
+                  border: Border.all(color: _accentColor.withOpacity(0.15)),
+                ),
+                child: Row(
+                  children: [
+                    Icon(CupertinoIcons.text_badge_minus,
+                        size: 16, color: _accentDark),
+                    const SizedBox(width: 8),
+                    Text("Length:", style: AppTheme.bodySmall
+                        .copyWith(fontWeight: FontWeight.w600)),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: DropdownButtonHideUnderline(
+                        child: DropdownButton<String>(
+                          value: _selectedLength,
+                          isExpanded: true,
+                          icon: Icon(CupertinoIcons.chevron_down,
+                              color: _accentDark, size: 14),
+                          borderRadius: BorderRadius.circular(12),
+                          dropdownColor: AppTheme.cardColor,
+                          style: AppTheme.bodyMedium.copyWith(
+                              color: _accentDark,
+                              fontWeight: FontWeight.w600),
+                          items: _lengths.map((l) => DropdownMenuItem(
+                            value: l, child: Text(l),
+                          )).toList(),
+                          onChanged: (v) {
+                            if (v != null) {
+                              setState(() => _selectedLength = v);
+                            }
+                          },
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+
+            const Spacer(),
+
+            // Summarize button
+            FadeInUp(
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(20, 8, 20, 12),
+                child: SizedBox(
+                  width: double.infinity, height: 52,
+                  child: GestureDetector(
+                    onTap: _isLoading ? null : _summarize,
+                    child: Container(
+                      decoration: BoxDecoration(
+                        gradient: const LinearGradient(
+                            colors: [_accentColor, _accentDark]),
+                        borderRadius: BorderRadius.circular(16),
+                        boxShadow: [
+                          BoxShadow(color: _accentColor.withOpacity(0.35),
+                              blurRadius: 16, offset: const Offset(0, 6)),
+                        ],
+                      ),
+                      child: Center(
+                        child: _isLoading
+                            ? const SizedBox(width: 24, height: 24,
+                                child: CircularProgressIndicator(
+                                    strokeWidth: 2.5, color: Colors.white))
+                            : const Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Icon(CupertinoIcons.text_badge_minus,
+                                      color: Colors.white, size: 18),
+                                  SizedBox(width: 8),
+                                  Text("Summarize",
+                                    style: TextStyle(color: Colors.white,
+                                        fontSize: 16,
+                                        fontWeight: FontWeight.w700)),
+                                ],
+                              ),
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _chip(IconData icon, String label, VoidCallback onTap) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+        decoration: BoxDecoration(
+          color: AppTheme.backgroundColor,
+          borderRadius: BorderRadius.circular(8),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(icon, size: 14, color: AppTheme.textSecondaryColor),
+            const SizedBox(width: 4),
+            Text(label, style: TextStyle(fontSize: 11,
+                color: AppTheme.textSecondaryColor,
+                fontWeight: FontWeight.w500)),
+          ],
+        ),
+      ),
+    );
+  }
+}

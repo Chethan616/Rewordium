@@ -17,17 +17,11 @@
 package com.noxquill.rewordium.keyboard.ime.ai
 
 import android.widget.Toast
-import androidx.compose.animation.core.LinearEasing
-import androidx.compose.animation.core.RepeatMode
-import androidx.compose.animation.core.animateFloat
-import androidx.compose.animation.core.infiniteRepeatable
-import androidx.compose.animation.core.rememberInfiniteTransition
+import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.gestures.snapping.rememberSnapFlingBehavior
-import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -40,21 +34,29 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.layout.wrapContentWidth
 import androidx.compose.foundation.lazy.LazyRow
-import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.Backspace
 import androidx.compose.material.icons.filled.AutoAwesome
 import androidx.compose.material.icons.filled.Check
-import androidx.compose.material.icons.filled.ContentPaste
 import androidx.compose.material.icons.filled.Refresh
-import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material.icons.filled.VerticalAlignBottom
+import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.FilledTonalButton
+import androidx.compose.material3.FilterChip
+import androidx.compose.material3.FilterChipDefaults
 import androidx.compose.material3.Icon
+import androidx.compose.material3.LinearProgressIndicator
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
@@ -66,15 +68,12 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.rotate
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -82,36 +81,22 @@ import com.noxquill.rewordium.keyboard.R
 import com.noxquill.rewordium.keyboard.aiManager
 import com.noxquill.rewordium.keyboard.editorInstance
 import com.noxquill.rewordium.keyboard.ime.ImeUiMode
-import com.noxquill.rewordium.keyboard.ime.input.InputEventDispatcher
-import com.noxquill.rewordium.keyboard.ime.input.LocalInputFeedbackController
 import com.noxquill.rewordium.keyboard.ime.keyboard.FlorisImeSizing
-import com.noxquill.rewordium.keyboard.ime.keyboard.KeyData
 import com.noxquill.rewordium.keyboard.ime.media.KeyboardLikeButton
 import com.noxquill.rewordium.keyboard.ime.text.keyboard.TextKeyData
 import com.noxquill.rewordium.keyboard.ime.theme.FlorisImeUi
 import com.noxquill.rewordium.keyboard.keyboardManager
 import kotlinx.coroutines.launch
 import org.florisboard.lib.snygg.ui.rememberSnyggThemeQuery
-import org.florisboard.lib.snygg.ui.SnyggBox
-import org.florisboard.lib.snygg.ui.SnyggColumn
-import org.florisboard.lib.snygg.ui.SnyggRow
-import org.florisboard.lib.snygg.ui.SnyggText
-
-// NOTE: No hardcoded colors - all colors come from snygg theme
 
 /**
- * AI Suggestion Chip data
+ * AI generation mode: Rewrite (replace) or Add Below (continue/append)
  */
-data class AiSuggestionChip(
-    val emoji: String,
-    val text: String,
-    val action: AIAction,
-    val prompt: String? = null
-)
+enum class AiMode { REWRITE, ADD_BELOW }
 
 /**
- * AI Input Layout - A keyboard panel for AI writing assistance
- * Themed to match the current keyboard theme
+ * AI Input Layout — full-screen Material 3 keyboard panel for AI writing assistance.
+ * 3-row chip selector (persona / task / length) + mode toggle + generate button.
  */
 @Composable
 fun AiInputLayout(
@@ -122,136 +107,179 @@ fun AiInputLayout(
     val editorInstance by context.editorInstance()
     val aiManager by context.aiManager()
     val scope = rememberCoroutineScope()
-    
-    // Get theme colors from keyboard theme
-    val windowStyle = rememberSnyggThemeQuery(FlorisImeUi.Window.elementName)
-    val keyStyle = rememberSnyggThemeQuery(FlorisImeUi.Key.elementName)
-    val smartbarStyle = rememberSnyggThemeQuery(FlorisImeUi.Smartbar.elementName)
-    
-    // Dynamic theme colors
-    val backgroundColor = windowStyle.background()
-    val surfaceColor = keyStyle.background()
-    val textColor = keyStyle.foreground()
-    val accentColor = smartbarStyle.foreground().takeIf { it.alpha > 0f } ?: textColor
-    val secondaryTextColor = textColor.copy(alpha = 0.7f)
-    val chipBackgroundColor = surfaceColor.copy(alpha = 0.8f)
-    val chipSelectedColor = surfaceColor
-    
-    var isGenerating by remember { mutableStateOf(false) }
-    var selectedAction by remember { mutableStateOf<AIAction?>(null) }
-    var generatedText by remember { mutableStateOf<String?>(null) }
-    var errorMessage by remember { mutableStateOf<String?>(null) }
-    var wasUsingAllText by remember { mutableStateOf(false) }  // Track if we should replace all text
 
-    // 3-ROW AI CONTROL PANEL DATA
-    // Row 1 - Personas (expanded)
-    val personaChips = remember {
-        listOf(
-            "🙂 Casual",
-            "🎓 Academic",
-            "👔 Professional",
-            "🤝 Friendly",
-            "🪄 Creative",
-            "🎭 Dramatic",
-            "🧘 Calm",
-            "💪 Motivational",
-            "🤓 Nerdy",
-            "😎 Cool",
-            "🌸 Poetic",
-            "🔬 Scientific",
-            "📰 Journalistic",
-            "🎬 Cinematic",
-            "👶 Simple"
-        )
-    }
-    
-    // Row 2 - Tasks/Modes (expanded)
-    val taskChips = remember {
-        listOf(
-            "✉️ Email",
-            "💼 Work",
-            "📚 Academic",
-            "😄 Humor",
-            "🤵 Polite",
-            "🌐 Translate",
-            "✨ Rewrite",
-            "📋 Summarize",
-            "📖 Expand",
-            "✏️ Fix Grammar",
-            "💌 Love Letter",
-            "📝 Essay",
-            "🎯 Pitch",
-            "📢 Marketing",
-            "🤝 Apology",
-            "🎉 Congratulate",
-            "📊 Report",
-            "💡 Brainstorm",
-            "🔄 Paraphrase",
-            "📣 Announce",
-            "🙏 Request",
-            "👋 Introduction",
-            "🎤 Speech",
-            "📱 Social Media",
-            "💬 Chat Reply"
-        )
-    }
-    
-    // Row 3 - Output Length (expanded)
-    val lengthChips = remember {
-        listOf(
-            "⚡ Very Short",
-            "📏 Short",
-            "📐 Medium",
-            "📜 Long",
-            "📚 Very Long",
-            "🎯 Precise",
-            "💎 Concise",
-            "📖 Detailed",
-            "🔍 Elaborate",
-            "✂️ Compact",
-            "🌊 Flowing",
-            "📌 Bullet Points"
-        )
-    }
-    
-    // Selected chip states
+    // ── Snygg theme → M3-style semantic colors ──
+    val windowStyle   = rememberSnyggThemeQuery(FlorisImeUi.Window.elementName)
+    val keyStyle      = rememberSnyggThemeQuery(FlorisImeUi.Key.elementName)
+    val smartbarStyle = rememberSnyggThemeQuery(FlorisImeUi.Smartbar.elementName)
+
+    val bgColor      = windowStyle.background()
+    val surfaceColor = keyStyle.background()
+    val onSurface    = keyStyle.foreground()
+    val primary      = smartbarStyle.foreground().takeIf { it.alpha > 0f } ?: onSurface
+    val onPrimary    = bgColor
+    val outline      = onSurface.copy(alpha = 0.16f)
+    val surfaceVar   = surfaceColor.copy(alpha = 0.62f)
+    val onSurfaceVar = onSurface.copy(alpha = 0.72f)
+    val errorColor   = Color(0xFFEF4444)
+
+    // ── State ──
+    var isGenerating    by remember { mutableStateOf(false) }
+    var generatedText   by remember { mutableStateOf<String?>(null) }
+    var errorMessage    by remember { mutableStateOf<String?>(null) }
+    var wasUsingAllText by remember { mutableStateOf(false) }
+    var aiMode          by remember { mutableStateOf(AiMode.REWRITE) }
     var selectedPersona by remember { mutableStateOf<String?>(null) }
-    var selectedTask by remember { mutableStateOf<String?>(null) }
-    var selectedLength by remember { mutableStateOf<String?>(null) }
+    var selectedTask    by remember { mutableStateOf<String?>(null) }
+    var selectedLength  by remember { mutableStateOf<String?>(null) }
+
+    // ── Chip data ──
+    val personaChips = remember { listOf(
+        "🙂 Casual", "🎓 Academic", "👔 Professional", "🤝 Friendly",
+        "🪄 Creative", "🎭 Dramatic", "🧘 Calm", "💪 Motivational",
+        "🤓 Nerdy", "😎 Cool", "🌸 Poetic", "🔬 Scientific",
+        "📰 Journalistic", "🎬 Cinematic", "👶 Simple"
+    ) }
+    val taskChips = remember { listOf(
+        "✉️ Email", "💼 Work", "📚 Academic", "😄 Humor", "🤵 Polite",
+        "🌐 Translate", "✨ Rewrite", "📋 Summarize", "📖 Expand",
+        "✏️ Fix Grammar", "💌 Love Letter", "📝 Essay", "🎯 Pitch",
+        "📢 Marketing", "🤝 Apology", "🎉 Congratulate", "📊 Report",
+        "💡 Brainstorm", "🔄 Paraphrase", "📣 Announce", "🙏 Request",
+        "👋 Introduction", "🎤 Speech", "📱 Social Media", "💬 Chat Reply"
+    ) }
+    val lengthChips = remember { listOf(
+        "⚡ Very Short", "📏 Short", "📐 Medium", "📜 Long",
+        "📚 Very Long", "🎯 Precise", "💎 Concise", "📖 Detailed",
+        "🔍 Elaborate", "✂️ Compact", "🌊 Flowing", "📌 Bullet Points"
+    ) }
+
+    // ── Generate logic ──
+    fun doGenerate() {
+        scope.launch {
+            val sel = editorInstance.activeContent.selectedText
+            val hasSel = sel.toString().isNotBlank()
+            val text = if (hasSel) sel.toString() else editorInstance.activeContent.text.toString()
+            wasUsingAllText = !hasSel
+            if (text.isBlank()) { errorMessage = context.getString(R.string.ai__error_no_text); return@launch }
+
+            isGenerating = true; errorMessage = null; generatedText = null
+            val persona = selectedPersona ?: ""
+            val task = selectedTask ?: ""
+            val length = selectedLength ?: ""
+
+            val result = if (aiMode == AiMode.ADD_BELOW) {
+                aiManager.continueText(text, persona, task, length)
+            } else {
+                val fullPrompt = buildString {
+                    if (persona.isNotBlank()) append("Persona: $persona. ")
+                    if (task.isNotBlank()) append("Task: $task. ")
+                    if (length.isNotBlank()) append("Length: $length. ")
+                    append("Rewrite this: $text")
+                }
+                val action = when {
+                    task.contains("Rewrite") -> AIAction.REWRITE
+                    task.contains("Summarize") -> AIAction.SUMMARIZE
+                    task.contains("Expand") -> AIAction.EXPAND
+                    task.contains("Grammar") -> AIAction.FIX_GRAMMAR
+                    task.contains("Polite") || task.contains("Academic") -> AIAction.MAKE_FORMAL
+                    task.contains("Humor") -> AIAction.MAKE_CASUAL
+                    else -> AIAction.REWRITE
+                }
+                aiManager.rewriteTextWithPrompt(fullPrompt, action)
+            }
+
+            isGenerating = false
+            result.fold(
+                onSuccess = { generatedText = it },
+                onFailure = { e -> errorMessage = e.message ?: context.getString(R.string.ai__error_api) }
+            )
+        }
+    }
 
     CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Ltr) {
         Box(
             modifier = modifier
                 .fillMaxWidth()
                 .height(FlorisImeSizing.imeUiHeight())
-                .background(backgroundColor)
+                .background(bgColor)
         ) {
-            Column(
-                modifier = Modifier.fillMaxSize()
-            ) {
-                // Header with AI branding
+            Column(modifier = Modifier.fillMaxSize()) {
+
+                // ════════ Header ════════
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(horizontal = 16.dp, vertical = 12.dp),
+                        .padding(horizontal = 16.dp, vertical = 10.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Icon(
-                        imageVector = Icons.Default.AutoAwesome,
-                        contentDescription = null,
-                        tint = textColor,
-                        modifier = Modifier.size(20.dp)
-                    )
-                    Spacer(modifier = Modifier.width(8.dp))
+                    Surface(
+                        color = primary.copy(alpha = 0.12f),
+                        shape = CircleShape,
+                        modifier = Modifier.size(30.dp)
+                    ) {
+                        Box(contentAlignment = Alignment.Center, modifier = Modifier.size(30.dp)) {
+                            Icon(Icons.Default.AutoAwesome, null, tint = primary, modifier = Modifier.size(16.dp))
+                        }
+                    }
+                    Spacer(Modifier.width(8.dp))
                     Text(
-                        text = stringResource(R.string.ai__panel_title),
-                        color = textColor,
-                        fontSize = 16.sp,
-                        fontWeight = FontWeight.SemiBold
+                        stringResource(R.string.ai__panel_title),
+                        style = MaterialTheme.typography.titleSmall,
+                        fontWeight = FontWeight.SemiBold,
+                        color = onSurface
                     )
                 }
-                
-                // Content area
+
+                // ════════ Mode segmented toggle ════════
+                Surface(
+                    color = surfaceVar,
+                    shape = RoundedCornerShape(12.dp),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 12.dp)
+                ) {
+                    Row(modifier = Modifier.padding(3.dp), horizontalArrangement = Arrangement.spacedBy(3.dp)) {
+                        listOf(
+                            AiMode.REWRITE to R.string.ai__mode_rewrite,
+                            AiMode.ADD_BELOW to R.string.ai__mode_add_below
+                        ).forEach { (mode, labelRes) ->
+                            val selected = aiMode == mode
+                            val bg by animateColorAsState(if (selected) primary else Color.Transparent, tween(200), label = "bg")
+                            val fg by animateColorAsState(if (selected) onPrimary else onSurfaceVar, tween(200), label = "fg")
+                            Surface(
+                                color = bg,
+                                shape = RoundedCornerShape(10.dp),
+                                modifier = Modifier
+                                    .weight(1f)
+                                    .clip(RoundedCornerShape(10.dp))
+                                    .clickable { aiMode = mode; generatedText = null; errorMessage = null }
+                            ) {
+                                Row(
+                                    modifier = Modifier.padding(vertical = 8.dp),
+                                    horizontalArrangement = Arrangement.Center,
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Spacer(Modifier.weight(1f))
+                                    Icon(
+                                        if (mode == AiMode.REWRITE) Icons.Default.AutoAwesome else Icons.Default.VerticalAlignBottom,
+                                        null, tint = fg, modifier = Modifier.size(14.dp)
+                                    )
+                                    Spacer(Modifier.width(4.dp))
+                                    Text(
+                                        stringResource(labelRes), color = fg, fontSize = 12.sp,
+                                        fontWeight = if (selected) FontWeight.SemiBold else FontWeight.Normal
+                                    )
+                                    Spacer(Modifier.weight(1f))
+                                }
+                            }
+                        }
+                    }
+                }
+
+                Spacer(Modifier.height(6.dp))
+
+                // ════════ Content area ════════
                 Box(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -261,492 +289,254 @@ fun AiInputLayout(
                 ) {
                     when {
                         isGenerating -> {
-                            // Loading state with animated spinner
-                            val infiniteTransition = rememberInfiniteTransition(label = "loading")
-                            val rotation by infiniteTransition.animateFloat(
-                                initialValue = 0f,
-                                targetValue = 360f,
-                                animationSpec = infiniteRepeatable(
-                                    animation = tween(1000, easing = LinearEasing),
-                                    repeatMode = RepeatMode.Restart
-                                ),
-                                label = "rotation"
-                            )
                             Column(
                                 horizontalAlignment = Alignment.CenterHorizontally,
                                 verticalArrangement = Arrangement.Center
                             ) {
-                                Box(
+                                LinearProgressIndicator(
                                     modifier = Modifier
-                                        .size(48.dp)
-                                        .rotate(rotation)
-                                        .border(
-                                            width = 3.dp,
-                                            color = accentColor,
-                                            shape = RoundedCornerShape(50)
-                                        )
+                                        .fillMaxWidth(0.6f)
+                                        .height(3.dp)
+                                        .clip(RoundedCornerShape(2.dp)),
+                                    color = primary,
+                                    trackColor = outline
                                 )
-                                Spacer(modifier = Modifier.height(16.dp))
-                                Text(
-                                    text = "Generating...",
-                                    color = textColor,
-                                    fontSize = 14.sp,
-                                    fontWeight = FontWeight.Medium
-                                )
-                                Spacer(modifier = Modifier.height(4.dp))
-                                Text(
-                                    text = "AI is working on your text",
-                                    color = secondaryTextColor,
-                                    fontSize = 12.sp
-                                )
+                                Spacer(Modifier.height(12.dp))
+                                Text("Generating…", color = onSurface, fontSize = 14.sp, fontWeight = FontWeight.Medium)
+                                Spacer(Modifier.height(2.dp))
+                                Text("AI is working on your text", color = onSurfaceVar, fontSize = 12.sp)
                             }
                         }
                         generatedText != null -> {
-                            // Result display - full screen with regenerate button
                             Column(
-                                modifier = Modifier
-                                    .fillMaxSize()
-                                    .padding(8.dp),
+                                modifier = Modifier.fillMaxSize().padding(4.dp),
                             ) {
-                                // Generated text with scroll
-                                Box(
-                                    modifier = Modifier
-                                        .weight(1f)
-                                        .fillMaxWidth()
-                                        .clip(RoundedCornerShape(12.dp))
-                                        .background(chipBackgroundColor.copy(alpha = 0.5f))
-                                        .padding(12.dp)
+                                // Result card
+                                Card(
+                                    colors = CardDefaults.cardColors(containerColor = surfaceVar),
+                                    shape = RoundedCornerShape(12.dp),
+                                    modifier = Modifier.weight(1f).fillMaxWidth()
                                 ) {
                                     Column(
                                         modifier = Modifier
                                             .fillMaxSize()
                                             .verticalScroll(rememberScrollState())
+                                            .padding(12.dp)
                                     ) {
-                                        Text(
-                                            text = generatedText!!,
-                                            color = textColor,
-                                            fontSize = 15.sp,
-                                            lineHeight = 22.sp
-                                        )
+                                        Text(generatedText!!, color = onSurface, fontSize = 15.sp, lineHeight = 22.sp)
                                     }
                                 }
-                                
-                                Spacer(modifier = Modifier.height(8.dp))
-                                
-                                // Action buttons row
+                                Spacer(Modifier.height(8.dp))
+                                // Action buttons
                                 Row(
                                     modifier = Modifier.fillMaxWidth(),
                                     horizontalArrangement = Arrangement.spacedBy(8.dp)
                                 ) {
-                                    // Regenerate button
-                                    Box(
-                                        modifier = Modifier
-                                            .weight(1f)
-                                            .clip(RoundedCornerShape(12.dp))
-                                            .background(chipBackgroundColor)
-                                            .clickable {
-                                                // Regenerate with same settings
-                                                scope.launch {
-                                                    val selectedText = editorInstance.activeContent.selectedText
-                                                    val hasSelection = selectedText.toString().isNotBlank()
-                                                    val textToRewrite = if (hasSelection) {
-                                                        selectedText.toString()
-                                                    } else {
-                                                        editorInstance.activeContent.text.toString()
-                                                    }
-                                                    
-                                                    // Track whether we're using all text (so we know to select all when inserting)
-                                                    wasUsingAllText = !hasSelection
-                                                    
-                                                    if (textToRewrite.isBlank()) {
-                                                        errorMessage = context.getString(R.string.ai__error_no_text)
-                                                        return@launch
-                                                    }
-                                                    
-                                                    isGenerating = true
-                                                    errorMessage = null
-                                                    generatedText = null
-                                                    
-                                                    val persona = selectedPersona ?: ""
-                                                    val task = selectedTask ?: ""
-                                                    val length = selectedLength ?: ""
-                                                    
-                                                    val fullPrompt = buildString {
-                                                        if (persona.isNotBlank()) append("Persona: $persona. ")
-                                                        if (task.isNotBlank()) append("Task: $task. ")
-                                                        if (length.isNotBlank()) append("Length: $length. ")
-                                                        append("Rewrite this: $textToRewrite")
-                                                    }
-                                                    
-                                                    val action = when {
-                                                        task.contains("Rewrite") -> AIAction.REWRITE
-                                                        task.contains("Summarize") -> AIAction.SUMMARIZE
-                                                        task.contains("Expand") -> AIAction.EXPAND
-                                                        task.contains("Grammar") -> AIAction.FIX_GRAMMAR
-                                                        task.contains("Polite") || task.contains("Academic") -> AIAction.MAKE_FORMAL
-                                                        task.contains("Humor") -> AIAction.MAKE_CASUAL
-                                                        else -> AIAction.REWRITE
-                                                    }
-                                                    
-                                                    val result = aiManager.rewriteTextWithPrompt(fullPrompt, action)
-                                                    
-                                                    isGenerating = false
-                                                    result.fold(
-                                                        onSuccess = { text -> generatedText = text },
-                                                        onFailure = { e -> errorMessage = e.message ?: context.getString(R.string.ai__error_api) }
-                                                    )
-                                                }
-                                            }
-                                            .padding(vertical = 12.dp),
-                                        contentAlignment = Alignment.Center
+                                    FilledTonalButton(
+                                        onClick = { doGenerate() },
+                                        colors = ButtonDefaults.filledTonalButtonColors(
+                                            containerColor = surfaceVar,
+                                            contentColor = onSurface
+                                        ),
+                                        shape = RoundedCornerShape(12.dp),
+                                        modifier = Modifier.weight(1f)
                                     ) {
-                                        Row(
-                                            verticalAlignment = Alignment.CenterVertically,
-                                            horizontalArrangement = Arrangement.Center
-                                        ) {
-                                            Icon(
-                                                imageVector = Icons.Default.Refresh,
-                                                contentDescription = "Regenerate",
-                                                tint = textColor,
-                                                modifier = Modifier.size(18.dp)
-                                            )
-                                            Spacer(modifier = Modifier.width(6.dp))
-                                            Text(
-                                                text = "Regenerate",
-                                                color = textColor,
-                                                fontSize = 13.sp,
-                                                fontWeight = FontWeight.Medium
-                                            )
-                                        }
+                                        Icon(Icons.Default.Refresh, null, modifier = Modifier.size(16.dp))
+                                        Spacer(Modifier.width(4.dp))
+                                        Text("Regenerate", fontSize = 13.sp, fontWeight = FontWeight.Medium)
                                     }
-                                    
-                                    // New prompt button
-                                    Box(
-                                        modifier = Modifier
-                                            .weight(1f)
-                                            .clip(RoundedCornerShape(12.dp))
-                                            .border(
-                                                width = 1.dp,
-                                                color = accentColor,
-                                                shape = RoundedCornerShape(12.dp)
-                                            )
-                                            .clickable {
-                                                generatedText = null
-                                                errorMessage = null
-                                                selectedPersona = null
-                                                selectedTask = null
-                                                selectedLength = null
-                                            }
-                                            .padding(vertical = 12.dp),
-                                        contentAlignment = Alignment.Center
+                                    OutlinedButton(
+                                        onClick = {
+                                            generatedText = null; errorMessage = null
+                                            selectedPersona = null; selectedTask = null; selectedLength = null
+                                        },
+                                        colors = ButtonDefaults.outlinedButtonColors(contentColor = onSurface),
+                                        border = ButtonDefaults.outlinedButtonBorder(enabled = true),
+                                        shape = RoundedCornerShape(12.dp),
+                                        modifier = Modifier.weight(1f)
                                     ) {
-                                        Text(
-                                            text = "New Prompt",
-                                            color = textColor,
-                                            fontSize = 13.sp,
-                                            fontWeight = FontWeight.Medium
-                                        )
+                                        Text("New Prompt", fontSize = 13.sp, fontWeight = FontWeight.Medium)
                                     }
                                 }
                             }
                         }
                         errorMessage != null -> {
-                            // Error state
                             Column(
                                 horizontalAlignment = Alignment.CenterHorizontally,
                                 verticalArrangement = Arrangement.Center
                             ) {
-                                Text(
-                                    text = errorMessage!!,
-                                    color = Color(0xFFFF6B6B),
-                                    fontSize = 14.sp,
-                                    textAlign = TextAlign.Center
-                                )
-                                Spacer(modifier = Modifier.height(12.dp))
-                                Box(
-                                    modifier = Modifier
-                                        .clip(RoundedCornerShape(12.dp))
-                                        .background(chipBackgroundColor)
-                                        .clickable { errorMessage = null }
-                                        .padding(horizontal = 16.dp, vertical = 8.dp)
+                                Text(errorMessage!!, color = errorColor, fontSize = 14.sp, textAlign = TextAlign.Center)
+                                Spacer(Modifier.height(12.dp))
+                                FilledTonalButton(
+                                    onClick = { errorMessage = null },
+                                    colors = ButtonDefaults.filledTonalButtonColors(
+                                        containerColor = surfaceVar, contentColor = onSurface
+                                    ),
+                                    shape = RoundedCornerShape(12.dp)
                                 ) {
-                                    Text(
-                                        text = "Try Again",
-                                        color = textColor,
-                                        fontSize = 13.sp
-                                    )
+                                    Text("Try Again", fontSize = 13.sp)
                                 }
                             }
                         }
                         else -> {
-                            // Default state - instruction text
                             Column(
                                 horizontalAlignment = Alignment.CenterHorizontally,
                                 verticalArrangement = Arrangement.Center
                             ) {
-                                Text(
-                                    text = "Select options below",
-                                    color = secondaryTextColor,
-                                    fontSize = 14.sp
-                                )
-                                Spacer(modifier = Modifier.height(4.dp))
-                                Text(
-                                    text = "then tap Generate to enhance your text",
-                                    color = secondaryTextColor.copy(alpha = 0.7f),
-                                    fontSize = 12.sp
-                                )
+                                Text("Select options below", color = onSurfaceVar, fontSize = 14.sp)
+                                Spacer(Modifier.height(2.dp))
+                                Text("then tap Generate to enhance your text", color = onSurfaceVar.copy(alpha = 0.7f), fontSize = 12.sp)
                             }
                         }
                     }
                 }
-                
-                // ---------- 3-ROW META-AI STYLE CONTROL PANEL WITH INFINITE SCROLL ----------
-                // Only show when not generating and no result yet
+
+                // ════════ 3-Row chip selector (only when idle) ════════
                 if (!isGenerating && generatedText == null) {
                     Column(
                         modifier = Modifier
                             .fillMaxWidth()
                             .padding(horizontal = 4.dp, vertical = 4.dp),
-                        verticalArrangement = Arrangement.spacedBy(6.dp)
+                        verticalArrangement = Arrangement.spacedBy(4.dp)
                     ) {
-                        // Row 1 — Persona Selection (Infinite Scroll)
-                        InfiniteScrollChipRow(
+                        // Row 1 — Persona
+                        M3InfiniteChipRow(
                             chips = personaChips,
                             selectedChip = selectedPersona,
-                            onChipSelected = { chip ->
-                                selectedPersona = if (selectedPersona == chip) null else chip
-                            },
-                            chipBackground = chipBackgroundColor,
-                            chipSelectedBackground = chipSelectedColor,
-                            textColor = textColor,
-                            accentColor = accentColor
+                            onChipSelected = { selectedPersona = if (selectedPersona == it) null else it },
+                            primary = primary,
+                            surfaceVar = surfaceVar,
+                            onSurface = onSurface,
+                            onSurfaceVar = onSurfaceVar,
+                            outline = outline
                         )
-
-                        // Row 2 — Writing Task (Infinite Scroll)
-                        InfiniteScrollChipRow(
+                        // Row 2 — Task
+                        M3InfiniteChipRow(
                             chips = taskChips,
                             selectedChip = selectedTask,
-                            onChipSelected = { chip ->
-                                selectedTask = if (selectedTask == chip) null else chip
-                            },
-                            chipBackground = chipBackgroundColor,
-                            chipSelectedBackground = chipSelectedColor,
-                            textColor = textColor,
-                            accentColor = accentColor
+                            onChipSelected = { selectedTask = if (selectedTask == it) null else it },
+                            primary = primary,
+                            surfaceVar = surfaceVar,
+                            onSurface = onSurface,
+                            onSurfaceVar = onSurfaceVar,
+                            outline = outline
                         )
-
-                        // Row 3 — Output Length (Infinite Scroll)
-                        InfiniteScrollChipRow(
+                        // Row 3 — Length
+                        M3InfiniteChipRow(
                             chips = lengthChips,
                             selectedChip = selectedLength,
-                            onChipSelected = { chip ->
-                                selectedLength = if (selectedLength == chip) null else chip
-                            },
-                            chipBackground = chipBackgroundColor,
-                            chipSelectedBackground = chipSelectedColor,
-                            textColor = textColor,
-                            accentColor = accentColor
+                            onChipSelected = { selectedLength = if (selectedLength == it) null else it },
+                            primary = primary,
+                            surfaceVar = surfaceVar,
+                            onSurface = onSurface,
+                            onSurfaceVar = onSurfaceVar,
+                            outline = outline
                         )
-                        
-                        // Generate Button Row
+
+                        // Generate CTA
                         Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(top = 4.dp),
+                            modifier = Modifier.fillMaxWidth().padding(top = 2.dp),
                             horizontalArrangement = Arrangement.Center
                         ) {
-                            Box(
-                                modifier = Modifier
-                                    .clip(RoundedCornerShape(20.dp))
-                                    .background(accentColor)
-                                    .clickable {
-                                        scope.launch {
-                                            val selectedText = editorInstance.activeContent.selectedText
-                                            val hasSelection = selectedText.toString().isNotBlank()
-                                            val textToRewrite = if (hasSelection) {
-                                                selectedText.toString()
-                                            } else {
-                                                editorInstance.activeContent.text.toString()
-                                            }
-                                            
-                                            // Track whether we're using all text (so we know to select all when inserting)
-                                            wasUsingAllText = !hasSelection
-                                            
-                                            if (textToRewrite.isBlank()) {
-                                                errorMessage = context.getString(R.string.ai__error_no_text)
-                                                return@launch
-                                            }
-                                            
-                                            isGenerating = true
-                                            errorMessage = null
-                                            generatedText = null
-                                            
-                                            // Build smart prompt with persona + task + length
-                                            val persona = selectedPersona ?: ""
-                                            val task = selectedTask ?: ""
-                                            val length = selectedLength ?: ""
-                                            
-                                            val fullPrompt = buildString {
-                                                if (persona.isNotBlank()) append("Persona: $persona. ")
-                                                if (task.isNotBlank()) append("Task: $task. ")
-                                                if (length.isNotBlank()) append("Length: $length. ")
-                                                append("Rewrite this: $textToRewrite")
-                                            }
-                                            
-                                            // Determine action based on selected task
-                                            val action = when {
-                                                task.contains("Rewrite") -> AIAction.REWRITE
-                                                task.contains("Summarize") -> AIAction.SUMMARIZE
-                                                task.contains("Expand") -> AIAction.EXPAND
-                                                task.contains("Grammar") -> AIAction.FIX_GRAMMAR
-                                                task.contains("Polite") || task.contains("Academic") -> AIAction.MAKE_FORMAL
-                                                task.contains("Humor") -> AIAction.MAKE_CASUAL
-                                                else -> AIAction.REWRITE
-                                            }
-                                            
-                                            val result = aiManager.rewriteTextWithPrompt(fullPrompt, action)
-                                            
-                                            isGenerating = false
-                                            result.fold(
-                                                onSuccess = { text ->
-                                                    generatedText = text
-                                                },
-                                                onFailure = { e ->
-                                                    errorMessage = e.message ?: context.getString(R.string.ai__error_api)
-                                                }
-                                            )
-                                        }
-                                    }
-                                    .padding(horizontal = 24.dp, vertical = 10.dp)
+                            FilledTonalButton(
+                                onClick = { doGenerate() },
+                                colors = ButtonDefaults.filledTonalButtonColors(
+                                    containerColor = primary,
+                                    contentColor = onPrimary
+                                ),
+                                shape = RoundedCornerShape(20.dp),
+                                modifier = Modifier.height(38.dp)
                             ) {
-                            Row(
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                Icon(
-                                    imageVector = Icons.Default.AutoAwesome,
-                                    contentDescription = null,
-                                    tint = backgroundColor,
-                                    modifier = Modifier.size(16.dp)
-                                )
-                                Spacer(modifier = Modifier.width(6.dp))
-                                Text(
-                                    text = "Generate",
-                                    color = backgroundColor,
-                                    fontSize = 14.sp,
-                                    fontWeight = FontWeight.SemiBold
-                                )
+                                Icon(Icons.Default.AutoAwesome, null, modifier = Modifier.size(16.dp))
+                                Spacer(Modifier.width(6.dp))
+                                Text("Generate", fontSize = 14.sp, fontWeight = FontWeight.SemiBold)
                             }
-                        }
                         }
                     }
                 }
-                // ---------- END 3-ROW PANEL ----------
-                
-                // Bottom action bar
-                Row(
+
+                // ════════ Bottom action bar ════════
+                Surface(
+                    color = surfaceVar,
                     modifier = Modifier
                         .fillMaxWidth()
                         .height(FlorisImeSizing.keyboardRowBaseHeight * 0.85f)
-                        .background(chipBackgroundColor.copy(alpha = 0.5f))
-                        .padding(horizontal = 8.dp),
-                    verticalAlignment = Alignment.CenterVertically
                 ) {
-                    // Back to keyboard button
-                    KeyboardLikeButton(
-                        elementName = FlorisImeUi.MediaBottomRowButton.elementName,
-                        inputEventDispatcher = keyboardManager.inputEventDispatcher,
-                        keyData = TextKeyData.IME_UI_MODE_TEXT,
-                        modifier = Modifier.fillMaxHeight(),
+                    Row(
+                        modifier = Modifier.fillMaxSize().padding(horizontal = 8.dp),
+                        verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Text(
-                            text = "ABC",
-                            color = textColor,
-                            fontWeight = FontWeight.Bold,
-                            fontSize = 14.sp
-                        )
-                    }
-                    
-                    // Insert generated text button (if available)
-                    if (generatedText != null) {
-                        Spacer(modifier = Modifier.width(8.dp))
-                        Box(
-                            modifier = Modifier
-                                .fillMaxHeight()
-                                .clip(RoundedCornerShape(8.dp))
-                                .background(accentColor)
-                                .clickable {
+                        // ABC button
+                        KeyboardLikeButton(
+                            elementName = FlorisImeUi.MediaBottomRowButton.elementName,
+                            inputEventDispatcher = keyboardManager.inputEventDispatcher,
+                            keyData = TextKeyData.IME_UI_MODE_TEXT,
+                            modifier = Modifier.fillMaxHeight(),
+                        ) {
+                            Text("ABC", color = onSurface, fontWeight = FontWeight.Bold, fontSize = 14.sp)
+                        }
+
+                        if (generatedText != null) {
+                            Spacer(Modifier.width(8.dp))
+                            FilledTonalButton(
+                                onClick = {
                                     generatedText?.let { text ->
-                                        // Select all text first if we were rewriting all text,
-                                        // this ensures the commitText replaces the old text
-                                        if (wasUsingAllText) {
-                                            editorInstance.performClipboardSelectAll()
+                                        if (aiMode == AiMode.REWRITE) {
+                                            if (wasUsingAllText) editorInstance.performClipboardSelectAll()
+                                            editorInstance.commitText(text)
+                                            Toast.makeText(context, R.string.ai__text_replaced, Toast.LENGTH_SHORT).show()
+                                        } else {
+                                            val endPos = editorInstance.activeContent.text.length
+                                            editorInstance.setSelection(endPos, endPos)
+                                            editorInstance.commitText("\n\n$text")
+                                            Toast.makeText(context, R.string.ai__text_inserted, Toast.LENGTH_SHORT).show()
                                         }
-                                        // commitText will replace any selected text
-                                        editorInstance.commitText(text)
-                                        Toast.makeText(context, R.string.ai__text_replaced, Toast.LENGTH_SHORT).show()
                                         keyboardManager.activeState.imeUiMode = ImeUiMode.TEXT
                                     }
-                                }
-                                .padding(horizontal = 16.dp),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Row(
-                                verticalAlignment = Alignment.CenterVertically
+                                },
+                                colors = ButtonDefaults.filledTonalButtonColors(
+                                    containerColor = primary,
+                                    contentColor = onPrimary
+                                ),
+                                shape = RoundedCornerShape(8.dp),
+                                modifier = Modifier.fillMaxHeight(0.75f)
                             ) {
                                 Icon(
-                                    imageVector = Icons.Default.Check,
-                                    contentDescription = "Insert",
-                                    tint = backgroundColor,
-                                    modifier = Modifier.size(16.dp)
+                                    if (aiMode == AiMode.REWRITE) Icons.Default.Check else Icons.Default.VerticalAlignBottom,
+                                    null, modifier = Modifier.size(16.dp)
                                 )
-                                Spacer(modifier = Modifier.width(4.dp))
+                                Spacer(Modifier.width(4.dp))
                                 Text(
-                                    text = "Replace",
-                                    color = backgroundColor,
-                                    fontSize = 13.sp,
-                                    fontWeight = FontWeight.Medium
+                                    if (aiMode == AiMode.REWRITE) "Replace" else "Insert ↓",
+                                    fontSize = 13.sp, fontWeight = FontWeight.Medium
                                 )
                             }
+
+                            Spacer(Modifier.width(6.dp))
+                            FilledTonalButton(
+                                onClick = { generatedText = null; errorMessage = null },
+                                colors = ButtonDefaults.filledTonalButtonColors(
+                                    containerColor = surfaceColor.copy(alpha = 0.8f),
+                                    contentColor = onSurface
+                                ),
+                                shape = RoundedCornerShape(8.dp),
+                                modifier = Modifier.fillMaxHeight(0.75f)
+                            ) {
+                                Icon(Icons.Default.Refresh, "Reset", modifier = Modifier.size(16.dp))
+                            }
                         }
-                        
-                        Spacer(modifier = Modifier.width(8.dp))
-                        // Reset/Try again button
-                        Box(
-                            modifier = Modifier
-                                .fillMaxHeight()
-                                .clip(RoundedCornerShape(8.dp))
-                                .background(chipBackgroundColor)
-                                .clickable {
-                                    generatedText = null
-                                    errorMessage = null
-                                    selectedAction = null
-                                }
-                                .padding(horizontal = 12.dp),
-                            contentAlignment = Alignment.Center
+
+                        Spacer(Modifier.weight(1f))
+
+                        // Backspace
+                        KeyboardLikeButton(
+                            elementName = FlorisImeUi.MediaBottomRowButton.elementName,
+                            inputEventDispatcher = keyboardManager.inputEventDispatcher,
+                            keyData = TextKeyData.DELETE,
+                            modifier = Modifier.fillMaxHeight(),
                         ) {
-                            Icon(
-                                imageVector = Icons.Default.Refresh,
-                                contentDescription = "Reset",
-                                tint = textColor,
-                                modifier = Modifier.size(18.dp)
-                            )
+                            Icon(Icons.AutoMirrored.Outlined.Backspace, null, tint = onSurface)
                         }
-                    }
-                    
-                    Spacer(modifier = Modifier.weight(1f))
-                    
-                    // Backspace button
-                    KeyboardLikeButton(
-                        elementName = FlorisImeUi.MediaBottomRowButton.elementName,
-                        inputEventDispatcher = keyboardManager.inputEventDispatcher,
-                        keyData = TextKeyData.DELETE,
-                        modifier = Modifier.fillMaxHeight(),
-                    ) {
-                        Icon(
-                            imageVector = Icons.AutoMirrored.Outlined.Backspace,
-                            contentDescription = null,
-                            tint = textColor
-                        )
                     }
                 }
             }
@@ -754,118 +544,79 @@ fun AiInputLayout(
     }
 }
 
-/**
- * Theme-aware suggestion chip with accent border when selected
- */
-@Composable
-private fun MetaAiSuggestionChip(
-    emoji: String,
-    text: String,
-    isSelected: Boolean,
-    onClick: () -> Unit,
-    chipBackground: Color,
-    chipSelectedBackground: Color,
-    textColor: Color,
-    accentColor: Color = textColor
-) {
-    Box(
-        modifier = Modifier
-            .clip(RoundedCornerShape(20.dp))
-            .then(
-                if (isSelected) {
-                    Modifier.border(
-                        width = 2.dp,
-                        color = accentColor,
-                        shape = RoundedCornerShape(20.dp)
-                    )
-                } else {
-                    Modifier
-                }
-            )
-            .background(if (isSelected) chipSelectedBackground else chipBackground)
-            .clickable(onClick = onClick)
-            .padding(horizontal = 12.dp, vertical = 8.dp)
-    ) {
-        Text(
-            text = text,
-            color = if (isSelected) accentColor else textColor,
-            fontSize = 12.sp,
-            fontWeight = if (isSelected) FontWeight.SemiBold else FontWeight.Medium,
-            maxLines = 1
-        )
-    }
-}
+// ──────────────────────────────────────────────
+// M3-style infinite scroll chip row
+// ──────────────────────────────────────────────
 
-/**
- * Infinite scroll chip row - creates circular/looping scroll effect
- * by duplicating items multiple times to simulate infinite scroll
- */
 @Composable
-private fun InfiniteScrollChipRow(
+private fun M3InfiniteChipRow(
     chips: List<String>,
     selectedChip: String?,
     onChipSelected: (String) -> Unit,
-    chipBackground: Color,
-    chipSelectedBackground: Color,
-    textColor: Color,
-    accentColor: Color = textColor
+    primary: Color,
+    surfaceVar: Color,
+    onSurface: Color,
+    onSurfaceVar: Color,
+    outline: Color
 ) {
-    // Create a large list by repeating the chips many times for infinite scroll effect
-    val repeatCount = 100 // Repeat enough times for seamless scrolling
+    val repeatCount = 100
     val infiniteChips = remember(chips) {
-        List(chips.size * repeatCount) { index ->
-            chips[index % chips.size]
-        }
+        List(chips.size * repeatCount) { chips[it % chips.size] }
     }
-    
-    // Start from the middle to allow scrolling in both directions
-    val listState = rememberLazyListState(
-        initialFirstVisibleItemIndex = chips.size * (repeatCount / 2)
-    )
-    
+    val listState = rememberLazyListState(initialFirstVisibleItemIndex = chips.size * (repeatCount / 2))
+
     LazyRow(
         state = listState,
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(horizontal = 4.dp),
+        modifier = Modifier.fillMaxWidth().padding(horizontal = 4.dp),
         horizontalArrangement = Arrangement.spacedBy(6.dp)
     ) {
         items(infiniteChips.size) { index ->
             val chip = infiniteChips[index]
-            MetaAiSuggestionChip(
-                emoji = "",
-                text = chip,
-                isSelected = selectedChip == chip,
+            val isSelected = selectedChip == chip
+            FilterChip(
+                selected = isSelected,
                 onClick = { onChipSelected(chip) },
-                chipBackground = chipBackground,
-                chipSelectedBackground = chipSelectedBackground,
-                textColor = textColor,
-                accentColor = accentColor
+                label = { Text(chip, fontSize = 12.sp, maxLines = 1, fontWeight = if (isSelected) FontWeight.SemiBold else FontWeight.Medium) },
+                colors = FilterChipDefaults.filterChipColors(
+                    containerColor = surfaceVar,
+                    labelColor = onSurfaceVar,
+                    selectedContainerColor = primary.copy(alpha = 0.16f),
+                    selectedLabelColor = primary
+                ),
+                border = FilterChipDefaults.filterChipBorder(
+                    enabled = true,
+                    selected = isSelected,
+                    borderWidth = 1.dp,
+                    borderColor = outline,
+                    selectedBorderColor = primary.copy(alpha = 0.4f)
+                ),
+                shape = RoundedCornerShape(20.dp),
+                modifier = Modifier.height(32.dp)
             )
         }
     }
 }
 
+// ──────────────────────────────────────────────
+// Helpers (string resource lookups)
+// ──────────────────────────────────────────────
+
 @Composable
-private fun getPersonaLabel(persona: AIPersona): String {
-    return when (persona) {
-        AIPersona.CASUAL -> stringResource(R.string.ai__persona_casual)
-        AIPersona.ACADEMIC -> stringResource(R.string.ai__persona_academic)
-        AIPersona.POETRY -> stringResource(R.string.ai__persona_poetry)
-        AIPersona.PROFESSIONAL -> stringResource(R.string.ai__persona_professional)
-        AIPersona.FRIENDLY -> stringResource(R.string.ai__persona_friendly)
-        AIPersona.CUSTOM -> stringResource(R.string.ai__persona_custom)
-    }
+private fun getPersonaLabel(persona: AIPersona): String = when (persona) {
+    AIPersona.CASUAL       -> stringResource(R.string.ai__persona_casual)
+    AIPersona.ACADEMIC     -> stringResource(R.string.ai__persona_academic)
+    AIPersona.POETRY       -> stringResource(R.string.ai__persona_poetry)
+    AIPersona.PROFESSIONAL -> stringResource(R.string.ai__persona_professional)
+    AIPersona.FRIENDLY     -> stringResource(R.string.ai__persona_friendly)
+    AIPersona.CUSTOM       -> stringResource(R.string.ai__persona_custom)
 }
 
 @Composable
-private fun getActionLabel(action: AIAction): String {
-    return when (action) {
-        AIAction.REWRITE -> stringResource(R.string.ai__action_rewrite)
-        AIAction.EXPAND -> stringResource(R.string.ai__action_expand)
-        AIAction.SUMMARIZE -> stringResource(R.string.ai__action_summarize)
-        AIAction.FIX_GRAMMAR -> stringResource(R.string.ai__action_fix_grammar)
-        AIAction.MAKE_FORMAL -> stringResource(R.string.ai__action_make_formal)
-        AIAction.MAKE_CASUAL -> stringResource(R.string.ai__action_make_casual)
-    }
+private fun getActionLabel(action: AIAction): String = when (action) {
+    AIAction.REWRITE     -> stringResource(R.string.ai__action_rewrite)
+    AIAction.EXPAND      -> stringResource(R.string.ai__action_expand)
+    AIAction.SUMMARIZE   -> stringResource(R.string.ai__action_summarize)
+    AIAction.FIX_GRAMMAR -> stringResource(R.string.ai__action_fix_grammar)
+    AIAction.MAKE_FORMAL -> stringResource(R.string.ai__action_make_formal)
+    AIAction.MAKE_CASUAL -> stringResource(R.string.ai__action_make_casual)
 }

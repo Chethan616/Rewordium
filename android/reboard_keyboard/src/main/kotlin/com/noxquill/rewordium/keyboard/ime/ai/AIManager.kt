@@ -333,6 +333,89 @@ You're helping improve English text, not translating."""
         
         return makeApiRequest(config, systemPrompt, fullPrompt)
     }
+
+    /**
+     * Generate contextual continuation text that flows naturally after the existing content.
+     * Used by the "Add Below" mode in AI panels.
+     */
+    suspend fun continueText(existingText: String, persona: String = "", task: String = "", length: String = ""): Result<String> {
+        val config = getConfig()
+        
+        if (!config.hasValidApiKey()) {
+            return Result.failure(AIException("⚠️ No API key. Go to Settings → Advanced AI"))
+        }
+        
+        if (existingText.isBlank()) {
+            return Result.failure(AIException("No text to continue from"))
+        }
+        
+        val systemPrompt = """You are a skilled writer who continues and extends existing text naturally. Your job is to generate NEW content that flows seamlessly after the given text.
+
+CRITICAL RULES:
+1. Return ONLY the new continuation text - no explanations, no quotes, no "Here is...", no commentary
+2. DO NOT repeat, rephrase, or rewrite ANY of the original text
+3. Write content that naturally follows and extends what was already written
+4. Match the tone, style, and context of the existing text
+5. ALWAYS respond in ENGLISH regardless of input language
+6. The continuation should feel like a natural next paragraph or section
+7. Write like a thoughtful human, not a template
+
+You're adding to existing text, not replacing it."""
+        
+        val fullPrompt = buildString {
+            if (persona.isNotBlank()) append("Writing style: $persona. ")
+            if (task.isNotBlank()) append("Purpose: $task. ")
+            if (length.isNotBlank()) append("Length: $length. ")
+            append("\n\nExisting text (DO NOT repeat this, write what comes NEXT):\n\n")
+            append(existingText)
+        }
+        
+        return makeApiRequest(config, systemPrompt, fullPrompt)
+    }
+
+    /**
+     * Generate contextual continuation using persona/action enums (for compact AiPanel)
+     */
+    suspend fun continueTextWithAction(existingText: String, action: AIAction = AIAction.EXPAND): Result<String> {
+        val config = getConfig()
+        
+        if (!config.hasValidApiKey()) {
+            return Result.failure(AIException("⚠️ No API key. Go to Settings → Advanced AI"))
+        }
+        
+        if (existingText.isBlank()) {
+            return Result.failure(AIException("No text to continue from"))
+        }
+        
+        val personaDescription = when (currentPersona) {
+            AIPersona.CASUAL -> "casual and conversational"
+            AIPersona.ACADEMIC -> "academic and scholarly"
+            AIPersona.POETRY -> "poetic and lyrical"
+            AIPersona.PROFESSIONAL -> "professional and polished"
+            AIPersona.FRIENDLY -> "warm and friendly"
+            AIPersona.CUSTOM -> customPersonaPrompt.ifBlank { "natural and helpful" }
+        }
+        
+        val taskInstruction = when (action) {
+            AIAction.REWRITE -> "Continue the text with more content on the same topic."
+            AIAction.EXPAND -> "Elaborate and expand on the ideas presented."
+            AIAction.SUMMARIZE -> "Add a brief conclusion or summary paragraph."
+            AIAction.FIX_GRAMMAR -> "Continue with well-structured, grammatically perfect prose."
+            AIAction.MAKE_FORMAL -> "Add a formal continuation appropriate for business or academic contexts."
+            AIAction.MAKE_CASUAL -> "Continue in a relaxed, conversational way."
+        }
+        
+        val systemPrompt = """You are a skilled $personaDescription writer. $taskInstruction
+
+CRITICAL RULES:
+1. Return ONLY the new continuation text - no explanations, no quotes, no commentary
+2. DO NOT repeat or rephrase ANY of the original text
+3. Write content that naturally follows what was already written
+4. ALWAYS respond in ENGLISH
+5. Write like a thoughtful human"""
+        
+        return makeApiRequest(config, systemPrompt, "Continue after this text:\n\n$existingText")
+    }
     
     private fun buildSystemPrompt(action: AIAction): String {
         val personaDescription = when (currentPersona) {

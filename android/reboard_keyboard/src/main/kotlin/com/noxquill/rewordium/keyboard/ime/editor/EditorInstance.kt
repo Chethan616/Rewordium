@@ -196,19 +196,38 @@ class EditorInstance(context: Context) : AbstractEditorInstance(context) {
             punctuationRule.symbolsPrecedingAutoSpace.contains(text.first())
     }
 
+    /**
+     * Transforms straight quotes into typographic (curly/smart) quotes
+     * based on the preceding text context.
+     */
+    private fun transformSmartQuote(char: String): String {
+        if (char != "\"" && char != "'") return char
+        val textBefore = activeContent.getTextBeforeCursor(1)
+        val isOpening = textBefore.isEmpty() || textBefore.last().let {
+            it.isWhitespace() || it == '(' || it == '[' || it == '{' || it == '\u2014' || it == '\u2013'
+        }
+        return when (char) {
+            "\"" -> if (isOpening) "\u201C" else "\u201D"
+            "'"  -> if (isOpening) "\u2018" else "\u2019"
+            else -> char
+        }
+    }
+
     override fun commitChar(char: String): Boolean {
-        val isInsertAutoSpaceBeforeChar = shouldInsertAutoSpaceBefore(char)
-        val isInsertAutoSpaceAfterChar = shouldInsertAutoSpaceAfter(char)
+        // Smart Quotes: transform straight quotes to curly quotes
+        val effectiveChar = if (prefs.correction.smartQuotes.get()) transformSmartQuote(char) else char
+        val isInsertAutoSpaceBeforeChar = shouldInsertAutoSpaceBefore(effectiveChar)
+        val isInsertAutoSpaceAfterChar = shouldInsertAutoSpaceAfter(effectiveChar)
         val isDeletePreviousSpace = isInsertAutoSpaceAfterChar && autoSpace.isActive
         if (isInsertAutoSpaceAfterChar) {
             autoSpace.setActive()
         } else {
             autoSpace.setInactive()
         }
-        val isPhantomSpaceActive = phantomSpace.determine(char)
+        val isPhantomSpaceActive = phantomSpace.determine(effectiveChar)
         phantomSpace.setInactive()
         return super.commitChar(
-            char = char,
+            char = effectiveChar,
             deletePreviousSpace = isDeletePreviousSpace,
             insertSpaceBeforeChar = isInsertAutoSpaceBeforeChar || isPhantomSpaceActive,
             insertSpaceAfterChar = isInsertAutoSpaceAfterChar,

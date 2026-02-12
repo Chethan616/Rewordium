@@ -19,9 +19,11 @@ package com.noxquill.rewordium.keyboard.ime.ai
 import android.content.Intent
 import android.widget.Toast
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.core.tween
 import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutVertically
-import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -34,17 +36,25 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.AutoAwesome
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Refresh
-import androidx.compose.material.icons.filled.Stars
-import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material.icons.filled.VerticalAlignBottom
+import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.FilterChipDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.IconButtonDefaults
+import androidx.compose.material3.LinearProgressIndicator
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -73,11 +83,10 @@ import com.noxquill.rewordium.keyboard.ime.theme.FlorisImeUi
 import com.noxquill.rewordium.keyboard.keyboardManager
 import kotlinx.coroutines.launch
 import org.florisboard.lib.snygg.ui.rememberSnyggThemeQuery
-import androidx.compose.foundation.BorderStroke
 
 /**
- * AI Panel composable that shows AI writing assistance options
- * within the keyboard interface. Uses keyboard theme colors.
+ * AiPanel — compact Material 3 AI overlay inside the keyboard.
+ * Uses keyboard snygg theme tokens mapped to M3 color roles.
  */
 @Composable
 fun AiPanel(
@@ -89,116 +98,148 @@ fun AiPanel(
     val keyboardManager by context.keyboardManager()
     val editorInstance by context.editorInstance()
     val aiManager by context.aiManager()
-    
-    // State for triggering API key error toast
+
     var showApiKeySnackbar by remember { mutableStateOf(false) }
-    
-    // Get theme colors from keyboard theme
-    val windowStyle = rememberSnyggThemeQuery(FlorisImeUi.Window.elementName)
-    val keyStyle = rememberSnyggThemeQuery(FlorisImeUi.Key.elementName)
+
+    // ── Snygg theme → M3-style semantic colors ──
+    val windowStyle   = rememberSnyggThemeQuery(FlorisImeUi.Window.elementName)
+    val keyStyle      = rememberSnyggThemeQuery(FlorisImeUi.Key.elementName)
     val smartbarStyle = rememberSnyggThemeQuery(FlorisImeUi.Smartbar.elementName)
-    
-    // Dynamic theme colors
-    val backgroundColor = windowStyle.background()
+
+    val bgColor      = windowStyle.background()
     val surfaceColor = smartbarStyle.background()
-    val textColor = keyStyle.foreground()
-    val accentColor = smartbarStyle.foreground().takeIf { it.alpha > 0f } ?: textColor
-    val secondaryTextColor = textColor.copy(alpha = 0.7f)
-    val borderColor = accentColor.copy(alpha = 0.12f)
-    
-    var isGenerating by remember { mutableStateOf(false) }
+    val onSurface    = keyStyle.foreground()
+    val primary      = smartbarStyle.foreground().takeIf { it.alpha > 0f } ?: onSurface
+    val onPrimary    = bgColor
+    val outline      = onSurface.copy(alpha = 0.16f)
+    val surfaceVar   = surfaceColor.copy(alpha = 0.62f)
+    val onSurfaceVar = onSurface.copy(alpha = 0.72f)
+    val errorColor   = Color(0xFFEF4444)
+
+    // ── State ──
+    var isGenerating    by remember { mutableStateOf(false) }
     var selectedPersona by remember { mutableStateOf(AIPersona.CASUAL) }
-    var selectedAction by remember { mutableStateOf(AIAction.REWRITE) }
-    var generatedText by remember { mutableStateOf<String?>(null) }
-    var errorMessage by remember { mutableStateOf<String?>(null) }
-    var wasUsingAllText by remember { mutableStateOf(false) }  // Track if we should replace all text
-    
-    // Handle showing message for API key error - use Toast directly since Compose Snackbar 
-    // doesn't work well in IME context (keyboard service window)
+    var selectedAction  by remember { mutableStateOf(AIAction.REWRITE) }
+    var generatedText   by remember { mutableStateOf<String?>(null) }
+    var errorMessage    by remember { mutableStateOf<String?>(null) }
+    var wasUsingAllText by remember { mutableStateOf(false) }
+    var aiMode          by remember { mutableStateOf(AiMode.REWRITE) }
+
+    // ── API-key toast ──
     LaunchedEffect(showApiKeySnackbar) {
         if (showApiKeySnackbar) {
-            // Show toast with actionable message
-            Toast.makeText(
-                context, 
-                "⚠️ No API key configured. Open Rewordium app → Settings → Advanced AI", 
-                Toast.LENGTH_LONG
-            ).show()
-            
-            // Also try to open the app
+            Toast.makeText(context, "⚠️ No API key. Open Rewordium → Settings → Advanced AI", Toast.LENGTH_LONG).show()
             try {
                 val intent = context.packageManager.getLaunchIntentForPackage(context.packageName)
                 intent?.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP)
                 context.startActivity(intent)
-            } catch (e: Exception) {
-                // Ignore - user saw the toast
-            }
+            } catch (_: Exception) {}
             showApiKeySnackbar = false
         }
     }
-    
+
     val isVisible = keyboardManager.activeState.isAiPanelVisible
-    
+
     AnimatedVisibility(
         visible = isVisible,
         enter = slideInVertically(initialOffsetY = { it }),
-        exit = slideOutVertically(targetOffsetY = { it }),
+        exit  = slideOutVertically(targetOffsetY = { it }),
         modifier = modifier
     ) {
-        Box(modifier = Modifier.fillMaxWidth()) {
-            Surface(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(FlorisImeSizing.smartbarHeight * 4),
-                color = backgroundColor.copy(alpha = 0.97f),
-                shape = RoundedCornerShape(topStart = 18.dp, topEnd = 18.dp),
-                border = BorderStroke(1.dp, borderColor),
-                shadowElevation = 6.dp,
-            ) {
+        Surface(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(FlorisImeSizing.smartbarHeight * 4),
+            color = bgColor,
+            tonalElevation = 3.dp,
+            shape = RoundedCornerShape(topStart = 16.dp, topEnd = 16.dp),
+        ) {
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(horizontal = 12.dp, vertical = 8.dp)
             ) {
-                // Header Row
+                // ════════ Header ════════
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
-                        Icon(
-                            imageVector = Icons.Default.Stars,
-                            contentDescription = null,
-                            tint = textColor,
-                            modifier = Modifier.size(20.dp)
-                        )
-                        Spacer(modifier = Modifier.width(8.dp))
+                        Surface(
+                            color = primary.copy(alpha = 0.12f),
+                            shape = CircleShape,
+                            modifier = Modifier.size(28.dp)
+                        ) {
+                            Box(contentAlignment = Alignment.Center, modifier = Modifier.size(28.dp)) {
+                                Icon(Icons.Default.AutoAwesome, null, tint = primary, modifier = Modifier.size(16.dp))
+                            }
+                        }
+                        Spacer(Modifier.width(8.dp))
                         Text(
-                            text = stringResource(R.string.ai__panel_title),
+                            stringResource(R.string.ai__panel_title),
+                            style = MaterialTheme.typography.titleSmall,
                             fontWeight = FontWeight.SemiBold,
-                            fontSize = 14.sp,
-                            color = textColor
+                            color = onSurface
                         )
                     }
                     IconButton(
-                        onClick = {
-                            keyboardManager.activeState.isAiPanelVisible = false
-                            onDismiss()
-                        },
-                        modifier = Modifier.size(32.dp)
+                        onClick = { keyboardManager.activeState.isAiPanelVisible = false; onDismiss() },
+                        modifier = Modifier.size(28.dp)
                     ) {
-                        Icon(
-                            imageVector = Icons.Default.Close,
-                            contentDescription = "Close",
-                            tint = textColor,
-                            modifier = Modifier.size(18.dp)
-                        )
+                        Icon(Icons.Default.Close, "Close", tint = onSurfaceVar, modifier = Modifier.size(18.dp))
                     }
                 }
-                
-                Spacer(modifier = Modifier.height(8.dp))
-                
-                // Persona Selection Row
+
+                Spacer(Modifier.height(8.dp))
+
+                // ════════ Mode Toggle (M3 segmented-button style) ════════
+                Surface(
+                    color = surfaceVar,
+                    shape = RoundedCornerShape(12.dp),
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Row(modifier = Modifier.padding(3.dp), horizontalArrangement = Arrangement.spacedBy(3.dp)) {
+                        listOf(
+                            AiMode.REWRITE to R.string.ai__mode_rewrite,
+                            AiMode.ADD_BELOW to R.string.ai__mode_add_below
+                        ).forEach { (mode, labelRes) ->
+                            val selected = aiMode == mode
+                            val bg by animateColorAsState(if (selected) primary else Color.Transparent, tween(200), label = "modeBg")
+                            val fg by animateColorAsState(if (selected) onPrimary else onSurfaceVar, tween(200), label = "modeFg")
+                            Surface(
+                                color = bg,
+                                shape = RoundedCornerShape(10.dp),
+                                modifier = Modifier
+                                    .weight(1f)
+                                    .clip(RoundedCornerShape(10.dp))
+                                    .clickable { aiMode = mode; generatedText = null; errorMessage = null }
+                            ) {
+                                Row(
+                                    modifier = Modifier.padding(vertical = 8.dp),
+                                    horizontalArrangement = Arrangement.Center,
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Spacer(Modifier.weight(1f))
+                                    Icon(
+                                        if (mode == AiMode.REWRITE) Icons.Default.AutoAwesome else Icons.Default.VerticalAlignBottom,
+                                        null, tint = fg, modifier = Modifier.size(14.dp)
+                                    )
+                                    Spacer(Modifier.width(4.dp))
+                                    Text(
+                                        stringResource(labelRes), color = fg, fontSize = 12.sp,
+                                        fontWeight = if (selected) FontWeight.SemiBold else FontWeight.Normal
+                                    )
+                                    Spacer(Modifier.weight(1f))
+                                }
+                            }
+                        }
+                    }
+                }
+
+                Spacer(Modifier.height(8.dp))
+
+                // ════════ Persona chips (M3 FilterChip) ════════
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -206,24 +247,29 @@ fun AiPanel(
                     horizontalArrangement = Arrangement.spacedBy(6.dp)
                 ) {
                     AIPersona.entries.forEach { persona ->
-                        PersonaChip(
-                            persona = persona,
-                            isSelected = selectedPersona == persona,
-                            onClick = {
-                                selectedPersona = persona
-                                aiManager.setPersona(persona)
-                            },
-                            selectedColor = accentColor,
-                            textColor = textColor,
-                            chipBackground = surfaceColor.copy(alpha = 0.9f),
-                            chipBorder = borderColor
+                        FilterChip(
+                            selected = selectedPersona == persona,
+                            onClick = { selectedPersona = persona; aiManager.setPersona(persona) },
+                            label = { Text(getPersonaLabel(persona), fontSize = 11.sp) },
+                            colors = FilterChipDefaults.filterChipColors(
+                                containerColor = surfaceVar,
+                                labelColor = onSurface,
+                                selectedContainerColor = primary.copy(alpha = 0.16f),
+                                selectedLabelColor = primary
+                            ),
+                            border = FilterChipDefaults.filterChipBorder(
+                                enabled = true, selected = selectedPersona == persona,
+                                borderWidth = 1.dp, borderColor = outline,
+                                selectedBorderColor = primary.copy(alpha = 0.4f)
+                            ),
+                            modifier = Modifier.height(30.dp)
                         )
                     }
                 }
-                
-                Spacer(modifier = Modifier.height(8.dp))
-                
-                // Action Buttons Row
+
+                Spacer(Modifier.height(6.dp))
+
+                // ════════ Action chips (M3 FilterChip) ════════
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -231,272 +277,170 @@ fun AiPanel(
                     horizontalArrangement = Arrangement.spacedBy(6.dp)
                 ) {
                     AIAction.entries.forEach { action ->
-                        ActionChip(
-                            action = action,
-                            isSelected = selectedAction == action,
+                        FilterChip(
+                            selected = selectedAction == action,
                             onClick = { selectedAction = action },
-                            selectedColor = accentColor,
-                            textColor = textColor,
-                            chipBackground = surfaceColor.copy(alpha = 0.9f),
-                            chipBorder = borderColor
+                            label = { Text(getActionLabel(action), fontSize = 11.sp) },
+                            colors = FilterChipDefaults.filterChipColors(
+                                containerColor = surfaceVar,
+                                labelColor = onSurface,
+                                selectedContainerColor = primary.copy(alpha = 0.16f),
+                                selectedLabelColor = primary
+                            ),
+                            border = FilterChipDefaults.filterChipBorder(
+                                enabled = true, selected = selectedAction == action,
+                                borderWidth = 1.dp, borderColor = outline,
+                                selectedBorderColor = primary.copy(alpha = 0.4f)
+                            ),
+                            modifier = Modifier.height(30.dp)
                         )
                     }
                 }
-                
-                Spacer(modifier = Modifier.height(12.dp))
-                
-                // Generate/Result Row
+
+                Spacer(Modifier.height(10.dp))
+
+                // ════════ Center: loading / result / error / generate CTA ════════
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.Center,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    if (isGenerating) {
-                        CircularProgressIndicator(
-                            modifier = Modifier.size(24.dp),
-                            strokeWidth = 2.dp,
-                            color = textColor
-                        )
-                        Spacer(modifier = Modifier.width(8.dp))
-                        Text(
-                            text = stringResource(R.string.ai__generating),
-                            fontSize = 13.sp,
-                            color = secondaryTextColor
-                        )
-                    } else if (generatedText != null) {
-                        // Show generated text preview
-                        Box(
-                            modifier = Modifier
-                                .weight(1f)
-                                .clip(RoundedCornerShape(8.dp))
-                                .background(surfaceColor.copy(alpha = 0.95f))
-                                .padding(8.dp)
-                        ) {
-                            Text(
-                                text = generatedText!!,
-                                fontSize = 12.sp,
-                                maxLines = 2,
-                                overflow = TextOverflow.Ellipsis,
-                                color = textColor
+                    when {
+                        isGenerating -> {
+                            LinearProgressIndicator(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .height(3.dp)
+                                    .clip(RoundedCornerShape(2.dp)),
+                                color = primary,
+                                trackColor = outline
                             )
                         }
-                        Spacer(modifier = Modifier.width(8.dp))
-                        IconButton(
-                            onClick = {
-                                generatedText?.let { text ->
-                                    // Select all text first if we were rewriting all text,
-                                    // this ensures the commitText replaces the old text
-                                    if (wasUsingAllText) {
-                                        editorInstance.performClipboardSelectAll()
-                                    }
-                                    // commitText will replace any selected text
-                                    editorInstance.commitText(text)
-                                    Toast.makeText(context, R.string.ai__text_replaced, Toast.LENGTH_SHORT).show()
-                                    keyboardManager.activeState.isAiPanelVisible = false
-                                }
-                            },
-                            modifier = Modifier.size(36.dp)
-                        ) {
-                            Icon(
-                                imageVector = Icons.Default.Check,
-                                contentDescription = "Insert",
-                                tint = accentColor
-                            )
-                        }
-                    } else if (errorMessage != null) {
-                        Text(
-                            text = errorMessage!!,
-                            fontSize = 12.sp,
-                            color = accentColor.copy(alpha = 0.9f),
-                            textAlign = TextAlign.Center
-                        )
-                    } else {
-                        // Generate button
-                        Surface(
-                            onClick = {
-                                scope.launch {
-                                    val selectedText = editorInstance.activeContent.selectedText
-                                    val hasSelection = selectedText.isNotBlank()
-                                    val textToRewrite = if (hasSelection) {
-                                        selectedText.toString()
-                                    } else {
-                                        // If no selection, use all text
-                                        editorInstance.activeContent.text.toString()
-                                    }
-                                    
-                                    // Track whether we're using all text (so we know to select all when inserting)
-                                    wasUsingAllText = !hasSelection
-                                    
-                                    if (textToRewrite.isBlank()) {
-                                        errorMessage = context.getString(R.string.ai__error_no_text)
-                                        return@launch
-                                    }
-                                    
-                                    isGenerating = true
-                                    errorMessage = null
-                                    
-                                    val result = aiManager.rewriteText(textToRewrite, selectedAction)
-                                    
-                                    isGenerating = false
-                                    result.fold(
-                                        onSuccess = { text ->
-                                            generatedText = text
-                                        },
-                                        onFailure = { e ->
-                                            val errorMsg = e.message ?: context.getString(R.string.ai__error_api)
-                                            // Check if it's an API key error - show snackbar with action
-                                            if (errorMsg.contains("No API key", ignoreCase = true)) {
-                                                showApiKeySnackbar = true
-                                                errorMessage = null // Don't show error text for this case
-                                            } else {
-                                                errorMessage = errorMsg
-                                            }
-                                        }
-                                    )
-                                }
-                            },
-                            shape = RoundedCornerShape(20.dp),
-                            color = accentColor.copy(alpha = 0.92f),
-                            modifier = Modifier.height(36.dp)
-                        ) {
-                            Row(
-                                modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
-                                verticalAlignment = Alignment.CenterVertically
+                        generatedText != null -> {
+                            Card(
+                                colors = CardDefaults.cardColors(containerColor = surfaceVar),
+                                shape = RoundedCornerShape(12.dp),
+                                modifier = Modifier.weight(1f)
                             ) {
-                                Icon(
-                                    imageVector = Icons.Default.Stars,
-                                    contentDescription = null,
-                                    tint = backgroundColor,
-                                    modifier = Modifier.size(16.dp)
-                                )
-                                Spacer(modifier = Modifier.width(6.dp))
                                 Text(
-                                    text = getActionLabel(selectedAction),
-                                    color = backgroundColor,
-                                    fontSize = 13.sp,
-                                    fontWeight = FontWeight.Medium
+                                    generatedText!!,
+                                    modifier = Modifier.padding(10.dp),
+                                    fontSize = 12.sp, maxLines = 2,
+                                    overflow = TextOverflow.Ellipsis,
+                                    color = onSurface
                                 )
                             }
+                            Spacer(Modifier.width(6.dp))
+                            IconButton(
+                                onClick = {
+                                    generatedText?.let { text ->
+                                        if (aiMode == AiMode.REWRITE) {
+                                            if (wasUsingAllText) editorInstance.performClipboardSelectAll()
+                                            editorInstance.commitText(text)
+                                            Toast.makeText(context, R.string.ai__text_replaced, Toast.LENGTH_SHORT).show()
+                                        } else {
+                                            val endPos = editorInstance.activeContent.text.length
+                                            editorInstance.setSelection(endPos, endPos)
+                                            editorInstance.commitText("\n\n$text")
+                                            Toast.makeText(context, R.string.ai__text_inserted, Toast.LENGTH_SHORT).show()
+                                        }
+                                        keyboardManager.activeState.isAiPanelVisible = false
+                                    }
+                                },
+                                colors = IconButtonDefaults.filledTonalIconButtonColors(
+                                    containerColor = primary.copy(alpha = 0.14f)
+                                ),
+                                modifier = Modifier.size(34.dp)
+                            ) {
+                                Icon(
+                                    if (aiMode == AiMode.REWRITE) Icons.Default.Check else Icons.Default.VerticalAlignBottom,
+                                    if (aiMode == AiMode.REWRITE) "Replace" else "Insert Below",
+                                    tint = primary, modifier = Modifier.size(18.dp)
+                                )
+                            }
+                            Spacer(Modifier.width(4.dp))
+                            IconButton(
+                                onClick = { generatedText = null; errorMessage = null },
+                                modifier = Modifier.size(34.dp)
+                            ) {
+                                Icon(Icons.Default.Refresh, "Reset", tint = onSurfaceVar, modifier = Modifier.size(18.dp))
+                            }
                         }
-                    }
-                    
-                    // Reset button (if there's generated text or error)
-                    if (generatedText != null || errorMessage != null) {
-                        Spacer(modifier = Modifier.width(8.dp))
-                        IconButton(
-                            onClick = {
-                                generatedText = null
-                                errorMessage = null
-                            },
-                            modifier = Modifier.size(36.dp)
-                        ) {
-                            Icon(
-                                imageVector = Icons.Default.Refresh,
-                                contentDescription = "Reset",
-                                tint = secondaryTextColor
+                        errorMessage != null -> {
+                            Text(
+                                errorMessage!!, fontSize = 12.sp, color = errorColor,
+                                textAlign = TextAlign.Center, modifier = Modifier.weight(1f)
                             )
+                            Spacer(Modifier.width(6.dp))
+                            IconButton(
+                                onClick = { generatedText = null; errorMessage = null },
+                                modifier = Modifier.size(34.dp)
+                            ) {
+                                Icon(Icons.Default.Refresh, "Retry", tint = onSurfaceVar, modifier = Modifier.size(18.dp))
+                            }
+                        }
+                        else -> {
+                            FilledTonalButton(
+                                onClick = {
+                                    scope.launch {
+                                        val sel = editorInstance.activeContent.selectedText
+                                        val hasSel = sel.isNotBlank()
+                                        val text = if (hasSel) sel.toString() else editorInstance.activeContent.text.toString()
+                                        wasUsingAllText = !hasSel
+                                        if (text.isBlank()) { errorMessage = context.getString(R.string.ai__error_no_text); return@launch }
+                                        isGenerating = true; errorMessage = null
+                                        val result = if (aiMode == AiMode.ADD_BELOW) aiManager.continueTextWithAction(text, selectedAction)
+                                                     else aiManager.rewriteText(text, selectedAction)
+                                        isGenerating = false
+                                        result.fold(
+                                            onSuccess = { generatedText = it },
+                                            onFailure = { e ->
+                                                val msg = e.message ?: context.getString(R.string.ai__error_api)
+                                                if (msg.contains("No API key", true)) { showApiKeySnackbar = true; errorMessage = null }
+                                                else errorMessage = msg
+                                            }
+                                        )
+                                    }
+                                },
+                                colors = ButtonDefaults.filledTonalButtonColors(
+                                    containerColor = primary,
+                                    contentColor = onPrimary
+                                ),
+                                shape = RoundedCornerShape(20.dp),
+                                modifier = Modifier.height(36.dp)
+                            ) {
+                                Icon(Icons.Default.AutoAwesome, null, modifier = Modifier.size(16.dp))
+                                Spacer(Modifier.width(6.dp))
+                                Text(getActionLabel(selectedAction), fontSize = 13.sp, fontWeight = FontWeight.Medium)
+                            }
                         }
                     }
                 }
             }
         }
-        // Note: Using Toast instead of SnackbarHost for IME context compatibility
-        }
     }
 }
 
+// ──────────────────────────────────────────────
+// Helpers
+// ──────────────────────────────────────────────
+
 @Composable
-private fun PersonaChip(
-    persona: AIPersona,
-    isSelected: Boolean,
-    onClick: () -> Unit,
-    selectedColor: Color = Color(0xFF4A9EFF),
-    textColor: Color = Color.White,
-    chipBackground: Color = Color.Black,
-    chipBorder: Color = Color.Transparent,
-) {
-    FilterChip(
-        selected = isSelected,
-        onClick = onClick,
-        label = {
-            Text(
-                text = getPersonaLabel(persona),
-                fontSize = 11.sp
-            )
-        },
-        colors = FilterChipDefaults.filterChipColors(
-            containerColor = chipBackground,
-            labelColor = textColor,
-            selectedContainerColor = selectedColor.copy(alpha = 0.18f),
-            selectedLabelColor = selectedColor
-        ),
-        border = FilterChipDefaults.filterChipBorder(
-            enabled = true,
-            selected = isSelected,
-            borderWidth = 1.dp,
-            borderColor = chipBorder,
-            selectedBorderColor = selectedColor.copy(alpha = 0.35f)
-        ),
-        modifier = Modifier.height(28.dp)
-    )
+private fun getPersonaLabel(persona: AIPersona): String = when (persona) {
+    AIPersona.CASUAL       -> stringResource(R.string.ai__persona_casual)
+    AIPersona.ACADEMIC     -> stringResource(R.string.ai__persona_academic)
+    AIPersona.POETRY       -> stringResource(R.string.ai__persona_poetry)
+    AIPersona.PROFESSIONAL -> stringResource(R.string.ai__persona_professional)
+    AIPersona.FRIENDLY     -> stringResource(R.string.ai__persona_friendly)
+    AIPersona.CUSTOM       -> stringResource(R.string.ai__persona_custom)
 }
 
 @Composable
-private fun ActionChip(
-    action: AIAction,
-    isSelected: Boolean,
-    onClick: () -> Unit,
-    selectedColor: Color = Color(0xFF4A9EFF),
-    textColor: Color = Color.White,
-    chipBackground: Color = Color.Black,
-    chipBorder: Color = Color.Transparent,
-) {
-    FilterChip(
-        selected = isSelected,
-        onClick = onClick,
-        label = {
-            Text(
-                text = getActionLabel(action),
-                fontSize = 11.sp
-            )
-        },
-        colors = FilterChipDefaults.filterChipColors(
-            containerColor = chipBackground,
-            labelColor = textColor,
-            selectedContainerColor = selectedColor.copy(alpha = 0.18f),
-            selectedLabelColor = selectedColor
-        ),
-        border = FilterChipDefaults.filterChipBorder(
-            enabled = true,
-            selected = isSelected,
-            borderWidth = 1.dp,
-            borderColor = chipBorder,
-            selectedBorderColor = selectedColor.copy(alpha = 0.35f)
-        ),
-        modifier = Modifier.height(28.dp)
-    )
-}
-
-@Composable
-private fun getPersonaLabel(persona: AIPersona): String {
-    return when (persona) {
-        AIPersona.CASUAL -> stringResource(R.string.ai__persona_casual)
-        AIPersona.ACADEMIC -> stringResource(R.string.ai__persona_academic)
-        AIPersona.POETRY -> stringResource(R.string.ai__persona_poetry)
-        AIPersona.PROFESSIONAL -> stringResource(R.string.ai__persona_professional)
-        AIPersona.FRIENDLY -> stringResource(R.string.ai__persona_friendly)
-        AIPersona.CUSTOM -> stringResource(R.string.ai__persona_custom)
-    }
-}
-
-@Composable
-private fun getActionLabel(action: AIAction): String {
-    return when (action) {
-        AIAction.REWRITE -> stringResource(R.string.ai__action_rewrite)
-        AIAction.EXPAND -> stringResource(R.string.ai__action_expand)
-        AIAction.SUMMARIZE -> stringResource(R.string.ai__action_summarize)
-        AIAction.FIX_GRAMMAR -> stringResource(R.string.ai__action_fix_grammar)
-        AIAction.MAKE_FORMAL -> stringResource(R.string.ai__action_make_formal)
-        AIAction.MAKE_CASUAL -> stringResource(R.string.ai__action_make_casual)
-    }
+private fun getActionLabel(action: AIAction): String = when (action) {
+    AIAction.REWRITE     -> stringResource(R.string.ai__action_rewrite)
+    AIAction.EXPAND      -> stringResource(R.string.ai__action_expand)
+    AIAction.SUMMARIZE   -> stringResource(R.string.ai__action_summarize)
+    AIAction.FIX_GRAMMAR -> stringResource(R.string.ai__action_fix_grammar)
+    AIAction.MAKE_FORMAL -> stringResource(R.string.ai__action_make_formal)
+    AIAction.MAKE_CASUAL -> stringResource(R.string.ai__action_make_casual)
 }

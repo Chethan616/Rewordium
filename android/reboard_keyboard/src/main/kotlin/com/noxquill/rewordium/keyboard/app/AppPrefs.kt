@@ -179,6 +179,10 @@ abstract class FlorisPreferenceModel : PreferenceModel() {
             key = "correction__remember_caps_lock_state",
             default = false,
         )
+        val smartQuotes = boolean(
+            key = "correction__smart_quotes",
+            default = true,
+        )
     }
 
     val devtools = Devtools()
