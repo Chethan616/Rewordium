@@ -207,7 +207,11 @@ class FlorisAppActivity : ComponentActivity() {
         LaunchedEffect(intentToBeHandled) {
             val intent = intentToBeHandled
             if (intent != null) {
-                if (intent.action == Intent.ACTION_VIEW && intent.categories?.contains(Intent.CATEGORY_BROWSABLE) == true) {
+                val isAppDeepLink = intent.action == Intent.ACTION_VIEW &&
+                    intent.data?.scheme == "ui" && intent.data?.host == "ReBoard"
+                val isBrowsableDeepLink = intent.action == Intent.ACTION_VIEW &&
+                    intent.categories?.contains(Intent.CATEGORY_BROWSABLE) == true
+                if (isAppDeepLink || isBrowsableDeepLink) {
                     navController.handleDeepLink(intent)
                 } else {
                     val data = if (intent.action == Intent.ACTION_VIEW) {

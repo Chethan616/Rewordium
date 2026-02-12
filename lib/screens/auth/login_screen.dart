@@ -20,6 +20,7 @@ class LoginScreen extends StatefulWidget {
 class _LoginScreenState extends State<LoginScreen> {
   final TextEditingController _emailController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
+  final TextEditingController _resetEmailController = TextEditingController();
   final _formKey = GlobalKey<FormState>();
   bool _passwordVisible = false;
 
@@ -27,6 +28,7 @@ class _LoginScreenState extends State<LoginScreen> {
   void dispose() {
     _emailController.dispose();
     _passwordController.dispose();
+    _resetEmailController.dispose();
     super.dispose();
   }
 
@@ -76,6 +78,19 @@ class _LoginScreenState extends State<LoginScreen> {
         );
       }
     }
+  }
+
+  // Show forgot password bottom sheet
+  void _showForgotPasswordSheet() {
+    _resetEmailController.text = _emailController.text.trim();
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) => _ForgotPasswordSheet(
+        emailController: _resetEmailController,
+      ),
+    );
   }
 
   // Handle Google sign in
@@ -197,9 +212,7 @@ class _LoginScreenState extends State<LoginScreen> {
                   Align(
                     alignment: Alignment.centerRight,
                     child: TextButton(
-                      onPressed: () {
-                        // Handle forgot password
-                      },
+                      onPressed: _showForgotPasswordSheet,
                       style: TextButton.styleFrom(
                         padding: EdgeInsets.zero,
                         tapTargetSize: MaterialTapTargetSize.shrinkWrap,
@@ -546,6 +559,185 @@ class _LoginScreenState extends State<LoginScreen> {
           ),
         ),
       ],
+    );
+  }
+}
+
+/// Bottom sheet for forgot password flow
+class _ForgotPasswordSheet extends StatefulWidget {
+  final TextEditingController emailController;
+
+  const _ForgotPasswordSheet({required this.emailController});
+
+  @override
+  State<_ForgotPasswordSheet> createState() => _ForgotPasswordSheetState();
+}
+
+class _ForgotPasswordSheetState extends State<_ForgotPasswordSheet> {
+  bool _isSending = false;
+  bool _sent = false;
+
+  Future<void> _sendResetEmail() async {
+    final email = widget.emailController.text.trim();
+    if (email.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Please enter your email address')),
+      );
+      return;
+    }
+
+    setState(() => _isSending = true);
+
+    final authProvider = Provider.of<AuthProvider>(context, listen: false);
+    final success = await authProvider.sendPasswordResetEmail(email);
+
+    if (!mounted) return;
+    setState(() => _isSending = false);
+
+    if (success) {
+      setState(() => _sent = true);
+    } else if (authProvider.error != null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(authProvider.error!)),
+      );
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: EdgeInsets.only(
+        bottom: MediaQuery.of(context).viewInsets.bottom,
+      ),
+      decoration: BoxDecoration(
+        color: AppTheme.backgroundColor,
+        borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(24, 16, 24, 32),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            // Handle bar
+            Center(
+              child: Container(
+                width: 40,
+                height: 4,
+                decoration: BoxDecoration(
+                  color: AppTheme.textSecondaryColor.withOpacity(0.3),
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+            ),
+            const SizedBox(height: 20),
+
+            if (_sent) ...[
+              // Success state
+              Container(
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: Colors.green.withOpacity(0.08),
+                  borderRadius: BorderRadius.circular(16),
+                  border: Border.all(
+                    color: Colors.green.withOpacity(0.2),
+                  ),
+                ),
+                child: Column(
+                  children: [
+                    Container(
+                      height: 56,
+                      width: 56,
+                      decoration: BoxDecoration(
+                        color: Colors.green.withOpacity(0.12),
+                        shape: BoxShape.circle,
+                      ),
+                      child: const Icon(
+                        CupertinoIcons.checkmark_circle_fill,
+                        size: 32,
+                        color: Colors.green,
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                    Text(
+                      'Reset Email Sent!',
+                      style: AppTheme.headingSmall.copyWith(
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      'Check your inbox at\n${widget.emailController.text.trim()}\nfor password reset instructions.',
+                      style: AppTheme.bodyMedium.copyWith(
+                        color: AppTheme.textSecondaryColor,
+                      ),
+                      textAlign: TextAlign.center,
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 20),
+              CustomButton(
+                text: 'Done',
+                onPressed: () => Navigator.pop(context),
+                type: ButtonType.primary,
+              ),
+            ] else ...[
+              // Input state
+              Text(
+                'Reset Password',
+                style: AppTheme.headingSmall.copyWith(
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+              const SizedBox(height: 8),
+              Text(
+                'Enter your email and we\'ll send you a link to reset your password.',
+                style: AppTheme.bodyMedium.copyWith(
+                  color: AppTheme.textSecondaryColor,
+                ),
+              ),
+              const SizedBox(height: 20),
+              TextFormField(
+                controller: widget.emailController,
+                keyboardType: TextInputType.emailAddress,
+                style: AppTheme.bodyMedium,
+                decoration: InputDecoration(
+                  hintText: 'Enter your email',
+                  hintStyle: AppTheme.bodyMedium.copyWith(
+                    color: AppTheme.textSecondaryColor.withOpacity(0.5),
+                  ),
+                  prefixIcon: Icon(
+                    CupertinoIcons.mail,
+                    color: AppTheme.textSecondaryColor,
+                    size: 18,
+                  ),
+                  filled: true,
+                  fillColor: AppTheme.textSecondaryColor.withOpacity(0.05),
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    borderSide: BorderSide.none,
+                  ),
+                  focusedBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    borderSide: BorderSide(
+                      color: AppTheme.primaryColor.withOpacity(0.3),
+                      width: 1.5,
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 20),
+              CustomButton(
+                text: 'Send Reset Link',
+                onPressed: _isSending ? null : _sendResetEmail,
+                isLoading: _isSending,
+                type: ButtonType.primary,
+              ),
+            ],
+          ],
+        ),
+      ),
     );
   }
 }

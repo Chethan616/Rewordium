@@ -81,7 +81,6 @@ import com.noxquill.rewordium.keyboard.lib.observeAsNonNullState
 import com.noxquill.rewordium.keyboard.subtypeManager
 import dev.patrickgold.jetpref.datastore.model.observeAsState
 import dev.patrickgold.jetpref.material.ui.JetPrefAlertDialog
-import dev.patrickgold.jetpref.material.ui.JetPrefDropdown
 import dev.patrickgold.jetpref.material.ui.JetPrefDropdownMenuDefaults
 import dev.patrickgold.jetpref.material.ui.JetPrefListItem
 import org.florisboard.lib.compose.FlorisButtonBar
@@ -380,13 +379,12 @@ fun SubtypeEditorScreen(id: Long?) = FlorisScreen {
                 }
                 val expanded = remember { mutableStateOf(false) }
                 val selectedIndex = popupMappingIds.indexOf(popupMapping).coerceAtLeast(0)
-                JetPrefDropdown(
+                CompatDropdown(
                     options = popupMappingLabels,
                     expanded = expanded,
                     selectedOptionIndex = selectedIndex,
                     isError = showSelectAsError && selectedIndex == 0,
                     onSelectOption = { popupMapping = popupMappingIds[it] },
-                    appearance = JetPrefDropdownMenuDefaults.outlined(shape = ShapeDefaults.Small),
                 )
             }
             SubtypePropertyDropdown(stringRes(R.string.settings__localization__subtype_characters_layout), LayoutType.CHARACTERS)
@@ -409,7 +407,7 @@ fun SubtypeEditorScreen(id: Long?) = FlorisScreen {
                 }
                 val expanded = remember { mutableStateOf(false) }
                 val selectedIndex = nlpProviderMappingIds.indexOf(nlpProviders.suggestion).coerceAtLeast(0)
-                JetPrefDropdown(
+                CompatDropdown(
                     options = nlpProviderMappingLabels,
                     expanded = expanded,
                     selectedOptionIndex = selectedIndex,
@@ -418,7 +416,6 @@ fun SubtypeEditorScreen(id: Long?) = FlorisScreen {
                         suggestion = nlpProviderMappingIds[it],
                         spelling = nlpProviderMappingIds[it]
                     ) },
-                    appearance = JetPrefDropdownMenuDefaults.outlined(shape = ShapeDefaults.Small),
                 )
             }
 
@@ -435,13 +432,12 @@ fun SubtypeEditorScreen(id: Long?) = FlorisScreen {
                     selectListValues + composers.values.map { it.label }
                 }
                 val expanded = remember { mutableStateOf(false) }
-                JetPrefDropdown(
+                CompatDropdown(
                     options = composerNames,
                     expanded = expanded,
                     selectedOptionIndex = composerIds.indexOf(composer).coerceAtLeast(0),
                     isError = showSelectAsError && composer == SelectComponentName,
                     onSelectOption = { composer = composerIds[it] },
-                    appearance = JetPrefDropdownMenuDefaults.outlined(shape = ShapeDefaults.Small),
                 )
             }
             SubtypeProperty(stringRes(R.string.settings__localization__subtype_currency_set)) {
@@ -452,13 +448,12 @@ fun SubtypeEditorScreen(id: Long?) = FlorisScreen {
                     selectListValues + currencySets.values.map { it.label }
                 }
                 val expanded = remember { mutableStateOf(false) }
-                JetPrefDropdown(
+                CompatDropdown(
                     options = currencySetNames,
                     expanded = expanded,
                     selectedOptionIndex = currencySetIds.indexOf(currencySet).coerceAtLeast(0),
                     isError = showSelectAsError && currencySet == SelectComponentName,
                     onSelectOption = { currencySet = currencySetIds[it] },
-                    appearance = JetPrefDropdownMenuDefaults.outlined(shape = ShapeDefaults.Small),
                 )
             }
 
@@ -558,13 +553,12 @@ private fun SubtypeLayoutDropdown(
     val layoutId = remember(layoutMap) { layoutMap[layoutType] }
     val expanded = remember { mutableStateOf(false) }
     val selectedIndex = layoutIds.indexOf(layoutId).coerceAtLeast(0)
-    JetPrefDropdown(
+    CompatDropdown(
         options = layoutLabels,
         expanded = expanded,
         selectedOptionIndex = selectedIndex,
         isError = showSelectAsError && selectedIndex == 0,
         onSelectOption = { onLayoutMapChanged(layoutMap.copy(layoutType = layoutType, componentName = layoutIds[it])!!) },
-        appearance = JetPrefDropdownMenuDefaults.outlined(shape = ShapeDefaults.Small),
     )
 }
 

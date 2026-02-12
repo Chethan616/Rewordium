@@ -1,23 +1,31 @@
 <vector xmlns:android="http://schemas.android.com/apk/res/android"
     android:width="24dp"
     android:height="24dp"
-    android:viewportWidth="24.0"
-    android:viewportHeight="24.0"
-    android:tint="?attr/colorControlNormal">
+    android:viewportWidth="960"
+    android:viewportHeight="960">
 
-    <!-- Wand part -->
+    <!-- Wand body -->
     <path
-        android:fillColor="@android:color/white"
-        android:pathData="M3,15h12v2H3zM3,11h12v2H3zM3,7h12v2H3z"/>
+        android:fillColor="#31D97A"
+        android:pathData="M176,840q-17,-17 -17,-42t17,-42l416,-416l84,84l-416,416q-17,17 -42,17t-42,-17Z"/>
 
-    <!-- Sparkles -->
+    <!-- Wand handle accent -->
     <path
-        android:fillColor="@android:color/white"
-        android:pathData="M18,2l1.5,3.5L23,7l-3.5,1.5L18,12l-1.5,-3.5L13,7l3.5,-1.5z"/>
+        android:fillColor="#7AEAAA"
+        android:pathData="M676,424l-84,-84l56,-56q17,-17 42,-17t42,17l0,0q17,17 17,42t-17,42L676,424Z"/>
+
+    <!-- Large sparkle -->
     <path
-        android:fillColor="@android:color/white"
-        android:pathData="M19,15l0.75,1.75L21.5,17.5l-1.75,0.75L19,20l-0.75,-1.75L16.5,17.5l1.75,-0.75z"/>
+        android:fillColor="#31D97A"
+        android:pathData="M480,200l-40,160l-160,40l160,40l40,160l40,-160l160,-40l-160,-40Z"/>
+
+    <!-- Small sparkle top-right -->
     <path
-        android:fillColor="@android:color/white"
-        android:pathData="M15,19l0.5,1.25L16.75,20.75l-1.25,0.5L15,22.5l-0.5,-1.25L13.25,20.75l1.25,-0.5z"/>
+        android:fillColor="#7AEAAA"
+        android:pathData="M760,160l-20,80l-80,20l80,20l20,80l20,-80l80,-20l-80,-20Z"/>
+
+    <!-- Small sparkle -->
+    <path
+        android:fillColor="#B8F5D2"
+        android:pathData="M320,160l-12,48l-48,12l48,12l12,48l12,-48l48,-12l-48,-12Z"/>
 </vector>

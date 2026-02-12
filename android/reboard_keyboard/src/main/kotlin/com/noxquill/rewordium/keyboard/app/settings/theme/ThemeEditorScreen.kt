@@ -93,7 +93,7 @@ import com.noxquill.rewordium.keyboard.lib.rememberValidationResult
 import com.noxquill.rewordium.keyboard.themeManager
 import dev.patrickgold.jetpref.datastore.model.observeAsState
 import dev.patrickgold.jetpref.material.ui.JetPrefAlertDialog
-import dev.patrickgold.jetpref.material.ui.JetPrefDropdown
+import com.noxquill.rewordium.keyboard.app.settings.localization.CompatDropdown
 import dev.patrickgold.jetpref.material.ui.JetPrefListItem
 import dev.patrickgold.jetpref.material.ui.JetPrefTextField
 import kotlinx.coroutines.delay
@@ -705,7 +705,7 @@ private fun ComponentMetaEditorDialog(
             }
 
             DialogProperty(text = stringRes(R.string.settings__theme_editor__component_meta_material_you__title)) {
-                JetPrefDropdown(
+                CompatDropdown(
                     modifier = Modifier.padding(bottom = 8.dp),
                     labelText = stringRes(R.string.settings__theme_editor__component_meta_material_you__palette_style),
                     optionsLabelProvider = {
@@ -717,7 +717,7 @@ private fun ComponentMetaEditorDialog(
                     },
                     selectedOptionIndex = materialYouFlags.paletteStyle.ordinal
                 )
-                JetPrefDropdown(
+                CompatDropdown(
                     modifier = Modifier.padding(bottom = 8.dp),
                     labelText = stringRes(R.string.settings__theme_editor__component_meta_material_you__color_contrast),
                     optionsLabelProvider = {
@@ -729,7 +729,7 @@ private fun ComponentMetaEditorDialog(
                     },
                     selectedOptionIndex = materialYouFlags.contrastLevel.ordinal
                 )
-                JetPrefDropdown(
+                CompatDropdown(
                     modifier = Modifier.padding(bottom = 8.dp),
                     labelText = stringRes(R.string.settings__theme_editor__component_meta_material_you__spec_version),
                     optionsLabelProvider = {

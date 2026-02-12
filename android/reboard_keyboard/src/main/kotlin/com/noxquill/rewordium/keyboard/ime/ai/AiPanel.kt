@@ -36,12 +36,11 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.AutoAwesome
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.VerticalAlignBottom
 import androidx.compose.material3.ButtonDefaults
@@ -85,8 +84,8 @@ import kotlinx.coroutines.launch
 import org.florisboard.lib.snygg.ui.rememberSnyggThemeQuery
 
 /**
- * AiPanel — compact Material 3 AI overlay inside the keyboard.
- * Uses keyboard snygg theme tokens mapped to M3 color roles.
+ * AiPanel — compact Material 3 overlay inside the keyboard.
+ * Uses keyboard snygg theme tokens (system keyboard colors) for a native look.
  */
 @Composable
 fun AiPanel(
@@ -101,20 +100,20 @@ fun AiPanel(
 
     var showApiKeySnackbar by remember { mutableStateOf(false) }
 
-    // ── Snygg theme → M3-style semantic colors ──
+    // ── System keyboard theme colors ──
     val windowStyle   = rememberSnyggThemeQuery(FlorisImeUi.Window.elementName)
     val keyStyle      = rememberSnyggThemeQuery(FlorisImeUi.Key.elementName)
     val smartbarStyle = rememberSnyggThemeQuery(FlorisImeUi.Smartbar.elementName)
 
-    val bgColor      = windowStyle.background()
-    val surfaceColor = smartbarStyle.background()
-    val onSurface    = keyStyle.foreground()
-    val primary      = smartbarStyle.foreground().takeIf { it.alpha > 0f } ?: onSurface
-    val onPrimary    = bgColor
-    val outline      = onSurface.copy(alpha = 0.16f)
-    val surfaceVar   = surfaceColor.copy(alpha = 0.62f)
-    val onSurfaceVar = onSurface.copy(alpha = 0.72f)
-    val errorColor   = Color(0xFFEF4444)
+    val bgColor        = windowStyle.background()
+    val surfaceColor   = smartbarStyle.background()
+    val onSurface      = keyStyle.foreground()
+    val primary        = smartbarStyle.foreground().takeIf { it.alpha > 0f } ?: onSurface
+    val onPrimary      = bgColor
+    val outline        = onSurface.copy(alpha = 0.14f)
+    val surfaceVariant = surfaceColor.copy(alpha = 0.55f)
+    val onSurfaceVar   = onSurface.copy(alpha = 0.70f)
+    val errorColor     = Color(0xFFBA1A1A)
 
     // ── State ──
     var isGenerating    by remember { mutableStateOf(false) }
@@ -128,7 +127,7 @@ fun AiPanel(
     // ── API-key toast ──
     LaunchedEffect(showApiKeySnackbar) {
         if (showApiKeySnackbar) {
-            Toast.makeText(context, "⚠️ No API key. Open Rewordium → Settings → Advanced AI", Toast.LENGTH_LONG).show()
+            Toast.makeText(context, "No API key configured. Go to Settings → Advanced AI.", Toast.LENGTH_LONG).show()
             try {
                 val intent = context.packageManager.getLaunchIntentForPackage(context.packageName)
                 intent?.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP)
@@ -151,8 +150,8 @@ fun AiPanel(
                 .fillMaxWidth()
                 .height(FlorisImeSizing.smartbarHeight * 4),
             color = bgColor,
-            tonalElevation = 3.dp,
-            shape = RoundedCornerShape(topStart = 16.dp, topEnd = 16.dp),
+            tonalElevation = 2.dp,
+            shape = RoundedCornerShape(topStart = 14.dp, topEnd = 14.dp),
         ) {
             Column(
                 modifier = Modifier
@@ -165,38 +164,27 @@ fun AiPanel(
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Surface(
-                            color = primary.copy(alpha = 0.12f),
-                            shape = CircleShape,
-                            modifier = Modifier.size(28.dp)
-                        ) {
-                            Box(contentAlignment = Alignment.Center, modifier = Modifier.size(28.dp)) {
-                                Icon(Icons.Default.AutoAwesome, null, tint = primary, modifier = Modifier.size(16.dp))
-                            }
-                        }
-                        Spacer(Modifier.width(8.dp))
-                        Text(
-                            stringResource(R.string.ai__panel_title),
-                            style = MaterialTheme.typography.titleSmall,
-                            fontWeight = FontWeight.SemiBold,
-                            color = onSurface
-                        )
-                    }
+                    Text(
+                        stringResource(R.string.ai__panel_title),
+                        style = MaterialTheme.typography.titleSmall,
+                        fontWeight = FontWeight.SemiBold,
+                        color = onSurface,
+                        letterSpacing = 0.3.sp
+                    )
                     IconButton(
                         onClick = { keyboardManager.activeState.isAiPanelVisible = false; onDismiss() },
                         modifier = Modifier.size(28.dp)
                     ) {
-                        Icon(Icons.Default.Close, "Close", tint = onSurfaceVar, modifier = Modifier.size(18.dp))
+                        Icon(Icons.Default.Close, "Close", tint = onSurfaceVar, modifier = Modifier.size(16.dp))
                     }
                 }
 
-                Spacer(Modifier.height(8.dp))
+                Spacer(Modifier.height(6.dp))
 
-                // ════════ Mode Toggle (M3 segmented-button style) ════════
+                // ════════ Mode Toggle ════════
                 Surface(
-                    color = surfaceVar,
-                    shape = RoundedCornerShape(12.dp),
+                    color = surfaceVariant,
+                    shape = RoundedCornerShape(10.dp),
                     modifier = Modifier.fillMaxWidth()
                 ) {
                     Row(modifier = Modifier.padding(3.dp), horizontalArrangement = Arrangement.spacedBy(3.dp)) {
@@ -205,30 +193,34 @@ fun AiPanel(
                             AiMode.ADD_BELOW to R.string.ai__mode_add_below
                         ).forEach { (mode, labelRes) ->
                             val selected = aiMode == mode
-                            val bg by animateColorAsState(if (selected) primary else Color.Transparent, tween(200), label = "modeBg")
-                            val fg by animateColorAsState(if (selected) onPrimary else onSurfaceVar, tween(200), label = "modeFg")
+                            val bg by animateColorAsState(
+                                if (selected) primary else Color.Transparent, tween(220), label = "modeBg"
+                            )
+                            val fg by animateColorAsState(
+                                if (selected) onPrimary else onSurfaceVar, tween(220), label = "modeFg"
+                            )
                             Surface(
                                 color = bg,
-                                shape = RoundedCornerShape(10.dp),
+                                shape = RoundedCornerShape(8.dp),
                                 modifier = Modifier
                                     .weight(1f)
-                                    .clip(RoundedCornerShape(10.dp))
+                                    .clip(RoundedCornerShape(8.dp))
                                     .clickable { aiMode = mode; generatedText = null; errorMessage = null }
                             ) {
                                 Row(
-                                    modifier = Modifier.padding(vertical = 8.dp),
+                                    modifier = Modifier.padding(vertical = 7.dp),
                                     horizontalArrangement = Arrangement.Center,
                                     verticalAlignment = Alignment.CenterVertically
                                 ) {
                                     Spacer(Modifier.weight(1f))
                                     Icon(
-                                        if (mode == AiMode.REWRITE) Icons.Default.AutoAwesome else Icons.Default.VerticalAlignBottom,
+                                        if (mode == AiMode.REWRITE) Icons.Default.Edit else Icons.Default.VerticalAlignBottom,
                                         null, tint = fg, modifier = Modifier.size(14.dp)
                                     )
                                     Spacer(Modifier.width(4.dp))
                                     Text(
                                         stringResource(labelRes), color = fg, fontSize = 12.sp,
-                                        fontWeight = if (selected) FontWeight.SemiBold else FontWeight.Normal
+                                        fontWeight = if (selected) FontWeight.Medium else FontWeight.Normal
                                     )
                                     Spacer(Modifier.weight(1f))
                                 }
@@ -237,9 +229,9 @@ fun AiPanel(
                     }
                 }
 
-                Spacer(Modifier.height(8.dp))
+                Spacer(Modifier.height(6.dp))
 
-                // ════════ Persona chips (M3 FilterChip) ════════
+                // ════════ Persona chips ════════
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -247,29 +239,36 @@ fun AiPanel(
                     horizontalArrangement = Arrangement.spacedBy(6.dp)
                 ) {
                     AIPersona.entries.forEach { persona ->
+                        val isSelected = selectedPersona == persona
                         FilterChip(
-                            selected = selectedPersona == persona,
+                            selected = isSelected,
                             onClick = { selectedPersona = persona; aiManager.setPersona(persona) },
-                            label = { Text(getPersonaLabel(persona), fontSize = 11.sp) },
+                            label = {
+                                Text(
+                                    getPersonaLabel(persona),
+                                    fontSize = 11.sp,
+                                    fontWeight = if (isSelected) FontWeight.Medium else FontWeight.Normal
+                                )
+                            },
                             colors = FilterChipDefaults.filterChipColors(
-                                containerColor = surfaceVar,
-                                labelColor = onSurface,
-                                selectedContainerColor = primary.copy(alpha = 0.16f),
+                                containerColor = Color.Transparent,
+                                labelColor = onSurfaceVar,
+                                selectedContainerColor = primary.copy(alpha = 0.12f),
                                 selectedLabelColor = primary
                             ),
                             border = FilterChipDefaults.filterChipBorder(
-                                enabled = true, selected = selectedPersona == persona,
-                                borderWidth = 1.dp, borderColor = outline,
-                                selectedBorderColor = primary.copy(alpha = 0.4f)
+                                enabled = true, selected = isSelected,
+                                borderWidth = 0.8.dp, borderColor = outline,
+                                selectedBorderColor = primary.copy(alpha = 0.3f)
                             ),
                             modifier = Modifier.height(30.dp)
                         )
                     }
                 }
 
-                Spacer(Modifier.height(6.dp))
+                Spacer(Modifier.height(4.dp))
 
-                // ════════ Action chips (M3 FilterChip) ════════
+                // ════════ Action chips ════════
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -277,27 +276,34 @@ fun AiPanel(
                     horizontalArrangement = Arrangement.spacedBy(6.dp)
                 ) {
                     AIAction.entries.forEach { action ->
+                        val isSelected = selectedAction == action
                         FilterChip(
-                            selected = selectedAction == action,
+                            selected = isSelected,
                             onClick = { selectedAction = action },
-                            label = { Text(getActionLabel(action), fontSize = 11.sp) },
+                            label = {
+                                Text(
+                                    getActionLabel(action),
+                                    fontSize = 11.sp,
+                                    fontWeight = if (isSelected) FontWeight.Medium else FontWeight.Normal
+                                )
+                            },
                             colors = FilterChipDefaults.filterChipColors(
-                                containerColor = surfaceVar,
-                                labelColor = onSurface,
-                                selectedContainerColor = primary.copy(alpha = 0.16f),
+                                containerColor = Color.Transparent,
+                                labelColor = onSurfaceVar,
+                                selectedContainerColor = primary.copy(alpha = 0.12f),
                                 selectedLabelColor = primary
                             ),
                             border = FilterChipDefaults.filterChipBorder(
-                                enabled = true, selected = selectedAction == action,
-                                borderWidth = 1.dp, borderColor = outline,
-                                selectedBorderColor = primary.copy(alpha = 0.4f)
+                                enabled = true, selected = isSelected,
+                                borderWidth = 0.8.dp, borderColor = outline,
+                                selectedBorderColor = primary.copy(alpha = 0.3f)
                             ),
                             modifier = Modifier.height(30.dp)
                         )
                     }
                 }
 
-                Spacer(Modifier.height(10.dp))
+                Spacer(Modifier.height(8.dp))
 
                 // ════════ Center: loading / result / error / generate CTA ════════
                 Row(
@@ -310,16 +316,16 @@ fun AiPanel(
                             LinearProgressIndicator(
                                 modifier = Modifier
                                     .fillMaxWidth()
-                                    .height(3.dp)
-                                    .clip(RoundedCornerShape(2.dp)),
+                                    .height(2.dp)
+                                    .clip(RoundedCornerShape(1.dp)),
                                 color = primary,
                                 trackColor = outline
                             )
                         }
                         generatedText != null -> {
                             Card(
-                                colors = CardDefaults.cardColors(containerColor = surfaceVar),
-                                shape = RoundedCornerShape(12.dp),
+                                colors = CardDefaults.cardColors(containerColor = surfaceVariant),
+                                shape = RoundedCornerShape(10.dp),
                                 modifier = Modifier.weight(1f)
                             ) {
                                 Text(
@@ -348,7 +354,7 @@ fun AiPanel(
                                     }
                                 },
                                 colors = IconButtonDefaults.filledTonalIconButtonColors(
-                                    containerColor = primary.copy(alpha = 0.14f)
+                                    containerColor = primary.copy(alpha = 0.12f)
                                 ),
                                 modifier = Modifier.size(34.dp)
                             ) {
@@ -363,7 +369,7 @@ fun AiPanel(
                                 onClick = { generatedText = null; errorMessage = null },
                                 modifier = Modifier.size(34.dp)
                             ) {
-                                Icon(Icons.Default.Refresh, "Reset", tint = onSurfaceVar, modifier = Modifier.size(18.dp))
+                                Icon(Icons.Default.Refresh, "Reset", tint = onSurfaceVar, modifier = Modifier.size(16.dp))
                             }
                         }
                         errorMessage != null -> {
@@ -376,7 +382,7 @@ fun AiPanel(
                                 onClick = { generatedText = null; errorMessage = null },
                                 modifier = Modifier.size(34.dp)
                             ) {
-                                Icon(Icons.Default.Refresh, "Retry", tint = onSurfaceVar, modifier = Modifier.size(18.dp))
+                                Icon(Icons.Default.Refresh, "Retry", tint = onSurfaceVar, modifier = Modifier.size(16.dp))
                             }
                         }
                         else -> {
@@ -389,8 +395,11 @@ fun AiPanel(
                                         wasUsingAllText = !hasSel
                                         if (text.isBlank()) { errorMessage = context.getString(R.string.ai__error_no_text); return@launch }
                                         isGenerating = true; errorMessage = null
-                                        val result = if (aiMode == AiMode.ADD_BELOW) aiManager.continueTextWithAction(text, selectedAction)
-                                                     else aiManager.rewriteText(text, selectedAction)
+                                        val result = if (aiMode == AiMode.ADD_BELOW) {
+                                            aiManager.continueTextWithAction(text, selectedAction)
+                                        } else {
+                                            aiManager.rewriteText(text, selectedAction)
+                                        }
                                         isGenerating = false
                                         result.fold(
                                             onSuccess = { generatedText = it },
@@ -409,7 +418,7 @@ fun AiPanel(
                                 shape = RoundedCornerShape(20.dp),
                                 modifier = Modifier.height(36.dp)
                             ) {
-                                Icon(Icons.Default.AutoAwesome, null, modifier = Modifier.size(16.dp))
+                                Icon(Icons.Default.Edit, null, modifier = Modifier.size(15.dp))
                                 Spacer(Modifier.width(6.dp))
                                 Text(getActionLabel(selectedAction), fontSize = 13.sp, fontWeight = FontWeight.Medium)
                             }

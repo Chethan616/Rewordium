@@ -88,7 +88,7 @@ import com.noxquill.rewordium.keyboard.lib.NATIVE_NULLPTR
 import com.noxquill.rewordium.keyboard.lib.compose.FlorisHyperlinkText
 import com.noxquill.rewordium.keyboard.lib.util.InputMethodUtils
 import dev.patrickgold.jetpref.material.ui.JetPrefAlertDialog
-import dev.patrickgold.jetpref.material.ui.JetPrefDropdown
+import com.noxquill.rewordium.keyboard.app.settings.localization.CompatDropdown
 import dev.patrickgold.jetpref.material.ui.JetPrefTextField
 import dev.patrickgold.jetpref.material.ui.JetPrefTextFieldDefaults
 import org.florisboard.lib.android.showShortToast
@@ -209,7 +209,7 @@ internal fun EditRuleDialog(
             }
 
             DialogProperty(text = stringRes(R.string.settings__theme_editor__rule_name)) {
-                JetPrefDropdown(
+                CompatDropdown(
                     options = possibleRuleLabels,
                     selectedOptionIndex = elementsSelectedIndex,
                     onSelectOption = { elementsSelectedIndex = it },

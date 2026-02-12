@@ -20,8 +20,9 @@ class NewsSubscriptionService {
   static const String _keyDontShowAgain = 'news_subscription_dont_show_again';
   static const String _keyRemindLaterTimestamp =
       'news_subscription_remind_later';
+  static const String _keyIsSubscribedLocal = 'news_subscription_is_subscribed';
   static const Duration _remindLaterDelay =
-      Duration(days: 3); // Remind after 3 days
+      Duration(days: 7); // Remind after 7 days
 
   /// Initialize news subscription checking
   static Future<void> initialize() async {
@@ -71,6 +72,13 @@ class NewsSubscriptionService {
         return;
       }
 
+      // Fast-path: check locally cached subscription status
+      final isSubscribedLocal = prefs.getBool(_keyIsSubscribedLocal) ?? false;
+      if (isSubscribedLocal) {
+        debugPrint('User is already subscribed (cached)');
+        return;
+      }
+
       // Check "Remind me later" timestamp
       final remindLaterTimestamp = prefs.getInt(_keyRemindLaterTimestamp);
       if (remindLaterTimestamp != null) {
@@ -86,6 +94,8 @@ class NewsSubscriptionService {
       final isSubscribed = await _checkUserSubscriptionStatus(currentUser.uid);
       if (isSubscribed) {
         debugPrint('User is already subscribed to news');
+        // Cache locally so we skip Firebase next time
+        await prefs.setBool(_keyIsSubscribedLocal, true);
         return;
       }
 
@@ -128,11 +138,16 @@ class NewsSubscriptionService {
 
     final success = await updateSubscriptionStatus(currentUser.uid, subscribed);
     if (success) {
-      // If user subscribes, reset the "don't show again" flag
+      // If user subscribes, reset the "don't show again" flag and cache status
       if (subscribed) {
         final prefs = await SharedPreferences.getInstance();
         await prefs.remove(_keyDontShowAgain);
         await prefs.remove(_keyRemindLaterTimestamp);
+        await prefs.setBool(_keyIsSubscribedLocal, true);
+      } else {
+        // Unsubscribed — clear local cache so prompt can reappear later
+        final prefs = await SharedPreferences.getInstance();
+        await prefs.remove(_keyIsSubscribedLocal);
       }
     }
     return success;
@@ -212,6 +227,7 @@ class NewsSubscriptionService {
     final prefs = await SharedPreferences.getInstance();
     await prefs.remove(_keyDontShowAgain);
     await prefs.remove(_keyRemindLaterTimestamp);
+    await prefs.remove(_keyIsSubscribedLocal);
     _hasInitialized = false;
     debugPrint('News subscription service reset');
   }

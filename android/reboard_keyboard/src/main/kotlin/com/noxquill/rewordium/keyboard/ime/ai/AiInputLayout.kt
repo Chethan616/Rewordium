@@ -20,7 +20,6 @@ import android.widget.Toast
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -37,13 +36,12 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.Backspace
-import androidx.compose.material.icons.filled.AutoAwesome
 import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.VerticalAlignBottom
 import androidx.compose.material3.ButtonDefaults
@@ -95,7 +93,8 @@ import org.florisboard.lib.snygg.ui.rememberSnyggThemeQuery
 enum class AiMode { REWRITE, ADD_BELOW }
 
 /**
- * AI Input Layout — full-screen Material 3 keyboard panel for AI writing assistance.
+ * AI Input Layout — full-screen keyboard panel for writing assistance.
+ * Uses system keyboard theme colors for a native, professional appearance.
  * 3-row chip selector (persona / task / length) + mode toggle + generate button.
  */
 @Composable
@@ -108,20 +107,20 @@ fun AiInputLayout(
     val aiManager by context.aiManager()
     val scope = rememberCoroutineScope()
 
-    // ── Snygg theme → M3-style semantic colors ──
+    // ── System keyboard theme colors ──
     val windowStyle   = rememberSnyggThemeQuery(FlorisImeUi.Window.elementName)
     val keyStyle      = rememberSnyggThemeQuery(FlorisImeUi.Key.elementName)
     val smartbarStyle = rememberSnyggThemeQuery(FlorisImeUi.Smartbar.elementName)
 
-    val bgColor      = windowStyle.background()
-    val surfaceColor = keyStyle.background()
-    val onSurface    = keyStyle.foreground()
-    val primary      = smartbarStyle.foreground().takeIf { it.alpha > 0f } ?: onSurface
-    val onPrimary    = bgColor
-    val outline      = onSurface.copy(alpha = 0.16f)
-    val surfaceVar   = surfaceColor.copy(alpha = 0.62f)
-    val onSurfaceVar = onSurface.copy(alpha = 0.72f)
-    val errorColor   = Color(0xFFEF4444)
+    val bgColor        = windowStyle.background()
+    val surfaceColor   = keyStyle.background()
+    val onSurface      = keyStyle.foreground()
+    val primary        = smartbarStyle.foreground().takeIf { it.alpha > 0f } ?: onSurface
+    val onPrimary      = bgColor
+    val outline        = onSurface.copy(alpha = 0.12f)
+    val surfaceVariant = surfaceColor.copy(alpha = 0.55f)
+    val onSurfaceVar   = onSurface.copy(alpha = 0.65f)
+    val errorColor     = Color(0xFFBA1A1A)
 
     // ── State ──
     var isGenerating    by remember { mutableStateOf(false) }
@@ -133,25 +132,23 @@ fun AiInputLayout(
     var selectedTask    by remember { mutableStateOf<String?>(null) }
     var selectedLength  by remember { mutableStateOf<String?>(null) }
 
-    // ── Chip data ──
+    // ── Chip data — clean labels, no emojis, professional ──
     val personaChips = remember { listOf(
-        "🙂 Casual", "🎓 Academic", "👔 Professional", "🤝 Friendly",
-        "🪄 Creative", "🎭 Dramatic", "🧘 Calm", "💪 Motivational",
-        "🤓 Nerdy", "😎 Cool", "🌸 Poetic", "🔬 Scientific",
-        "📰 Journalistic", "🎬 Cinematic", "👶 Simple"
+        "Casual", "Academic", "Professional", "Friendly",
+        "Creative", "Dramatic", "Calm", "Motivational",
+        "Technical", "Poetic", "Journalistic", "Simple"
     ) }
     val taskChips = remember { listOf(
-        "✉️ Email", "💼 Work", "📚 Academic", "😄 Humor", "🤵 Polite",
-        "🌐 Translate", "✨ Rewrite", "📋 Summarize", "📖 Expand",
-        "✏️ Fix Grammar", "💌 Love Letter", "📝 Essay", "🎯 Pitch",
-        "📢 Marketing", "🤝 Apology", "🎉 Congratulate", "📊 Report",
-        "💡 Brainstorm", "🔄 Paraphrase", "📣 Announce", "🙏 Request",
-        "👋 Introduction", "🎤 Speech", "📱 Social Media", "💬 Chat Reply"
+        "Email", "Work", "Academic", "Humor", "Polite",
+        "Translate", "Rewrite", "Summarize", "Expand",
+        "Fix Grammar", "Essay", "Pitch",
+        "Marketing", "Apology", "Congratulate", "Report",
+        "Brainstorm", "Paraphrase", "Announce", "Request",
+        "Introduction", "Speech", "Social Media", "Chat Reply"
     ) }
     val lengthChips = remember { listOf(
-        "⚡ Very Short", "📏 Short", "📐 Medium", "📜 Long",
-        "📚 Very Long", "🎯 Precise", "💎 Concise", "📖 Detailed",
-        "🔍 Elaborate", "✂️ Compact", "🌊 Flowing", "📌 Bullet Points"
+        "Very Short", "Short", "Medium", "Long",
+        "Detailed", "Concise", "Elaborate", "Bullet Points"
     ) }
 
     // ── Generate logic ──
@@ -213,28 +210,19 @@ fun AiInputLayout(
                         .padding(horizontal = 16.dp, vertical = 10.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Surface(
-                        color = primary.copy(alpha = 0.12f),
-                        shape = CircleShape,
-                        modifier = Modifier.size(30.dp)
-                    ) {
-                        Box(contentAlignment = Alignment.Center, modifier = Modifier.size(30.dp)) {
-                            Icon(Icons.Default.AutoAwesome, null, tint = primary, modifier = Modifier.size(16.dp))
-                        }
-                    }
-                    Spacer(Modifier.width(8.dp))
                     Text(
                         stringResource(R.string.ai__panel_title),
                         style = MaterialTheme.typography.titleSmall,
                         fontWeight = FontWeight.SemiBold,
-                        color = onSurface
+                        color = onSurface,
+                        letterSpacing = 0.3.sp
                     )
                 }
 
                 // ════════ Mode segmented toggle ════════
                 Surface(
-                    color = surfaceVar,
-                    shape = RoundedCornerShape(12.dp),
+                    color = surfaceVariant,
+                    shape = RoundedCornerShape(10.dp),
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(horizontal = 12.dp)
@@ -245,30 +233,34 @@ fun AiInputLayout(
                             AiMode.ADD_BELOW to R.string.ai__mode_add_below
                         ).forEach { (mode, labelRes) ->
                             val selected = aiMode == mode
-                            val bg by animateColorAsState(if (selected) primary else Color.Transparent, tween(200), label = "bg")
-                            val fg by animateColorAsState(if (selected) onPrimary else onSurfaceVar, tween(200), label = "fg")
+                            val bg by animateColorAsState(
+                                if (selected) primary else Color.Transparent, tween(220), label = "bg"
+                            )
+                            val fg by animateColorAsState(
+                                if (selected) onPrimary else onSurfaceVar, tween(220), label = "fg"
+                            )
                             Surface(
                                 color = bg,
-                                shape = RoundedCornerShape(10.dp),
+                                shape = RoundedCornerShape(8.dp),
                                 modifier = Modifier
                                     .weight(1f)
-                                    .clip(RoundedCornerShape(10.dp))
+                                    .clip(RoundedCornerShape(8.dp))
                                     .clickable { aiMode = mode; generatedText = null; errorMessage = null }
                             ) {
                                 Row(
-                                    modifier = Modifier.padding(vertical = 8.dp),
+                                    modifier = Modifier.padding(vertical = 7.dp),
                                     horizontalArrangement = Arrangement.Center,
                                     verticalAlignment = Alignment.CenterVertically
                                 ) {
                                     Spacer(Modifier.weight(1f))
                                     Icon(
-                                        if (mode == AiMode.REWRITE) Icons.Default.AutoAwesome else Icons.Default.VerticalAlignBottom,
+                                        if (mode == AiMode.REWRITE) Icons.Default.Edit else Icons.Default.VerticalAlignBottom,
                                         null, tint = fg, modifier = Modifier.size(14.dp)
                                     )
                                     Spacer(Modifier.width(4.dp))
                                     Text(
                                         stringResource(labelRes), color = fg, fontSize = 12.sp,
-                                        fontWeight = if (selected) FontWeight.SemiBold else FontWeight.Normal
+                                        fontWeight = if (selected) FontWeight.Medium else FontWeight.Normal
                                     )
                                     Spacer(Modifier.weight(1f))
                                 }
@@ -295,16 +287,25 @@ fun AiInputLayout(
                             ) {
                                 LinearProgressIndicator(
                                     modifier = Modifier
-                                        .fillMaxWidth(0.6f)
-                                        .height(3.dp)
-                                        .clip(RoundedCornerShape(2.dp)),
+                                        .fillMaxWidth(0.5f)
+                                        .height(2.dp)
+                                        .clip(RoundedCornerShape(1.dp)),
                                     color = primary,
                                     trackColor = outline
                                 )
                                 Spacer(Modifier.height(12.dp))
-                                Text("Generating…", color = onSurface, fontSize = 14.sp, fontWeight = FontWeight.Medium)
+                                Text(
+                                    "Processing…",
+                                    color = onSurface,
+                                    fontSize = 14.sp,
+                                    fontWeight = FontWeight.Medium
+                                )
                                 Spacer(Modifier.height(2.dp))
-                                Text("AI is working on your text", color = onSurfaceVar, fontSize = 12.sp)
+                                Text(
+                                    "Enhancing your text",
+                                    color = onSurfaceVar,
+                                    fontSize = 12.sp
+                                )
                             }
                         }
                         generatedText != null -> {
@@ -313,8 +314,8 @@ fun AiInputLayout(
                             ) {
                                 // Result card
                                 Card(
-                                    colors = CardDefaults.cardColors(containerColor = surfaceVar),
-                                    shape = RoundedCornerShape(12.dp),
+                                    colors = CardDefaults.cardColors(containerColor = surfaceVariant),
+                                    shape = RoundedCornerShape(10.dp),
                                     modifier = Modifier.weight(1f).fillMaxWidth()
                                 ) {
                                     Column(
@@ -323,7 +324,12 @@ fun AiInputLayout(
                                             .verticalScroll(rememberScrollState())
                                             .padding(12.dp)
                                     ) {
-                                        Text(generatedText!!, color = onSurface, fontSize = 15.sp, lineHeight = 22.sp)
+                                        Text(
+                                            generatedText!!,
+                                            color = onSurface,
+                                            fontSize = 14.sp,
+                                            lineHeight = 20.sp
+                                        )
                                     }
                                 }
                                 Spacer(Modifier.height(8.dp))
@@ -335,13 +341,13 @@ fun AiInputLayout(
                                     FilledTonalButton(
                                         onClick = { doGenerate() },
                                         colors = ButtonDefaults.filledTonalButtonColors(
-                                            containerColor = surfaceVar,
+                                            containerColor = surfaceVariant,
                                             contentColor = onSurface
                                         ),
-                                        shape = RoundedCornerShape(12.dp),
+                                        shape = RoundedCornerShape(10.dp),
                                         modifier = Modifier.weight(1f)
                                     ) {
-                                        Icon(Icons.Default.Refresh, null, modifier = Modifier.size(16.dp))
+                                        Icon(Icons.Default.Refresh, null, modifier = Modifier.size(15.dp))
                                         Spacer(Modifier.width(4.dp))
                                         Text("Regenerate", fontSize = 13.sp, fontWeight = FontWeight.Medium)
                                     }
@@ -352,7 +358,7 @@ fun AiInputLayout(
                                         },
                                         colors = ButtonDefaults.outlinedButtonColors(contentColor = onSurface),
                                         border = ButtonDefaults.outlinedButtonBorder(enabled = true),
-                                        shape = RoundedCornerShape(12.dp),
+                                        shape = RoundedCornerShape(10.dp),
                                         modifier = Modifier.weight(1f)
                                     ) {
                                         Text("New Prompt", fontSize = 13.sp, fontWeight = FontWeight.Medium)
@@ -365,14 +371,19 @@ fun AiInputLayout(
                                 horizontalAlignment = Alignment.CenterHorizontally,
                                 verticalArrangement = Arrangement.Center
                             ) {
-                                Text(errorMessage!!, color = errorColor, fontSize = 14.sp, textAlign = TextAlign.Center)
+                                Text(
+                                    errorMessage!!,
+                                    color = errorColor,
+                                    fontSize = 13.sp,
+                                    textAlign = TextAlign.Center
+                                )
                                 Spacer(Modifier.height(12.dp))
                                 FilledTonalButton(
                                     onClick = { errorMessage = null },
                                     colors = ButtonDefaults.filledTonalButtonColors(
-                                        containerColor = surfaceVar, contentColor = onSurface
+                                        containerColor = surfaceVariant, contentColor = onSurface
                                     ),
-                                    shape = RoundedCornerShape(12.dp)
+                                    shape = RoundedCornerShape(10.dp)
                                 ) {
                                     Text("Try Again", fontSize = 13.sp)
                                 }
@@ -383,9 +394,17 @@ fun AiInputLayout(
                                 horizontalAlignment = Alignment.CenterHorizontally,
                                 verticalArrangement = Arrangement.Center
                             ) {
-                                Text("Select options below", color = onSurfaceVar, fontSize = 14.sp)
+                                Text(
+                                    "Select options below",
+                                    color = onSurfaceVar,
+                                    fontSize = 14.sp
+                                )
                                 Spacer(Modifier.height(2.dp))
-                                Text("then tap Generate to enhance your text", color = onSurfaceVar.copy(alpha = 0.7f), fontSize = 12.sp)
+                                Text(
+                                    "then tap Generate to enhance your text",
+                                    color = onSurfaceVar.copy(alpha = 0.7f),
+                                    fontSize = 12.sp
+                                )
                             }
                         }
                     }
@@ -400,34 +419,34 @@ fun AiInputLayout(
                         verticalArrangement = Arrangement.spacedBy(4.dp)
                     ) {
                         // Row 1 — Persona
-                        M3InfiniteChipRow(
+                        SystemChipRow(
                             chips = personaChips,
                             selectedChip = selectedPersona,
                             onChipSelected = { selectedPersona = if (selectedPersona == it) null else it },
                             primary = primary,
-                            surfaceVar = surfaceVar,
+                            surfaceVariant = surfaceVariant,
                             onSurface = onSurface,
                             onSurfaceVar = onSurfaceVar,
                             outline = outline
                         )
                         // Row 2 — Task
-                        M3InfiniteChipRow(
+                        SystemChipRow(
                             chips = taskChips,
                             selectedChip = selectedTask,
                             onChipSelected = { selectedTask = if (selectedTask == it) null else it },
                             primary = primary,
-                            surfaceVar = surfaceVar,
+                            surfaceVariant = surfaceVariant,
                             onSurface = onSurface,
                             onSurfaceVar = onSurfaceVar,
                             outline = outline
                         )
                         // Row 3 — Length
-                        M3InfiniteChipRow(
+                        SystemChipRow(
                             chips = lengthChips,
                             selectedChip = selectedLength,
                             onChipSelected = { selectedLength = if (selectedLength == it) null else it },
                             primary = primary,
-                            surfaceVar = surfaceVar,
+                            surfaceVariant = surfaceVariant,
                             onSurface = onSurface,
                             onSurfaceVar = onSurfaceVar,
                             outline = outline
@@ -447,9 +466,9 @@ fun AiInputLayout(
                                 shape = RoundedCornerShape(20.dp),
                                 modifier = Modifier.height(38.dp)
                             ) {
-                                Icon(Icons.Default.AutoAwesome, null, modifier = Modifier.size(16.dp))
+                                Icon(Icons.Default.Edit, null, modifier = Modifier.size(15.dp))
                                 Spacer(Modifier.width(6.dp))
-                                Text("Generate", fontSize = 14.sp, fontWeight = FontWeight.SemiBold)
+                                Text("Generate", fontSize = 14.sp, fontWeight = FontWeight.Medium)
                             }
                         }
                     }
@@ -457,7 +476,7 @@ fun AiInputLayout(
 
                 // ════════ Bottom action bar ════════
                 Surface(
-                    color = surfaceVar,
+                    color = surfaceVariant,
                     modifier = Modifier
                         .fillMaxWidth()
                         .height(FlorisImeSizing.keyboardRowBaseHeight * 0.85f)
@@ -503,11 +522,11 @@ fun AiInputLayout(
                             ) {
                                 Icon(
                                     if (aiMode == AiMode.REWRITE) Icons.Default.Check else Icons.Default.VerticalAlignBottom,
-                                    null, modifier = Modifier.size(16.dp)
+                                    null, modifier = Modifier.size(15.dp)
                                 )
                                 Spacer(Modifier.width(4.dp))
                                 Text(
-                                    if (aiMode == AiMode.REWRITE) "Replace" else "Insert ↓",
+                                    if (aiMode == AiMode.REWRITE) "Replace" else "Insert",
                                     fontSize = 13.sp, fontWeight = FontWeight.Medium
                                 )
                             }
@@ -522,7 +541,7 @@ fun AiInputLayout(
                                 shape = RoundedCornerShape(8.dp),
                                 modifier = Modifier.fillMaxHeight(0.75f)
                             ) {
-                                Icon(Icons.Default.Refresh, "Reset", modifier = Modifier.size(16.dp))
+                                Icon(Icons.Default.Refresh, "Reset", modifier = Modifier.size(15.dp))
                             }
                         }
 
@@ -545,16 +564,16 @@ fun AiInputLayout(
 }
 
 // ──────────────────────────────────────────────
-// M3-style infinite scroll chip row
+// System-styled infinite scroll chip row
 // ──────────────────────────────────────────────
 
 @Composable
-private fun M3InfiniteChipRow(
+private fun SystemChipRow(
     chips: List<String>,
     selectedChip: String?,
     onChipSelected: (String) -> Unit,
     primary: Color,
-    surfaceVar: Color,
+    surfaceVariant: Color,
     onSurface: Color,
     onSurfaceVar: Color,
     outline: Color
@@ -576,19 +595,26 @@ private fun M3InfiniteChipRow(
             FilterChip(
                 selected = isSelected,
                 onClick = { onChipSelected(chip) },
-                label = { Text(chip, fontSize = 12.sp, maxLines = 1, fontWeight = if (isSelected) FontWeight.SemiBold else FontWeight.Medium) },
+                label = {
+                    Text(
+                        chip,
+                        fontSize = 12.sp,
+                        maxLines = 1,
+                        fontWeight = if (isSelected) FontWeight.Medium else FontWeight.Normal
+                    )
+                },
                 colors = FilterChipDefaults.filterChipColors(
-                    containerColor = surfaceVar,
+                    containerColor = Color.Transparent,
                     labelColor = onSurfaceVar,
-                    selectedContainerColor = primary.copy(alpha = 0.16f),
+                    selectedContainerColor = primary.copy(alpha = 0.12f),
                     selectedLabelColor = primary
                 ),
                 border = FilterChipDefaults.filterChipBorder(
                     enabled = true,
                     selected = isSelected,
-                    borderWidth = 1.dp,
+                    borderWidth = 0.8.dp,
                     borderColor = outline,
-                    selectedBorderColor = primary.copy(alpha = 0.4f)
+                    selectedBorderColor = primary.copy(alpha = 0.3f)
                 ),
                 shape = RoundedCornerShape(20.dp),
                 modifier = Modifier.height(32.dp)
@@ -598,7 +624,7 @@ private fun M3InfiniteChipRow(
 }
 
 // ──────────────────────────────────────────────
-// Helpers (string resource lookups)
+// Helpers
 // ──────────────────────────────────────────────
 
 @Composable

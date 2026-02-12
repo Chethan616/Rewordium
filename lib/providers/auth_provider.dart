@@ -586,4 +586,48 @@ class AuthProvider extends ChangeNotifier {
   String getUpgradeUrl() {
     return getPaymentPortalUrl();
   }
+
+  /// Send a password reset email via Firebase Auth
+  Future<bool> sendPasswordResetEmail(String email) async {
+    _isLoading = true;
+    _error = null;
+    notifyListeners();
+
+    try {
+      if (email.trim().isEmpty) {
+        _error = 'Please enter your email address';
+        _isLoading = false;
+        notifyListeners();
+        return false;
+      }
+
+      await FirebaseAuth.instance.sendPasswordResetEmail(email: email.trim());
+      _isLoading = false;
+      notifyListeners();
+      return true;
+    } on FirebaseAuthException catch (e) {
+      switch (e.code) {
+        case 'user-not-found':
+          _error = 'No account found for this email.';
+          break;
+        case 'invalid-email':
+          _error = 'Please enter a valid email address.';
+          break;
+        case 'too-many-requests':
+          _error = 'Too many requests. Please try again later.';
+          break;
+        default:
+          _error = e.message ?? 'Failed to send reset email.';
+      }
+      _isLoading = false;
+      notifyListeners();
+      return false;
+    } catch (e) {
+      debugPrint('Error sending password reset email: $e');
+      _error = 'An unexpected error occurred. Please try again.';
+      _isLoading = false;
+      notifyListeners();
+      return false;
+    }
+  }
 }
