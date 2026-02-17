@@ -190,7 +190,7 @@ fun AiPanel(
                     Row(modifier = Modifier.padding(3.dp), horizontalArrangement = Arrangement.spacedBy(3.dp)) {
                         listOf(
                             AiMode.REWRITE to R.string.ai__mode_rewrite,
-                            AiMode.ADD_BELOW to R.string.ai__mode_add_below
+                            AiMode.APPEND to R.string.ai__mode_append
                         ).forEach { (mode, labelRes) ->
                             val selected = aiMode == mode
                             val bg by animateColorAsState(
@@ -395,7 +395,7 @@ fun AiPanel(
                                         wasUsingAllText = !hasSel
                                         if (text.isBlank()) { errorMessage = context.getString(R.string.ai__error_no_text); return@launch }
                                         isGenerating = true; errorMessage = null
-                                        val result = if (aiMode == AiMode.ADD_BELOW) {
+                                        val result = if (aiMode == AiMode.APPEND) {
                                             aiManager.continueTextWithAction(text, selectedAction)
                                         } else {
                                             aiManager.rewriteText(text, selectedAction)

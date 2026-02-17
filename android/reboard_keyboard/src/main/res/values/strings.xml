@@ -136,7 +136,7 @@
     <string name="ai__text_replaced">Text replaced</string>
     <string name="ai__text_inserted">Text inserted below</string>
     <string name="ai__mode_rewrite">Rewrite</string>
-    <string name="ai__mode_add_below">Add Below</string>
+    <string name="ai__mode_append">Append</string>
 
     <!-- Incognito mode strings -->
     <string name="incognito_mode__toast_after_enabled">Incognito mode is now enabled\n\n{app_name} will not learn words from your input while this mode is active</string>

@@ -88,9 +88,9 @@ import kotlinx.coroutines.launch
 import org.florisboard.lib.snygg.ui.rememberSnyggThemeQuery
 
 /**
- * AI generation mode: Rewrite (replace) or Add Below (continue/append)
+ * AI generation mode: Rewrite (replace) or Append (continue/append)
  */
-enum class AiMode { REWRITE, ADD_BELOW }
+enum class AiMode { REWRITE, APPEND }
 
 /**
  * AI Input Layout — full-screen keyboard panel for writing assistance.
@@ -165,7 +165,7 @@ fun AiInputLayout(
             val task = selectedTask ?: ""
             val length = selectedLength ?: ""
 
-            val result = if (aiMode == AiMode.ADD_BELOW) {
+            val result = if (aiMode == AiMode.APPEND) {
                 aiManager.continueText(text, persona, task, length)
             } else {
                 val fullPrompt = buildString {
@@ -230,7 +230,7 @@ fun AiInputLayout(
                     Row(modifier = Modifier.padding(3.dp), horizontalArrangement = Arrangement.spacedBy(3.dp)) {
                         listOf(
                             AiMode.REWRITE to R.string.ai__mode_rewrite,
-                            AiMode.ADD_BELOW to R.string.ai__mode_add_below
+                            AiMode.APPEND to R.string.ai__mode_append
                         ).forEach { (mode, labelRes) ->
                             val selected = aiMode == mode
                             val bg by animateColorAsState(
