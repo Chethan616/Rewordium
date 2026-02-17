@@ -545,7 +545,7 @@ fun AiInputLayout(
                             elementName = FlorisImeUi.MediaBottomRowButton.elementName,
                             inputEventDispatcher = keyboardManager.inputEventDispatcher,
                             keyData = TextKeyData.IME_UI_MODE_TEXT,
-                            modifier = Modifier.fillMaxHeight(),
+                            modifier = Modifier.weight(1f).fillMaxHeight(),
                         ) {
                             Text("ABC", fontWeight = FontWeight.Bold, fontSize = 14.sp)
                         }
@@ -618,7 +618,7 @@ fun AiInputLayout(
                             elementName = FlorisImeUi.MediaBottomRowButton.elementName,
                             inputEventDispatcher = keyboardManager.inputEventDispatcher,
                             keyData = TextKeyData.DELETE,
-                            modifier = Modifier.fillMaxHeight(),
+                            modifier = Modifier.weight(1f).fillMaxHeight(),
                         ) {
                             Icon(Icons.AutoMirrored.Outlined.Backspace, null)
                         }

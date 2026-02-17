@@ -468,7 +468,7 @@
     "background": "var(--accent)",
     "foreground": "var(--accent-text)",
     "padding": "16dp 0dp",
-    "shape": "var(--r-sm)"
+    "shape": "var(--r-pill)"
   },
   "media-emoji-key-popup-extended-indicator": {
     "foreground": "inherit"

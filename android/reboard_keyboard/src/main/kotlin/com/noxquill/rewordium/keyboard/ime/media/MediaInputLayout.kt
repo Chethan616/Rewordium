@@ -95,7 +95,7 @@ fun MediaInputLayout(
                     elementName = FlorisImeUi.MediaBottomRowButton.elementName,
                     inputEventDispatcher = keyboardManager.inputEventDispatcher,
                     keyData = TextKeyData.IME_UI_MODE_TEXT,
-                    modifier = Modifier.fillMaxHeight(),
+                    modifier = Modifier.weight(1f).fillMaxHeight(),
                 ) {
                     Text(
                         text = "ABC",
@@ -107,7 +107,7 @@ fun MediaInputLayout(
                     elementName = FlorisImeUi.MediaBottomRowButton.elementName,
                     inputEventDispatcher = keyboardManager.inputEventDispatcher,
                     keyData = TextKeyData.DELETE,
-                    modifier = Modifier.fillMaxHeight(),
+                    modifier = Modifier.weight(1f).fillMaxHeight(),
                 ) {
                     Icon(imageVector = Icons.AutoMirrored.Outlined.Backspace, contentDescription = null)
                 }
