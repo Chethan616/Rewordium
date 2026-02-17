@@ -58,6 +58,7 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -88,14 +89,15 @@ import kotlinx.coroutines.launch
 import org.florisboard.lib.snygg.ui.rememberSnyggThemeQuery
 
 /**
- * AI generation mode: Rewrite (replace) or Append (continue/append)
+ * AI generation mode: Rewrite (replace), Append (continue/append), or Enhance (prompt enhancer)
  */
-enum class AiMode { REWRITE, APPEND }
+enum class AiMode { REWRITE, APPEND, ENHANCE }
 
 /**
  * AI Input Layout — full-screen keyboard panel for writing assistance.
  * Uses system keyboard theme colors for a native, professional appearance.
  * 3-row chip selector (persona / task / length) + mode toggle + generate button.
+ * Automatically switches to "Prompt Enhancer" mode when in AI apps.
  */
 @Composable
 fun AiInputLayout(
@@ -106,6 +108,11 @@ fun AiInputLayout(
     val editorInstance by context.editorInstance()
     val aiManager by context.aiManager()
     val scope = rememberCoroutineScope()
+
+    // ── AI app detection for prompt enhancer ──
+    val currentPackageName = editorInstance.activeInfo.packageName
+    val isInAiApp = remember(currentPackageName) { PromptEnhancerDetector.isAiApp(currentPackageName) }
+    val aiAppName = remember(currentPackageName) { PromptEnhancerDetector.getAiAppName(currentPackageName) }
 
     // ── System keyboard theme colors ──
     val windowStyle   = rememberSnyggThemeQuery(FlorisImeUi.Window.elementName)
@@ -127,10 +134,17 @@ fun AiInputLayout(
     var generatedText   by remember { mutableStateOf<String?>(null) }
     var errorMessage    by remember { mutableStateOf<String?>(null) }
     var wasUsingAllText by remember { mutableStateOf(false) }
-    var aiMode          by remember { mutableStateOf(AiMode.REWRITE) }
+    var aiMode          by remember { mutableStateOf(if (isInAiApp) AiMode.ENHANCE else AiMode.REWRITE) }
     var selectedPersona by remember { mutableStateOf<String?>(null) }
     var selectedTask    by remember { mutableStateOf<String?>(null) }
     var selectedLength  by remember { mutableStateOf<String?>(null) }
+
+    // Auto-switch to ENHANCE mode when AI app is detected
+    LaunchedEffect(isInAiApp) {
+        if (isInAiApp && aiMode != AiMode.ENHANCE) {
+            aiMode = AiMode.ENHANCE
+        }
+    }
 
     // ── Chip data — clean labels, no emojis, professional ──
     val personaChips = remember { listOf(
@@ -165,25 +179,32 @@ fun AiInputLayout(
             val task = selectedTask ?: ""
             val length = selectedLength ?: ""
 
-            val result = if (aiMode == AiMode.APPEND) {
-                aiManager.continueText(text, persona, task, length)
-            } else {
-                val fullPrompt = buildString {
-                    if (persona.isNotBlank()) append("Persona: $persona. ")
-                    if (task.isNotBlank()) append("Task: $task. ")
-                    if (length.isNotBlank()) append("Length: $length. ")
-                    append("Rewrite this: $text")
+            val result = when (aiMode) {
+                AiMode.ENHANCE -> {
+                    // Prompt Enhancer mode — enhance the prompt for AI apps
+                    aiManager.enhancePrompt(text, aiAppName)
                 }
-                val action = when {
-                    task.contains("Rewrite") -> AIAction.REWRITE
-                    task.contains("Summarize") -> AIAction.SUMMARIZE
-                    task.contains("Expand") -> AIAction.EXPAND
-                    task.contains("Grammar") -> AIAction.FIX_GRAMMAR
-                    task.contains("Polite") || task.contains("Academic") -> AIAction.MAKE_FORMAL
-                    task.contains("Humor") -> AIAction.MAKE_CASUAL
-                    else -> AIAction.REWRITE
+                AiMode.APPEND -> {
+                    aiManager.continueText(text, persona, task, length)
                 }
-                aiManager.rewriteTextWithPrompt(fullPrompt, action)
+                AiMode.REWRITE -> {
+                    val fullPrompt = buildString {
+                        if (persona.isNotBlank()) append("Persona: $persona. ")
+                        if (task.isNotBlank()) append("Task: $task. ")
+                        if (length.isNotBlank()) append("Length: $length. ")
+                        append("Rewrite this: $text")
+                    }
+                    val action = when {
+                        task.contains("Rewrite") -> AIAction.REWRITE
+                        task.contains("Summarize") -> AIAction.SUMMARIZE
+                        task.contains("Expand") -> AIAction.EXPAND
+                        task.contains("Grammar") -> AIAction.FIX_GRAMMAR
+                        task.contains("Polite") || task.contains("Academic") -> AIAction.MAKE_FORMAL
+                        task.contains("Humor") -> AIAction.MAKE_CASUAL
+                        else -> AIAction.REWRITE
+                    }
+                    aiManager.rewriteTextWithPrompt(fullPrompt, action)
+                }
             }
 
             isGenerating = false
@@ -208,15 +229,32 @@ fun AiInputLayout(
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(horizontal = 16.dp, vertical = 10.dp),
-                    verticalAlignment = Alignment.CenterVertically
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
                     Text(
-                        stringResource(R.string.ai__panel_title),
+                        if (isInAiApp) stringResource(R.string.ai__prompt_enhancer_title)
+                        else stringResource(R.string.ai__panel_title),
                         style = MaterialTheme.typography.titleSmall,
                         fontWeight = FontWeight.SemiBold,
                         color = onSurface,
                         letterSpacing = 0.3.sp
                     )
+                    // Prompt Enhancer badge when in AI app
+                    if (isInAiApp) {
+                        Surface(
+                            color = primary.copy(alpha = 0.12f),
+                            shape = RoundedCornerShape(6.dp)
+                        ) {
+                            Text(
+                                "✨ ${aiAppName ?: "AI"}",
+                                modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp),
+                                fontSize = 10.sp,
+                                fontWeight = FontWeight.Medium,
+                                color = primary
+                            )
+                        }
+                    }
                 }
 
                 // ════════ Mode segmented toggle ════════
@@ -227,11 +265,20 @@ fun AiInputLayout(
                         .fillMaxWidth()
                         .padding(horizontal = 12.dp)
                 ) {
-                    Row(modifier = Modifier.padding(3.dp), horizontalArrangement = Arrangement.spacedBy(3.dp)) {
+                    val modeList = if (isInAiApp) {
+                        listOf(
+                            AiMode.ENHANCE to R.string.ai__mode_enhance,
+                            AiMode.REWRITE to R.string.ai__mode_rewrite,
+                            AiMode.APPEND to R.string.ai__mode_append
+                        )
+                    } else {
                         listOf(
                             AiMode.REWRITE to R.string.ai__mode_rewrite,
                             AiMode.APPEND to R.string.ai__mode_append
-                        ).forEach { (mode, labelRes) ->
+                        )
+                    }
+                    Row(modifier = Modifier.padding(3.dp), horizontalArrangement = Arrangement.spacedBy(3.dp)) {
+                        modeList.forEach { (mode, labelRes) ->
                             val selected = aiMode == mode
                             val bg by animateColorAsState(
                                 if (selected) primary else Color.Transparent, tween(220), label = "bg"
@@ -295,14 +342,14 @@ fun AiInputLayout(
                                 )
                                 Spacer(Modifier.height(12.dp))
                                 Text(
-                                    "Processing…",
+                                    if (aiMode == AiMode.ENHANCE) "Enhancing…" else "Processing…",
                                     color = onSurface,
                                     fontSize = 14.sp,
                                     fontWeight = FontWeight.Medium
                                 )
                                 Spacer(Modifier.height(2.dp))
                                 Text(
-                                    "Enhancing your text",
+                                    if (aiMode == AiMode.ENHANCE) "Making your prompt more effective" else "Enhancing your text",
                                     color = onSurfaceVar,
                                     fontSize = 12.sp
                                 )
@@ -395,13 +442,15 @@ fun AiInputLayout(
                                 verticalArrangement = Arrangement.Center
                             ) {
                                 Text(
-                                    "Select options below",
+                                    if (aiMode == AiMode.ENHANCE) "Write your prompt in the text field"
+                                    else "Select options below",
                                     color = onSurfaceVar,
                                     fontSize = 14.sp
                                 )
                                 Spacer(Modifier.height(2.dp))
                                 Text(
-                                    "then tap Generate to enhance your text",
+                                    if (aiMode == AiMode.ENHANCE) "then tap Enhance to make it better"
+                                    else "then tap Generate to enhance your text",
                                     color = onSurfaceVar.copy(alpha = 0.7f),
                                     fontSize = 12.sp
                                 )
@@ -410,7 +459,7 @@ fun AiInputLayout(
                     }
                 }
 
-                // ════════ 3-Row chip selector (only when idle) ════════
+                // ════════ 3-Row chip selector (only when idle and NOT in enhance mode) ════════
                 if (!isGenerating && generatedText == null) {
                     Column(
                         modifier = Modifier
@@ -418,39 +467,42 @@ fun AiInputLayout(
                             .padding(horizontal = 4.dp, vertical = 4.dp),
                         verticalArrangement = Arrangement.spacedBy(4.dp)
                     ) {
-                        // Row 1 — Persona
-                        SystemChipRow(
-                            chips = personaChips,
-                            selectedChip = selectedPersona,
-                            onChipSelected = { selectedPersona = if (selectedPersona == it) null else it },
-                            primary = primary,
-                            surfaceVariant = surfaceVariant,
-                            onSurface = onSurface,
-                            onSurfaceVar = onSurfaceVar,
-                            outline = outline
-                        )
-                        // Row 2 — Task
-                        SystemChipRow(
-                            chips = taskChips,
-                            selectedChip = selectedTask,
-                            onChipSelected = { selectedTask = if (selectedTask == it) null else it },
-                            primary = primary,
-                            surfaceVariant = surfaceVariant,
-                            onSurface = onSurface,
-                            onSurfaceVar = onSurfaceVar,
-                            outline = outline
-                        )
-                        // Row 3 — Length
-                        SystemChipRow(
-                            chips = lengthChips,
-                            selectedChip = selectedLength,
-                            onChipSelected = { selectedLength = if (selectedLength == it) null else it },
-                            primary = primary,
-                            surfaceVariant = surfaceVariant,
-                            onSurface = onSurface,
-                            onSurfaceVar = onSurfaceVar,
-                            outline = outline
-                        )
+                        // Only show chip rows for Rewrite/Append modes
+                        if (aiMode != AiMode.ENHANCE) {
+                            // Row 1 — Persona
+                            SystemChipRow(
+                                chips = personaChips,
+                                selectedChip = selectedPersona,
+                                onChipSelected = { selectedPersona = if (selectedPersona == it) null else it },
+                                primary = primary,
+                                surfaceVariant = surfaceVariant,
+                                onSurface = onSurface,
+                                onSurfaceVar = onSurfaceVar,
+                                outline = outline
+                            )
+                            // Row 2 — Task
+                            SystemChipRow(
+                                chips = taskChips,
+                                selectedChip = selectedTask,
+                                onChipSelected = { selectedTask = if (selectedTask == it) null else it },
+                                primary = primary,
+                                surfaceVariant = surfaceVariant,
+                                onSurface = onSurface,
+                                onSurfaceVar = onSurfaceVar,
+                                outline = outline
+                            )
+                            // Row 3 — Length
+                            SystemChipRow(
+                                chips = lengthChips,
+                                selectedChip = selectedLength,
+                                onChipSelected = { selectedLength = if (selectedLength == it) null else it },
+                                primary = primary,
+                                surfaceVariant = surfaceVariant,
+                                onSurface = onSurface,
+                                onSurfaceVar = onSurfaceVar,
+                                outline = outline
+                            )
+                        }
 
                         // Generate CTA
                         Row(
@@ -468,7 +520,10 @@ fun AiInputLayout(
                             ) {
                                 Icon(Icons.Default.Edit, null, modifier = Modifier.size(15.dp))
                                 Spacer(Modifier.width(6.dp))
-                                Text("Generate", fontSize = 14.sp, fontWeight = FontWeight.Medium)
+                                Text(
+                                    if (aiMode == AiMode.ENHANCE) stringResource(R.string.ai__prompt_enhancer_action) else "Generate",
+                                    fontSize = 14.sp, fontWeight = FontWeight.Medium
+                                )
                             }
                         }
                     }
@@ -500,15 +555,19 @@ fun AiInputLayout(
                             FilledTonalButton(
                                 onClick = {
                                     generatedText?.let { text ->
-                                        if (aiMode == AiMode.REWRITE) {
-                                            if (wasUsingAllText) editorInstance.performClipboardSelectAll()
-                                            editorInstance.commitText(text)
-                                            Toast.makeText(context, R.string.ai__text_replaced, Toast.LENGTH_SHORT).show()
-                                        } else {
-                                            val endPos = editorInstance.activeContent.text.length
-                                            editorInstance.setSelection(endPos, endPos)
-                                            editorInstance.commitText("\n\n$text")
-                                            Toast.makeText(context, R.string.ai__text_inserted, Toast.LENGTH_SHORT).show()
+                                        when (aiMode) {
+                                            AiMode.ENHANCE, AiMode.REWRITE -> {
+                                                if (wasUsingAllText) editorInstance.performClipboardSelectAll()
+                                                editorInstance.commitText(text)
+                                                val toastRes = if (aiMode == AiMode.ENHANCE) R.string.ai__prompt_enhancer_replaced else R.string.ai__text_replaced
+                                                Toast.makeText(context, toastRes, Toast.LENGTH_SHORT).show()
+                                            }
+                                            AiMode.APPEND -> {
+                                                val endPos = editorInstance.activeContent.text.length
+                                                editorInstance.setSelection(endPos, endPos)
+                                                editorInstance.commitText("\n\n$text")
+                                                Toast.makeText(context, R.string.ai__text_inserted, Toast.LENGTH_SHORT).show()
+                                            }
                                         }
                                         keyboardManager.activeState.imeUiMode = ImeUiMode.TEXT
                                     }
@@ -521,12 +580,19 @@ fun AiInputLayout(
                                 modifier = Modifier.fillMaxHeight(0.75f)
                             ) {
                                 Icon(
-                                    if (aiMode == AiMode.REWRITE) Icons.Default.Check else Icons.Default.VerticalAlignBottom,
+                                    when (aiMode) {
+                                        AiMode.ENHANCE, AiMode.REWRITE -> Icons.Default.Check
+                                        AiMode.APPEND -> Icons.Default.VerticalAlignBottom
+                                    },
                                     null, modifier = Modifier.size(15.dp)
                                 )
                                 Spacer(Modifier.width(4.dp))
                                 Text(
-                                    if (aiMode == AiMode.REWRITE) "Replace" else "Insert",
+                                    when (aiMode) {
+                                        AiMode.ENHANCE -> "Apply"
+                                        AiMode.REWRITE -> "Replace"
+                                        AiMode.APPEND -> "Insert"
+                                    },
                                     fontSize = 13.sp, fontWeight = FontWeight.Medium
                                 )
                             }

@@ -452,6 +452,63 @@ CRITICAL RULES:
     }
     
     /**
+     * Enhance a prompt for AI chat applications.
+     * Makes the prompt more detailed, specific, and effective for getting
+     * better responses from AI assistants like ChatGPT, Gemini, Claude, etc.
+     *
+     * @param prompt The user's original prompt
+     * @param aiAppName Optional name of the AI app being used (for context-aware enhancement)
+     * @return Enhanced prompt text
+     */
+    suspend fun enhancePrompt(prompt: String, aiAppName: String? = null): Result<String> {
+        val config = getConfig()
+        
+        if (!config.hasValidApiKey()) {
+            return Result.failure(AIException("⚠️ No API key. Go to Settings → Advanced AI"))
+        }
+        
+        if (prompt.isBlank()) {
+            return Result.failure(AIException("No prompt to enhance"))
+        }
+        
+        val targetContext = if (!aiAppName.isNullOrBlank()) {
+            "The user is typing this prompt into $aiAppName. "
+        } else {
+            "The user is typing this prompt into an AI chat assistant. "
+        }
+        
+        val systemPrompt = """You are an expert prompt engineer. Your job is to enhance and improve AI prompts to get better, more detailed, and more useful responses from AI assistants.
+
+$targetContext
+
+CRITICAL RULES:
+1. Return ONLY the enhanced prompt text - no explanations, no quotes, no "Here is...", no commentary, no meta-text
+2. DO NOT answer the prompt - only IMPROVE it
+3. Keep the same intent and topic as the original prompt
+4. Make the prompt more specific, detailed, and well-structured
+5. Add relevant context, constraints, or formatting instructions where helpful
+6. If the prompt is vague, add specificity while preserving the user's intent
+7. Use clear, direct language - write the prompt as if the user wrote it themselves
+8. Maintain first-person perspective where appropriate
+9. DO NOT add "Please" or overly polite filler - keep it natural and efficient
+10. The enhanced prompt should be 1.5x to 3x the length of the original, not excessively long
+11. ALWAYS respond in the same language as the original prompt
+
+ENHANCEMENT STRATEGIES:
+- Add role/persona instructions if relevant (e.g., "Act as a...")
+- Specify desired output format (bullet points, steps, table, etc.)
+- Add constraints (length, tone, audience)
+- Include relevant context the AI might need
+- Break complex requests into clear sub-tasks
+- Add "think step by step" for reasoning tasks
+- Specify what to include AND what to avoid"""
+        
+        val userPrompt = "Enhance this prompt:\n\n$prompt"
+        
+        return makeApiRequest(config, systemPrompt, userPrompt)
+    }
+
+    /**
      * Get a random creative persona for inspiration
      */
     fun getRandomCreativePersona(): String {

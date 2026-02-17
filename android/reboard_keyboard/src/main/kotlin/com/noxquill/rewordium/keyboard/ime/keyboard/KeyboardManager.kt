@@ -620,6 +620,7 @@ class KeyboardManager(context: Context) : InputKeyEventReceiver {
     /**
      * Handles a [KeyCode.AI_REWRITE] event.
      * Gets selected text or all text and rewrites it using AI.
+     * Automatically detects AI apps and activates Prompt Enhancer mode.
      */
     private fun handleAiRewrite() {
         // Check if AI features are enabled from Flutter SharedPreferences
@@ -635,6 +636,15 @@ class KeyboardManager(context: Context) : InputKeyEventReceiver {
         }
         
         val aiManager by appContext.aiManager()
+        
+        // Detect if the user is in an AI app for prompt enhancer
+        val currentPackage = editorInstance.activeInfo.packageName
+        val isInAiApp = com.noxquill.rewordium.keyboard.ime.ai.PromptEnhancerDetector.isAiApp(currentPackage)
+        val aiAppName = com.noxquill.rewordium.keyboard.ime.ai.PromptEnhancerDetector.getAiAppName(currentPackage)
+        
+        // Store AI app detection state
+        activeState.isInAiApp = isInAiApp
+        activeState.aiAppName = aiAppName
         
         // Get selected text or current editor content
         val selectedText = editorInstance.activeContent.selectedText
@@ -820,6 +830,10 @@ class KeyboardManager(context: Context) : InputKeyEventReceiver {
                 if (activeState.imeUiMode == ImeUiMode.AI) {
                     activeState.imeUiMode = ImeUiMode.TEXT
                 } else {
+                    // Detect AI app for prompt enhancer
+                    val currentPackage = editorInstance.activeInfo.packageName
+                    activeState.isInAiApp = com.noxquill.rewordium.keyboard.ime.ai.PromptEnhancerDetector.isAiApp(currentPackage)
+                    activeState.aiAppName = com.noxquill.rewordium.keyboard.ime.ai.PromptEnhancerDetector.getAiAppName(currentPackage)
                     activeState.imeUiMode = ImeUiMode.AI
                 }
             }

@@ -138,6 +138,19 @@
     <string name="ai__mode_rewrite">Rewrite</string>
     <string name="ai__mode_append">Append</string>
 
+    <!-- AI Prompt Enhancer strings -->
+    <string name="ai__prompt_enhancer_title">Prompt Enhancer</string>
+    <string name="ai__prompt_enhancer_subtitle">Enhance your prompt for better AI responses</string>
+    <string name="ai__prompt_enhancer_badge">✨ Prompt Enhancer</string>
+    <string name="ai__prompt_enhancer_active">Prompt Enhancer Active</string>
+    <string name="ai__prompt_enhancer_detected">AI app detected — enhance your prompt</string>
+    <string name="ai__prompt_enhancer_action">Enhance Prompt</string>
+    <string name="ai__prompt_enhancer_generating">Enhancing prompt…</string>
+    <string name="ai__prompt_enhancer_success">Prompt enhanced</string>
+    <string name="ai__prompt_enhancer_hint">Write your prompt, then tap Enhance</string>
+    <string name="ai__prompt_enhancer_replaced">Enhanced prompt applied</string>
+    <string name="ai__mode_enhance">Enhance</string>
+
     <!-- Incognito mode strings -->
     <string name="incognito_mode__toast_after_enabled">Incognito mode is now enabled\n\n{app_name} will not learn words from your input while this mode is active</string>
     <string name="incognito_mode__toast_after_disabled">Incognito mode is now disabled by default</string>

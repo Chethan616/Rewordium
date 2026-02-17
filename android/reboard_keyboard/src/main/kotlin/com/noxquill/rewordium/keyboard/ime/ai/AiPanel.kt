@@ -86,6 +86,8 @@ import org.florisboard.lib.snygg.ui.rememberSnyggThemeQuery
 /**
  * AiPanel — compact Material 3 overlay inside the keyboard.
  * Uses keyboard snygg theme tokens (system keyboard colors) for a native look.
+ * Automatically switches to "Prompt Enhancer" mode when the user is typing in
+ * a known AI app (ChatGPT, Gemini, Claude, etc.).
  */
 @Composable
 fun AiPanel(
@@ -97,6 +99,11 @@ fun AiPanel(
     val keyboardManager by context.keyboardManager()
     val editorInstance by context.editorInstance()
     val aiManager by context.aiManager()
+
+    // ── AI app detection for prompt enhancer ──
+    val currentPackageName = editorInstance.activeInfo.packageName
+    val isInAiApp = remember(currentPackageName) { PromptEnhancerDetector.isAiApp(currentPackageName) }
+    val aiAppName = remember(currentPackageName) { PromptEnhancerDetector.getAiAppName(currentPackageName) }
 
     var showApiKeySnackbar by remember { mutableStateOf(false) }
 
@@ -164,13 +171,34 @@ fun AiPanel(
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Text(
-                        stringResource(R.string.ai__panel_title),
-                        style = MaterialTheme.typography.titleSmall,
-                        fontWeight = FontWeight.SemiBold,
-                        color = onSurface,
-                        letterSpacing = 0.3.sp
-                    )
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        Text(
+                            if (isInAiApp) stringResource(R.string.ai__prompt_enhancer_title)
+                            else stringResource(R.string.ai__panel_title),
+                            style = MaterialTheme.typography.titleSmall,
+                            fontWeight = FontWeight.SemiBold,
+                            color = onSurface,
+                            letterSpacing = 0.3.sp
+                        )
+                        // Prompt Enhancer badge when in AI app
+                        if (isInAiApp) {
+                            Surface(
+                                color = primary.copy(alpha = 0.12f),
+                                shape = RoundedCornerShape(6.dp)
+                            ) {
+                                Text(
+                                    "✨ ${aiAppName ?: "AI"}",
+                                    modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
+                                    fontSize = 9.sp,
+                                    fontWeight = FontWeight.Medium,
+                                    color = primary
+                                )
+                            }
+                        }
+                    }
                     IconButton(
                         onClick = { keyboardManager.activeState.isAiPanelVisible = false; onDismiss() },
                         modifier = Modifier.size(28.dp)
@@ -187,11 +215,26 @@ fun AiPanel(
                     shape = RoundedCornerShape(10.dp),
                     modifier = Modifier.fillMaxWidth()
                 ) {
-                    Row(modifier = Modifier.padding(3.dp), horizontalArrangement = Arrangement.spacedBy(3.dp)) {
+                    val modeList = if (isInAiApp) {
+                        listOf(
+                            AiMode.ENHANCE to R.string.ai__mode_enhance,
+                            AiMode.REWRITE to R.string.ai__mode_rewrite,
+                            AiMode.APPEND to R.string.ai__mode_append
+                        )
+                    } else {
                         listOf(
                             AiMode.REWRITE to R.string.ai__mode_rewrite,
                             AiMode.APPEND to R.string.ai__mode_append
-                        ).forEach { (mode, labelRes) ->
+                        )
+                    }
+                    // Auto-select Enhance mode when in AI app and nothing selected yet
+                    LaunchedEffect(isInAiApp) {
+                        if (isInAiApp && aiMode != AiMode.ENHANCE) {
+                            aiMode = AiMode.ENHANCE
+                        }
+                    }
+                    Row(modifier = Modifier.padding(3.dp), horizontalArrangement = Arrangement.spacedBy(3.dp)) {
+                        modeList.forEach { (mode, labelRes) ->
                             val selected = aiMode == mode
                             val bg by animateColorAsState(
                                 if (selected) primary else Color.Transparent, tween(220), label = "modeBg"
@@ -340,15 +383,19 @@ fun AiPanel(
                             IconButton(
                                 onClick = {
                                     generatedText?.let { text ->
-                                        if (aiMode == AiMode.REWRITE) {
-                                            if (wasUsingAllText) editorInstance.performClipboardSelectAll()
-                                            editorInstance.commitText(text)
-                                            Toast.makeText(context, R.string.ai__text_replaced, Toast.LENGTH_SHORT).show()
-                                        } else {
-                                            val endPos = editorInstance.activeContent.text.length
-                                            editorInstance.setSelection(endPos, endPos)
-                                            editorInstance.commitText("\n\n$text")
-                                            Toast.makeText(context, R.string.ai__text_inserted, Toast.LENGTH_SHORT).show()
+                                        when (aiMode) {
+                                            AiMode.ENHANCE, AiMode.REWRITE -> {
+                                                if (wasUsingAllText) editorInstance.performClipboardSelectAll()
+                                                editorInstance.commitText(text)
+                                                val toastRes = if (aiMode == AiMode.ENHANCE) R.string.ai__prompt_enhancer_replaced else R.string.ai__text_replaced
+                                                Toast.makeText(context, toastRes, Toast.LENGTH_SHORT).show()
+                                            }
+                                            AiMode.APPEND -> {
+                                                val endPos = editorInstance.activeContent.text.length
+                                                editorInstance.setSelection(endPos, endPos)
+                                                editorInstance.commitText("\n\n$text")
+                                                Toast.makeText(context, R.string.ai__text_inserted, Toast.LENGTH_SHORT).show()
+                                            }
                                         }
                                         keyboardManager.activeState.isAiPanelVisible = false
                                     }
@@ -359,8 +406,15 @@ fun AiPanel(
                                 modifier = Modifier.size(34.dp)
                             ) {
                                 Icon(
-                                    if (aiMode == AiMode.REWRITE) Icons.Default.Check else Icons.Default.VerticalAlignBottom,
-                                    if (aiMode == AiMode.REWRITE) "Replace" else "Insert Below",
+                                    when (aiMode) {
+                                        AiMode.ENHANCE, AiMode.REWRITE -> Icons.Default.Check
+                                        AiMode.APPEND -> Icons.Default.VerticalAlignBottom
+                                    },
+                                    when (aiMode) {
+                                        AiMode.ENHANCE -> "Apply Enhanced Prompt"
+                                        AiMode.REWRITE -> "Replace"
+                                        AiMode.APPEND -> "Insert Below"
+                                    },
                                     tint = primary, modifier = Modifier.size(18.dp)
                                 )
                             }
@@ -395,10 +449,10 @@ fun AiPanel(
                                         wasUsingAllText = !hasSel
                                         if (text.isBlank()) { errorMessage = context.getString(R.string.ai__error_no_text); return@launch }
                                         isGenerating = true; errorMessage = null
-                                        val result = if (aiMode == AiMode.APPEND) {
-                                            aiManager.continueTextWithAction(text, selectedAction)
-                                        } else {
-                                            aiManager.rewriteText(text, selectedAction)
+                                        val result = when (aiMode) {
+                                            AiMode.ENHANCE -> aiManager.enhancePrompt(text, aiAppName)
+                                            AiMode.APPEND -> aiManager.continueTextWithAction(text, selectedAction)
+                                            AiMode.REWRITE -> aiManager.rewriteText(text, selectedAction)
                                         }
                                         isGenerating = false
                                         result.fold(
@@ -420,7 +474,11 @@ fun AiPanel(
                             ) {
                                 Icon(Icons.Default.Edit, null, modifier = Modifier.size(15.dp))
                                 Spacer(Modifier.width(6.dp))
-                                Text(getActionLabel(selectedAction), fontSize = 13.sp, fontWeight = FontWeight.Medium)
+                                Text(
+                                    if (aiMode == AiMode.ENHANCE) stringResource(R.string.ai__prompt_enhancer_action)
+                                    else getActionLabel(selectedAction),
+                                    fontSize = 13.sp, fontWeight = FontWeight.Medium
+                                )
                             }
                         }
                     }

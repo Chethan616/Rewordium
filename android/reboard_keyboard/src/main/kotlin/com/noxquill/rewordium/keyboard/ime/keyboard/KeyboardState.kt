@@ -222,6 +222,12 @@ open class KeyboardState protected constructor(open var rawValue: ULong) {
     
     // AI pending text for rewriting (stored separately from bit flags)
     var aiPendingText: String = ""
+    
+    // Whether the user is currently in a known AI app (for prompt enhancer)
+    var isInAiApp: Boolean = false
+    
+    // Name of the detected AI app (for display in prompt enhancer UI)
+    var aiAppName: String? = null
 }
 
 class ObservableKeyboardState private constructor(
