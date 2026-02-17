@@ -43,10 +43,10 @@ object PromptEnhancerDetector {
         "com.anthropic.claude",
         
         // Meta AI
-        "com.facebook.orca",              // Messenger (has Meta AI)
-        "com.instagram.android",          // Instagram (has Meta AI)
-        "com.whatsapp",                   // WhatsApp (has Meta AI)
-        "com.facebook.katana",            // Facebook (has Meta AI)
+        // "com.facebook.orca",              // Messenger (has Meta AI)
+        // "com.instagram.android",          // Instagram (has Meta AI)
+        // "com.whatsapp",                   // WhatsApp (has Meta AI)
+        // "com.facebook.katana",            // Facebook (has Meta AI)
         
         // Microsoft Copilot / Bing Chat
         "com.microsoft.copilot",

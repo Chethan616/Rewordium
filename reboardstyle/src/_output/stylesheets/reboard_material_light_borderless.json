@@ -15,7 +15,7 @@
     "--key-bg-pressed": "dynamic-light-color(surfaceContainerHighest)",
     "--key-fg": "dynamic-light-color(onSurface)",
     "--key-fg-dim": "dynamic-light-color(onSurfaceVariant)",
-    "--key-fg-disabled": "rgb(180,180,180)",
+    "--key-fg-disabled": "rgb(175,175,175)",
 
     "--popup-bg": "dynamic-light-color(surfaceContainerLow)",
     "--popup-bg-focus": "dynamic-light-color(surfaceContainerHigh)",
@@ -88,7 +88,24 @@
   "key[code=-201,-202,-203]": {
     "background": "var(--accent)",
     "foreground": "var(--accent-text)",
-    "font-size": "18sp"
+    "font-size": "18sp",
+    "shape": "var(--r-pill)"
+  },
+  "key[code=44]": {
+    "background": "var(--accent)",
+    "foreground": "var(--accent-text)"
+  },
+  "key[code=44]:pressed": {
+    "background": "var(--accent-pressed)",
+    "foreground": "var(--accent-pressed-text)"
+  },
+  "key[code=46]": {
+    "background": "var(--accent)",
+    "foreground": "var(--accent-text)"
+  },
+  "key[code=46]:pressed": {
+    "background": "var(--accent-pressed)",
+    "foreground": "var(--accent-pressed-text)"
   },
   "key[code=-204,-205]": {
     "font-size": "12sp"
