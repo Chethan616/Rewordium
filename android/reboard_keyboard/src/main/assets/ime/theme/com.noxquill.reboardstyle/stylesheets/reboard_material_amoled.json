@@ -63,13 +63,10 @@
     "foreground": "var(--key-fg-dim)",
     "font-size": "12sp",
     "shape": "var(--r-sm)",
-    "border-color": "dynamic-dark-color(outlineVariant)",
-    "border-width": "1dp",
     "text-overflow": "ellipsis"
   },
   "key[code=32]:pressed": {
-    "background": "var(--key-bg-pressed)",
-    "border-color": "dynamic-dark-color(outline)"
+    "background": "var(--key-bg-pressed)"
   },
   "key[code=-5]": {
     "background": "var(--accent)",
@@ -451,6 +448,8 @@
     "foreground": "var(--accent-pressed)"
   },
   "media-bottom-row-button": {
+    "background": "var(--accent)",
+    "foreground": "var(--accent-text)",
     "padding": "16dp 0dp",
     "shape": "var(--r-sm)"
   },

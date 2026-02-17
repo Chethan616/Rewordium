@@ -547,7 +547,7 @@ fun AiInputLayout(
                             keyData = TextKeyData.IME_UI_MODE_TEXT,
                             modifier = Modifier.fillMaxHeight(),
                         ) {
-                            Text("ABC", color = onSurface, fontWeight = FontWeight.Bold, fontSize = 14.sp)
+                            Text("ABC", fontWeight = FontWeight.Bold, fontSize = 14.sp)
                         }
 
                         if (generatedText != null) {
@@ -620,7 +620,7 @@ fun AiInputLayout(
                             keyData = TextKeyData.DELETE,
                             modifier = Modifier.fillMaxHeight(),
                         ) {
-                            Icon(Icons.AutoMirrored.Outlined.Backspace, null, tint = onSurface)
+                            Icon(Icons.AutoMirrored.Outlined.Backspace, null)
                         }
                     }
                 }
