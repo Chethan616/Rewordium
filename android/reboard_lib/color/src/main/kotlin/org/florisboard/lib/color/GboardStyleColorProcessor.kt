@@ -54,10 +54,10 @@ object GboardStyleColorProcessor {
 
         // Make keys and background significantly lighter/more colorful (tinted)
         // User requested approx 0.5% darker keys compared to previous iteration
-        // Previous: MIN_TONE + 14.0
-        // New: MIN_TONE + 12.0 (slightly lower tone = darker)
+        // Previous: MIN_TONE + 10.0
+        // New: MIN_TONE + 9.5 and slightly less chroma for that "303538" look
         val baseKeyTone = ((keyHct.tone * 0.40) + (accentHct.tone * 0.40) + (backgroundHct.tone * 0.20))
-            .coerceIn(MIN_TONE + 10.0, MAX_TONE)
+            .coerceIn(MIN_TONE + 9.5, MAX_TONE)
         
         val targetKeyTone = baseKeyTone
         val targetBackgroundTone = (targetKeyTone - 8.0).coerceIn(MIN_TONE, MAX_TONE - 4.0)
@@ -96,14 +96,15 @@ object GboardStyleColorProcessor {
             ),
 
             // Base key color (Normal keys)
+            // Reduced chroma scale slightly (1.0 -> 0.9) to match Gboard "grayer" look (303538 vs 30373d)
             surfaceBright = transformSurfaceRole(
                 color = scheme.surfaceBright,
                 targetHue = sharedHue,
                 targetTone = targetKeyTone,
-                toneMix = 0.85,
-                chromaScale = 1.0,
-                chromaCap = SURFACE_MAX_CHROMA + 12.0, // Stronger tint on keys
-                minChroma = 8.0,
+                toneMix = 0.90, // Increased mix
+                chromaScale = 0.9, // Slightly desaturated
+                chromaCap = SURFACE_MAX_CHROMA + 8.0, 
+                minChroma = 6.0,
             ),
             
             // Pressed state for normal keys (needs to keep tint!)

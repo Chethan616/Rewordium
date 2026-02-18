@@ -25,7 +25,7 @@
     "--one-hand-fg": "dynamic-dark-color(onPrimaryContainer)",
     "--incognito": "#ffffff11",
 
-    "--r-sm": "rounded-corner(8dp, 8dp, 8dp, 8dp)",
+    "--r-sm": "rounded-corner(6dp, 6dp, 6dp, 6dp)",
     "--r-md": "rounded-corner(16dp, 16dp, 16dp, 16dp)",
     "--r-lg": "rounded-corner(24dp, 24dp, 24dp, 24dp)",
     "--r-xl": "rounded-corner(28dp, 28dp, 28dp, 28dp)",
