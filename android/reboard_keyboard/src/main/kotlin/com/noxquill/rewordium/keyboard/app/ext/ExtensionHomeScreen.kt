@@ -70,7 +70,7 @@ fun ExtensionHomeScreen() = FlorisScreen {
         SettingsGroup {
             SettingItem(
                 title = "Browse Themes",
-                subtitle = "Material You, Catppuccin, Void & more",
+                subtitle = "ReBoard Material You themes",
                 icon = Icons.Default.Palette,
                 iconTint = MaterialTheme.colorScheme.primary,
                 showDivider = false,

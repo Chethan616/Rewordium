@@ -103,6 +103,12 @@ android {
         
         consumerProguardFiles("proguard-rules.pro")
 
+        // 16 KB page size support - ARM64 only
+        ndk {
+            abiFilters.addAll(listOf("arm64-v8a"))
+            debugSymbolLevel = "SYMBOL_TABLE"
+        }
+
         buildConfigField("String", "BUILD_COMMIT_HASH", "\"${getGitCommitHash().get()}\"")
         buildConfigField("String", "FLADDONS_API_VERSION", "\"v~draft2\"")
         buildConfigField("String", "FLADDONS_STORE_URL", "\"www.rewordium.tech/extensions\"")
@@ -129,6 +135,8 @@ android {
     packagingOptions {
         jniLibs {
             useLegacyPackaging = false
+            // Exclude 32-bit and x86_64 architectures - only keep arm64-v8a for 16KB support
+            excludes += listOf("**/armeabi-v7a/*.so", "**/x86/*.so", "**/x86_64/*.so")
         }
     }
 

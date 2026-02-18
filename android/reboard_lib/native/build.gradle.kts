@@ -96,6 +96,8 @@ android {
     packagingOptions {
         jniLibs {
             useLegacyPackaging = false  // 16 KB page size support
+            // Exclude 32-bit and x86_64 architectures - only keep arm64-v8a for 16KB support
+            excludes += listOf("**/armeabi-v7a/*.so", "**/x86/*.so", "**/x86_64/*.so")
         }
     }
 }

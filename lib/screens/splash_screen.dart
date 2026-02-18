@@ -32,6 +32,29 @@ class _SplashScreenState extends State<SplashScreen>
   @override
   void initState() {
     super.initState();
+
+    // If services are already initialized (e.g. returning from another Activity),
+    // skip the splash animation and navigate immediately.
+    if (isFirebaseInitialized && isGroqInitialized) {
+      _animationController = AnimationController(
+        vsync: this,
+        duration: Duration.zero,
+      );
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!mounted) return;
+        final authProvider =
+            Provider.of<AuthProvider>(context, listen: false);
+        if (authProvider.isLoggedIn) {
+          Navigator.of(context).pushReplacementNamed('/home');
+        } else {
+          Navigator.of(context).pushReplacement(
+            MaterialPageRoute(builder: (_) => const LoginScreen()),
+          );
+        }
+      });
+      return;
+    }
+
     _animationController = AnimationController(
       vsync: this,
       duration: const Duration(seconds: 3),

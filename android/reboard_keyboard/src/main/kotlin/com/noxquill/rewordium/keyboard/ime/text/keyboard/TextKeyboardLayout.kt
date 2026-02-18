@@ -574,8 +574,16 @@ private class TextKeyboardLayoutController(
                                 inputEventDispatcher.sendDownUp(TextKeyData.CAPS_LOCK)
                                 inputFeedbackController?.keyLongPress(key.computedData)
                             }
-                            // We always return false here to prevent blockade for the up touch event
-                            false
+                            // Also try to show extended popup if available
+                            if (popupUiController.isSuitableForPopups(key) && key.computedPopups.getPopupKeys(
+                                    keyHintConfiguration
+                                ).isNotEmpty()
+                            ) {
+                                popupUiController.extend(key, size)
+                                true
+                            } else {
+                                false
+                            }
                         }
                         KeyCode.LANGUAGE_SWITCH -> {
                             inputEventDispatcher.sendDownUp(TextKeyData.SYSTEM_INPUT_METHOD_PICKER)

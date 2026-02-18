@@ -1,8 +1,8 @@
 {
   "$schema": "https://schemas.florisboard.org/snygg/v2/stylesheet",
   "@defines": {
-    "--accent": "dynamic-dark-color(primaryContainer)",
-    "--accent-text": "dynamic-dark-color(onPrimaryContainer)",
+    "--accent": "dynamic-dark-color(inversePrimary)",
+    "--accent-text": "dynamic-dark-color(onSurface)",
     "--accent-pressed": "dynamic-dark-color(primary)",
     "--accent-pressed-text": "dynamic-dark-color(onPrimary)",
 

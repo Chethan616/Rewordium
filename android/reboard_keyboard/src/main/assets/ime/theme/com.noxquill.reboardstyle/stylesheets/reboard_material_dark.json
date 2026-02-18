@@ -58,6 +58,44 @@
     "background": "var(--accent-pressed)",
     "foreground": "var(--accent-pressed-text)"
   },
+  
+  "key[code=-1]": {
+    "background": "var(--accent)",
+    "foreground": "var(--accent-text)",
+    "font-size": "20sp"
+  },
+  "key[code=-1]:pressed": {
+    "background": "var(--accent-pressed)",
+    "foreground": "var(--accent-pressed-text)"
+  },
+  "key[code=-2]": {
+    "background": "var(--accent)",
+    "foreground": "var(--accent-text)",
+    "font-size": "20sp"
+  },
+  "key[code=-2]:pressed": {
+    "background": "var(--accent-pressed)",
+    "foreground": "var(--accent-pressed-text)"
+  },
+  "key[code=-3]": {
+    "background": "var(--accent)",
+    "foreground": "var(--accent-text)",
+    "font-size": "20sp"
+  },
+  "key[code=-3]:pressed": {
+    "background": "var(--accent-pressed)",
+    "foreground": "var(--accent-pressed-text)"
+  },
+  "key[code=-4]": {
+    "background": "var(--accent)",
+    "foreground": "var(--accent-text)",
+    "font-size": "20sp"
+  },
+  "key[code=-4]:pressed": {
+    "background": "var(--accent-pressed)",
+    "foreground": "var(--accent-pressed-text)"
+  },
+
   "key[code=32]": {
     "background": "var(--key-bg)",
     "foreground": "var(--key-fg-dim)",
@@ -74,6 +112,15 @@
     "font-size": "20sp"
   },
   "key[code=-5]:pressed": {
+    "background": "var(--accent-pressed)",
+    "foreground": "var(--accent-pressed-text)"
+  },
+  "key[code=-7]": {
+    "background": "var(--accent)",
+    "foreground": "var(--accent-text)",
+    "font-size": "20sp"
+  },
+  "key[code=-7]:pressed": {
     "background": "var(--accent-pressed)",
     "foreground": "var(--accent-pressed-text)"
   },

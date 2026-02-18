@@ -46,6 +46,7 @@ import androidx.compose.ui.unit.sp
 import androidx.compose.ui.unit.takeOrElse
 import com.materialkolor.dynamicColorScheme
 import kotlinx.coroutines.runBlocking
+import org.florisboard.lib.color.GboardStyleColorProcessor
 import org.florisboard.lib.color.MaterialYouFlags
 import org.florisboard.lib.color.systemAccentOrDefault
 import org.florisboard.lib.snygg.CompiledFontFamilyData
@@ -154,20 +155,26 @@ fun ProvideSnyggTheme(
     content: @Composable () -> Unit,
 ) {
     val (colorPalette, contrastLevel, specVersion) = materialYouFlags
-    val lightScheme = dynamicColorScheme(
-        primary = systemAccentOrDefault(dynamicAccentColor),
-        isDark = false,
-        style = colorPalette,
-        contrastLevel = contrastLevel.value,
-        specVersion = specVersion
-    )
-    val darkScheme = dynamicColorScheme(
-        primary = systemAccentOrDefault(dynamicAccentColor),
-        isDark = true,
-        style = colorPalette,
-        contrastLevel = contrastLevel.value,
-        specVersion = specVersion
-    )
+    val accentColor = systemAccentOrDefault(dynamicAccentColor)
+    val lightScheme = remember(accentColor, colorPalette, contrastLevel, specVersion) {
+        dynamicColorScheme(
+            primary = accentColor,
+            isDark = false,
+            style = colorPalette,
+            contrastLevel = contrastLevel.value,
+            specVersion = specVersion
+        )
+    }
+    val darkScheme = remember(accentColor, colorPalette, contrastLevel, specVersion) {
+        val raw = dynamicColorScheme(
+            primary = accentColor,
+            isDark = true,
+            style = colorPalette,
+            contrastLevel = contrastLevel.value,
+            specVersion = specVersion
+        )
+        GboardStyleColorProcessor.process(raw)
+    }
 
     val resolver = LocalFontFamilyResolver.current
     val customFontFamilies = remember(snyggTheme) {

@@ -68,6 +68,11 @@ val ExceptionsForKeyCodes = listOf(
     KeyCode.IME_UI_MODE_CLIPBOARD,
     KeyCode.KANA_SWITCHER,
     KeyCode.CHAR_WIDTH_SWITCHER,
+    KeyCode.VIEW_CHARACTERS,
+    KeyCode.VIEW_SYMBOLS,
+    KeyCode.VIEW_SYMBOLS2,
+    KeyCode.SHIFT,
+    KeyCode.DELETE,
 )
 
 @Suppress("unused")

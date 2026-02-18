@@ -1,8 +1,8 @@
 {
   "$schema": "https://schemas.florisboard.org/snygg/v2/stylesheet",
   "@defines": {
-    "--accent": "dynamic-light-color(primaryContainer)",
-    "--accent-text": "dynamic-light-color(onPrimaryContainer)",
+    "--accent": "dynamic-light-color(inversePrimary)",
+    "--accent-text": "dynamic-light-color(onSurface)",
     "--accent-pressed": "dynamic-light-color(primary)",
     "--accent-pressed-text": "dynamic-light-color(onPrimary)",
 

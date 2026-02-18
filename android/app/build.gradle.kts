@@ -60,7 +60,7 @@ fun getGroqApiKey(): String {
 android {
     namespace = "com.noxquill.rewordium"
     compileSdk = 36
-    ndkVersion = "27.0.12077973" // NDK r27 for 16 KB support with proper linker flags
+    ndkVersion = "27.0.12077973" // NDK r27 with explicit 16 KB linker flags
 
     compileOptions {
         // Flag to enable support for the new language APIs
@@ -102,6 +102,8 @@ android {
         // 16 KB page size support - ensure uncompressed native libraries with proper alignment
         jniLibs {
             useLegacyPackaging = false // Use uncompressed native libs for 16 KB support
+            // Exclude 32-bit and x86_64 architectures - only keep arm64-v8a for 16KB support
+            excludes += listOf("**/armeabi-v7a/*.so", "**/x86/*.so", "**/x86_64/*.so")
         }
     }
 
@@ -215,7 +217,7 @@ dependencies {
 
     // Lottie & GIF
     implementation("com.airbnb.android:lottie:6.4.0")
-    implementation("pl.droidsonroids.gif:android-gif-drawable:1.2.28")
+    implementation("pl.droidsonroids.gif:android-gif-drawable:1.2.29")
 
     // Retrofit for Network Calls
     implementation("com.squareup.retrofit2:retrofit:2.9.0")
