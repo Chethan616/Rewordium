@@ -15,6 +15,7 @@ import android.view.inputmethod.InputMethodManager
 import androidx.annotation.NonNull
 import com.noxquill.rewordium.util.KeyboardConstants
 import com.noxquill.rewordium.service.KeyboardSettingsBroadcastReceiver
+import com.noxquill.rewordium.integrity.PlayIntegrityHandler
 import io.flutter.embedding.android.FlutterActivity
 import io.flutter.embedding.engine.FlutterEngine
 import io.flutter.plugin.common.MethodChannel
@@ -28,6 +29,7 @@ class MainActivity : FlutterActivity() {
         private const val SWIPE_GESTURE_CHANNEL = "com.noxquill.rewordium/swipe_gestures"
         private const val AI_SETTINGS_CHANNEL = "com.noxquill.rewordium/ai_settings"
         private const val DEEP_LINK_CHANNEL = "com.noxquill.rewordium/deep_link"
+        private const val INTEGRITY_CHANNEL = "com.noxquill.rewordium/integrity"
         
         // <-- ADDED: A new channel specifically for syncing user status and credits.
         private const val USER_STATUS_CHANNEL = "com.noxquill.rewordium/user_status"
@@ -179,7 +181,12 @@ class MainActivity : FlutterActivity() {
                 deepLinkChannel?.invokeMethod("navigateTo", mapOf("route" to link))
             }, 500) // Small delay to ensure Flutter is ready
         }
+PLAY INTEGRITY CHANNEL ---
+        val integrityChannel = MethodChannel(flutterEngine.dartExecutor.binaryMessenger, INTEGRITY_CHANNEL)
+        integrityChannel.setMethodCallHandler(PlayIntegrityHandler(this))
+        Log.d(TAG, "Play Integrity channel configured")
 
+        // --- 
         // --- ACCESSIBILITY CHANNEL (Unchanged) ---
         val accessibilityChannel = MethodChannel(flutterEngine.dartExecutor.binaryMessenger, ACCESSIBILITY_CHANNEL)
         accessibilityChannel.setMethodCallHandler { call, result ->

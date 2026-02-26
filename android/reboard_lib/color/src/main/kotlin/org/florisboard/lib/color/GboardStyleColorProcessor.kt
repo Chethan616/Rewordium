@@ -52,15 +52,16 @@ object GboardStyleColorProcessor {
         // Blend much more of the system accent hue into everything
         val sharedHue = blendHue(backgroundHct.hue, accentHct.hue, 0.70)
 
-        // Make keys and background significantly lighter/more colorful (tinted)
-        // User requested approx 0.5% darker keys compared to previous iteration
-        // Previous: MIN_TONE + 10.0
-        // New: MIN_TONE + 9.5 and slightly less chroma for that "303538" look
-        val baseKeyTone = ((keyHct.tone * 0.40) + (accentHct.tone * 0.40) + (backgroundHct.tone * 0.20))
-            .coerceIn(MIN_TONE + 9.5, MAX_TONE)
+        // Make keys and background significantly darker to match Gboard "bluish" theme
+        // User requested approx hex 303538 (Tone ~22) for keys
+        // User requested approx hex 1b2023 (Tone ~13) for background
+        
+        // Calculate a target tone that leans heavily towards the dark end
+        // For dark themes, we want this to be fixed around 22.0 for keys
+        val baseKeyTone = 22.0
         
         val targetKeyTone = baseKeyTone
-        val targetBackgroundTone = (targetKeyTone - 8.0).coerceIn(MIN_TONE, MAX_TONE - 4.0)
+        val targetBackgroundTone = 13.0 // Explicitly requested 1b2023 (Tone 13)
         val targetAccentTone = (targetKeyTone + 8.0).coerceIn(MIN_TONE + 4.0, MAX_TONE)
         
         // Ensure pressed state is VERY LIGHT (nearly white/pastel) to maintain tint visibility
@@ -70,29 +71,29 @@ object GboardStyleColorProcessor {
             background = transformSurfaceRole(
                 color = scheme.background,
                 targetHue = sharedHue,
-                targetTone = targetBackgroundTone,
-                toneMix = 0.90,
+                targetTone = targetBackgroundTone - 2.0, // Darken background further
+                toneMix = 1.0, // FORCE target tone
                 chromaScale = 1.0, 
-                chromaCap = SURFACE_MAX_CHROMA + 8.0, // Allow more flavor
-                minChroma = 6.0, // Force minimum tint
+                chromaCap = SURFACE_MAX_CHROMA + 6.0, 
+                minChroma = 5.0, 
             ),
             surfaceDim = transformSurfaceRole(
                 color = scheme.surfaceDim,
                 targetHue = sharedHue,
-                targetTone = targetBackgroundTone - 2.0,
-                toneMix = 0.90,
+                targetTone = targetBackgroundTone - 4.0,
+                toneMix = 1.0,
                 chromaScale = 1.0,
-                chromaCap = SURFACE_MAX_CHROMA + 8.0,
-                minChroma = 4.0,
+                chromaCap = SURFACE_MAX_CHROMA + 6.0,
+                minChroma = 3.0,
             ),
             surfaceContainerLowest = transformSurfaceRole(
                 color = scheme.surfaceContainerLowest,
                 targetHue = sharedHue,
-                targetTone = targetBackgroundTone + 2.0,
-                toneMix = 0.90,
+                targetTone = targetBackgroundTone,
+                toneMix = 1.0,
                 chromaScale = 1.0,
-                chromaCap = SURFACE_MAX_CHROMA + 8.0,
-                minChroma = 4.0,
+                chromaCap = SURFACE_MAX_CHROMA + 6.0,
+                minChroma = 3.0,
             ),
 
             // Base key color (Normal keys)
@@ -101,10 +102,10 @@ object GboardStyleColorProcessor {
                 color = scheme.surfaceBright,
                 targetHue = sharedHue,
                 targetTone = targetKeyTone,
-                toneMix = 0.90, // Increased mix
-                chromaScale = 0.9, // Slightly desaturated
-                chromaCap = SURFACE_MAX_CHROMA + 8.0, 
-                minChroma = 6.0,
+                toneMix = 1.0, // FORCE target tone
+                chromaScale = 0.85, 
+                chromaCap = SURFACE_MAX_CHROMA + 6.0, 
+                minChroma = 5.0,
             ),
             
             // Pressed state for normal keys (needs to keep tint!)

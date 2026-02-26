@@ -27,6 +27,7 @@ import 'services/admin_service.dart';
 import 'services/ai_settings_bridge.dart';
 import 'services/billing_service.dart';
 import 'services/deep_link_service.dart';
+import 'services/play_integrity_service.dart';
 import 'widgets/tool_popup.dart';
 import 'admin.dart';
 
@@ -151,6 +152,10 @@ void main() async {
 
   // Initialize remaining services in the background
   void initializeServices() {
+    // Initialize Play Integrity API for app security
+    PlayIntegrityService.initialize();
+    AppLogger.init('Play Integrity API');
+
     // Initialize billing service for Google Play In-App Purchases
     billingService.initialize();
     AppLogger.init('Billing service');

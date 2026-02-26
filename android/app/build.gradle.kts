@@ -254,6 +254,9 @@ dependencies {
     implementation("com.google.android.play:app-update:2.1.0")
     implementation("com.google.android.play:app-update-ktx:2.1.0")
     
+    // Google Play Integrity API
+    implementation("com.google.android.play:integrity:1.4.0")
+    
     // ========== REBOARD KEYBOARD MODULE ==========
     implementation(project(":reboard_keyboard"))
 }
