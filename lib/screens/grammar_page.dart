@@ -10,8 +10,11 @@ import '../widgets/custom_app_bar.dart';
 import '../widgets/custom_button.dart';
 import '../utils/lottie_assets.dart';
 import '../providers/auth_provider.dart';
-import '../services/groq_service.dart';
 import '../services/unified_ai_service.dart';
+import '../services/document_chunking_service.dart';
+import '../models/document_result.dart';
+import '../widgets/document_input_widget.dart';
+import '../screens/document_viewer_screen.dart';
 import 'auth/login_screen.dart';
 
 class GrammarPage extends StatefulWidget {
@@ -29,6 +32,19 @@ class _GrammarPageState extends State<GrammarPage> {
   bool _isChecking = false;
   String _correctedText = '';
   List<Map<String, dynamic>> _errors = [];
+  DocumentResult? _loadedDocument;
+
+  void _onDocumentTextExtracted(String text, DocumentResult doc) {
+    setState(() {
+      _textController.text = text;
+      _updateWordCount(text);
+      _loadedDocument = doc;
+    });
+  }
+
+  void _clearDocument() {
+    setState(() => _loadedDocument = null);
+  }
 
   @override
   void initState() {
@@ -65,7 +81,9 @@ class _GrammarPageState extends State<GrammarPage> {
     });
 
     try {
-      final result = await UnifiedAIService.checkGrammar(text);
+      final result = DocumentChunkingService.needsChunking(text)
+          ? await DocumentChunkingService.checkGrammarLarge(text)
+          : await UnifiedAIService.checkGrammar(text);
       
       // Check for API errors first
       if (result.containsKey('error') || result.containsKey('errorType')) {
@@ -296,6 +314,29 @@ class _GrammarPageState extends State<GrammarPage> {
                               ),
                               const SizedBox(height: 16),
                             ],
+                          ),
+                        ),
+                        Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 0),
+                          child: DocumentInputWidget(
+                            onTextExtracted: _onDocumentTextExtracted,
+                            currentDocument: _loadedDocument,
+                            onClear: _clearDocument,
+                            accentColor: Colors.red,
+                            onViewDocument: (doc) {
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (_) => DocumentViewerScreen(
+                                    document: doc,
+                                    onUseText: (text) {
+                                      _textController.text = text;
+                                      _updateWordCount(text);
+                                    },
+                                  ),
+                                ),
+                              );
+                            },
                           ),
                         ),
                         _buildTextInputField(),

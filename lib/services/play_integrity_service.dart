@@ -3,50 +3,71 @@ import 'package:flutter/services.dart';
 import '../utils/app_logger.dart';
 
 /// Service for Google Play Integrity API
-/// Verifies app integrity and device authenticity
+/// Verifies app integrity and device authenticity via server-side verification
+/// 
+/// Flow:
+/// 1. Flutter calls native Android code via MethodChannel
+/// 2. Android requests integrity token from Google Play
+/// 3. Android sends token to Firebase Cloud Function (verifyIntegrity)
+/// 4. Cloud Function decodes token and checks verdicts
+/// 5. Returns allow/block decision
 class PlayIntegrityService {
   static const MethodChannel _channel = MethodChannel('com.noxquill.rewordium/integrity');
 
   /// Check if the device and app meet integrity requirements
-  /// Returns true if integrity check passes, false otherwise
+  /// Returns true ONLY if ALL conditions pass:
+  /// - MEETS_STRONG_INTEGRITY (device is genuine, not rooted)
+  /// - PLAY_RECOGNIZED (app is the real, unmodified APK)
+  /// - LICENSED (installed from Play Store, not sideloaded)
+  /// 
+  /// Returns false on ANY error (strict mode - block by default)
   static Future<bool> checkIntegrity() async {
     try {
       // Only run on Android
-      if (!defaultTargetPlatform.name.contains('android')) {
+      if (defaultTargetPlatform != TargetPlatform.android) {
         AppLogger.info('Play Integrity: Not Android platform, skipping');
         return true;
       }
 
+      AppLogger.info('Play Integrity: Starting verification...');
+      
       final result = await _channel.invokeMethod<bool>('checkIntegrity');
       
       if (result == true) {
-        AppLogger.info('Play Integrity: Check passed ✓');
+        AppLogger.info('Play Integrity: ✅ All checks passed (Strong + PlayRecognized + Licensed)');
         return true;
       } else {
-        AppLogger.warning('Play Integrity: Check failed ✗');
+        AppLogger.warning('Play Integrity: ⛔ Verification FAILED');
         return false;
       }
+    } on PlatformException catch (e) {
+      AppLogger.error('Play Integrity: Platform error - ${e.code}: ${e.message}', e);
+      // STRICT: Return false on errors - block the app
+      // A legitimate Play Store install should never hit this
+      return false;
     } catch (e) {
       AppLogger.error('Play Integrity: Error during check', e);
-      // Return true in case of errors to not block app functionality
-      // You can change this to false for stricter security
-      return true;
+      // STRICT: Return false on ANY error
+      return false;
     }
   }
 
-  /// Get detailed integrity verdict
-  /// Returns a map with integrity details or null on error
+  /// Get detailed integrity verdict from backend
+  /// Returns full verdict data including which checks passed/failed
   static Future<Map<String, dynamic>?> getIntegrityVerdict() async {
     try {
-      if (!defaultTargetPlatform.name.contains('android')) {
+      if (defaultTargetPlatform != TargetPlatform.android) {
         return null;
       }
 
       final result = await _channel.invokeMethod<Map>('getIntegrityVerdict');
       
       if (result != null) {
-        AppLogger.info('Play Integrity: Verdict received');
-        return Map<String, dynamic>.from(result);
+        final verdict = Map<String, dynamic>.from(result);
+        AppLogger.info('Play Integrity: Detailed verdict received');
+        AppLogger.info('  allowed: ${verdict['allowed']}');
+        AppLogger.info('  reason: ${verdict['reason']}');
+        return verdict;
       }
       
       return null;
@@ -60,7 +81,7 @@ class PlayIntegrityService {
   /// Should be called during app startup
   static Future<void> initialize() async {
     try {
-      if (!defaultTargetPlatform.name.contains('android')) {
+      if (defaultTargetPlatform != TargetPlatform.android) {
         return;
       }
 
@@ -74,7 +95,7 @@ class PlayIntegrityService {
   /// Check if device meets basic play protect requirements
   static Future<bool> isDeviceSecure() async {
     try {
-      if (!defaultTargetPlatform.name.contains('android')) {
+      if (defaultTargetPlatform != TargetPlatform.android) {
         return true;
       }
 

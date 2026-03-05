@@ -1,16 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:lottie/lottie.dart';
 import 'dart:async';
-import 'package:provider/provider.dart';
 
 import '../theme/app_theme.dart';
 import '../main.dart';
-import '../services/groq_service.dart';
 import '../services/unified_ai_service.dart';
 import '../services/firebase_service.dart';
-import '../services/force_update_service.dart';
-import '../providers/auth_provider.dart';
-import '../screens/auth/login_screen.dart';
+import '../screens/installer_verification_screen.dart';
 
 class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});
@@ -42,15 +38,10 @@ class _SplashScreenState extends State<SplashScreen>
       );
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (!mounted) return;
-        final authProvider =
-            Provider.of<AuthProvider>(context, listen: false);
-        if (authProvider.isLoggedIn) {
-          Navigator.of(context).pushReplacementNamed('/home');
-        } else {
-          Navigator.of(context).pushReplacement(
-            MaterialPageRoute(builder: (_) => const LoginScreen()),
-          );
-        }
+        // Go to verification screen (it handles auth routing after checks)
+        Navigator.of(context).pushReplacement(
+          MaterialPageRoute(builder: (_) => const InstallerVerificationScreen()),
+        );
       });
       return;
     }
@@ -150,33 +141,22 @@ class _SplashScreenState extends State<SplashScreen>
             });
           }
 
-          // Check authentication status
-          final authProvider =
-              Provider.of<AuthProvider>(context, listen: false);
-
-          if (authProvider.isLoggedIn) {
-            // User is already logged in, go to home
-            Navigator.of(context).pushReplacementNamed('/home');
-          } else {
-            // User is not logged in, show sign in page
-            Navigator.of(context).pushReplacement(
-              PageRouteBuilder(
-                pageBuilder: (context, animation, secondaryAnimation) =>
-                    const LoginScreen(),
-                transitionDuration: const Duration(milliseconds: 800),
-                transitionsBuilder:
-                    (context, animation, secondaryAnimation, child) {
-                  return FadeTransition(
-                    opacity: animation,
-                    child: child,
-                  );
-                },
-              ),
-            );
-          }
-
-          // Initialize force update service after navigation
-          ForceUpdateService.initialize();
+          // Navigate to installer verification screen
+          // It handles integrity checks and then routes to Home/Login
+          Navigator.of(context).pushReplacement(
+            PageRouteBuilder(
+              pageBuilder: (context, animation, secondaryAnimation) =>
+                  const InstallerVerificationScreen(),
+              transitionDuration: const Duration(milliseconds: 600),
+              transitionsBuilder:
+                  (context, animation, secondaryAnimation, child) {
+                return FadeTransition(
+                  opacity: animation,
+                  child: child,
+                );
+              },
+            ),
+          );
         }
       });
     }

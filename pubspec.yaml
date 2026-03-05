@@ -16,7 +16,7 @@ publish_to: 'none' # Remove this line if you wish to publish to pub.dev
 # https://developer.apple.com/library/archive/documentation/General/Reference/InfoPlistKeyReference/Articles/CoreFoundationKeys.html
 # In Windows, build-name is used as the major, minor, and patch parts
 # of the product and file versions while build-number is used as the build suffix.
-version: 1.0.36+36
+version: 1.0.39+39
 
 environment:
   sdk: '>=3.0.0 <4.0.0'
@@ -76,6 +76,25 @@ dependencies:
   # File handling and sharing
   path_provider: ^2.1.2
   share_plus: ^7.2.2
+  
+  # PDF creation & export (save to file, share via share_plus)
+  pdf: ^3.11.3
+  
+  # DOCX handling
+  archive: any
+  xml: ^6.3.0
+  
+  # File picker & open external
+  file_picker: ^8.0.7
+  open_filex: ^4.5.0
+  
+  # Document scanning & OCR (mobile only)
+  cunning_document_scanner: ^1.4.0
+  google_mlkit_text_recognition: ^0.15.1
+  
+  # URL content extraction
+  html: ^0.15.6
+  beautiful_soup_dart: ^0.3.0
 
 dev_dependencies:
   flutter_test:
@@ -87,6 +106,10 @@ dev_dependencies:
   # package. See that file for information about deactivating specific lint
   # rules and activating additional ones.
   flutter_lints: ^2.0.0
+
+# Force archive v4 so pdfrx and lottie resolve (lottie 2.x pins archive ^3 but works fine with 4)
+dependency_overrides:
+  archive: ^4.0.0
 
 # For information on the generic Dart part of this file, see the
 # following page: https://dart.dev/tools/pub/pubspec
@@ -106,6 +129,7 @@ flutter:
     - assets/images/ai_icons/
     - assets/config/
     - assets/licenses/
+    - assets/templates/
     - .env
 
   # Custom fonts bundled with the app

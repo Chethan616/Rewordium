@@ -11,6 +11,10 @@ import '../widgets/custom_button.dart';
 import '../utils/lottie_assets.dart';
 import '../providers/auth_provider.dart';
 import '../services/unified_ai_service.dart';
+import '../services/document_chunking_service.dart';
+import '../models/document_result.dart';
+import '../widgets/document_input_widget.dart';
+import '../screens/document_viewer_screen.dart';
 
 // Import your login screen here; adjust path as needed
 import 'auth/login_screen.dart';
@@ -26,6 +30,18 @@ class _AIDetectorPageState extends State<AIDetectorPage> {
   final TextEditingController _controller = TextEditingController();
   bool _isLoading = false;
   Map<String, dynamic>? _result;
+  DocumentResult? _loadedDocument;
+
+  void _onDocumentTextExtracted(String text, DocumentResult doc) {
+    setState(() {
+      _controller.text = text;
+      _loadedDocument = doc;
+    });
+  }
+
+  void _clearDocument() {
+    setState(() => _loadedDocument = null);
+  }
 
   @override
   void dispose() {
@@ -48,7 +64,9 @@ class _AIDetectorPageState extends State<AIDetectorPage> {
     });
 
     try {
-      final result = await UnifiedAIService.detectAIText(text);
+      final result = DocumentChunkingService.needsChunking(text)
+          ? await DocumentChunkingService.detectAILarge(text)
+          : await UnifiedAIService.detectAIText(text);
 
       setState(() {
         _result = result;
@@ -280,7 +298,29 @@ class _AIDetectorPageState extends State<AIDetectorPage> {
               ],
             ),
             Padding(
-              padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
+              padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
+              child: DocumentInputWidget(
+                onTextExtracted: _onDocumentTextExtracted,
+                currentDocument: _loadedDocument,
+                onClear: _clearDocument,
+                accentColor: Colors.purple,
+                onViewDocument: (doc) {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => DocumentViewerScreen(
+                        document: doc,
+                        onUseText: (text) {
+                          _controller.text = text;
+                        },
+                      ),
+                    ),
+                  );
+                },
+              ),
+            ),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
               child: Material(
                 elevation: 2,
                 borderRadius: BorderRadius.circular(16),

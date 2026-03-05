@@ -11,6 +11,10 @@ import '../widgets/custom_app_bar.dart';
 import '../widgets/custom_button.dart';
 import '../providers/auth_provider.dart';
 import '../services/unified_ai_service.dart';
+import '../services/document_chunking_service.dart';
+import '../models/document_result.dart';
+import '../widgets/document_input_widget.dart';
+import '../screens/document_viewer_screen.dart';
 
 // Import your login screen here; adjust path as needed
 import 'auth/login_screen.dart';
@@ -30,6 +34,18 @@ class _ToneEditorPageState extends State<ToneEditorPage> {
   String _selectedTone = "Professional";
   Map<String, dynamic>? _toneResult;
   List<String> _changesMade = [];
+  DocumentResult? _loadedDocument;
+
+  void _onDocumentTextExtracted(String text, DocumentResult doc) {
+    setState(() {
+      _controller.text = text;
+      _loadedDocument = doc;
+    });
+  }
+
+  void _clearDocument() {
+    setState(() => _loadedDocument = null);
+  }
 
   final List<String> _tones = [
     "Professional",
@@ -88,7 +104,9 @@ class _ToneEditorPageState extends State<ToneEditorPage> {
           ? _customToneController.text 
           : _selectedTone.toLowerCase();
           
-      final result = await UnifiedAIService.editTone(text, targetTone);
+      final result = DocumentChunkingService.needsChunking(text)
+          ? await DocumentChunkingService.editToneLarge(text, targetTone)
+          : await UnifiedAIService.editTone(text, targetTone);
 
       setState(() {
         _toneResult = result;
@@ -276,7 +294,29 @@ class _ToneEditorPageState extends State<ToneEditorPage> {
               ],
             ),
             Padding(
-              padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
+              padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
+              child: DocumentInputWidget(
+                onTextExtracted: _onDocumentTextExtracted,
+                currentDocument: _loadedDocument,
+                onClear: _clearDocument,
+                accentColor: Colors.teal,
+                onViewDocument: (doc) {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => DocumentViewerScreen(
+                        document: doc,
+                        onUseText: (text) {
+                          _controller.text = text;
+                        },
+                      ),
+                    ),
+                  );
+                },
+              ),
+            ),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
               child: Material(
                 elevation: 2,
                 borderRadius: BorderRadius.circular(16),

@@ -11,8 +11,12 @@ import '../widgets/custom_button.dart';
 import '../utils/lottie_assets.dart';
 import '../providers/auth_provider.dart';
 import '../services/unified_ai_service.dart';
+import '../services/document_chunking_service.dart';
 import '../models/persona_model.dart';
 import '../utils/ai_error_handler.dart';
+import '../models/document_result.dart';
+import '../widgets/document_input_widget.dart';
+import '../screens/document_viewer_screen.dart';
 
 // Import your login screen here; adjust path as needed
 import 'auth/login_screen.dart';
@@ -34,6 +38,18 @@ class _ParaphraserPageState extends State<ParaphraserPage> {
   Persona? _selectedPersona;
   bool _usePersona = false; // Whether to use persona or mode
   String? _customPrompt; // Store custom prompt for custom mode
+  DocumentResult? _loadedDocument;
+
+  void _onDocumentTextExtracted(String text, DocumentResult doc) {
+    setState(() {
+      _controller.text = text;
+      _loadedDocument = doc;
+    });
+  }
+
+  void _clearDocument() {
+    setState(() => _loadedDocument = null);
+  }
 
   @override
   void initState() {
@@ -371,7 +387,9 @@ class _ParaphraserPageState extends State<ParaphraserPage> {
       } else {
         // Use standard mode paraphrasing
         final tone = _getToneFromMode(_selectedMode);
-        final result = await UnifiedAIService.paraphraseText(text, tone);
+        final result = DocumentChunkingService.needsChunking(text)
+            ? await DocumentChunkingService.paraphraseLarge(text, tone)
+            : await UnifiedAIService.paraphraseText(text, tone);
 
         // Handle API errors with snackbar
         if (result.containsKey('error')) {
@@ -522,7 +540,29 @@ class _ParaphraserPageState extends State<ParaphraserPage> {
                   ],
                 ),
                 Padding(
-                  padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
+                  padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
+                  child: DocumentInputWidget(
+                    onTextExtracted: _onDocumentTextExtracted,
+                    currentDocument: _loadedDocument,
+                    onClear: _clearDocument,
+                    accentColor: AppTheme.primaryColor,
+                    onViewDocument: (doc) {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => DocumentViewerScreen(
+                            document: doc,
+                            onUseText: (text) {
+                              _controller.text = text;
+                            },
+                          ),
+                        ),
+                      );
+                    },
+                  ),
+                ),
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
                   child: Material(
                     elevation: 2,
                     borderRadius: BorderRadius.circular(16),

@@ -1,16 +1,16 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/cupertino.dart';
-import 'package:provider/provider.dart';
 import 'package:animate_do/animate_do.dart';
 
 import '../theme/app_theme.dart';
-import '../theme/theme_provider.dart';
 import '../screens/paraphraser_page.dart';
 import '../screens/grammar_page.dart';
 import '../screens/ai_detector_page.dart';
 import '../screens/translator_page.dart';
 import '../screens/summarizer_page.dart';
 import '../screens/tone_editor_page.dart';
+import '../screens/document_viewer_screen.dart';
+import '../services/document_service.dart';
 
 class ToolPopup extends StatelessWidget {
   const ToolPopup({super.key});
@@ -54,6 +54,50 @@ class ToolPopup extends StatelessWidget {
           MaterialPageRoute(builder: (context) => const ToneEditorPage()),
         );
         break;
+      case 'scan document':
+        _scanDocument(context);
+        break;
+      case 'import file':
+        _importFile(context);
+        break;
+    }
+  }
+
+  void _scanDocument(BuildContext context) async {
+    try {
+      final result = await DocumentService.scanDocument();
+      if (result != null && result.text.isNotEmpty && context.mounted) {
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (_) => DocumentViewerScreen(
+              document: result,
+              onUseText: (text) {},
+            ),
+          ),
+        );
+      }
+    } catch (e) {
+      debugPrint('Scan error: $e');
+    }
+  }
+
+  void _importFile(BuildContext context) async {
+    try {
+      final result = await DocumentService.pickFile();
+      if (result != null && result.text.isNotEmpty && context.mounted) {
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (_) => DocumentViewerScreen(
+              document: result,
+              onUseText: (text) {},
+            ),
+          ),
+        );
+      }
+    } catch (e) {
+      debugPrint('Import error: $e');
     }
   }
 
@@ -322,4 +366,12 @@ const List<ToolItem> _toolList = [
       title: "Tone Editor",
       icon: CupertinoIcons.waveform_path,
       color: Color(0xFF00BCD4)),
+  ToolItem(
+      title: "Scan Document",
+      icon: CupertinoIcons.camera_viewfinder,
+      color: Color(0xFF7C3AED)),
+  ToolItem(
+      title: "Import File",
+      icon: CupertinoIcons.doc_on_doc,
+      color: Color(0xFF1E3A8A)),
 ];

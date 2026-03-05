@@ -20,6 +20,8 @@ import '../screens/ai_detector_page.dart';
 import '../screens/summarizer_page.dart';
 import '../screens/tone_editor_page.dart';
 import '../screens/jade_chat_screen.dart';
+import '../services/document_service.dart';
+import '../screens/document_viewer_screen.dart';
 
 class HomeScreen extends StatelessWidget {
   const HomeScreen({super.key});
@@ -229,6 +231,60 @@ class _ToolsRow extends StatelessWidget {
             color: Colors.deepPurple,
             isSmallScreen: isSmallScreen,
           ),
+          _buildDocActionCard(
+            context,
+            title: "Scan Doc",
+            subtitle: "Camera scan to text",
+            icon: CupertinoIcons.camera_viewfinder,
+            color: const Color(0xFF7C3AED),
+            isSmallScreen: isSmallScreen,
+            onTap: () async {
+              try {
+                final result = await DocumentService.scanDocument();
+                if (result != null && result.text.isNotEmpty && context.mounted) {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => DocumentViewerScreen(
+                        document: result,
+                        onUseText: (text) {
+                          // User can choose a tool from the viewer
+                        },
+                      ),
+                    ),
+                  );
+                }
+              } catch (e) {
+                debugPrint('Scan error: $e');
+              }
+            },
+          ),
+          _buildDocActionCard(
+            context,
+            title: "Import File",
+            subtitle: "PDF, DOCX, TXT",
+            icon: CupertinoIcons.doc_on_doc,
+            color: const Color(0xFF1E3A8A),
+            isSmallScreen: isSmallScreen,
+            onTap: () async {
+              try {
+                final result = await DocumentService.pickFile();
+                if (result != null && result.text.isNotEmpty && context.mounted) {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => DocumentViewerScreen(
+                        document: result,
+                        onUseText: (text) {},
+                      ),
+                    ),
+                  );
+                }
+              } catch (e) {
+                debugPrint('Import error: $e');
+              }
+            },
+          ),
         ],
       ),
     );
@@ -309,6 +365,75 @@ class _ToolsRow extends StatelessWidget {
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
               Flexible(child: icon),
+              const SizedBox(height: 4),
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    title,
+                    style: AppTheme.headingSmall.copyWith(
+                      color: Colors.white,
+                      fontSize: isSmallScreen ? 14 : 16,
+                    ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                  Text(
+                    subtitle,
+                    style: AppTheme.bodySmall.copyWith(
+                      color: Colors.white.withOpacity(0.8),
+                      fontSize: isSmallScreen ? 9 : 10,
+                    ),
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildDocActionCard(
+    BuildContext context, {
+    required String title,
+    required String subtitle,
+    required IconData icon,
+    required Color color,
+    required bool isSmallScreen,
+    required VoidCallback onTap,
+  }) {
+    return FadeInRight(
+      delay: const Duration(milliseconds: 200),
+      child: GestureDetector(
+        onTap: onTap,
+        child: Container(
+          width: isSmallScreen ? 140 : 160,
+          margin: EdgeInsets.all(isSmallScreen ? 6 : 8),
+          padding: EdgeInsets.all(isSmallScreen ? 8 : 12),
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+              colors: [color.withOpacity(0.8), color.withOpacity(0.6)],
+            ),
+            borderRadius: BorderRadius.circular(18),
+            boxShadow: [
+              BoxShadow(
+                color: color.withOpacity(0.3),
+                blurRadius: 12,
+                offset: const Offset(0, 4),
+              ),
+            ],
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(icon, color: Colors.white, size: isSmallScreen ? 40 : 48),
               const SizedBox(height: 4),
               Column(
                 crossAxisAlignment: CrossAxisAlignment.start,

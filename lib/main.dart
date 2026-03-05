@@ -10,6 +10,7 @@ import 'screens/paraphraser_page.dart';
 import 'screens/grammar_page.dart';
 import 'screens/settings_screen.dart';
 import 'screens/splash_screen.dart';
+import 'screens/installer_verification_screen.dart';
 import 'theme/theme_provider.dart';
 import 'providers/auth_provider.dart';
 import 'providers/keyboard_provider.dart';
@@ -152,9 +153,7 @@ void main() async {
 
   // Initialize remaining services in the background
   void initializeServices() {
-    // Initialize Play Integrity API for app security
-    PlayIntegrityService.initialize();
-    AppLogger.init('Play Integrity API');
+    // Play Integrity is now handled in SplashScreen with actual enforcement
 
     // Initialize billing service for Google Play In-App Purchases
     billingService.initialize();
@@ -221,6 +220,7 @@ class MyApp extends StatelessWidget {
         '/home': (context) => const HomePage(),
         '/settings': (context) => const SettingsScreen(),
         '/admin': (context) => const AdminPanel(),
+        '/verify': (context) => const InstallerVerificationScreen(),
       },
       // Performance optimizations
       builder: (context, child) {

@@ -181,7 +181,7 @@ class MainActivity : FlutterActivity() {
                 deepLinkChannel?.invokeMethod("navigateTo", mapOf("route" to link))
             }, 500) // Small delay to ensure Flutter is ready
         }
-PLAY INTEGRITY CHANNEL ---
+        // --- PLAY INTEGRITY CHANNEL ---
         val integrityChannel = MethodChannel(flutterEngine.dartExecutor.binaryMessenger, INTEGRITY_CHANNEL)
         integrityChannel.setMethodCallHandler(PlayIntegrityHandler(this))
         Log.d(TAG, "Play Integrity channel configured")

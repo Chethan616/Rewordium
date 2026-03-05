@@ -835,7 +835,7 @@ class MyAccessibilityService : AccessibilityService(), BubbleInteractionListener
 
     private fun getPersonaPrompt(): String {
         return when (selectedPersona) {
-            "Casual" -> "You MUST adopt the persona of a friendly, easy-going person. Your goal is to make the text sound more natural, relaxed, and conversational. Use contractions (like it's, you're) and common phrasing."
+            "Casual" -> "You are a grammar and clarity assistant. Your job is to fix ONLY grammar errors, spelling mistakes, and punctuation issues. Identify the existing tone of the text and preserve it exactly. Make the absolute minimum changes needed — do NOT rewrite, rephrase, or add new words unless correcting an error. Keep the author's original voice, word choices, and sentence structure intact. If the text has no errors, return it unchanged."
             "Academic" -> "You MUST adopt the persona of a university professor or researcher. Your goal is to make the text sound formal, scholarly, and objective. Use complex sentences, precise vocabulary, and avoid colloquialisms or emotional language. The tone should be authoritative and well-structured."
             "Poetry" -> "You MUST adopt the persona of a poet. Your goal is to transform the text into a short, lyrical piece. Use literary devices like metaphors, similes, imagery, and rhythm to convey the core message in an artistic and evocative way."
             "Custom" -> if (customPersonaPrompt.isNotBlank()) "You MUST adopt the following specific persona: '$customPersonaPrompt'" else ""
@@ -985,13 +985,12 @@ class MyAccessibilityService : AccessibilityService(), BubbleInteractionListener
                 "Casual" ->
                     """
                     $personaInstruction
-                    Rewrite the user's text into three distinct casual styles, each on a new line:
-                    1. Friendly & Warm: Extra positive and approachable.
-                    2. Clear & Direct: Efficient but still relaxed.
-                    3. Playful & Witty: A bit more fun and clever.
-
-                    Your output MUST BE ONLY the three rewritten sentences, each on a new line.
-                    ABSOLUTELY NO labels (like "1.", "Friendly:"), titles, or any other extra text.
+                    Fix only grammar, spelling, and punctuation errors in the user's text below.
+                    Do NOT change the tone, style, meaning, or word choices. Make minimal edits only where errors exist.
+                    Return the corrected text on the first line.
+                    Then on a NEW line, write "Changes:" followed by a brief summary of what was fixed (e.g., "Fixed 2 grammar errors, 1 spelling mistake").
+                    If no errors are found, return the original text unchanged and write "Changes: No errors found."
+                    ABSOLUTELY NO labels, titles, numbers, or extra formatting.
 
                     ---
                     USER'S TEXT: "$textToRewrite"
@@ -1052,6 +1051,7 @@ class MyAccessibilityService : AccessibilityService(), BubbleInteractionListener
         bottomSheetView!!.findViewById<LinearLayout>(R.id.suggestions_container).removeAllViews()
 
         thinkingText.text = when (selectedPersona) {
+            "Casual" -> "Checking grammar..."
             "Academic" -> "Consulting archives..."
             "Poetry" -> "Weaving words into verse..."
             "Custom" -> "Channeling your persona..."
@@ -1137,8 +1137,22 @@ class MyAccessibilityService : AccessibilityService(), BubbleInteractionListener
                     val content = response.body()!!.choices.firstOrNull()?.message?.content ?: ""
 
                     // --- RESTORED SUGGESTION PARSING ---
-                    val suggestions = if (isGenerationTask || selectedPersona == "Poetry") {
-                        listOf(content.trim())
+                    val suggestions = if (isGenerationTask || selectedPersona == "Poetry" || selectedPersona == "Casual") {
+                        // Casual mode returns a single grammar-corrected version
+                        // Poetry and generation tasks also return a single result
+                        val lines = content.trim().lines().filter { it.isNotBlank() }
+                        if (selectedPersona == "Casual" && lines.size > 1) {
+                            // First line(s) are the corrected text, last line starting with "Changes:" is the summary
+                            val changesIdx = lines.indexOfLast { it.trim().startsWith("Changes:", ignoreCase = true) }
+                            if (changesIdx > 0) {
+                                val correctedText = lines.subList(0, changesIdx).joinToString("\n")
+                                listOf(correctedText.trim())
+                            } else {
+                                listOf(content.trim())
+                            }
+                        } else {
+                            listOf(content.trim())
+                        }
                     } else {
                         content.lines().filter { it.isNotBlank() }.take(3)
                     }

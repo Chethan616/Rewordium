@@ -11,6 +11,10 @@ import '../widgets/custom_button.dart';
 import '../utils/lottie_assets.dart';
 import '../providers/auth_provider.dart';
 import '../services/unified_ai_service.dart';
+import '../services/document_chunking_service.dart';
+import '../models/document_result.dart';
+import '../widgets/document_input_widget.dart';
+import '../screens/document_viewer_screen.dart';
 
 // Import your login screen here; adjust path as needed
 import 'auth/login_screen.dart';
@@ -29,6 +33,18 @@ class _SummarizerPageState extends State<SummarizerPage> {
   String _selectedLength = "Medium";
   Map<String, dynamic>? _summaryResult;
   List<String> _keyPoints = [];
+  DocumentResult? _loadedDocument;
+
+  void _onDocumentTextExtracted(String text, DocumentResult doc) {
+    setState(() {
+      _controller.text = text;
+      _loadedDocument = doc;
+    });
+  }
+
+  void _clearDocument() {
+    setState(() => _loadedDocument = null);
+  }
 
   final List<String> _summaryLengths = [
     "Very Short",
@@ -60,7 +76,9 @@ class _SummarizerPageState extends State<SummarizerPage> {
     });
 
     try {
-      final result = await UnifiedAIService.summarizeText(text, length: _selectedLength.toLowerCase());
+      final result = DocumentChunkingService.needsChunking(text)
+          ? await DocumentChunkingService.summarizeLarge(text, length: _selectedLength.toLowerCase())
+          : await UnifiedAIService.summarizeText(text, length: _selectedLength.toLowerCase());
 
       setState(() {
         _summaryResult = result;
@@ -213,7 +231,29 @@ class _SummarizerPageState extends State<SummarizerPage> {
               ],
             ),
             Padding(
-              padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
+              padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
+              child: DocumentInputWidget(
+                onTextExtracted: _onDocumentTextExtracted,
+                currentDocument: _loadedDocument,
+                onClear: _clearDocument,
+                accentColor: Colors.orange,
+                onViewDocument: (doc) {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => DocumentViewerScreen(
+                        document: doc,
+                        onUseText: (text) {
+                          _controller.text = text;
+                        },
+                      ),
+                    ),
+                  );
+                },
+              ),
+            ),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
               child: Material(
                 elevation: 2,
                 borderRadius: BorderRadius.circular(16),
