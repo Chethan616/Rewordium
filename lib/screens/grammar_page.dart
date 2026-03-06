@@ -4,8 +4,8 @@ import 'package:flutter/services.dart';
 import 'package:animate_do/animate_do.dart';
 import 'package:shimmer/shimmer.dart';
 import 'package:provider/provider.dart';
+import 'package:m3e_collection/m3e_collection.dart';
 
-import '../theme/app_theme.dart';
 import '../widgets/custom_app_bar.dart';
 import '../widgets/custom_button.dart';
 import '../utils/lottie_assets.dart';
@@ -236,6 +236,12 @@ class _GrammarPageState extends State<GrammarPage> {
             if (!isLoggedIn) const SizedBox(width: 8),
           ],
         ),
+        if (_isChecking)
+          LinearProgressIndicatorM3E(
+            shape: ProgressM3EShape.wavy,
+            size: LinearProgressM3ESize.s,
+            activeColor: Colors.red,
+          ),
         Expanded(
           child: Padding(
             padding: const EdgeInsets.all(16.0),
@@ -269,8 +275,8 @@ class _GrammarPageState extends State<GrammarPage> {
                               Text(
                                 "Enter or paste your text to check grammar",
                                 textAlign: TextAlign.center,
-                                style: AppTheme.bodyMedium.copyWith(
-                                  color: AppTheme.textSecondaryColor,
+                                style: Theme.of(context).textTheme.bodyMedium!.copyWith(
+                                  color: Theme.of(context).colorScheme.onSurfaceVariant,
                                 ),
                               ),
                               const SizedBox(height: 20),
@@ -323,12 +329,14 @@ class _GrammarPageState extends State<GrammarPage> {
                             currentDocument: _loadedDocument,
                             onClear: _clearDocument,
                             accentColor: Colors.red,
+                            initialToolForViewer: 'grammar',
                             onViewDocument: (doc) {
                               Navigator.push(
                                 context,
                                 MaterialPageRoute(
                                   builder: (_) => DocumentViewerScreen(
                                     document: doc,
+                                    initialTool: 'grammar',
                                     onUseText: (text) {
                                       _textController.text = text;
                                       _updateWordCount(text);
@@ -352,7 +360,7 @@ class _GrammarPageState extends State<GrammarPage> {
           child: Container(
             padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
             decoration: BoxDecoration(
-              color: AppTheme.cardColor,
+              color: Theme.of(context).colorScheme.surface,
               boxShadow: [
                 BoxShadow(
                   color: Colors.black.withOpacity(0.03),
@@ -390,7 +398,7 @@ class _GrammarPageState extends State<GrammarPage> {
         vertical: 8,
       ),
       decoration: BoxDecoration(
-        color: AppTheme.backgroundColor,
+        color: Theme.of(context).colorScheme.surfaceContainerLow,
         borderRadius: BorderRadius.circular(16),
       ),
       child: Row(
@@ -398,12 +406,12 @@ class _GrammarPageState extends State<GrammarPage> {
           Icon(
             icon,
             size: isSmallScreen ? 14 : 16,
-            color: accentColor ?? AppTheme.textSecondaryColor,
+            color: accentColor ?? Theme.of(context).colorScheme.onSurfaceVariant,
           ),
           const SizedBox(width: 4),
           Text(
             label,
-            style: AppTheme.bodySmall.copyWith(
+            style: Theme.of(context).textTheme.bodySmall!.copyWith(
               fontSize: isSmallScreen ? 10 : 12,
             ),
           ),
@@ -417,7 +425,7 @@ class _GrammarPageState extends State<GrammarPage> {
       width: double.infinity,
       constraints: const BoxConstraints(minHeight: 100, maxHeight: 300),
       decoration: BoxDecoration(
-        color: AppTheme.cardColor,
+        color: Theme.of(context).colorScheme.surface,
         borderRadius: BorderRadius.circular(16),
         boxShadow: [
           BoxShadow(
@@ -440,8 +448,8 @@ class _GrammarPageState extends State<GrammarPage> {
             decoration: InputDecoration(
               border: InputBorder.none,
               hintText: "Type or paste your text here...",
-              hintStyle: AppTheme.bodyMedium.copyWith(
-                color: AppTheme.textSecondaryColor,
+              hintStyle: Theme.of(context).textTheme.bodyMedium!.copyWith(
+                color: Theme.of(context).colorScheme.onSurfaceVariant,
               ),
               suffixIcon: IconButton(
                 icon: Icon(Icons.edit, color: Colors.red.withOpacity(0.6)),

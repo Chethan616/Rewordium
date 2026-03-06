@@ -3,6 +3,7 @@ import 'package:flutter/cupertino.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter/foundation.dart';
 import 'package:provider/provider.dart';
+import 'package:m3e_collection/m3e_collection.dart';
 import 'dart:async';
 
 import 'screens/home_screen.dart';
@@ -10,7 +11,6 @@ import 'screens/paraphraser_page.dart';
 import 'screens/grammar_page.dart';
 import 'screens/settings_screen.dart';
 import 'screens/splash_screen.dart';
-import 'screens/installer_verification_screen.dart';
 import 'theme/theme_provider.dart';
 import 'providers/auth_provider.dart';
 import 'providers/keyboard_provider.dart';
@@ -203,7 +203,9 @@ class MyApp extends StatelessWidget {
         statusBarIconBrightness:
             isDarkMode ? Brightness.light : Brightness.dark,
         systemNavigationBarColor:
-            isDarkMode ? AppTheme.darkCardColor : Colors.white,
+            isDarkMode
+                ? AppTheme.darkSurfaceContainer
+                : AppTheme.lightSurfaceContainer,
         systemNavigationBarIconBrightness:
             isDarkMode ? Brightness.light : Brightness.dark,
       ),
@@ -220,7 +222,6 @@ class MyApp extends StatelessWidget {
         '/home': (context) => const HomePage(),
         '/settings': (context) => const SettingsScreen(),
         '/admin': (context) => const AdminPanel(),
-        '/verify': (context) => const InstallerVerificationScreen(),
       },
       // Performance optimizations
       builder: (context, child) {
@@ -328,8 +329,7 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
 
   @override
   Widget build(BuildContext context) {
-    final themeProvider = Provider.of<ThemeProvider>(context);
-    final isDarkMode = themeProvider.isDarkMode;
+    final colorScheme = Theme.of(context).colorScheme;
 
     return Scaffold(
       body: TabBarView(
@@ -337,80 +337,44 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
         physics: const NeverScrollableScrollPhysics(),
         children: _pages,
       ),
-      floatingActionButton: FloatingActionButton(
+      floatingActionButton: FabM3E(
+        icon: const Icon(CupertinoIcons.square_grid_2x2),
         onPressed: _showToolPopup,
-        backgroundColor: AppTheme.primaryColor,
-        child: const Icon(CupertinoIcons.square_grid_2x2, color: Colors.white),
+        kind: FabM3EKind.primary,
+        size: FabM3ESize.regular,
+        shapeFamily: FabM3EShapeFamily.round,
+        tooltip: 'Tools',
       ),
-      bottomNavigationBar: Container(
-        decoration: BoxDecoration(
-          color: AppTheme.cardColor,
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withOpacity(isDarkMode ? 0.2 : 0.05),
-              blurRadius: 10,
-              offset: const Offset(0, -5),
-            ),
-          ],
-        ),
-        child: SafeArea(
-          child: Padding(
-            padding: const EdgeInsets.symmetric(
-              horizontal: 8.0,
-              vertical: 8.0,
-            ),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceAround,
-              children: [
-                _buildNavItem(0, CupertinoIcons.home, 'Home'),
-                _buildNavItem(1, CupertinoIcons.pencil_outline, 'Paraphrase'),
-                _buildNavItem(2, CupertinoIcons.checkmark_seal, 'Grammar'),
-                _buildNavItem(3, CupertinoIcons.gear, 'Settings'),
-              ],
-            ),
+      bottomNavigationBar: NavigationBarM3E(
+        selectedIndex: _selectedIndex,
+        onDestinationSelected: _onItemTapped,
+        indicatorStyle: NavBarM3EIndicatorStyle.pill,
+        shapeFamily: NavBarM3EShapeFamily.round,
+        size: NavBarM3ESize.medium,
+        labelBehavior: NavBarM3ELabelBehavior.alwaysShow,
+        backgroundColor: colorScheme.surface,
+        destinations: const [
+          NavigationDestinationM3E(
+            icon: Icon(CupertinoIcons.home),
+            selectedIcon: Icon(CupertinoIcons.house_fill),
+            label: 'Home',
           ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildNavItem(int index, IconData icon, String label) {
-    final isSelected = _selectedIndex == index;
-
-    return GestureDetector(
-      onTap: () => _onItemTapped(index),
-      behavior: HitTestBehavior.opaque,
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-        decoration: isSelected
-            ? BoxDecoration(
-                color: AppTheme.primaryColor.withOpacity(0.1),
-                borderRadius: BorderRadius.circular(16),
-              )
-            : null,
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(
-              icon,
-              color: isSelected
-                  ? AppTheme.primaryColor
-                  : AppTheme.textSecondaryColor,
-              size: 24,
-            ),
-            const SizedBox(height: 4),
-            Text(
-              label,
-              style: TextStyle(
-                fontSize: 12,
-                fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
-                color: isSelected
-                    ? AppTheme.primaryColor
-                    : AppTheme.textSecondaryColor,
-              ),
-            ),
-          ],
-        ),
+          NavigationDestinationM3E(
+            icon: Icon(CupertinoIcons.pencil_outline),
+            selectedIcon: Icon(CupertinoIcons.pencil_outline),
+            label: 'Paraphrase',
+          ),
+          NavigationDestinationM3E(
+            icon: Icon(CupertinoIcons.checkmark_seal),
+            selectedIcon: Icon(CupertinoIcons.checkmark_seal_fill),
+            label: 'Grammar',
+          ),
+          NavigationDestinationM3E(
+            icon: Icon(CupertinoIcons.gear),
+            selectedIcon: Icon(CupertinoIcons.gear_solid),
+            label: 'Settings',
+          ),
+        ],
       ),
     );
   }

@@ -5,8 +5,8 @@ import 'package:flutter/services.dart';
 import 'package:shimmer/shimmer.dart';
 import 'package:provider/provider.dart';
 import 'package:lottie/lottie.dart';
+import 'package:m3e_collection/m3e_collection.dart';
 
-import '../theme/app_theme.dart';
 import '../widgets/custom_app_bar.dart';
 import '../widgets/custom_button.dart';
 import '../providers/auth_provider.dart';
@@ -293,6 +293,12 @@ class _ToneEditorPageState extends State<ToneEditorPage> {
                 if (!isLoggedIn) const SizedBox(width: 8),
               ],
             ),
+            if (_isLoading)
+              LinearProgressIndicatorM3E(
+                shape: ProgressM3EShape.wavy,
+                size: LinearProgressM3ESize.s,
+                activeColor: Colors.teal,
+              ),
             Padding(
               padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
               child: DocumentInputWidget(
@@ -300,12 +306,14 @@ class _ToneEditorPageState extends State<ToneEditorPage> {
                 currentDocument: _loadedDocument,
                 onClear: _clearDocument,
                 accentColor: Colors.teal,
+                initialToolForViewer: 'tone',
                 onViewDocument: (doc) {
                   Navigator.push(
                     context,
                     MaterialPageRoute(
                       builder: (_) => DocumentViewerScreen(
                         document: doc,
+                        initialTool: 'tone',
                         onUseText: (text) {
                           _controller.text = text;
                         },
@@ -327,7 +335,7 @@ class _ToneEditorPageState extends State<ToneEditorPage> {
                     maxLines: null,
                     expands: true,
                     textAlignVertical: TextAlignVertical.top,
-                    style: AppTheme.bodyMedium,
+                    style: Theme.of(context).textTheme.bodyMedium!,
                     decoration: InputDecoration(
                       hintText: "Enter text to adjust its tone...",
                       contentPadding: const EdgeInsets.symmetric(
@@ -337,7 +345,7 @@ class _ToneEditorPageState extends State<ToneEditorPage> {
                         borderSide: BorderSide.none,
                       ),
                       filled: true,
-                      fillColor: AppTheme.cardColor,
+                      fillColor: Theme.of(context).colorScheme.surface,
                     ),
                   ),
                 ),
@@ -347,7 +355,7 @@ class _ToneEditorPageState extends State<ToneEditorPage> {
               padding: const EdgeInsets.symmetric(horizontal: 16),
               child: Row(
                 children: [
-                  Text("Target Tone:", style: AppTheme.bodySmall.copyWith(fontWeight: FontWeight.w600)),
+                  Text("Target Tone:", style: Theme.of(context).textTheme.bodySmall!.copyWith(fontWeight: FontWeight.w600)),
                   SizedBox(width: 8),
                   Expanded(
                     child: Container(
@@ -374,8 +382,8 @@ class _ToneEditorPageState extends State<ToneEditorPage> {
                             size: 16,
                           ),
                           borderRadius: BorderRadius.circular(10),
-                          dropdownColor: AppTheme.cardColor,
-                          style: AppTheme.bodyMedium.copyWith(
+                          dropdownColor: Theme.of(context).colorScheme.surface,
+                          style: Theme.of(context).textTheme.bodyMedium!.copyWith(
                             color: Colors.teal.shade700,
                             fontWeight: FontWeight.w500,
                           ),
@@ -387,7 +395,7 @@ class _ToneEditorPageState extends State<ToneEditorPage> {
                                 style: TextStyle(
                                   color: tone == _selectedTone
                                       ? Colors.teal
-                                      : AppTheme.textPrimaryColor,
+                                      : Theme.of(context).colorScheme.onSurface,
                                 ),
                               ),
                             );
@@ -442,8 +450,8 @@ class _ToneEditorPageState extends State<ToneEditorPage> {
                         child: Text(
                           "Enter or paste text and select a tone to apply",
                           textAlign: TextAlign.center,
-                          style: AppTheme.bodyMedium.copyWith(
-                            color: AppTheme.textSecondaryColor,
+                          style: Theme.of(context).textTheme.bodyMedium!.copyWith(
+                            color: Theme.of(context).colorScheme.onSurfaceVariant,
                           ),
                         ),
                       ),

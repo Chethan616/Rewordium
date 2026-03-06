@@ -1,0 +1,129 @@
+# navigation_rail_m3e
+
+Material 3 **Expressive** Navigation Rail for Flutter — featuring **collapsed** & **expanded** variants,
+**modal** and **standard** presentation, **sections**, **badges**, **menu** and **FAB** slots, and smooth
+**expand/collapse transitions**. Built to match the M3 Expressive spec and integrate with the `m3e_design`
+token package.
+
+<img src="https://raw.githubusercontent.com/EmilyMonestone/material_3_expressive/main/.github/images/nav_rail_m3e_cover.png" width="980"/>
+
+## Highlights
+
+- Collapsed (96 dp) and Expanded (220–360 dp) rails with animated transition
+- Expanded **modal** presentation with scrim
+- Optional menu and FAB/Extended FAB slots
+- Item badges (large numeric & small dot)
+- Sections with headers; full-width hit targets
+- Token-driven colors, typography & shapes via `m3e_design` (with safe fallbacks)
+
+## Quick start
+
+```dart
+NavigationRailM3E(
+  type: NavigationRailM3EType.expanded,
+  modality: NavigationRailM3EModality.standard,
+  selectedIndex: 0,
+  onDestinationSelected: (i) => setState(() => _index = i),
+  onTypeChanged: (t) => setState(() => type = t),
+  fab: NavigationRailM3EFabSlot(icon: const Icon(Icons.add), label: 'New', onPressed: () {}),
+  sections: [
+    NavigationRailM3ESection(
+      header: const Text('Main'),
+      destinations: [
+        NavigationRailM3EDestination(
+          icon: const Icon(Icons.edit_outlined),
+          selectedIcon: const Icon(Icons.edit),
+          label: 'Edit',
+          largeBadgeCount: 0,
+        ),
+        NavigationRailM3EDestination(
+          icon: const Icon(Icons.star_outline),
+          selectedIcon: const Icon(Icons.star),
+          label: 'Starred',
+          smallBadge: true,
+        ),
+      ],
+    ),
+  ],
+);
+```
+
+See the `/example` app for a runnable demo.
+
+---
+
+## Live demo (Gallery)
+
+Explore this component in the M3E Gallery (GitHub Pages):
+
+https://<your-github-username>.github.io/material_3_expressive/
+
+To run the Gallery locally:
+
+```sh
+cd apps/gallery
+flutter run -d chrome
+```
+
+_Last updated: 2025-10-23_
+
+
+---
+
+## Detailed Guide
+
+### What this package provides
+NavigationRailM3E with collapsed/expanded states, standard/modal presentation, badges, sections, and slots for FAB/menu. Integrates tightly with M3E tokens.
+
+### Installation
+- Monorepo (local path): already configured alongside m3e_design, fab_m3e, icon_button_m3e, button_m3e.
+- Pub (when published):
+```yaml
+dependencies:
+  navigation_rail_m3e: ^0.1.0
+  m3e_design: ^0.1.0
+  fab_m3e: ^0.1.0
+  icon_button_m3e: ^0.1.1
+  button_m3e: ^0.1.0
+```
+
+Minimum SDK: Dart >=3.0.0.
+
+### Dependencies
+- flutter
+- m3e_design, fab_m3e, icon_button_m3e, button_m3e
+
+### Quick start
+```dart
+NavigationRailM3E(
+  selectedIndex: 0,
+  onDestinationSelected: (i) {},
+  expanded: true,
+  modal: false,
+  leading: const FabM3E(icon: Icon(Icons.add)),
+  destinations: const [
+    NavigationRailDestinationM3E(icon: Icon(Icons.inbox), label: 'Inbox'),
+    NavigationRailDestinationM3E(icon: Icon(Icons.send), label: 'Sent'),
+  ],
+)
+```
+
+### Key parameters
+- expanded: bool — Expanded vs collapsed rail.
+- modal: bool — Modal overlay vs standard inline rail.
+- destinations: List<NavigationRailDestinationM3E> — Items to render.
+- selectedIndex: int; onDestinationSelected: ValueChanged<int> — Selection handling.
+- leading / trailing: Widget? — Header/footer area.
+- fab / menu slots: Widgets for actions and menus.
+- badgeBuilder / badgeCount: Optional per-item badges.
+
+### Theming with m3e_design
+Rail colors, indicator style, and typography adapt from M3ETheme.
+
+### Accessibility
+- Keyboard navigation, focus order, and semantics supported.
+
+### Links
+- Repository: https://github.com/EmilyMoonstone/material_3_expressive/tree/main/packages/navigation_rail_m3e
+- Issue tracker: https://github.com/EmilyMonestone/material_3_expressive/issues
+- Changelog: ./CHANGELOG.md

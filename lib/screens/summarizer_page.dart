@@ -4,8 +4,8 @@ import 'package:animate_do/animate_do.dart';
 import 'package:flutter/services.dart';
 import 'package:shimmer/shimmer.dart';
 import 'package:provider/provider.dart';
+import 'package:m3e_collection/m3e_collection.dart';
 
-import '../theme/app_theme.dart';
 import '../widgets/custom_app_bar.dart';
 import '../widgets/custom_button.dart';
 import '../utils/lottie_assets.dart';
@@ -230,6 +230,12 @@ class _SummarizerPageState extends State<SummarizerPage> {
                 if (!isLoggedIn) const SizedBox(width: 8),
               ],
             ),
+            if (_isLoading)
+              LinearProgressIndicatorM3E(
+                shape: ProgressM3EShape.wavy,
+                size: LinearProgressM3ESize.s,
+                activeColor: Colors.orange,
+              ),
             Padding(
               padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
               child: DocumentInputWidget(
@@ -237,12 +243,14 @@ class _SummarizerPageState extends State<SummarizerPage> {
                 currentDocument: _loadedDocument,
                 onClear: _clearDocument,
                 accentColor: Colors.orange,
+                initialToolForViewer: 'summarize',
                 onViewDocument: (doc) {
                   Navigator.push(
                     context,
                     MaterialPageRoute(
                       builder: (_) => DocumentViewerScreen(
                         document: doc,
+                        initialTool: 'summarize',
                         onUseText: (text) {
                           _controller.text = text;
                         },
@@ -264,7 +272,7 @@ class _SummarizerPageState extends State<SummarizerPage> {
                     maxLines: null,
                     expands: true,
                     textAlignVertical: TextAlignVertical.top,
-                    style: AppTheme.bodyMedium,
+                    style: Theme.of(context).textTheme.bodyMedium!,
                     decoration: InputDecoration(
                       hintText: "Enter text to summarize...",
                       contentPadding: const EdgeInsets.symmetric(
@@ -274,7 +282,7 @@ class _SummarizerPageState extends State<SummarizerPage> {
                         borderSide: BorderSide.none,
                       ),
                       filled: true,
-                      fillColor: AppTheme.cardColor,
+                      fillColor: Theme.of(context).colorScheme.surface,
                     ),
                   ),
                 ),
@@ -284,7 +292,7 @@ class _SummarizerPageState extends State<SummarizerPage> {
               padding: const EdgeInsets.symmetric(horizontal: 16),
               child: Row(
                 children: [
-                  Text("Summary Length:", style: AppTheme.bodySmall.copyWith(fontWeight: FontWeight.w600)),
+                  Text("Summary Length:", style: Theme.of(context).textTheme.bodySmall!.copyWith(fontWeight: FontWeight.w600)),
                   SizedBox(width: 8),
                   Expanded(
                     child: Container(
@@ -311,8 +319,8 @@ class _SummarizerPageState extends State<SummarizerPage> {
                             size: 16,
                           ),
                           borderRadius: BorderRadius.circular(10),
-                          dropdownColor: AppTheme.cardColor,
-                          style: AppTheme.bodyMedium.copyWith(
+                          dropdownColor: Theme.of(context).colorScheme.surface,
+                          style: Theme.of(context).textTheme.bodyMedium!.copyWith(
                             color: Colors.orange.shade700,
                             fontWeight: FontWeight.w500,
                           ),
@@ -324,7 +332,7 @@ class _SummarizerPageState extends State<SummarizerPage> {
                                 style: TextStyle(
                                   color: length == _selectedLength
                                       ? Colors.orange
-                                      : AppTheme.textPrimaryColor,
+                                      : Theme.of(context).colorScheme.onSurface,
                                 ),
                               ),
                             );
@@ -368,8 +376,8 @@ class _SummarizerPageState extends State<SummarizerPage> {
                         child: Text(
                           "Enter or paste text to create a concise summary",
                           textAlign: TextAlign.center,
-                          style: AppTheme.bodyMedium.copyWith(
-                            color: AppTheme.textSecondaryColor,
+                          style: Theme.of(context).textTheme.bodyMedium!.copyWith(
+                            color: Theme.of(context).colorScheme.onSurfaceVariant,
                           ),
                         ),
                       ),

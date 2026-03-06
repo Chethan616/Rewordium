@@ -2,11 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/services.dart';
 import 'package:url_launcher/url_launcher.dart';
-import '../theme/app_theme.dart';
-import 'installer_verification_screen.dart';
+import '../services/play_integrity_service.dart';
+import 'splash_screen.dart';
 
 /// Full-screen blocking page shown when Play Integrity check fails.
-/// Uses the same design language as the rest of the app (AppTheme).
+/// Uses the same design language as the rest of the app (Theme).
 /// This screen cannot be dismissed or navigated away from.
 class IntegrityBlockedScreen extends StatelessWidget {
   final String reason;
@@ -31,7 +31,7 @@ class IntegrityBlockedScreen extends StatelessWidget {
     return PopScope(
       canPop: false,
       child: Scaffold(
-        backgroundColor: AppTheme.backgroundColor,
+        backgroundColor: Theme.of(context).colorScheme.surfaceContainerLow,
         body: SafeArea(
           child: SingleChildScrollView(
             physics: const BouncingScrollPhysics(),
@@ -46,13 +46,13 @@ class IntegrityBlockedScreen extends StatelessWidget {
                     width: 96,
                     height: 96,
                     decoration: BoxDecoration(
-                      color: AppTheme.errorColor.withOpacity(0.1),
+                      color: Theme.of(context).colorScheme.error.withValues(alpha: 0.1),
                       shape: BoxShape.circle,
                     ),
                     child: Icon(
                       CupertinoIcons.shield_slash,
                       size: 48,
-                      color: AppTheme.errorColor,
+                      color: Theme.of(context).colorScheme.error,
                     ),
                   ),
 
@@ -61,8 +61,8 @@ class IntegrityBlockedScreen extends StatelessWidget {
                   // Title
                   Text(
                     'Unauthorized Copy',
-                    style: AppTheme.headingLarge.copyWith(
-                      color: AppTheme.textPrimaryColor,
+                    style: Theme.of(context).textTheme.headlineMedium!.copyWith(
+                      color: Theme.of(context).colorScheme.onSurface,
                     ),
                   ),
 
@@ -74,8 +74,8 @@ class IntegrityBlockedScreen extends StatelessWidget {
                     child: Text(
                       'This app was not installed from the Google Play Store and cannot be used.',
                       textAlign: TextAlign.center,
-                      style: AppTheme.bodyMedium.copyWith(
-                        color: AppTheme.textSecondaryColor,
+                      style: Theme.of(context).textTheme.bodyMedium!.copyWith(
+                        color: Theme.of(context).colorScheme.onSurfaceVariant,
                         height: 1.5,
                       ),
                     ),
@@ -87,20 +87,32 @@ class IntegrityBlockedScreen extends StatelessWidget {
                   Container(
                     width: double.infinity,
                     padding: const EdgeInsets.all(20),
-                    decoration: AppTheme.cardDecoration,
+                    decoration: BoxDecoration(
+                      color: Theme.of(context).colorScheme.surface,
+                      borderRadius: BorderRadius.circular(28),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withValues(alpha: Theme.of(context).brightness == Brightness.dark ? 0.25 : 0.06),
+                          offset: const Offset(0, 2),
+                          blurRadius: 12,
+                        ),
+                      ],
+                    ),
                     child: Column(
                       children: [
                         _buildInfoRow(
+                          context,
                           CupertinoIcons.arrow_down_circle,
                           'Install from Play Store',
                           'Only official installs are allowed',
-                          AppTheme.primaryColor,
+                          Theme.of(context).colorScheme.primary,
                         ),
                         Divider(
                           height: 28,
-                          color: AppTheme.textSecondaryColor.withOpacity(0.15),
+                          color: Theme.of(context).colorScheme.onSurfaceVariant.withValues(alpha: 0.15),
                         ),
                         _buildInfoRow(
+                          context,
                           CupertinoIcons.shield_fill,
                           'Your data stays safe',
                           'This prevents tampered versions',
@@ -108,9 +120,10 @@ class IntegrityBlockedScreen extends StatelessWidget {
                         ),
                         Divider(
                           height: 28,
-                          color: AppTheme.textSecondaryColor.withOpacity(0.15),
+                          color: Theme.of(context).colorScheme.onSurfaceVariant.withValues(alpha: 0.15),
                         ),
                         _buildInfoRow(
+                          context,
                           CupertinoIcons.delete,
                           'Uninstall this copy',
                           'Then download from Play Store',
@@ -137,7 +150,7 @@ class IntegrityBlockedScreen extends StatelessWidget {
                         ),
                       ),
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: AppTheme.primaryColor,
+                        backgroundColor: Theme.of(context).colorScheme.primary,
                         foregroundColor: Colors.white,
                         elevation: 0,
                         shape: RoundedRectangleBorder(
@@ -154,25 +167,29 @@ class IntegrityBlockedScreen extends StatelessWidget {
                     width: double.infinity,
                     height: 52,
                     child: OutlinedButton.icon(
-                      onPressed: () {
-                        Navigator.of(context).pushReplacement(
-                          MaterialPageRoute(
-                            builder: (_) => const InstallerVerificationScreen(),
-                          ),
-                        );
+                      onPressed: () async {
+                        // Clear cached result so splash re-runs a live check.
+                        await PlayIntegrityService.clearCache();
+                        if (context.mounted) {
+                          Navigator.of(context).pushReplacement(
+                            MaterialPageRoute(
+                              builder: (_) => const SplashScreen(),
+                            ),
+                          );
+                        }
                       },
-                      icon: Icon(CupertinoIcons.arrow_counterclockwise, size: 16, color: AppTheme.primaryColor),
+                      icon: Icon(CupertinoIcons.arrow_counterclockwise, size: 16, color: Theme.of(context).colorScheme.primary),
                       label: Text(
                         'Retry Verification',
                         style: TextStyle(
                           fontSize: 16,
                           fontWeight: FontWeight.w600,
-                          color: AppTheme.primaryColor,
+                          color: Theme.of(context).colorScheme.primary,
                         ),
                       ),
                       style: OutlinedButton.styleFrom(
                         side: BorderSide(
-                          color: AppTheme.primaryColor.withOpacity(0.3),
+                          color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.3),
                         ),
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(16),
@@ -191,18 +208,18 @@ class IntegrityBlockedScreen extends StatelessWidget {
                       onPressed: () {
                         SystemNavigator.pop();
                       },
-                      icon: Icon(CupertinoIcons.xmark, size: 16, color: AppTheme.textSecondaryColor),
+                      icon: Icon(CupertinoIcons.xmark, size: 16, color: Theme.of(context).colorScheme.onSurfaceVariant),
                       label: Text(
                         'Close App',
                         style: TextStyle(
                           fontSize: 16,
                           fontWeight: FontWeight.w600,
-                          color: AppTheme.textSecondaryColor,
+                          color: Theme.of(context).colorScheme.onSurfaceVariant,
                         ),
                       ),
                       style: OutlinedButton.styleFrom(
                         side: BorderSide(
-                          color: AppTheme.textSecondaryColor.withOpacity(0.3),
+                          color: Theme.of(context).colorScheme.onSurfaceVariant.withValues(alpha: 0.3),
                         ),
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(16),
@@ -216,8 +233,8 @@ class IntegrityBlockedScreen extends StatelessWidget {
                   // Small footer
                   Text(
                     'Rewordium Security',
-                    style: AppTheme.bodySmall.copyWith(
-                      color: AppTheme.textSecondaryColor.withOpacity(0.5),
+                    style: Theme.of(context).textTheme.bodySmall!.copyWith(
+                      color: Theme.of(context).colorScheme.onSurfaceVariant.withValues(alpha: 0.5),
                       letterSpacing: 1.0,
                       fontSize: 11,
                     ),
@@ -234,6 +251,7 @@ class IntegrityBlockedScreen extends StatelessWidget {
   }
 
   Widget _buildInfoRow(
+    BuildContext context,
     IconData icon,
     String title,
     String subtitle,
@@ -245,7 +263,7 @@ class IntegrityBlockedScreen extends StatelessWidget {
           width: 40,
           height: 40,
           decoration: BoxDecoration(
-            color: iconColor.withOpacity(0.12),
+            color: iconColor.withValues(alpha: 0.12),
             borderRadius: BorderRadius.circular(10),
           ),
           child: Icon(icon, color: iconColor, size: 20),
@@ -257,15 +275,15 @@ class IntegrityBlockedScreen extends StatelessWidget {
             children: [
               Text(
                 title,
-                style: AppTheme.bodyMedium.copyWith(
+                style: Theme.of(context).textTheme.bodyMedium!.copyWith(
                   fontWeight: FontWeight.w600,
                 ),
               ),
               const SizedBox(height: 2),
               Text(
                 subtitle,
-                style: AppTheme.bodySmall.copyWith(
-                  color: AppTheme.textSecondaryColor,
+                style: Theme.of(context).textTheme.bodySmall!.copyWith(
+                  color: Theme.of(context).colorScheme.onSurfaceVariant,
                   fontSize: 12,
                 ),
               ),

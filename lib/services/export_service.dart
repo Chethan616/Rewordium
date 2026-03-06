@@ -5,7 +5,6 @@ import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
 import 'package:path_provider/path_provider.dart';
 import 'package:share_plus/share_plus.dart';
-import '../theme/app_theme.dart';
 
 /// Service for exporting processed text as PDF, DOCX (TXT-based), or TXT files.
 /// Provides a bottom sheet UI for format selection.
@@ -394,7 +393,7 @@ class _ExportBottomSheetState extends State<_ExportBottomSheet> {
   Widget build(BuildContext context) {
     return Container(
       decoration: BoxDecoration(
-        color: AppTheme.cardColor,
+        color: Theme.of(context).colorScheme.surface,
         borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
       ),
       padding: const EdgeInsets.fromLTRB(20, 12, 20, 32),
@@ -406,7 +405,7 @@ class _ExportBottomSheetState extends State<_ExportBottomSheet> {
             width: 36,
             height: 5,
             decoration: BoxDecoration(
-              color: AppTheme.textSecondaryColor.withOpacity(0.3),
+              color: Theme.of(context).colorScheme.onSurfaceVariant.withValues(alpha: 0.3),
               borderRadius: BorderRadius.circular(3),
             ),
           ),
@@ -415,13 +414,13 @@ class _ExportBottomSheetState extends State<_ExportBottomSheet> {
           // Title
           Text(
             'Export As',
-            style: AppTheme.headingSmall,
+            style: Theme.of(context).textTheme.titleLarge!,
           ),
           const SizedBox(height: 4),
           Text(
             'Choose a format to export your results',
-            style: AppTheme.bodySmall.copyWith(
-              color: AppTheme.textSecondaryColor,
+            style: Theme.of(context).textTheme.bodySmall!.copyWith(
+              color: Theme.of(context).colorScheme.onSurfaceVariant,
             ),
           ),
           const SizedBox(height: 24),
@@ -447,7 +446,7 @@ class _ExportBottomSheetState extends State<_ExportBottomSheet> {
             icon: CupertinoIcons.doc_plaintext,
             label: 'Plain Text',
             subtitle: 'Simple text file (.txt)',
-            color: AppTheme.textSecondaryColor,
+            color: Theme.of(context).colorScheme.onSurfaceVariant,
             format: 'txt',
           ),
 
@@ -461,7 +460,7 @@ class _ExportBottomSheetState extends State<_ExportBottomSheet> {
               onPressed: _isExporting ? null : () => Navigator.pop(context),
               style: OutlinedButton.styleFrom(
                 side: BorderSide(
-                  color: AppTheme.textSecondaryColor.withOpacity(0.3),
+                  color: Theme.of(context).colorScheme.onSurfaceVariant.withValues(alpha: 0.3),
                 ),
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(16),
@@ -470,7 +469,7 @@ class _ExportBottomSheetState extends State<_ExportBottomSheet> {
               child: Text(
                 'Cancel',
                 style: TextStyle(
-                  color: AppTheme.textSecondaryColor,
+                  color: Theme.of(context).colorScheme.onSurfaceVariant,
                   fontWeight: FontWeight.w600,
                 ),
               ),
@@ -500,7 +499,7 @@ class _ExportBottomSheetState extends State<_ExportBottomSheet> {
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(16),
             border: Border.all(
-              color: AppTheme.textSecondaryColor.withOpacity(0.15),
+              color: Theme.of(context).colorScheme.onSurfaceVariant.withValues(alpha: 0.15),
             ),
           ),
           child: Row(
@@ -509,7 +508,7 @@ class _ExportBottomSheetState extends State<_ExportBottomSheet> {
                 width: 44,
                 height: 44,
                 decoration: BoxDecoration(
-                  color: color.withOpacity(0.1),
+                  color: color.withValues(alpha: 0.1),
                   borderRadius: BorderRadius.circular(12),
                 ),
                 child: isLoading
@@ -529,15 +528,15 @@ class _ExportBottomSheetState extends State<_ExportBottomSheet> {
                   children: [
                     Text(
                       label,
-                      style: AppTheme.bodyMedium.copyWith(
+                      style: Theme.of(context).textTheme.bodyMedium!.copyWith(
                         fontWeight: FontWeight.w600,
                       ),
                     ),
                     const SizedBox(height: 2),
                     Text(
                       subtitle,
-                      style: AppTheme.bodySmall.copyWith(
-                        color: AppTheme.textSecondaryColor,
+                      style: Theme.of(context).textTheme.bodySmall!.copyWith(
+                        color: Theme.of(context).colorScheme.onSurfaceVariant,
                         fontSize: 12,
                       ),
                     ),
@@ -546,7 +545,7 @@ class _ExportBottomSheetState extends State<_ExportBottomSheet> {
               ),
               Icon(
                 CupertinoIcons.chevron_right,
-                color: AppTheme.textSecondaryColor.withOpacity(0.5),
+                color: Theme.of(context).colorScheme.onSurfaceVariant.withValues(alpha: 0.5),
                 size: 18,
               ),
             ],

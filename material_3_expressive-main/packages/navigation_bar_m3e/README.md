@@ -1,0 +1,152 @@
+# navigation_bar_m3e
+
+Material 3 **Expressive** Navigation Bar for Flutter with badges, pill/underline indicators, and token-driven styling.
+
+- `NavigationBarM3E` — wrapper around Flutter's `NavigationBar` with M3E tokens
+- `NavigationDestinationM3E` — destination data (icon, selectedIcon, label, badge)
+- `NavBadgeM3E` — small badge/dot utility for icons
+
+All styling is driven by the `m3e_design` ThemeExtension (**M3ETheme**).
+
+## Monorepo Layout
+
+```
+packages/
+  m3e_design/
+  navigation_bar_m3e/
+```
+
+`pubspec.yaml` references `../m3e_design`.
+
+## Usage
+
+```dart
+import 'package:navigation_bar_m3e/navigation_bar_m3e.dart';
+
+final items = [
+  const NavigationDestinationM3E(
+    icon: Icon(Icons.home_outlined),
+    selectedIcon: Icon(Icons.home),
+    label: 'Home',
+  ),
+  const NavigationDestinationM3E(
+    icon: Icon(Icons.search),
+    label: 'Search',
+    badgeCount: 3,
+  ),
+  const NavigationDestinationM3E(
+    icon: Icon(Icons.person),
+    label: 'Profile',
+    badgeDot: true,
+  ),
+];
+
+NavigationBarM3E(
+  destinations: items,
+  selectedIndex: 0,
+  onDestinationSelected: (i) {},
+  labelBehavior: NavBarM3ELabelBehavior.onlySelected,
+  indicatorStyle: NavBarM3EIndicatorStyle.pill, // pill | underline | none
+  size: NavBarM3ESize.medium,
+  density: NavBarM3EDensity.regular,
+  shapeFamily: NavBarM3EShapeFamily.round,
+);
+```
+
+## Tokens mapping
+
+- **Container**: `surfaceContainerHigh`
+- **Indicator**: `secondaryContainer` (color), pill shape by default; `underline` style uses a bottom border
+- **Selected**: `onSecondaryContainer` (icon/label)
+- **Unselected**: `onSurfaceVariant`
+- **Label style**: `labelMedium`
+- **Heights**: `small ≈64dp`, `medium ≈80dp`
+- **Icon size**: `24dp`
+
+## Badges
+
+Use `badgeCount` for numeric badges or `badgeDot: true` for a small dot. Colors default to `errorContainer / onErrorContainer` and can be overridden via `NavBadgeM3E`.
+
+## Accessibility
+
+- Provide `semanticLabel` per destination (used as tooltip) or on the bar.
+- Label behavior options: **alwaysShow**, **onlySelected**, or **alwaysHide**.
+
+## License
+
+MIT
+
+
+---
+
+## Live demo (Gallery)
+
+Explore this component in the M3E Gallery (GitHub Pages):
+
+https://<your-github-username>.github.io/material_3_expressive/
+
+To run the Gallery locally:
+
+```sh
+cd apps/gallery
+flutter run -d chrome
+```
+
+_Last updated: 2025-10-23_
+
+
+---
+
+## Detailed Guide
+
+### What this package provides
+NavigationBarM3E with M3E tokens for colors and shapes, badges, and adaptive layout behavior.
+
+### Installation
+- Monorepo (local path): already configured alongside m3e_design.
+- Pub (when published):
+```yaml
+dependencies:
+  navigation_bar_m3e: ^0.1.0
+  m3e_design: ^0.1.0
+```
+
+Minimum SDK: Dart >=3.5.0; Flutter >=3.22.0.
+
+### Dependencies
+- flutter
+- m3e_design
+
+### Quick start
+```dart
+int index = 0;
+
+NavigationBarM3E(
+  selectedIndex: index,
+  onDestinationSelected: (i) => setState(() => index = i),
+  destinations: const [
+    NavigationDestinationM3E(icon: Icon(Icons.home), label: 'Home'),
+    NavigationDestinationM3E(icon: Icon(Icons.search), label: 'Search'),
+    NavigationDestinationM3E(icon: Icon(Icons.person), label: 'Profile'),
+  ],
+)
+```
+
+### Key parameters
+- destinations: List<NavigationDestinationM3E> — Destinations to render.
+- selectedIndex: int — Current selection.
+- onDestinationSelected: ValueChanged<int> — Selection callback.
+- badgeBuilder / badgeCount: Optional badges per destination.
+- backgroundColor / indicatorColor: Color? — Override token-driven colors.
+- height / labelBehavior: Layout tweaks.
+
+### Theming with m3e_design
+Colors/shape/typography adapt from the active M3ETheme extension.
+
+### Accessibility
+- Labels visible or via semantics; badges have semantics descriptions.
+
+### Links
+- Repository: https://github.com/EmilyMoonstone/material_3_expressive/tree/main/packages/navigation_bar_m3e
+- Issue tracker: https://github.com/EmilyMonestone/material_3_expressive/issues
+- Changelog: ./CHANGELOG.md

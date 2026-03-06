@@ -2,16 +2,18 @@ import 'package:flutter/material.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/foundation.dart';
 import 'package:animate_do/animate_do.dart';
-import '../theme/app_theme.dart';
+import 'package:m3e_collection/m3e_collection.dart';
 import '../models/document_result.dart';
 import '../services/document_service.dart';
 import '../widgets/url_import_dialog.dart';
+import '../screens/document_viewer_screen.dart';
 
 /// A reusable widget providing document import options (file picker, camera scan, URL).
 /// Drop this into any tool screen between instruction text and text input.
 ///
-/// When a document is imported, [onTextExtracted] is called with the extracted
-/// text and a [DocumentResult] containing metadata.
+/// When a document is imported, behaviour depends on [initialToolForViewer]:
+///  • If set, navigates to [DocumentViewerScreen] with the tool pre-selected.
+///  • Otherwise, calls [onTextExtracted] with the extracted text.
 class DocumentInputWidget extends StatefulWidget {
   /// Called when text is successfully extracted from a document.
   final void Function(String text, DocumentResult document) onTextExtracted;
@@ -28,6 +30,11 @@ class DocumentInputWidget extends StatefulWidget {
   /// Accent color for the widget (matches the tool's theme color).
   final Color accentColor;
 
+  /// When set, importing a document opens [DocumentViewerScreen] with this
+  /// tool pre-selected (e.g. 'grammar', 'paraphrase', 'ai_detect').
+  /// The "Use This Text" button in the viewer sends text back via [onTextExtracted].
+  final String? initialToolForViewer;
+
   const DocumentInputWidget({
     super.key,
     required this.onTextExtracted,
@@ -35,6 +42,7 @@ class DocumentInputWidget extends StatefulWidget {
     this.currentDocument,
     this.onClear,
     this.accentColor = const Color(0xFF009B6E),
+    this.initialToolForViewer,
   });
 
   @override
@@ -58,7 +66,7 @@ class _DocumentInputWidgetState extends State<DocumentInputWidget> {
     try {
       final result = await DocumentService.pickFile();
       if (result != null && result.text.isNotEmpty) {
-        widget.onTextExtracted(result.text, result);
+        _handleImportResult(result);
       } else if (result != null && result.text.isEmpty) {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
@@ -92,7 +100,7 @@ class _DocumentInputWidgetState extends State<DocumentInputWidget> {
     try {
       final result = await DocumentService.scanDocument();
       if (result != null && result.text.isNotEmpty) {
-        widget.onTextExtracted(result.text, result);
+        _handleImportResult(result);
       } else if (result != null && result.text.isEmpty) {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
@@ -122,10 +130,31 @@ class _DocumentInputWidgetState extends State<DocumentInputWidget> {
       isScrollControlled: true,
       builder: (context) => UrlImportDialog(
         onImported: (result) {
-          widget.onTextExtracted(result.text, result);
+          _handleImportResult(result);
         },
       ),
     );
+  }
+
+  /// Central handler for import results. If [initialToolForViewer] is set,
+  /// navigates to [DocumentViewerScreen]; otherwise calls [onTextExtracted].
+  void _handleImportResult(DocumentResult result) {
+    if (widget.initialToolForViewer != null && mounted) {
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (_) => DocumentViewerScreen(
+            document: result,
+            initialTool: widget.initialToolForViewer,
+            onUseText: (text) {
+              widget.onTextExtracted(text, result);
+            },
+          ),
+        ),
+      );
+    } else {
+      widget.onTextExtracted(result.text, result);
+    }
   }
 
   @override
@@ -175,7 +204,7 @@ class _DocumentInputWidgetState extends State<DocumentInputWidget> {
                     children: [
                       Text(
                         doc.title ?? doc.typeLabel,
-                        style: AppTheme.bodyMedium.copyWith(
+                        style: Theme.of(context).textTheme.bodyMedium!.copyWith(
                           fontWeight: FontWeight.w600,
                           fontSize: 13,
                         ),
@@ -185,8 +214,8 @@ class _DocumentInputWidgetState extends State<DocumentInputWidget> {
                       const SizedBox(height: 2),
                       Text(
                         doc.summary,
-                        style: AppTheme.bodySmall.copyWith(
-                          color: AppTheme.textSecondaryColor,
+                        style: Theme.of(context).textTheme.bodySmall!.copyWith(
+                          color: Theme.of(context).colorScheme.onSurfaceVariant,
                           fontSize: 11,
                         ),
                       ),
@@ -217,7 +246,7 @@ class _DocumentInputWidgetState extends State<DocumentInputWidget> {
                   child: Icon(
                     CupertinoIcons.xmark_circle_fill,
                     size: 18,
-                    color: AppTheme.textSecondaryColor.withOpacity(0.5),
+                    color: Theme.of(context).colorScheme.onSurfaceVariant.withValues(alpha: 0.5),
                   ),
                 ),
               ),
@@ -245,16 +274,17 @@ class _DocumentInputWidgetState extends State<DocumentInputWidget> {
             SizedBox(
               width: 18,
               height: 18,
-              child: CircularProgressIndicator(
-                strokeWidth: 2,
-                valueColor: AlwaysStoppedAnimation<Color>(widget.accentColor),
+              child: CircularProgressIndicatorM3E(
+                shape: ProgressM3EShape.wavy,
+                size: CircularProgressM3ESize.s,
+                activeColor: widget.accentColor,
               ),
             ),
             const SizedBox(width: 10),
             Text(
               _loadingLabel ?? 'Processing...',
-              style: AppTheme.bodySmall.copyWith(
-                color: AppTheme.textSecondaryColor,
+              style: Theme.of(context).textTheme.bodySmall!.copyWith(
+                color: Theme.of(context).colorScheme.onSurfaceVariant,
               ),
             ),
           ],
@@ -269,10 +299,10 @@ class _DocumentInputWidgetState extends State<DocumentInputWidget> {
         margin: const EdgeInsets.only(bottom: 12),
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
         decoration: BoxDecoration(
-          color: AppTheme.cardColor,
+          color: Theme.of(context).colorScheme.surface,
           borderRadius: BorderRadius.circular(12),
           border: Border.all(
-            color: AppTheme.textSecondaryColor.withOpacity(0.12),
+            color: Theme.of(context).colorScheme.onSurfaceVariant.withValues(alpha: 0.12),
           ),
         ),
         child: Row(

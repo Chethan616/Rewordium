@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:animate_do/animate_do.dart';
+import 'package:m3e_collection/m3e_collection.dart';
 
-import '../theme/app_theme.dart';
 import '../services/groq_service.dart';
 import '../services/unified_ai_service.dart';
 import '../services/jade_settings_controller.dart';
@@ -215,7 +215,7 @@ class _JadeChatScreenState extends State<JadeChatScreen>
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppTheme.backgroundColor,
+      backgroundColor: Theme.of(context).colorScheme.surfaceContainerLow,
       appBar: CustomAppBar(
         title: "Jade AI Assistant",
         showBackButton: true,
@@ -223,14 +223,14 @@ class _JadeChatScreenState extends State<JadeChatScreen>
         actions: [
           // Settings Help Button
           IconButton(
-            icon: Icon(Icons.help_outline, color: AppTheme.primaryColor),
+            icon: Icon(Icons.help_outline, color: Theme.of(context).colorScheme.primary),
             onPressed: () {
               _sendQuickMessage("What settings can you control?");
             },
             tooltip: "Settings Help",
           ),
           IconButton(
-            icon: Icon(Icons.refresh, color: AppTheme.primaryColor),
+            icon: Icon(Icons.refresh, color: Theme.of(context).colorScheme.primary),
             onPressed: () {
               setState(() {
                 _messages.clear();
@@ -247,9 +247,9 @@ class _JadeChatScreenState extends State<JadeChatScreen>
             begin: Alignment.topCenter,
             end: Alignment.bottomCenter,
             colors: [
-              AppTheme.backgroundColor,
-              AppTheme.backgroundColor.withOpacity(0.95),
-              AppTheme.primaryColor.withOpacity(0.05),
+              Theme.of(context).colorScheme.surfaceContainerLow,
+              Theme.of(context).colorScheme.surfaceContainerLow.withOpacity(0.95),
+              Theme.of(context).colorScheme.primary.withValues(alpha: 0.05),
             ],
           ),
         ),
@@ -285,10 +285,10 @@ class _JadeChatScreenState extends State<JadeChatScreen>
                     begin: Alignment.topLeft,
                     end: Alignment.bottomRight,
                     colors: [
-                      AppTheme.primaryColor.withOpacity(0.02),
-                      AppTheme.primaryColor.withOpacity(0.015),
-                      AppTheme.primaryColor.withOpacity(0.01),
-                      AppTheme.primaryColor.withOpacity(0.02),
+                      Theme.of(context).colorScheme.primary.withValues(alpha: 0.02),
+                      Theme.of(context).colorScheme.primary.withValues(alpha: 0.015),
+                      Theme.of(context).colorScheme.primary.withValues(alpha: 0.01),
+                      Theme.of(context).colorScheme.primary.withValues(alpha: 0.02),
                     ],
                     stops: const [0.0, 0.3, 0.7, 1.0],
                   ),
@@ -356,8 +356,8 @@ class _JadeChatScreenState extends State<JadeChatScreen>
                 children: [
                   Text(
                     "Jade",
-                    style: AppTheme.headingMedium.copyWith(
-                      color: AppTheme.primaryColor,
+                    style: Theme.of(context).textTheme.headlineMedium!.copyWith(
+                      color: Theme.of(context).colorScheme.primary,
                       fontWeight: FontWeight.bold,
                     ),
                   ),
@@ -374,8 +374,8 @@ class _JadeChatScreenState extends State<JadeChatScreen>
                       const SizedBox(width: 6),
                       Text(
                         "Online • AI Writing Assistant",
-                        style: AppTheme.bodySmall.copyWith(
-                          color: AppTheme.textSecondaryColor,
+                        style: Theme.of(context).textTheme.bodySmall!.copyWith(
+                          color: Theme.of(context).colorScheme.onSurfaceVariant,
                         ),
                       ),
                     ],
@@ -415,10 +415,10 @@ class _JadeChatScreenState extends State<JadeChatScreen>
                                 Colors.red.withOpacity(0.6)
                               ]
                             : [
-                                AppTheme.primaryColor.withOpacity(0.9),
-                                AppTheme.primaryColor.withOpacity(0.7),
-                                AppTheme.primaryColor.withOpacity(0.8),
-                                AppTheme.primaryColor.withOpacity(0.6),
+                                Theme.of(context).colorScheme.primary.withValues(alpha: 0.9),
+                                Theme.of(context).colorScheme.primary.withValues(alpha: 0.7),
+                                Theme.of(context).colorScheme.primary.withValues(alpha: 0.8),
+                                Theme.of(context).colorScheme.primary.withValues(alpha: 0.6),
                               ],
                       ),
                       borderRadius: BorderRadius.circular(18),
@@ -426,7 +426,7 @@ class _JadeChatScreenState extends State<JadeChatScreen>
                         BoxShadow(
                           color: message.isError
                               ? Colors.red.withOpacity(0.3)
-                              : AppTheme.primaryColor.withOpacity(0.3),
+                              : Theme.of(context).colorScheme.primary.withValues(alpha: 0.3),
                           blurRadius: 8,
                           offset: const Offset(0, 4),
                         ),
@@ -442,7 +442,7 @@ class _JadeChatScreenState extends State<JadeChatScreen>
                           : Container(
                               margin: const EdgeInsets.all(2),
                               decoration: BoxDecoration(
-                                color: AppTheme.cardColor,
+                                color: Theme.of(context).colorScheme.surface,
                                 borderRadius: BorderRadius.circular(16),
                               ),
                             child: const Center(
@@ -469,8 +469,8 @@ class _JadeChatScreenState extends State<JadeChatScreen>
                       end: Alignment.bottomRight,
                       colors: message.isUser
                           ? [
-                              AppTheme.primaryColor,
-                              AppTheme.primaryColor.withOpacity(0.8),
+                              Theme.of(context).colorScheme.primary,
+                              Theme.of(context).colorScheme.primary.withValues(alpha: 0.8),
                             ]
                           : message.isError
                               ? [
@@ -478,8 +478,8 @@ class _JadeChatScreenState extends State<JadeChatScreen>
                                   Colors.red.withOpacity(0.05)
                                 ]
                               : [
-                                  AppTheme.cardColor,
-                                  AppTheme.cardColor.withOpacity(0.9),
+                                  Theme.of(context).colorScheme.surface,
+                                  Theme.of(context).colorScheme.surface.withOpacity(0.9),
                                 ],
                     ),
                     borderRadius: BorderRadius.only(
@@ -496,11 +496,11 @@ class _JadeChatScreenState extends State<JadeChatScreen>
                         ? Border.all(color: Colors.red.withOpacity(0.3))
                         : message.isUser
                             ? null
-                            : Border.all(color: AppTheme.textSecondaryColor.withOpacity(0.1)),
+                            : Border.all(color: Theme.of(context).colorScheme.onSurfaceVariant.withOpacity(0.1)),
                     boxShadow: [
                       BoxShadow(
                         color: message.isUser
-                            ? AppTheme.primaryColor.withOpacity(0.2)
+                            ? Theme.of(context).colorScheme.primary.withValues(alpha: 0.2)
                             : Colors.black.withOpacity(0.05),
                         blurRadius: 8,
                         offset: const Offset(0, 2),
@@ -512,21 +512,21 @@ class _JadeChatScreenState extends State<JadeChatScreen>
                     children: [
                       Text(
                         message.content,
-                        style: AppTheme.bodyMedium.copyWith(
+                        style: Theme.of(context).textTheme.bodyMedium!.copyWith(
                           color: message.isUser
                               ? Colors.white
                               : message.isError
                                   ? Colors.red.shade700
-                                  : AppTheme.textPrimaryColor,
+                                  : Theme.of(context).colorScheme.onSurface,
                         ),
                       ),
                       const SizedBox(height: 4),
                       Text(
                         _formatTime(message.timestamp),
-                        style: AppTheme.bodySmall.copyWith(
+                        style: Theme.of(context).textTheme.bodySmall!.copyWith(
                           color: message.isUser
                               ? Colors.white.withOpacity(0.7)
-                              : AppTheme.textSecondaryColor,
+                              : Theme.of(context).colorScheme.onSurfaceVariant,
                           fontSize: 10,
                         ),
                       ),
@@ -541,10 +541,10 @@ class _JadeChatScreenState extends State<JadeChatScreen>
                     width: 32,
                     height: 32,
                     decoration: BoxDecoration(
-                      color: AppTheme.cardColor,
+                      color: Theme.of(context).colorScheme.surface,
                       borderRadius: BorderRadius.circular(16),
                       border: Border.all(
-                        color: AppTheme.primaryColor.withOpacity(0.2),
+                        color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.2),
                       ),
                     ),
                     child: const Center(
@@ -584,35 +584,15 @@ class _JadeChatScreenState extends State<JadeChatScreen>
                   begin: Alignment.topLeft,
                   end: Alignment.bottomRight,
                   colors: [
-                    AppTheme.textSecondaryColor.withOpacity(0.1),
-                    AppTheme.textSecondaryColor.withOpacity(0.05)
+                    Theme.of(context).colorScheme.onSurfaceVariant.withOpacity(0.1),
+                    Theme.of(context).colorScheme.onSurfaceVariant.withOpacity(0.05)
                   ],
                 ),
                 borderRadius: BorderRadius.circular(20),
               ),
-              child: AnimatedBuilder(
-                animation: _typingAnimationController,
-                builder: (context, child) {
-                  return Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: List.generate(3, (index) {
-                      return AnimatedContainer(
-                        duration: Duration(milliseconds: 300 + (index * 100)),
-                        margin: const EdgeInsets.symmetric(horizontal: 2),
-                        width: 8,
-                        height: 8,
-                        decoration: BoxDecoration(
-                          color: AppTheme.primaryColor.withOpacity(
-                            ((_typingAnimationController.value + index * 0.3) %
-                                    1.0)
-                                .clamp(0.3, 1.0),
-                          ),
-                          shape: BoxShape.circle,
-                        ),
-                      );
-                    }),
-                  );
-                },
+              child: LoadingIndicatorM3E(
+                color: Theme.of(context).colorScheme.primary,
+                constraints: const BoxConstraints(maxWidth: 32, maxHeight: 24),
               ),
             ),
           ],
@@ -630,8 +610,8 @@ class _JadeChatScreenState extends State<JadeChatScreen>
             begin: Alignment.topCenter,
             end: Alignment.bottomCenter,
             colors: [
-              AppTheme.cardColor.withOpacity(0.95),
-              AppTheme.cardColor,
+              Theme.of(context).colorScheme.surface.withOpacity(0.95),
+              Theme.of(context).colorScheme.surface,
             ],
           ),
           boxShadow: [
@@ -654,22 +634,22 @@ class _JadeChatScreenState extends State<JadeChatScreen>
                       begin: Alignment.topLeft,
                       end: Alignment.bottomRight,
                       colors: [
-                        AppTheme.cardColor,
-                        AppTheme.cardColor.withOpacity(0.95),
+                        Theme.of(context).colorScheme.surface,
+                        Theme.of(context).colorScheme.surface.withOpacity(0.95),
                       ],
                     ),
                     borderRadius: BorderRadius.circular(25),
                     border: Border.all(
                       color: _messageFocusNode.hasFocus
-                          ? AppTheme.primaryColor.withOpacity(0.3)
-                          : AppTheme.primaryColor.withOpacity(0.1),
+                          ? Theme.of(context).colorScheme.primary.withValues(alpha: 0.3)
+                          : Theme.of(context).colorScheme.primary.withValues(alpha: 0.1),
                       width: _messageFocusNode.hasFocus ? 2.0 : 1.5,
                     ),
                     boxShadow: [
                       BoxShadow(
                         color: _messageFocusNode.hasFocus
-                            ? AppTheme.primaryColor.withOpacity(0.2)
-                            : AppTheme.primaryColor.withOpacity(0.1),
+                            ? Theme.of(context).colorScheme.primary.withValues(alpha: 0.2)
+                            : Theme.of(context).colorScheme.primary.withValues(alpha: 0.1),
                         blurRadius: _messageFocusNode.hasFocus ? 15 : 10,
                         offset: const Offset(0, 2),
                       ),
@@ -680,8 +660,8 @@ class _JadeChatScreenState extends State<JadeChatScreen>
                     focusNode: _messageFocusNode,
                     decoration: InputDecoration(
                       hintText: "Ask Jade anything... 💭",
-                      hintStyle: AppTheme.bodyMedium.copyWith(
-                        color: AppTheme.textSecondaryColor,
+                      hintStyle: Theme.of(context).textTheme.bodyMedium!.copyWith(
+                        color: Theme.of(context).colorScheme.onSurfaceVariant,
                       ),
                       border: InputBorder.none,
                       contentPadding: const EdgeInsets.symmetric(
@@ -689,7 +669,7 @@ class _JadeChatScreenState extends State<JadeChatScreen>
                         vertical: 12,
                       ),
                     ),
-                    style: AppTheme.bodyMedium,
+                    style: Theme.of(context).textTheme.bodyMedium!,
                     maxLines: null,
                     textCapitalization: TextCapitalization.sentences,
                     onSubmitted: (_) => _sendMessage(),
@@ -719,9 +699,9 @@ class _JadeChatScreenState extends State<JadeChatScreen>
                                     Colors.grey.withOpacity(0.4)
                                   ]
                                 : [
-                                    AppTheme.primaryColor,
-                                    AppTheme.primaryColor.withOpacity(0.8),
-                                    AppTheme.primaryColor.withOpacity(0.7),
+                                    Theme.of(context).colorScheme.primary,
+                                    Theme.of(context).colorScheme.primary.withValues(alpha: 0.8),
+                                    Theme.of(context).colorScheme.primary.withValues(alpha: 0.7),
                                   ],
                           ),
                           borderRadius: BorderRadius.circular(24),
@@ -729,7 +709,7 @@ class _JadeChatScreenState extends State<JadeChatScreen>
                             BoxShadow(
                               color: _isTyping
                                   ? Colors.grey.withOpacity(0.2)
-                                  : AppTheme.primaryColor.withOpacity(0.4),
+                                  : Theme.of(context).colorScheme.primary.withValues(alpha: 0.4),
                               blurRadius: 12,
                               offset: const Offset(0, 4),
                             ),
@@ -755,9 +735,10 @@ class _JadeChatScreenState extends State<JadeChatScreen>
                                         key: const ValueKey('loading'),
                                         width: 20,
                                         height: 20,
-                                        child: CircularProgressIndicator(
-                                          strokeWidth: 2,
-                                          color: Colors.white.withOpacity(0.8),
+                                        child: CircularProgressIndicatorM3E(
+                                          shape: ProgressM3EShape.wavy,
+                                          size: CircularProgressM3ESize.s,
+                                          activeColor: Colors.white.withValues(alpha: 0.9),
                                         ),
                                       )
                                     : Icon(
@@ -847,13 +828,13 @@ class _JadeChatScreenState extends State<JadeChatScreen>
                     decoration: BoxDecoration(
                       gradient: LinearGradient(
                         colors: [
-                          AppTheme.primaryColor.withOpacity(0.1),
-                          AppTheme.primaryColor.withOpacity(0.05),
+                          Theme.of(context).colorScheme.primary.withValues(alpha: 0.1),
+                          Theme.of(context).colorScheme.primary.withValues(alpha: 0.05),
                         ],
                       ),
                       borderRadius: BorderRadius.circular(20),
                       border: Border.all(
-                        color: AppTheme.primaryColor.withOpacity(0.2),
+                        color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.2),
                         width: 1,
                       ),
                     ),
@@ -863,13 +844,13 @@ class _JadeChatScreenState extends State<JadeChatScreen>
                         Icon(
                           action['icon'] as IconData,
                           size: 16,
-                          color: AppTheme.primaryColor,
+                          color: Theme.of(context).colorScheme.primary,
                         ),
                         const SizedBox(width: 6),
                         Text(
                           action['label'] as String,
-                          style: AppTheme.bodySmall.copyWith(
-                            color: AppTheme.primaryColor,
+                          style: Theme.of(context).textTheme.bodySmall!.copyWith(
+                            color: Theme.of(context).colorScheme.primary,
                             fontWeight: FontWeight.w500,
                           ),
                         ),

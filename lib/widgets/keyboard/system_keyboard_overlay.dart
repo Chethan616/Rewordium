@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'dart:async';
 import '../../providers/keyboard_provider.dart';
-import '../../theme/app_theme.dart';
 import '../../screens/paraphraser_page.dart';
 import '../../services/unified_ai_service.dart';
 
@@ -119,11 +118,11 @@ class _SystemKeyboardOverlayState extends State<SystemKeyboardOverlay> {
             Container(
               margin: const EdgeInsets.all(8),
               decoration: BoxDecoration(
-                color: AppTheme.primaryColor,
+              color: Theme.of(context).colorScheme.primary,
                 borderRadius: BorderRadius.circular(20),
                 boxShadow: [
                   BoxShadow(
-                    color: Colors.black.withOpacity(0.2),
+                    color: Colors.black.withValues(alpha: 0.2),
                     blurRadius: 5,
                     offset: const Offset(0, 2),
                   ),
@@ -147,7 +146,7 @@ class _SystemKeyboardOverlayState extends State<SystemKeyboardOverlay> {
                         const SizedBox(width: 4),
                         Text(
                           'Keyboard',
-                          style: AppTheme.bodySmall.copyWith(
+                          style: Theme.of(context).textTheme.bodySmall?.copyWith(
                             color: Colors.white,
                             fontWeight: FontWeight.w600,
                           ),
@@ -184,7 +183,7 @@ class _SystemKeyboardOverlayState extends State<SystemKeyboardOverlay> {
                         children: [
                           Text(
                             'System Keyboard',
-                            style: AppTheme.bodyLarge.copyWith(
+                            style: Theme.of(context).textTheme.bodyLarge?.copyWith(
                               fontWeight: FontWeight.w600,
                             ),
                           ),
@@ -237,7 +236,7 @@ class _SystemKeyboardOverlayState extends State<SystemKeyboardOverlay> {
                       icon: const Icon(Icons.autorenew),
                       label: const Text('Paraphrase Text'),
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: AppTheme.primaryColor,
+                        backgroundColor: Theme.of(context).colorScheme.primary,
                         foregroundColor: Colors.white,
                       ),
                     ),

@@ -7,7 +7,6 @@ import 'package:package_info_plus/package_info_plus.dart';
 import 'dart:math';
 import '../providers/keyboard_provider.dart';
 import '../services/news_subscription_service.dart';
-import '../theme/app_theme.dart';
 import '../services/rewordium_keyboard_service.dart';
 import '../services/force_update_service.dart';
 import '../services/billing_service.dart';
@@ -249,7 +248,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
           children: [
             const CircularProgressIndicator(),
             const SizedBox(width: 20),
-            Text('Restoring purchases...', style: AppTheme.bodyMedium),
+            Text('Restoring purchases...', style: Theme.of(context).textTheme.bodyMedium!),
           ],
         ),
       ),
@@ -427,7 +426,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 IconButton(
                   icon: const Icon(CupertinoIcons.bolt),
                   onPressed: _onThunderTap,
-                  color: AppTheme.primaryColor,
+                  color: Theme.of(context).colorScheme.primary,
                 ),
               ],
             ),
@@ -438,7 +437,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
             _buildSectionHeader(
               icon: CupertinoIcons.person_circle,
               title: "Account",
-              color: AppTheme.primaryColor,
+              color: Theme.of(context).colorScheme.primary,
             ),
             AnimatedCard(
               child: isLoggedIn
@@ -471,7 +470,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     trailing: CupertinoSwitch(
                       value: isDarkMode,
                       onChanged: (value) => themeProvider.toggleTheme(),
-                      activeTrackColor: AppTheme.primaryColor,
+                      activeTrackColor: Theme.of(context).colorScheme.primary,
                     ),
                   ),
                   if (isLoggedIn) ...[
@@ -491,7 +490,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                           : CupertinoSwitch(
                               value: _isNewsSubscribed,
                               onChanged: _toggleNewsSubscription,
-                              activeTrackColor: AppTheme.primaryColor,
+                              activeTrackColor: Theme.of(context).colorScheme.primary,
                             ),
                     ),
                   ],
@@ -514,7 +513,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   // Keyboard Settings
                   _buildSettingItem(
                     icon: CupertinoIcons.keyboard,
-                    iconColor: AppTheme.primaryColor,
+                    iconColor: Theme.of(context).colorScheme.primary,
                     title: "Rewordium AI Keyboard",
                     subtitle: "Customize appearance and behavior",
                     trailing: const Icon(CupertinoIcons.chevron_right,
@@ -558,8 +557,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     Text(
                       "Create an account to personalize your keyboard",
                       textAlign: TextAlign.center,
-                      style: AppTheme.bodyMedium.copyWith(
-                        color: AppTheme.textSecondaryColor,
+                      style: Theme.of(context).textTheme.bodyMedium!.copyWith(
+                        color: Theme.of(context).colorScheme.onSurfaceVariant,
                       ),
                     ),
                     const SizedBox(height: 12),
@@ -637,7 +636,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
           const SizedBox(width: 10),
           Text(
             title,
-            style: AppTheme.bodyLarge.copyWith(
+            style: Theme.of(context).textTheme.bodyLarge!.copyWith(
               fontWeight: FontWeight.w700,
               letterSpacing: 0.3,
             ),
@@ -689,7 +688,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
               children: [
                 Text(
                   title,
-                  style: AppTheme.bodyMedium.copyWith(
+                  style: Theme.of(context).textTheme.bodyMedium!.copyWith(
                     fontWeight: FontWeight.w600,
                     color: isDanger ? Colors.red : null,
                   ),
@@ -697,10 +696,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 const SizedBox(height: 2),
                 Text(
                   subtitle,
-                  style: AppTheme.bodySmall.copyWith(
+                  style: Theme.of(context).textTheme.bodySmall!.copyWith(
                     color: isDanger
                         ? Colors.red.withOpacity(0.7)
-                        : AppTheme.textSecondaryColor,
+                        : Theme.of(context).colorScheme.onSurfaceVariant,
                     fontSize: 12,
                   ),
                 ),
@@ -783,7 +782,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 padding:
                     const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
                 decoration: BoxDecoration(
-                  color: AppTheme.textSecondaryColor.withOpacity(0.08),
+                  color: Theme.of(context).colorScheme.onSurfaceVariant.withValues(alpha: 0.08),
                   borderRadius: BorderRadius.circular(8),
                 ),
                 child: Row(
@@ -794,9 +793,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     Expanded(
                       child: Text(
                         "Based on FlorisBoard • Apache License 2.0",
-                        style: AppTheme.bodySmall.copyWith(
+                        style: Theme.of(context).textTheme.bodySmall!.copyWith(
                           fontSize: 11,
-                          color: AppTheme.textSecondaryColor,
+                          color: Theme.of(context).colorScheme.onSurfaceVariant,
                         ),
                       ),
                     ),
@@ -822,12 +821,12 @@ class _SettingsScreenState extends State<SettingsScreen> {
               width: 50,
               height: 50,
               decoration: BoxDecoration(
-                color: AppTheme.primaryColor.withOpacity(0.1),
+                color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.1),
                 shape: BoxShape.circle,
               ),
               child: Icon(
                 CupertinoIcons.person_fill,
-                color: AppTheme.primaryColor,
+                color: Theme.of(context).colorScheme.primary,
               ),
             ),
             const SizedBox(width: 16),
@@ -837,7 +836,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 children: [
                   Text(
                     name,
-                    style: AppTheme.bodyLarge.copyWith(
+                    style: Theme.of(context).textTheme.bodyLarge!.copyWith(
                       fontWeight: FontWeight.w600,
                     ),
                   ),
@@ -858,7 +857,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                                 ? "Lifetime Pro User"
                                 : "Pro User")
                             : "Standard User",
-                        style: AppTheme.bodySmall
+                        style: Theme.of(context).textTheme.bodySmall!
                             .copyWith(color: isPro ? Colors.amber : null),
                       ),
                     ],
@@ -897,22 +896,22 @@ class _SettingsScreenState extends State<SettingsScreen> {
             padding: const EdgeInsets.all(12),
             margin: const EdgeInsets.only(bottom: 12),
             decoration: BoxDecoration(
-              color: AppTheme.primaryColor.withOpacity(0.1),
+              color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.1),
               borderRadius: BorderRadius.circular(8),
             ),
             child: Row(
               children: [
                 Icon(
                   CupertinoIcons.star,
-                  color: AppTheme.primaryColor,
+                  color: Theme.of(context).colorScheme.primary,
                   size: 18,
                 ),
                 const SizedBox(width: 8),
                 Text(
                   'Credits: ${authProvider.credits ?? 0}',
-                  style: AppTheme.bodyMedium.copyWith(
+                  style: Theme.of(context).textTheme.bodyMedium!.copyWith(
                     fontWeight: FontWeight.w600,
-                    color: AppTheme.primaryColor,
+                    color: Theme.of(context).colorScheme.primary,
                   ),
                 ),
               ],
@@ -954,12 +953,12 @@ class _SettingsScreenState extends State<SettingsScreen> {
           width: 50,
           height: 50,
           decoration: BoxDecoration(
-            color: AppTheme.primaryColor.withOpacity(0.1),
+            color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.1),
             shape: BoxShape.circle,
           ),
           child: Icon(
             CupertinoIcons.person,
-            color: AppTheme.primaryColor,
+            color: Theme.of(context).colorScheme.primary,
           ),
         ),
         const SizedBox(width: 16),
@@ -969,14 +968,14 @@ class _SettingsScreenState extends State<SettingsScreen> {
             children: [
               Text(
                 "Create an account",
-                style: AppTheme.bodyLarge.copyWith(
+                style: Theme.of(context).textTheme.bodyLarge!.copyWith(
                   fontWeight: FontWeight.w600,
                 ),
               ),
               const SizedBox(height: 4),
               Text(
                 "Sync your settings across devices",
-                style: AppTheme.bodySmall,
+                style: Theme.of(context).textTheme.bodySmall!,
               ),
             ],
           ),

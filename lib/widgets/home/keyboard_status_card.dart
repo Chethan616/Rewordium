@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import '../../theme/app_theme.dart';
 import '../../utils/lottie_assets.dart';
 import '../animated_card.dart';
 import '../custom_button.dart';
@@ -86,7 +85,7 @@ class _KeyboardStatusCardState extends State<KeyboardStatusCard>
               const SizedBox(width: 8),
               Text(
                 "Keyboard Status",
-                style: AppTheme.bodyLarge.copyWith(fontWeight: FontWeight.w600),
+                style: Theme.of(context).textTheme.bodyLarge?.copyWith(fontWeight: FontWeight.w600),
               ),
               const Spacer(),
               // Status indicator with refresh button
@@ -125,12 +124,12 @@ class _KeyboardStatusCardState extends State<KeyboardStatusCard>
                       isEnabled
                           ? "System Keyboard Active"
                           : "Manage Your Keyboard",
-                      style: AppTheme.bodyMedium,
+                      style: Theme.of(context).textTheme.bodyMedium!,
                     ),
                     const SizedBox(height: 4),
                     Text(
                       "Write better in all your apps",
-                      style: AppTheme.bodySmall,
+                      style: Theme.of(context).textTheme.bodySmall!,
                     ),
                   ],
                 ),
@@ -162,12 +161,12 @@ class _KeyboardStatusCardState extends State<KeyboardStatusCard>
                   children: [
                     Text(
                       "Enable AI",
-                      style: AppTheme.bodyMedium,
+                      style: Theme.of(context).textTheme.bodyMedium!,
                     ),
                     const SizedBox(height: 4),
                     Text(
                       "Smart writing assistance",
-                      style: AppTheme.bodySmall,
+                      style: Theme.of(context).textTheme.bodySmall!,
                     ),
                   ],
                 ),
@@ -176,7 +175,7 @@ class _KeyboardStatusCardState extends State<KeyboardStatusCard>
               Switch(
                 value: isParaphraserEnabled,
                 onChanged: (_) => keyboardProvider.toggleParaphraser(),
-                activeColor: AppTheme.primaryColor,
+                activeColor: Theme.of(context).colorScheme.primary,
               ),
             ],
           ),
@@ -223,15 +222,16 @@ class KeyboardSettingsSheet extends StatelessWidget {
               width: 40,
               height: 4,
               decoration: BoxDecoration(
-                color: Colors.grey.withOpacity(0.3),
+                color: Colors.grey.withValues(alpha: 0.3),
                 borderRadius: BorderRadius.circular(2),
               ),
             ),
           ),
           const SizedBox(height: 24),
-          Text("Keyboard Settings", style: AppTheme.headingMedium),
+          Text("Keyboard Settings", style: Theme.of(context).textTheme.headlineSmall!),
           const SizedBox(height: 16),
           _buildSettingItem(
+            context: context,
             title: "Keyboard Layout",
             subtitle: "Select your preferred keyboard layout",
             trailing: DropdownButton<KeyboardLayout>(
@@ -252,22 +252,24 @@ class KeyboardSettingsSheet extends StatelessWidget {
           ),
           const Divider(),
           _buildSettingItem(
+            context: context,
             title: "Haptic Feedback",
             subtitle: "Vibrate when typing",
             trailing: Switch(
               value: provider.soundOn,
               onChanged: (_) => provider.toggleSound(),
-              activeColor: AppTheme.primaryColor,
+              activeColor: Theme.of(context).colorScheme.primary,
             ),
           ),
           const Divider(),
           _buildSettingItem(
+            context: context,
             title: "Paraphraser Button",
             subtitle: "Show paraphraser button on keyboard",
             trailing: Switch(
               value: provider.isParaphraserEnabled,
               onChanged: (_) => provider.toggleParaphraser(),
-              activeColor: AppTheme.primaryColor,
+              activeColor: Theme.of(context).colorScheme.primary,
             ),
           ),
           const SizedBox(height: 24),
@@ -286,6 +288,7 @@ class KeyboardSettingsSheet extends StatelessWidget {
   }
 
   Widget _buildSettingItem({
+    required BuildContext context,
     required String title,
     required String subtitle,
     required Widget trailing,
@@ -298,12 +301,12 @@ class KeyboardSettingsSheet extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(title, style: AppTheme.bodyLarge),
+                Text(title, style: Theme.of(context).textTheme.bodyLarge!),
                 const SizedBox(height: 4),
                 Text(
                   subtitle,
-                  style: AppTheme.bodySmall.copyWith(
-                    color: AppTheme.textSecondaryColor,
+                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                    color: Theme.of(context).colorScheme.onSurfaceVariant,
                   ),
                 ),
               ],

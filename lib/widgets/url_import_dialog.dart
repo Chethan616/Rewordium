@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:animate_do/animate_do.dart';
-import '../theme/app_theme.dart';
+import 'package:m3e_collection/m3e_collection.dart';
 import '../models/document_result.dart';
 import '../services/document_service.dart';
 
@@ -90,7 +90,7 @@ class _UrlImportDialogState extends State<UrlImportDialog> {
         margin: const EdgeInsets.all(16),
         padding: EdgeInsets.only(bottom: bottomInset > 0 ? bottomInset : 16),
         decoration: BoxDecoration(
-          color: AppTheme.cardColor,
+          color: Theme.of(context).colorScheme.surface,
           borderRadius: BorderRadius.circular(20),
         ),
         child: Column(
@@ -104,7 +104,7 @@ class _UrlImportDialogState extends State<UrlImportDialog> {
                 width: 40,
                 height: 4,
                 decoration: BoxDecoration(
-                  color: AppTheme.textSecondaryColor.withOpacity(0.2),
+                  color: Theme.of(context).colorScheme.onSurfaceVariant.withValues(alpha: 0.2),
                   borderRadius: BorderRadius.circular(2),
                 ),
               ),
@@ -133,7 +133,7 @@ class _UrlImportDialogState extends State<UrlImportDialog> {
                       children: [
                         Text(
                           'Import from URL',
-                          style: AppTheme.bodyLarge.copyWith(
+                          style: Theme.of(context).textTheme.bodyLarge!.copyWith(
                             fontWeight: FontWeight.w700,
                             fontSize: 16,
                           ),
@@ -141,8 +141,8 @@ class _UrlImportDialogState extends State<UrlImportDialog> {
                         const SizedBox(height: 2),
                         Text(
                           'Paste a web page or PDF link',
-                          style: AppTheme.bodySmall.copyWith(
-                            color: AppTheme.textSecondaryColor,
+                          style: Theme.of(context).textTheme.bodySmall!.copyWith(
+                            color: Theme.of(context).colorScheme.onSurfaceVariant,
                             fontSize: 12,
                           ),
                         ),
@@ -168,18 +168,18 @@ class _UrlImportDialogState extends State<UrlImportDialog> {
                     _errorText = null;
                   });
                 },
-                style: AppTheme.bodyMedium.copyWith(fontSize: 14),
+                style: Theme.of(context).textTheme.bodyMedium!.copyWith(fontSize: 14),
                 decoration: InputDecoration(
                   hintText: 'https://example.com/article',
-                  hintStyle: AppTheme.bodyMedium.copyWith(
-                    color: AppTheme.textSecondaryColor.withOpacity(0.4),
+                  hintStyle: Theme.of(context).textTheme.bodyMedium!.copyWith(
+                    color: Theme.of(context).colorScheme.onSurfaceVariant.withValues(alpha: 0.4),
                     fontSize: 14,
                   ),
                   prefixIcon: Padding(
                     padding: const EdgeInsets.only(left: 14, right: 8),
                     child: Icon(
                       CupertinoIcons.globe,
-                      color: AppTheme.textSecondaryColor.withOpacity(0.4),
+                      color: Theme.of(context).colorScheme.onSurfaceVariant.withValues(alpha: 0.4),
                       size: 18,
                     ),
                   ),
@@ -196,13 +196,13 @@ class _UrlImportDialogState extends State<UrlImportDialog> {
                           child: Icon(
                             CupertinoIcons.xmark_circle_fill,
                             color:
-                                AppTheme.textSecondaryColor.withOpacity(0.3),
+                                Theme.of(context).colorScheme.onSurfaceVariant.withValues(alpha: 0.3),
                             size: 18,
                           ),
                         )
                       : null,
                   filled: true,
-                  fillColor: AppTheme.textSecondaryColor.withOpacity(0.06),
+                  fillColor: Theme.of(context).colorScheme.onSurfaceVariant.withValues(alpha: 0.06),
                   border: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(12),
                     borderSide: BorderSide.none,
@@ -277,10 +277,10 @@ class _UrlImportDialogState extends State<UrlImportDialog> {
                       ? const SizedBox(
                           width: 22,
                           height: 22,
-                          child: CircularProgressIndicator(
-                            strokeWidth: 2,
-                            valueColor:
-                                AlwaysStoppedAnimation<Color>(Colors.white),
+                          child: CircularProgressIndicatorM3E(
+                            shape: ProgressM3EShape.wavy,
+                            size: CircularProgressM3ESize.s,
+                            activeColor: Colors.white,
                           ),
                         )
                       : Row(
@@ -291,7 +291,7 @@ class _UrlImportDialogState extends State<UrlImportDialog> {
                             const SizedBox(width: 8),
                             Text(
                               'Import Content',
-                              style: AppTheme.bodyMedium.copyWith(
+                              style: Theme.of(context).textTheme.bodyMedium!.copyWith(
                                 color: Colors.white,
                                 fontWeight: FontWeight.w600,
                                 fontSize: 15,
@@ -309,8 +309,8 @@ class _UrlImportDialogState extends State<UrlImportDialog> {
               child: Text(
                 'Supports web articles, blog posts, and direct PDF links',
                 textAlign: TextAlign.center,
-                style: AppTheme.bodySmall.copyWith(
-                  color: AppTheme.textSecondaryColor.withOpacity(0.5),
+                style: Theme.of(context).textTheme.bodySmall!.copyWith(
+                  color: Theme.of(context).colorScheme.onSurfaceVariant.withValues(alpha: 0.5),
                   fontSize: 11,
                 ),
               ),

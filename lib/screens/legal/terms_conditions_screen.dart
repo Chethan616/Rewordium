@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/cupertino.dart';
-import '../../theme/app_theme.dart';
 
 class TermsConditionsScreen extends StatelessWidget {
   const TermsConditionsScreen({super.key});
@@ -8,21 +7,21 @@ class TermsConditionsScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppTheme.backgroundColor,
+      backgroundColor: Theme.of(context).colorScheme.surfaceContainerLow,
       appBar: AppBar(
-        backgroundColor: AppTheme.backgroundColor,
+        backgroundColor: Theme.of(context).colorScheme.surfaceContainerLow,
         elevation: 0,
         leading: IconButton(
           icon: Icon(
             Icons.arrow_back_ios_new_rounded,
-            color: AppTheme.textPrimaryColor,
+            color: Theme.of(context).colorScheme.onSurface,
             size: 20,
           ),
           onPressed: () => Navigator.pop(context),
         ),
         title: Text(
           'Terms & Conditions',
-          style: AppTheme.headingMedium.copyWith(
+          style: Theme.of(context).textTheme.headlineSmall?.copyWith(
             fontWeight: FontWeight.w700,
           ),
         ),
@@ -35,20 +34,21 @@ class TermsConditionsScreen extends StatelessWidget {
           children: [
             Text(
               'Terms and Conditions',
-              style: AppTheme.headingLarge.copyWith(
+              style: Theme.of(context).textTheme.headlineMedium?.copyWith(
                 fontWeight: FontWeight.w900,
-                color: AppTheme.primaryColor,
+                color: Theme.of(context).colorScheme.primary,
               ),
             ),
             const SizedBox(height: 8),
             Text(
               'Last updated: ${DateTime.now().toString().split(' ')[0]}',
-              style: AppTheme.bodySmall.copyWith(
-                color: AppTheme.textSecondaryColor,
+              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                color: Theme.of(context).colorScheme.onSurfaceVariant,
               ),
             ),
             const SizedBox(height: 24),
             _buildSection(
+              context: context,
               title: '1. Acceptance of Terms',
               content:
                   '''By downloading, installing, or using Rewordium ("the App"), you agree to be bound by these Terms and Conditions. If you do not agree to these terms, please do not use the App.
@@ -56,6 +56,7 @@ class TermsConditionsScreen extends StatelessWidget {
 Rewordium is an AI-powered writing assistant that helps users rewrite, enhance, and improve their text content through artificial intelligence and natural language processing.''',
             ),
             _buildSection(
+              context: context,
               title: '2. Description of Service',
               content: '''Rewordium provides the following services:
 • AI-powered text rewriting and enhancement
@@ -68,6 +69,7 @@ Rewordium is an AI-powered writing assistant that helps users rewrite, enhance, 
 The App uses advanced AI models to analyze and improve your text while maintaining the original meaning and intent.''',
             ),
             _buildSection(
+              context: context,
               title: '3. User Accounts and Registration',
               content:
                   '''To access certain features of Rewordium, you may need to create an account. You agree to:
@@ -79,6 +81,7 @@ The App uses advanced AI models to analyze and improve your text while maintaini
 You may register using your email address or through Google Sign-In integration.''',
             ),
             _buildSection(
+              context: context,
               title: '4. Acceptable Use Policy',
               content:
                   '''You agree to use Rewordium only for lawful purposes and in accordance with these Terms. You shall not:
@@ -90,6 +93,7 @@ You may register using your email address or through Google Sign-In integration.
 • Attempt to bypass any usage limits or restrictions''',
             ),
             _buildSection(
+              context: context,
               title: '5. Accessibility Service',
               content:
                   '''Rewordium includes an accessibility service that helps improve text across various applications on your device. By enabling this service:
@@ -99,6 +103,7 @@ You may register using your email address or through Google Sign-In integration.
 • The service only processes text when explicitly requested by you''',
             ),
             _buildSection(
+              context: context,
               title: '6. Subscription and Payments',
               content:
                   '''Rewordium offers both free and premium subscription tiers:
@@ -113,6 +118,7 @@ Payments and subscriptions are processed securely through Google Play Billing:
 • Refunds are subject to Google Play’s refund policies''',
             ),
             _buildSection(
+              context: context,
               title: 'Feature Availability Disclaimer',
               content:
                   '''Features described in the App, including premium or experimental features, may change, be modified, limited, or discontinued at any time without prior notice.
@@ -120,6 +126,7 @@ Payments and subscriptions are processed securely through Google Play Billing:
 We do not guarantee uninterrupted access, specific feature availability, or permanent inclusion of any feature.''',
             ),
             _buildSection(
+              context: context,
               title: '7. Intellectual Property',
               content:
                   '''The Rewordium App, including its design, functionality, and underlying technology, is owned by us and protected by intellectual property laws. While you retain rights to your original content, our AI-generated suggestions and improvements are provided as a service.
@@ -127,6 +134,7 @@ We do not guarantee uninterrupted access, specific feature availability, or perm
 You grant us a limited license to process your text for the purpose of providing our services.''',
             ),
             _buildSection(
+              context: context,
               title: '8. Open Source Components',
               content:
                   '''Rewordium incorporates open source software components, which are used in accordance with their respective licenses:
@@ -140,6 +148,7 @@ We acknowledge and thank the open source community for their contributions. A fu
 The use of open source components does not affect your rights or obligations under these Terms regarding the proprietary portions of Rewordium.''',
             ),
             _buildSection(
+              context: context,
               title: '9. Data Privacy and Security',
               content:
                   '''We are committed to protecting your privacy and data security:
@@ -150,6 +159,7 @@ The use of open source components does not affect your rights or obligations und
 • We do not store your text content longer than necessary to provide the service''',
             ),
             _buildSection(
+              context: context,
               title: '10. Service Availability',
               content:
                   '''We strive to maintain high service availability, but cannot guarantee uninterrupted access. The service may be temporarily unavailable due to:
@@ -161,6 +171,7 @@ The use of open source components does not affect your rights or obligations und
 We will make reasonable efforts to notify users of planned maintenance.''',
             ),
             _buildSection(
+              context: context,
               title: '11. Limitation of Liability',
               content:
                   '''To the maximum extent permitted by law, Rewordium and its developers shall not be liable for:
@@ -172,6 +183,7 @@ We will make reasonable efforts to notify users of planned maintenance.''',
 Your sole remedy for dissatisfaction with the service is to stop using the App.''',
             ),
             _buildSection(
+              context: context,
               title: '12. AI Content Disclaimer',
               content:
                   '''Rewordium uses artificial intelligence to generate text suggestions and improvements. Please note:
@@ -182,6 +194,7 @@ Your sole remedy for dissatisfaction with the service is to stop using the App.'
 • Users should exercise judgment when using AI suggestions in professional or academic contexts''',
             ),
             _buildSection(
+              context: context,
               title: '13. Updates and Modifications',
               content:
                   '''We reserve the right to modify these Terms and Conditions at any time. When we make changes:
@@ -191,6 +204,7 @@ Your sole remedy for dissatisfaction with the service is to stop using the App.'
 • If you disagree with changes, you may discontinue using the service''',
             ),
             _buildSection(
+              context: context,
               title: '14. Termination',
               content: '''Either party may terminate this agreement at any time:
 • You may stop using the App and delete your account
@@ -199,6 +213,7 @@ Your sole remedy for dissatisfaction with the service is to stop using the App.'
 • Certain provisions of these terms will survive termination''',
             ),
             _buildSection(
+              context: context,
               title: '15. Contact Information',
               content:
                   '''If you have questions about these Terms and Conditions, please contact us at:
@@ -212,17 +227,17 @@ We will respond to inquiries within 48 hours during business days.''',
             Container(
               padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
-                color: AppTheme.primaryColor.withOpacity(0.1),
+                color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.1),
                 borderRadius: BorderRadius.circular(12),
                 border: Border.all(
-                  color: AppTheme.primaryColor.withOpacity(0.2),
+                  color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.2),
                 ),
               ),
               child: Text(
                 'By using Rewordium, you acknowledge that you have read, understood, and agree to be bound by these Terms and Conditions.',
-                style: AppTheme.bodyMedium.copyWith(
+                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                   fontWeight: FontWeight.w600,
-                  color: AppTheme.primaryColor,
+                  color: Theme.of(context).colorScheme.primary,
                 ),
                 textAlign: TextAlign.center,
               ),
@@ -234,23 +249,23 @@ We will respond to inquiries within 48 hours during business days.''',
     );
   }
 
-  Widget _buildSection({required String title, required String content}) {
+  Widget _buildSection({required BuildContext context, required String title, required String content}) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
           title,
-          style: AppTheme.headingSmall.copyWith(
+          style: Theme.of(context).textTheme.titleLarge?.copyWith(
             fontWeight: FontWeight.w700,
-            color: AppTheme.primaryColor,
+            color: Theme.of(context).colorScheme.primary,
           ),
         ),
         const SizedBox(height: 12),
         Text(
           content,
-          style: AppTheme.bodyMedium.copyWith(
+          style: Theme.of(context).textTheme.bodyMedium?.copyWith(
             height: 1.6,
-            color: AppTheme.textPrimaryColor,
+            color: Theme.of(context).colorScheme.onSurface,
           ),
         ),
         const SizedBox(height: 24),

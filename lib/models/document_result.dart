@@ -18,6 +18,9 @@ class DocumentResult {
   final int wordCount;
   final DateTime importedAt;
 
+  /// For camera scans: paths to the scanned page images.
+  final List<String>? imagePaths;
+
   DocumentResult({
     required this.text,
     this.filePath,
@@ -25,6 +28,7 @@ class DocumentResult {
     this.pageCount = 1,
     this.title,
     this.sourceUrl,
+    this.imagePaths,
     int? wordCount,
     DateTime? importedAt,
   })  : wordCount = wordCount ?? _countWords(text),

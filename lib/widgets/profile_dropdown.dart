@@ -3,7 +3,6 @@ import 'package:provider/provider.dart';
 import 'package:animate_do/animate_do.dart';
 
 import '../providers/auth_provider.dart';
-import '../theme/app_theme.dart';
 import '../widgets/custom_button.dart';
 import '../widgets/upgrade_dialog.dart';
 import '../screens/auth/login_screen.dart';
@@ -23,11 +22,11 @@ class ProfileDropdown extends StatelessWidget {
         width: 200,
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
-          color: AppTheme.cardColor,
+          color: Theme.of(context).colorScheme.surface,
           borderRadius: BorderRadius.circular(16),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withOpacity(0.1),
+              color: Colors.black.withValues(alpha: 0.1),
               blurRadius: 10,
               offset: const Offset(0, 5),
             ),
@@ -43,12 +42,12 @@ class ProfileDropdown extends StatelessWidget {
                   width: 40,
                   height: 40,
                   decoration: BoxDecoration(
-                    color: AppTheme.primaryColor.withOpacity(0.1),
+                    color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.1),
                     shape: BoxShape.circle,
                   ),
                   child: Icon(
                     Icons.person,
-                    color: AppTheme.primaryColor,
+                    color: Theme.of(context).colorScheme.primary,
                   ),
                 ),
                 const SizedBox(width: 12),
@@ -58,7 +57,7 @@ class ProfileDropdown extends StatelessWidget {
                     children: [
                       Text(
                         userName,
-                        style: AppTheme.bodyMedium.copyWith(
+                        style: Theme.of(context).textTheme.bodyMedium!.copyWith(
                           fontWeight: FontWeight.bold,
                         ),
                         maxLines: 1,
@@ -66,10 +65,10 @@ class ProfileDropdown extends StatelessWidget {
                       ),
                       Text(
                         isPro ? 'Pro User' : 'Normal User',
-                        style: AppTheme.bodySmall.copyWith(
+                        style: Theme.of(context).textTheme.bodySmall!.copyWith(
                           color: isPro
                               ? Colors.green
-                              : AppTheme.textSecondaryColor,
+                              : Theme.of(context).colorScheme.onSurfaceVariant,
                         ),
                       ),
                     ],

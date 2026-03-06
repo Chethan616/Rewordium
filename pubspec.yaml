@@ -16,10 +16,10 @@ publish_to: 'none' # Remove this line if you wish to publish to pub.dev
 # https://developer.apple.com/library/archive/documentation/General/Reference/InfoPlistKeyReference/Articles/CoreFoundationKeys.html
 # In Windows, build-name is used as the major, minor, and patch parts
 # of the product and file versions while build-number is used as the build suffix.
-version: 1.0.39+39
+version: 1.0.42+42
 
 environment:
-  sdk: '>=3.0.0 <4.0.0'
+  sdk: '>=3.5.0 <4.0.0'
 
 # Dependencies specify other packages that your package needs in order to work.
 # To automatically upgrade your package dependencies to the latest versions
@@ -80,6 +80,9 @@ dependencies:
   # PDF creation & export (save to file, share via share_plus)
   pdf: ^3.11.3
   
+  # PDF text extraction (reading/parsing)
+  syncfusion_flutter_pdf: ^28.2.12
+  
   # DOCX handling
   archive: any
   xml: ^6.3.0
@@ -96,6 +99,10 @@ dependencies:
   html: ^0.15.6
   beautiful_soup_dart: ^0.3.0
 
+  # Material 3 Expressive Design System
+  m3e_collection:
+    path: material_3_expressive-main/packages/m3e_collection
+
 dev_dependencies:
   flutter_test:
     sdk: flutter
@@ -110,6 +117,32 @@ dev_dependencies:
 # Force archive v4 so pdfrx and lottie resolve (lottie 2.x pins archive ^3 but works fine with 4)
 dependency_overrides:
   archive: ^4.0.0
+  m3e_design:
+    path: material_3_expressive-main/packages/m3e_design
+  button_m3e:
+    path: material_3_expressive-main/packages/button_m3e
+  button_group_m3e:
+    path: material_3_expressive-main/packages/button_group_m3e
+  fab_m3e:
+    path: material_3_expressive-main/packages/fab_m3e
+  icon_button_m3e:
+    path: material_3_expressive-main/packages/icon_button_m3e
+  loading_indicator_m3e:
+    path: material_3_expressive-main/packages/loading_indicator_m3e
+  navigation_bar_m3e:
+    path: material_3_expressive-main/packages/navigation_bar_m3e
+  navigation_rail_m3e:
+    path: material_3_expressive-main/packages/navigation_rail_m3e
+  progress_indicator_m3e:
+    path: material_3_expressive-main/packages/progress_indicator_m3e
+  slider_m3e:
+    path: material_3_expressive-main/packages/slider_m3e
+  split_button_m3e:
+    path: material_3_expressive-main/packages/split_button_m3e
+  toolbar_m3e:
+    path: material_3_expressive-main/packages/toolbar_m3e
+  app_bar_m3e:
+    path: material_3_expressive-main/packages/app_bar_m3e
 
 # For information on the generic Dart part of this file, see the
 # following page: https://dart.dev/tools/pub/pubspec

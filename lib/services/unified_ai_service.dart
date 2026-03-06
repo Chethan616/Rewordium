@@ -537,7 +537,11 @@ class UnifiedAIService {
   /// Detect AI-generated text using configured provider
   static Future<Map<String, dynamic>> detectAIText(String text) async {
     final systemPrompt =
-        'You are an AI text detection expert. Analyze the following text and determine if it was likely written by AI or a human. Return JSON: {"is_ai_generated": true/false, "confidence": 0.85, "indicators": ["specific indicators"], "explanation": "detailed explanation"}';
+        'You are an AI text detection expert. Analyze the following text and determine if it was likely written by AI or a human. '
+        'For each sentence, assign an ai_score from 0.0 (human) to 1.0 (AI). '
+        'Return JSON: {"is_ai_generated": true/false, "confidence": 0.85, '
+        '"sentences": [{"text": "exact sentence from input", "ai_score": 0.9}], '
+        '"indicators": ["specific indicators"], "explanation": "detailed explanation"}';
 
     final result = await makeRequest(
       systemPrompt: systemPrompt,

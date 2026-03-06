@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:provider/provider.dart';
 import '../theme/theme_provider.dart';
-import '../theme/app_theme.dart';
 import '../services/keyboard_service.dart';
 
 class SystemKeyboardScreen extends StatefulWidget {
@@ -133,7 +132,7 @@ class _SystemKeyboardScreenState extends State<SystemKeyboardScreen> {
                           children: [
                             Text(
                               'Keyboard Status',
-                              style: AppTheme.headingSmall,
+                              style: Theme.of(context).textTheme.titleLarge!,
                             ),
                             const SizedBox(height: 16),
                             Row(
@@ -206,7 +205,7 @@ class _SystemKeyboardScreenState extends State<SystemKeyboardScreen> {
                           children: [
                             Text(
                               'Keyboard Layout',
-                              style: AppTheme.headingSmall,
+                              style: Theme.of(context).textTheme.titleLarge!,
                             ),
                             const SizedBox(height: 16),
                             RadioListTile<KeyboardLayout>(
@@ -261,7 +260,7 @@ class _SystemKeyboardScreenState extends State<SystemKeyboardScreen> {
                           children: [
                             Text(
                               'Additional Settings',
-                              style: AppTheme.headingSmall,
+                              style: Theme.of(context).textTheme.titleLarge!,
                             ),
                             const SizedBox(height: 16),
                             SwitchListTile(
@@ -299,7 +298,7 @@ class _SystemKeyboardScreenState extends State<SystemKeyboardScreen> {
                           children: [
                             Text(
                               'About',
-                              style: AppTheme.headingSmall,
+                              style: Theme.of(context).textTheme.titleLarge!,
                             ),
                             const SizedBox(height: 16),
                             Text(

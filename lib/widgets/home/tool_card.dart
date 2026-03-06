@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:animate_do/animate_do.dart';
-import '../../theme/app_theme.dart';
 
 class ToolCard extends StatelessWidget {
   final String title;
@@ -28,12 +27,12 @@ class ToolCard extends StatelessWidget {
         gradient: LinearGradient(
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
-          colors: [color.withOpacity(0.8), color.withOpacity(0.6)],
+          colors: [color.withValues(alpha: 0.8), color.withValues(alpha: 0.6)],
         ),
         borderRadius: BorderRadius.circular(16),
         boxShadow: [
           BoxShadow(
-            color: color.withOpacity(0.3),
+            color: color.withValues(alpha: 0.3),
             blurRadius: 8,
             offset: const Offset(0, 4),
           ),
@@ -52,7 +51,7 @@ class ToolCard extends StatelessWidget {
             children: [
               Text(
                 title,
-                style: AppTheme.headingSmall.copyWith(
+                style: Theme.of(context).textTheme.titleLarge?.copyWith(
                   color: Colors.white,
                   fontSize: isSmallScreen ? 14 : 16,
                 ),
@@ -61,8 +60,8 @@ class ToolCard extends StatelessWidget {
               ),
               Text(
                 subtitle,
-                style: AppTheme.bodySmall.copyWith(
-                  color: Colors.white.withOpacity(0.8),
+                style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                  color: Colors.white.withValues(alpha: 0.8),
                   fontSize: isSmallScreen ? 9 : 10,
                 ),
                 maxLines: 2,

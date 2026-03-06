@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:animate_do/animate_do.dart';
-import '../theme/app_theme.dart';
 
 class CustomAppBar extends StatelessWidget implements PreferredSizeWidget {
   final String title;
@@ -20,48 +19,33 @@ class CustomAppBar extends StatelessWidget implements PreferredSizeWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-      decoration: BoxDecoration(
-        color: AppTheme.cardColor,
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.03),
-            offset: const Offset(0, 2),
-            blurRadius: 5,
-          ),
-        ],
-      ),
-      child: SafeArea(
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            Row(
-              children: [
-                if (showBackButton)
-                  IconButton(
-                    icon: const Icon(Icons.arrow_back_ios_new),
-                    onPressed:
-                        onLeadingTap ?? () => Navigator.of(context).pop(),
-                  )
-                else if (leadingIcon != null)
-                  leadingIcon!,
-                const SizedBox(width: 8),
-                FadeIn(
-                  duration: const Duration(milliseconds: 300),
-                  child: Text(
-                    title,
-                    style: AppTheme.headingSmall,
-                  ),
-                ),
-              ],
-            ),
-            Row(
-              children: actions ?? [],
-            ),
-          ],
+    final colorScheme = Theme.of(context).colorScheme;
+    final textTheme = Theme.of(context).textTheme;
+
+    Widget? leading;
+    if (showBackButton) {
+      leading = IconButton(
+        icon: const Icon(Icons.arrow_back_ios_new),
+        onPressed: onLeadingTap ?? () => Navigator.of(context).pop(),
+      );
+    } else if (leadingIcon != null) {
+      leading = leadingIcon;
+    }
+
+    return AppBar(
+      backgroundColor: colorScheme.surface,
+      elevation: 0,
+      scrolledUnderElevation: 0,
+      leading: leading,
+      automaticallyImplyLeading: false,
+      title: FadeIn(
+        duration: const Duration(milliseconds: 300),
+        child: Text(
+          title,
+          style: textTheme.titleLarge,
         ),
       ),
+      actions: actions,
     );
   }
 

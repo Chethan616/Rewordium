@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:animate_do/animate_do.dart';
+import 'package:m3e_collection/m3e_collection.dart';
 
-import '../theme/app_theme.dart';
 import '../screens/paraphraser_page.dart';
 import '../screens/grammar_page.dart';
 import '../screens/ai_detector_page.dart';
@@ -15,44 +15,31 @@ import '../services/document_service.dart';
 class ToolPopup extends StatelessWidget {
   const ToolPopup({super.key});
   
-  // Navigate to the selected tool
   void _navigateToTool(BuildContext context, String toolName) {
     switch (toolName.toLowerCase()) {
       case 'ai detector':
-        Navigator.push(
-          context,
-          MaterialPageRoute(builder: (context) => const AIDetectorPage()),
-        );
+        Navigator.push(context,
+            MaterialPageRoute(builder: (_) => const AIDetectorPage()));
         break;
       case 'translator':
-        Navigator.push(
-          context,
-          MaterialPageRoute(builder: (context) => const TranslatorPage()),
-        );
+        Navigator.push(context,
+            MaterialPageRoute(builder: (_) => const TranslatorPage()));
         break;
       case 'paraphraser':
-        Navigator.push(
-          context,
-          MaterialPageRoute(builder: (context) => const ParaphraserPage()),
-        );
+        Navigator.push(context,
+            MaterialPageRoute(builder: (_) => const ParaphraserPage()));
         break;
       case 'grammar':
-        Navigator.push(
-          context,
-          MaterialPageRoute(builder: (context) => const GrammarPage()),
-        );
+        Navigator.push(context,
+            MaterialPageRoute(builder: (_) => const GrammarPage()));
         break;
       case 'summarizer':
-        Navigator.push(
-          context,
-          MaterialPageRoute(builder: (context) => const SummarizerPage()),
-        );
+        Navigator.push(context,
+            MaterialPageRoute(builder: (_) => const SummarizerPage()));
         break;
       case 'tone editor':
-        Navigator.push(
-          context,
-          MaterialPageRoute(builder: (context) => const ToneEditorPage()),
-        );
+        Navigator.push(context,
+            MaterialPageRoute(builder: (_) => const ToneEditorPage()));
         break;
       case 'scan document':
         _scanDocument(context);
@@ -105,7 +92,8 @@ class ToolPopup extends StatelessWidget {
   Widget build(BuildContext context) {
     final size = MediaQuery.of(context).size;
     final popupHeight = size.height * 0.6;
-
+    final colorScheme = Theme.of(context).colorScheme;
+    final textTheme = Theme.of(context).textTheme;
     final tools = _toolList;
 
     return SlideInUp(
@@ -113,18 +101,11 @@ class ToolPopup extends StatelessWidget {
       child: Container(
         height: popupHeight,
         decoration: BoxDecoration(
-          color: AppTheme.cardColor,
+          color: colorScheme.surface,
           borderRadius: const BorderRadius.only(
-            topLeft: Radius.circular(30),
-            topRight: Radius.circular(30),
+            topLeft: Radius.circular(28),
+            topRight: Radius.circular(28),
           ),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withOpacity(0.15),
-              blurRadius: 20,
-              offset: const Offset(0, -8),
-            ),
-          ],
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -138,22 +119,16 @@ class ToolPopup extends StatelessWidget {
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    Text(
-                      "Tools",
-                      style: AppTheme.headingMedium.copyWith(
-                        fontWeight: FontWeight.w700,
-                        letterSpacing: -0.5,
-                      ),
-                    ),
+                    Text("Tools", style: textTheme.headlineMedium),
                     Container(
-                      padding: const EdgeInsets.all(6),
+                      padding: const EdgeInsets.all(8),
                       decoration: BoxDecoration(
-                        color: AppTheme.primaryColor.withOpacity(0.12),
-                        borderRadius: BorderRadius.circular(10),
+                        color: colorScheme.primaryContainer,
+                        borderRadius: BorderRadius.circular(12),
                       ),
                       child: Icon(
                         CupertinoIcons.square_grid_2x2,
-                        color: AppTheme.primaryColor,
+                        color: colorScheme.onPrimaryContainer,
                         size: 22,
                       ),
                     ),
@@ -170,22 +145,21 @@ class ToolPopup extends StatelessWidget {
                   itemCount: tools.length,
                   gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
                     crossAxisCount: 2,
-                    crossAxisSpacing: 16,
-                    mainAxisSpacing: 16,
+                    crossAxisSpacing: 14,
+                    mainAxisSpacing: 14,
                     childAspectRatio: 1,
                   ),
                   itemBuilder: (context, index) {
                     final tool = tools[index];
                     return FadeInUp(
                       duration: const Duration(milliseconds: 400),
-                      delay: Duration(milliseconds: 100 * index),
+                      delay: Duration(milliseconds: 60 * index),
                       child: _ToolCard(
                         title: tool.title,
                         icon: tool.icon,
                         color: tool.color,
                         onTap: () {
                           Navigator.pop(context);
-                          // Navigate to the selected tool
                           _navigateToTool(context, tool.title);
                         },
                       ),
@@ -200,7 +174,16 @@ class ToolPopup extends StatelessWidget {
               delay: const Duration(milliseconds: 350),
               child: Padding(
                 padding: const EdgeInsets.fromLTRB(20, 0, 20, 26),
-                child: _BottomButton(),
+                child: SizedBox(
+                  width: double.infinity,
+                  child: ButtonM3E(
+                    onPressed: () => Navigator.pop(context),
+                    label: const Text('Close'),
+                    style: ButtonM3EStyle.tonal,
+                    size: ButtonM3ESize.md,
+                    shape: ButtonM3EShape.round,
+                  ),
+                ),
               ),
             ),
           ],
@@ -215,6 +198,7 @@ class _Handle extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
     return Center(
       child: FadeIn(
         duration: const Duration(milliseconds: 600),
@@ -223,7 +207,7 @@ class _Handle extends StatelessWidget {
           height: 5,
           margin: const EdgeInsets.only(top: 12, bottom: 12),
           decoration: BoxDecoration(
-            color: Colors.grey.withOpacity(0.25),
+            color: colorScheme.outlineVariant,
             borderRadius: BorderRadius.circular(2.5),
           ),
         ),
@@ -247,36 +231,29 @@ class _ToolCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+    final textTheme = Theme.of(context).textTheme;
+
     return Material(
-      color: Colors.transparent,
+      color: colorScheme.surfaceContainer,
       borderRadius: BorderRadius.circular(20),
+      clipBehavior: Clip.antiAlias,
       child: InkWell(
         onTap: onTap,
         borderRadius: BorderRadius.circular(20),
-        child: AnimatedContainer(
-          duration: const Duration(milliseconds: 160),
+        child: Container(
           padding: const EdgeInsets.all(18),
           decoration: BoxDecoration(
-            color: color.withOpacity(0.05),
-            borderRadius: BorderRadius.circular(20),
-            border: Border.all(
-              color: color.withOpacity(0.18),
-              width: 1.0,
+            border: Border(
+              top: BorderSide(color: color, width: 3),
             ),
-            boxShadow: [
-              BoxShadow(
-                color: color.withOpacity(0.06),
-                blurRadius: 12,
-                offset: const Offset(0, 5),
-              ),
-            ],
           ),
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
               Container(
                 decoration: BoxDecoration(
-                  color: color.withOpacity(0.12),
+                  color: color.withValues(alpha: 0.15),
                   shape: BoxShape.circle,
                 ),
                 padding: const EdgeInsets.all(14),
@@ -286,45 +263,11 @@ class _ToolCard extends StatelessWidget {
               Text(
                 title,
                 textAlign: TextAlign.center,
-                style: AppTheme.bodyLarge.copyWith(
+                style: textTheme.titleSmall?.copyWith(
                   fontWeight: FontWeight.w600,
-                  color: AppTheme.textPrimaryColor,
-                  letterSpacing: -0.2,
                 ),
               ),
             ],
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-class _BottomButton extends StatelessWidget {
-  const _BottomButton();
-
-  @override
-  Widget build(BuildContext context) {
-    return CupertinoButton(
-      padding: EdgeInsets.zero,
-      onPressed: () => Navigator.pop(context),
-      child: Container(
-        padding: const EdgeInsets.symmetric(vertical: 14),
-        decoration: BoxDecoration(
-          color: Colors.grey.withOpacity(0.06),
-          borderRadius: BorderRadius.circular(16),
-          border: Border.all(
-            color: Colors.grey.withOpacity(0.15),
-            width: 1.0,
-          ),
-        ),
-        child: Center(
-          child: Text(
-            "Close",
-            style: AppTheme.bodyLarge.copyWith(
-              fontWeight: FontWeight.w500,
-              color: AppTheme.textSecondaryColor,
-            ),
           ),
         ),
       ),

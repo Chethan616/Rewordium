@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:animate_do/animate_do.dart';
 
-import '../theme/app_theme.dart';
 import '../utils/lottie_assets.dart';
 import '../widgets/animated_card.dart';
 import '../widgets/animated_jade_avatar.dart';
@@ -30,7 +29,7 @@ class HomeContent extends StatelessWidget {
               duration: const Duration(milliseconds: 600),
               child: Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 16),
-                child: Text("Your Tools", style: AppTheme.headingSmall),
+                child: Text("Your Tools", style: Theme.of(context).textTheme.titleLarge!),
               ),
             ),
             _buildQuickTools(isSmallScreen, context),
@@ -39,12 +38,12 @@ class HomeContent extends StatelessWidget {
               duration: const Duration(milliseconds: 800),
               child: Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 16),
-                child: Text("Setup Status", style: AppTheme.headingSmall),
+                child: Text("Setup Status", style: Theme.of(context).textTheme.titleLarge!),
               ),
             ),
-            _buildKeyboardStatusCard(isSmallScreen),
+            _buildKeyboardStatusCard(isSmallScreen, context),
             const AssistantStatusCard(),
-            _buildFeedbackCard(),
+            _buildFeedbackCard(context),
             const SizedBox(height: 20),
           ],
         ),
@@ -67,14 +66,14 @@ class HomeContent extends StatelessWidget {
                   children: [
                     Text(
                       "Welcome to",
-                      style: AppTheme.bodyLarge.copyWith(
-                        color: AppTheme.textSecondaryColor,
+                      style: Theme.of(context).textTheme.bodyLarge!.copyWith(
+                        color: Theme.of(context).colorScheme.onSurfaceVariant,
                       ),
                     ),
                     Text(
                       "YC Startup",
-                      style: AppTheme.headingLarge.copyWith(
-                        color: AppTheme.primaryColor,
+                      style: Theme.of(context).textTheme.headlineMedium!.copyWith(
+                        color: Theme.of(context).colorScheme.primary,
                         fontWeight: FontWeight.w900,
                       ),
                     ),
@@ -96,7 +95,7 @@ class HomeContent extends StatelessWidget {
             delay: const Duration(milliseconds: 300),
             child: Text(
               "Improve your writing with AI",
-              style: AppTheme.bodyMedium,
+              style: Theme.of(context).textTheme.bodyMedium!,
             ),
           ),
         ],
@@ -123,6 +122,7 @@ class HomeContent extends StatelessWidget {
             Colors.green,
             100,
             isSmallScreen,
+            context,
           ),
           _buildToolCard(
             "Grammar Check",
@@ -133,6 +133,7 @@ class HomeContent extends StatelessWidget {
             Colors.red,
             300,
             isSmallScreen,
+            context,
           ),
           _buildToolCard(
             "Keyboard",
@@ -141,6 +142,7 @@ class HomeContent extends StatelessWidget {
             Colors.blue,
             500,
             isSmallScreen,
+            context,
           ),
           GestureDetector(
             onTap: () {
@@ -152,7 +154,7 @@ class HomeContent extends StatelessWidget {
                 ),
               );
             },
-            child: _buildJadeAICard(isSmallScreen),
+            child: _buildJadeAICard(isSmallScreen, context),
           ),
         ],
       ),
@@ -166,6 +168,7 @@ class HomeContent extends StatelessWidget {
     Color color,
     int delay,
     bool isSmallScreen,
+    BuildContext context,
   ) {
     return FadeInRight(
       delay: Duration(milliseconds: delay),
@@ -177,12 +180,12 @@ class HomeContent extends StatelessWidget {
           gradient: LinearGradient(
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
-            colors: [color.withOpacity(0.8), color.withOpacity(0.6)],
+            colors: [color.withValues(alpha: 0.8), color.withValues(alpha: 0.6)],
           ),
           borderRadius: BorderRadius.circular(16),
           boxShadow: [
             BoxShadow(
-              color: color.withOpacity(0.3),
+              color: color.withValues(alpha: 0.3),
               blurRadius: 8,
               offset: const Offset(0, 4),
             ),
@@ -201,7 +204,7 @@ class HomeContent extends StatelessWidget {
               children: [
                 Text(
                   title,
-                  style: AppTheme.headingSmall.copyWith(
+                  style: Theme.of(context).textTheme.titleLarge!.copyWith(
                     color: Colors.white,
                     fontSize: isSmallScreen ? 14 : 16,
                   ),
@@ -210,8 +213,8 @@ class HomeContent extends StatelessWidget {
                 ),
                 Text(
                   subtitle,
-                  style: AppTheme.bodySmall.copyWith(
-                    color: Colors.white.withOpacity(0.8),
+                  style: Theme.of(context).textTheme.bodySmall!.copyWith(
+                    color: Colors.white.withValues(alpha: 0.8),
                     fontSize: isSmallScreen ? 9 : 10,
                   ),
                   maxLines: 2,
@@ -225,7 +228,7 @@ class HomeContent extends StatelessWidget {
     );
   }
 
-  Widget _buildKeyboardStatusCard(bool isSmallScreen) {
+  Widget _buildKeyboardStatusCard(bool isSmallScreen, BuildContext context) {
     return AnimatedCard(
       animationDelay: 300,
       padding: EdgeInsets.all(isSmallScreen ? 12 : 16),
@@ -245,7 +248,7 @@ class HomeContent extends StatelessWidget {
               const SizedBox(width: 8),
               Text(
                 "Keyboard Status",
-                style: AppTheme.bodyLarge.copyWith(fontWeight: FontWeight.w600),
+                style: Theme.of(context).textTheme.bodyLarge!.copyWith(fontWeight: FontWeight.w600),
               ),
             ],
           ),
@@ -258,12 +261,12 @@ class HomeContent extends StatelessWidget {
                   children: [
                     Text(
                       "Switch to YC Startup Keyboard",
-                      style: AppTheme.bodyMedium,
+                      style: Theme.of(context).textTheme.bodyMedium!,
                     ),
                     const SizedBox(height: 4),
                     Text(
                       "Write better in all your apps",
-                      style: AppTheme.bodySmall,
+                      style: Theme.of(context).textTheme.bodySmall!,
                     ),
                   ],
                 ),
@@ -288,7 +291,7 @@ class HomeContent extends StatelessWidget {
     );
   }
 
-  Widget _buildFeedbackCard() {
+  Widget _buildFeedbackCard(BuildContext context) {
     return AnimatedCard(
       animationDelay: 500,
       child: Column(
@@ -296,7 +299,7 @@ class HomeContent extends StatelessWidget {
         children: [
           Text(
             "Rate Us",
-            style: AppTheme.bodyLarge.copyWith(fontWeight: FontWeight.w600),
+            style: Theme.of(context).textTheme.bodyLarge!.copyWith(fontWeight: FontWeight.w600),
           ),
           const SizedBox(height: 12),
           SizedBox(
@@ -315,7 +318,7 @@ class HomeContent extends StatelessWidget {
     );
   }
 
-  Widget _buildJadeAICard(bool isSmallScreen) {
+  Widget _buildJadeAICard(bool isSmallScreen, BuildContext context) {
     return FadeInRight(
       delay: const Duration(milliseconds: 700),
       child: Container(
@@ -327,15 +330,15 @@ class HomeContent extends StatelessWidget {
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
             colors: [
-              Colors.deepPurple.withOpacity(0.8),
-              Colors.deepPurple.withOpacity(0.6),
-              const Color(0xFF4ECDC4).withOpacity(0.5),
+              Colors.deepPurple.withValues(alpha: 0.8),
+              Colors.deepPurple.withValues(alpha: 0.6),
+              const Color(0xFF4ECDC4).withValues(alpha: 0.5),
             ],
           ),
           borderRadius: BorderRadius.circular(16),
           boxShadow: [
             BoxShadow(
-              color: Colors.deepPurple.withOpacity(0.3),
+              color: Colors.deepPurple.withValues(alpha: 0.3),
               blurRadius: 8,
               offset: const Offset(0, 4),
             ),
@@ -363,7 +366,7 @@ class HomeContent extends StatelessWidget {
               children: [
                 Text(
                   "Jade AI",
-                  style: AppTheme.headingSmall.copyWith(
+                  style: Theme.of(context).textTheme.titleLarge!.copyWith(
                     color: Colors.white,
                     fontSize: isSmallScreen ? 14 : 16,
                   ),
@@ -372,8 +375,8 @@ class HomeContent extends StatelessWidget {
                 ),
                 Text(
                   "Chat with AI assistant",
-                  style: AppTheme.bodySmall.copyWith(
-                    color: Colors.white.withOpacity(0.8),
+                  style: Theme.of(context).textTheme.bodySmall!.copyWith(
+                    color: Colors.white.withValues(alpha: 0.8),
                     fontSize: isSmallScreen ? 9 : 10,
                   ),
                   maxLines: 2,

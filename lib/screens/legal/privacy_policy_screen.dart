@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/cupertino.dart';
-import '../../theme/app_theme.dart';
 
 class PrivacyPolicyScreen extends StatelessWidget {
   const PrivacyPolicyScreen({super.key});
@@ -8,21 +7,21 @@ class PrivacyPolicyScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppTheme.backgroundColor,
+      backgroundColor: Theme.of(context).colorScheme.surfaceContainerLow,
       appBar: AppBar(
-        backgroundColor: AppTheme.backgroundColor,
+        backgroundColor: Theme.of(context).colorScheme.surfaceContainerLow,
         elevation: 0,
         leading: IconButton(
           icon: Icon(
             Icons.arrow_back_ios_new_rounded,
-            color: AppTheme.textPrimaryColor,
+            color: Theme.of(context).colorScheme.onSurface,
             size: 20,
           ),
           onPressed: () => Navigator.pop(context),
         ),
         title: Text(
           'Privacy Policy',
-          style: AppTheme.headingMedium.copyWith(
+          style: Theme.of(context).textTheme.headlineSmall?.copyWith(
             fontWeight: FontWeight.w700,
           ),
         ),
@@ -35,20 +34,21 @@ class PrivacyPolicyScreen extends StatelessWidget {
           children: [
             Text(
               'Privacy Policy',
-              style: AppTheme.headingLarge.copyWith(
+              style: Theme.of(context).textTheme.headlineMedium?.copyWith(
                 fontWeight: FontWeight.w900,
-                color: AppTheme.primaryColor,
+                color: Theme.of(context).colorScheme.primary,
               ),
             ),
             const SizedBox(height: 8),
             Text(
               'Last updated: ${DateTime.now().toString().split(' ')[0]}',
-              style: AppTheme.bodySmall.copyWith(
-                color: AppTheme.textSecondaryColor,
+              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                color: Theme.of(context).colorScheme.onSurfaceVariant,
               ),
             ),
             const SizedBox(height: 24),
             _buildSection(
+              context: context,
               title: '1. Introduction',
               content:
                   '''Welcome to Rewordium. We are committed to protecting your privacy and ensuring the security of your personal information. This Privacy Policy explains how we collect, use, store, and protect your data when you use our AI-powered writing assistant application.
@@ -56,6 +56,7 @@ class PrivacyPolicyScreen extends StatelessWidget {
 Rewordium is designed with privacy in mind, processing text locally whenever possible and minimizing data collection to provide you with the best writing assistance experience.''',
             ),
             _buildSection(
+              context: context,
               title: '2. Information We Collect',
               content: '''2.1 Account Information:
 • Email address (for account creation and communication)
@@ -80,6 +81,7 @@ Rewordium is designed with privacy in mind, processing text locally whenever pos
 • Accessibility service permissions and status''',
             ),
             _buildSection(
+              context: context,
               title: '3. How We Use Your Information',
               content: '''We use your information exclusively to:
 • Provide AI-powered text rewriting and enhancement services
@@ -93,6 +95,7 @@ Rewordium is designed with privacy in mind, processing text locally whenever pos
 We do not use your personal information for advertising or marketing to third parties.''',
             ),
             _buildSection(
+              context: context,
               title: '4. Data Processing and AI Services',
               content: '''4.1 Local Processing:
 • Most text processing occurs directly on your device
@@ -111,6 +114,7 @@ We do not use your personal information for advertising or marketing to third pa
 • Usage analytics are aggregated and anonymized after 90 days''',
             ),
             _buildSection(
+              context: context,
               title: '5. Accessibility Service Privacy',
               content: '''Rewordium's accessibility service:
 • Only activates when you explicitly request text assistance
@@ -121,6 +125,7 @@ We do not use your personal information for advertising or marketing to third pa
 • Does not store or transmit personal conversations or sensitive information''',
             ),
             _buildSection(
+              context: context,
               title: '6. Data Sharing and Third Parties',
               content:
                   '''We do not sell, rent, or share your personal information with third parties except:
@@ -139,6 +144,7 @@ We do not use your personal information for advertising or marketing to third pa
 All third-party services are carefully vetted for privacy compliance.''',
             ),
             _buildSection(
+              context: context,
               title: '7. Open Source Software',
               content:
                   '''Rewordium incorporates open source software components:
@@ -150,6 +156,7 @@ Open source components are used in accordance with their respective licenses. Th
 For a full list of open source licenses, see Settings > Open Source Licenses within the App.''',
             ),
             _buildSection(
+              context: context,
               title: '8. Data Security',
               content: '''We implement comprehensive security measures:
 • End-to-end encryption for sensitive data transmission
@@ -161,6 +168,7 @@ For a full list of open source licenses, see Settings > Open Source Licenses wit
 • Device-level security recommendations for users''',
             ),
             _buildSection(
+              context: context,
               title: '9. Your Privacy Rights',
               content: '''You have the right to:
 • Access your personal information and account data
@@ -172,6 +180,7 @@ For a full list of open source licenses, see Settings > Open Source Licenses wit
 To exercise these rights, contact us at noxquilltech@gmail.com''',
             ),
             _buildSection(
+              context: context,
               title: '10. Children\'s Privacy',
               content:
                 '''Rewordium is not intended for users under the minimum age required by applicable laws in their region. We do not knowingly collect personal information from children who do not meet the minimum age requirement. If we discover that we have collected information from a user below the applicable age threshold, we will delete that information immediately.
@@ -179,11 +188,13 @@ To exercise these rights, contact us at noxquilltech@gmail.com''',
       Parents and guardians should monitor their children's online activities and app usage.''',
             ),
             _buildSection(
+              context: context,
               title: 'No Professional Advice',
               content:
                 '''AI-generated content is provided for assistance purposes only and should not be considered professional, legal, academic, medical, or financial advice. Users are responsible for reviewing and validating AI-generated suggestions before use.''',
             ),
             _buildSection(
+              context: context,
               title: '11. Third-Party Services',
               content:
                   '''Our App uses the following third-party services that may process data:
@@ -194,6 +205,7 @@ To exercise these rights, contact us at noxquilltech@gmail.com''',
 Each service operates under their own privacy policies. We only share the minimum data necessary for these services to function.''',
             ),
             _buildSection(
+              context: context,
               title: '12. Cookies and Tracking',
               content: '''Rewordium uses minimal tracking technologies:
 • Essential cookies for app functionality and user sessions
@@ -205,6 +217,7 @@ Each service operates under their own privacy policies. We only share the minimu
 We prioritize functionality over data collection.''',
             ),
             _buildSection(
+              context: context,
               title: '13. Privacy Policy Updates',
               content:
                   '''We may update this Privacy Policy occasionally to reflect:
@@ -220,6 +233,7 @@ When we make significant changes:
 • Users may delete their accounts if they disagree with updates''',
             ),
             _buildSection(
+              context: context,
               title: '14. Contact Us',
               content: '''For privacy-related questions, concerns, or requests:
 
@@ -231,6 +245,7 @@ Website: rewordium.tech
 We are committed to addressing privacy concerns promptly and transparently. Responses are typically provided within 48 hours.''',
             ),
             _buildSection(
+              context: context,
               title: '15. Regional Privacy Rights',
               content: '''15.1 GDPR (European Union):
 EU users have additional rights under GDPR, including data portability, right to be forgotten, and the right to object to processing.
@@ -245,32 +260,32 @@ We comply with applicable privacy laws in all regions where Rewordium is availab
             Container(
               padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
-                color: AppTheme.primaryColor.withOpacity(0.1),
+                color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.1),
                 borderRadius: BorderRadius.circular(12),
                 border: Border.all(
-                  color: AppTheme.primaryColor.withOpacity(0.2),
+                  color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.2),
                 ),
               ),
               child: Column(
                 children: [
                   Icon(
                     CupertinoIcons.shield_fill,
-                    color: AppTheme.primaryColor,
+                    color: Theme.of(context).colorScheme.primary,
                     size: 32,
                   ),
                   const SizedBox(height: 12),
                   Text(
                     'Your Privacy Matters',
-                    style: AppTheme.headingSmall.copyWith(
+                    style: Theme.of(context).textTheme.titleLarge?.copyWith(
                       fontWeight: FontWeight.w700,
-                      color: AppTheme.primaryColor,
+                      color: Theme.of(context).colorScheme.primary,
                     ),
                   ),
                   const SizedBox(height: 8),
                   Text(
                     'We are committed to protecting your privacy and being transparent about our data practices. If you have any questions or concerns, please don\'t hesitate to contact us.',
-                    style: AppTheme.bodyMedium.copyWith(
-                      color: AppTheme.primaryColor,
+                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                      color: Theme.of(context).colorScheme.primary,
                       height: 1.5,
                     ),
                     textAlign: TextAlign.center,
@@ -285,23 +300,23 @@ We comply with applicable privacy laws in all regions where Rewordium is availab
     );
   }
 
-  Widget _buildSection({required String title, required String content}) {
+  Widget _buildSection({required BuildContext context, required String title, required String content}) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
           title,
-          style: AppTheme.headingSmall.copyWith(
+          style: Theme.of(context).textTheme.titleLarge?.copyWith(
             fontWeight: FontWeight.w700,
-            color: AppTheme.primaryColor,
+            color: Theme.of(context).colorScheme.primary,
           ),
         ),
         const SizedBox(height: 12),
         Text(
           content,
-          style: AppTheme.bodyMedium.copyWith(
+          style: Theme.of(context).textTheme.bodyMedium?.copyWith(
             height: 1.6,
-            color: AppTheme.textPrimaryColor,
+            color: Theme.of(context).colorScheme.onSurface,
           ),
         ),
         const SizedBox(height: 24),

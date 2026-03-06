@@ -2,11 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:animate_do/animate_do.dart';
 import 'package:provider/provider.dart';
+import 'package:m3e_collection/m3e_collection.dart';
 
 import '../providers/auth_provider.dart';
-import '../theme/app_theme.dart';
 import '../utils/lottie_assets.dart';
-import '../widgets/animated_card.dart';
 import '../widgets/custom_button.dart';
 import '../widgets/home/keyboard_status_card.dart';
 import '../widgets/home/assistant_status_card.dart';
@@ -55,6 +54,8 @@ class HomeScreen extends StatelessWidget {
     final authProvider = Provider.of<AuthProvider>(context);
     final userName = authProvider.userName ?? 'Rewordium';
     final isLoggedIn = authProvider.isLoggedIn;
+    final colorScheme = Theme.of(context).colorScheme;
+    final textTheme = Theme.of(context).textTheme;
 
     return SingleChildScrollView(
       physics: const BouncingScrollPhysics(),
@@ -62,8 +63,21 @@ class HomeScreen extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            AnimatedCard(
-              padding: const EdgeInsets.all(16),
+            // Hero header card
+            Container(
+              margin: const EdgeInsets.all(16),
+              padding: const EdgeInsets.all(20),
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                  colors: [
+                    colorScheme.primaryContainer,
+                    colorScheme.secondaryContainer,
+                  ],
+                ),
+                borderRadius: BorderRadius.circular(28),
+              ),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
@@ -76,15 +90,16 @@ class HomeScreen extends StatelessWidget {
                           children: [
                             Text(
                               isLoggedIn ? "Welcome back" : "Welcome to",
-                              style: AppTheme.bodyLarge.copyWith(
-                                color: AppTheme.textSecondaryColor,
+                              style: textTheme.bodyLarge?.copyWith(
+                                color: colorScheme.onPrimaryContainer
+                                    .withValues(alpha: 0.7),
                               ),
                             ),
                             Text(
                               userName,
-                              style: AppTheme.headingLarge.copyWith(
-                                color: AppTheme.primaryColor,
-                                fontWeight: FontWeight.w900,
+                              style: textTheme.headlineMedium?.copyWith(
+                                color: colorScheme.onPrimaryContainer,
+                                fontWeight: FontWeight.w800,
                               ),
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
@@ -94,39 +109,45 @@ class HomeScreen extends StatelessWidget {
                       ),
                       const SizedBox(width: 8),
                       if (!isLoggedIn)
-                        CustomButton(
-                          text: "Log in",
+                        ButtonM3E(
                           onPressed: () {
                             Navigator.push(
                               context,
                               MaterialPageRoute(
-                                  builder: (context) => const LoginScreen()),
+                                  builder: (_) => const LoginScreen()),
                             );
                           },
-                          width: 90,
-                          type: ButtonType.primary,
+                          label: const Text("Log in"),
+                          style: ButtonM3EStyle.filled,
+                          size: ButtonM3ESize.sm,
+                          shape: ButtonM3EShape.round,
                         )
                       else
-                        IconButton(
+                        IconButtonM3E(
                           icon: const Icon(CupertinoIcons.person_fill),
                           onPressed: () => _showProfileDropdown(context),
-                          color: AppTheme.primaryColor,
+                          variant: IconButtonM3EVariant.tonal,
+                          size: IconButtonM3ESize.md,
+                          shape: IconButtonM3EShapeVariant.round,
                         ),
                     ],
                   ),
-                  const SizedBox(height: 16),
+                  const SizedBox(height: 12),
                   Text(
                     "Improve your writing with AI",
-                    style: AppTheme.bodyMedium,
+                    style: textTheme.bodyMedium?.copyWith(
+                      color: colorScheme.onPrimaryContainer
+                          .withValues(alpha: 0.6),
+                    ),
                   ),
                 ],
               ),
             ),
-            const SizedBox(height: 8),
-            _buildSectionTitle("Your Tools"),
+            const SizedBox(height: 4),
+            _buildSectionTitle(context, "Your Tools"),
             const _ToolsRow(),
-            const SizedBox(height: 8),
-            _buildSectionTitle("Setup Status"),
+            const SizedBox(height: 4),
+            _buildSectionTitle(context, "Setup Status"),
             const KeyboardStatusCard(),
             const AssistantStatusCard(),
             const FeedbackCard(),
@@ -137,10 +158,10 @@ class HomeScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildSectionTitle(String title) {
+  Widget _buildSectionTitle(BuildContext context, String title) {
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16),
-      child: Text(title, style: AppTheme.headingSmall),
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+      child: Text(title, style: Theme.of(context).textTheme.titleLarge),
     );
   }
 }
@@ -298,47 +319,36 @@ class _ToolsRow extends StatelessWidget {
     required Color color,
     required bool isSmallScreen,
   }) {
+    final colorScheme = Theme.of(context).colorScheme;
+    final textTheme = Theme.of(context).textTheme;
+
     return FadeInRight(
-      delay: Duration(milliseconds: 200),
+      delay: const Duration(milliseconds: 200),
       child: GestureDetector(
         onTap: () {
           final normalizedTitle = title.trim().toLowerCase();
           if (normalizedTitle == "paraphraser") {
-            Navigator.push(
-              context,
-              MaterialPageRoute(builder: (context) => const ParaphraserPage()),
-            );
+            Navigator.push(context,
+                MaterialPageRoute(builder: (_) => const ParaphraserPage()));
           } else if (normalizedTitle == "grammar check" ||
               normalizedTitle == "grammar") {
-            Navigator.push(
-              context,
-              MaterialPageRoute(builder: (context) => const GrammarPage()),
-            );
+            Navigator.push(context,
+                MaterialPageRoute(builder: (_) => const GrammarPage()));
           } else if (normalizedTitle == "translator") {
-            Navigator.push(
-              context,
-              MaterialPageRoute(builder: (context) => const TranslatorPage()),
-            );
+            Navigator.push(context,
+                MaterialPageRoute(builder: (_) => const TranslatorPage()));
           } else if (normalizedTitle == "ai detector") {
-            Navigator.push(
-              context,
-              MaterialPageRoute(builder: (context) => const AIDetectorPage()),
-            );
+            Navigator.push(context,
+                MaterialPageRoute(builder: (_) => const AIDetectorPage()));
           } else if (normalizedTitle == "summarizer") {
-            Navigator.push(
-              context,
-              MaterialPageRoute(builder: (context) => const SummarizerPage()),
-            );
+            Navigator.push(context,
+                MaterialPageRoute(builder: (_) => const SummarizerPage()));
           } else if (normalizedTitle == "tone editor") {
-            Navigator.push(
-              context,
-              MaterialPageRoute(builder: (context) => const ToneEditorPage()),
-            );
+            Navigator.push(context,
+                MaterialPageRoute(builder: (_) => const ToneEditorPage()));
           } else if (normalizedTitle == "jade ai") {
-            Navigator.push(
-              context,
-              MaterialPageRoute(builder: (context) => const JadeChatScreen()),
-            );
+            Navigator.push(context,
+                MaterialPageRoute(builder: (_) => const JadeChatScreen()));
           }
         },
         child: Container(
@@ -346,19 +356,11 @@ class _ToolsRow extends StatelessWidget {
           margin: EdgeInsets.all(isSmallScreen ? 6 : 8),
           padding: EdgeInsets.all(isSmallScreen ? 8 : 12),
           decoration: BoxDecoration(
-            gradient: LinearGradient(
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-              colors: [color.withOpacity(0.8), color.withOpacity(0.6)],
+            color: colorScheme.surfaceContainer,
+            borderRadius: BorderRadius.circular(20),
+            border: Border(
+              left: BorderSide(color: color, width: 3),
             ),
-            borderRadius: BorderRadius.circular(18),
-            boxShadow: [
-              BoxShadow(
-                color: color.withOpacity(0.3),
-                blurRadius: 12,
-                offset: const Offset(0, 4),
-              ),
-            ],
           ),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -372,8 +374,7 @@ class _ToolsRow extends StatelessWidget {
                 children: [
                   Text(
                     title,
-                    style: AppTheme.headingSmall.copyWith(
-                      color: Colors.white,
+                    style: textTheme.titleSmall?.copyWith(
                       fontSize: isSmallScreen ? 14 : 16,
                     ),
                     maxLines: 1,
@@ -381,8 +382,7 @@ class _ToolsRow extends StatelessWidget {
                   ),
                   Text(
                     subtitle,
-                    style: AppTheme.bodySmall.copyWith(
-                      color: Colors.white.withOpacity(0.8),
+                    style: textTheme.bodySmall?.copyWith(
                       fontSize: isSmallScreen ? 9 : 10,
                     ),
                     maxLines: 2,
@@ -406,6 +406,9 @@ class _ToolsRow extends StatelessWidget {
     required bool isSmallScreen,
     required VoidCallback onTap,
   }) {
+    final colorScheme = Theme.of(context).colorScheme;
+    final textTheme = Theme.of(context).textTheme;
+
     return FadeInRight(
       delay: const Duration(milliseconds: 200),
       child: GestureDetector(
@@ -415,25 +418,17 @@ class _ToolsRow extends StatelessWidget {
           margin: EdgeInsets.all(isSmallScreen ? 6 : 8),
           padding: EdgeInsets.all(isSmallScreen ? 8 : 12),
           decoration: BoxDecoration(
-            gradient: LinearGradient(
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-              colors: [color.withOpacity(0.8), color.withOpacity(0.6)],
+            color: colorScheme.surfaceContainer,
+            borderRadius: BorderRadius.circular(20),
+            border: Border(
+              left: BorderSide(color: color, width: 3),
             ),
-            borderRadius: BorderRadius.circular(18),
-            boxShadow: [
-              BoxShadow(
-                color: color.withOpacity(0.3),
-                blurRadius: 12,
-                offset: const Offset(0, 4),
-              ),
-            ],
           ),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              Icon(icon, color: Colors.white, size: isSmallScreen ? 40 : 48),
+              Icon(icon, color: color, size: isSmallScreen ? 40 : 48),
               const SizedBox(height: 4),
               Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -441,8 +436,7 @@ class _ToolsRow extends StatelessWidget {
                 children: [
                   Text(
                     title,
-                    style: AppTheme.headingSmall.copyWith(
-                      color: Colors.white,
+                    style: textTheme.titleSmall?.copyWith(
                       fontSize: isSmallScreen ? 14 : 16,
                     ),
                     maxLines: 1,
@@ -450,8 +444,7 @@ class _ToolsRow extends StatelessWidget {
                   ),
                   Text(
                     subtitle,
-                    style: AppTheme.bodySmall.copyWith(
-                      color: Colors.white.withOpacity(0.8),
+                    style: textTheme.bodySmall?.copyWith(
                       fontSize: isSmallScreen ? 9 : 10,
                     ),
                     maxLines: 2,

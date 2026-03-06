@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import '../theme/app_theme.dart';
 import '../widgets/custom_app_bar.dart';
 
 class LicensesScreen extends StatelessWidget {
@@ -9,7 +8,7 @@ class LicensesScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppTheme.backgroundColor,
+      backgroundColor: Theme.of(context).colorScheme.surfaceContainerLow,
       body: Column(
         children: [
           CustomAppBar(
@@ -48,10 +47,10 @@ class LicensesScreen extends StatelessWidget {
                   Container(
                     padding: const EdgeInsets.all(16),
                     decoration: BoxDecoration(
-                      color: AppTheme.cardColor,
+                      color: Theme.of(context).colorScheme.surface,
                       borderRadius: BorderRadius.circular(12),
                       border: Border.all(
-                        color: AppTheme.primaryColor.withOpacity(0.2),
+                        color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.2),
                       ),
                     ),
                     child: Column(
@@ -61,13 +60,13 @@ class LicensesScreen extends StatelessWidget {
                           children: [
                             Icon(
                               Icons.info_outline,
-                              color: AppTheme.primaryColor,
+                              color: Theme.of(context).colorScheme.primary,
                               size: 20,
                             ),
                             const SizedBox(width: 8),
                             Text(
                               "About Licenses",
-                              style: AppTheme.bodyLarge.copyWith(
+                              style: Theme.of(context).textTheme.bodyLarge!.copyWith(
                                 fontWeight: FontWeight.bold,
                               ),
                             ),
@@ -80,8 +79,8 @@ class LicensesScreen extends StatelessWidget {
                           "The keyboard component is based on FlorisBoard, an open source keyboard "
                           "licensed under the Apache License 2.0. This license allows us to use, modify, "
                           "and distribute the software while providing proper attribution.",
-                          style: AppTheme.bodyMedium.copyWith(
-                            color: AppTheme.textSecondaryColor,
+                          style: Theme.of(context).textTheme.bodyMedium!.copyWith(
+                            color: Theme.of(context).colorScheme.onSurfaceVariant,
                             height: 1.5,
                           ),
                         ),
@@ -94,7 +93,7 @@ class LicensesScreen extends StatelessWidget {
                     width: double.infinity,
                     padding: const EdgeInsets.all(16),
                     decoration: BoxDecoration(
-                      color: AppTheme.cardColor,
+                      color: Theme.of(context).colorScheme.surface,
                       borderRadius: BorderRadius.circular(12),
                     ),
                     child: InkWell(
@@ -108,7 +107,7 @@ class LicensesScreen extends StatelessWidget {
                             child: Icon(
                               Icons.auto_awesome,
                               size: 48,
-                              color: AppTheme.primaryColor,
+                              color: Theme.of(context).colorScheme.primary,
                             ),
                           ),
                         );
@@ -120,7 +119,7 @@ class LicensesScreen extends StatelessWidget {
                             width: 40,
                             height: 40,
                             decoration: BoxDecoration(
-                              color: Colors.blue.withOpacity(0.1),
+                              color: Colors.blue.withValues(alpha: 0.1),
                               borderRadius: BorderRadius.circular(10),
                             ),
                             child: const Icon(
@@ -136,21 +135,21 @@ class LicensesScreen extends StatelessWidget {
                               children: [
                                 Text(
                                   "All Licenses",
-                                  style: AppTheme.bodyLarge.copyWith(
+                                  style: Theme.of(context).textTheme.bodyLarge!.copyWith(
                                     fontWeight: FontWeight.w600,
                                   ),
                                 ),
                                 const SizedBox(height: 4),
                                 Text(
                                   "View all open source licenses used in this app",
-                                  style: AppTheme.bodySmall,
+                                  style: Theme.of(context).textTheme.bodySmall!,
                                 ),
                               ],
                             ),
                           ),
                           Icon(
                             Icons.chevron_right,
-                            color: AppTheme.textSecondaryColor,
+                            color: Theme.of(context).colorScheme.onSurfaceVariant,
                           ),
                         ],
                       ),
@@ -178,11 +177,11 @@ class LicensesScreen extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: AppTheme.cardColor,
+        color: Theme.of(context).colorScheme.surface,
         borderRadius: BorderRadius.circular(12),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.05),
+            color: Colors.black.withValues(alpha: 0.05),
             blurRadius: 10,
             offset: const Offset(0, 2),
           ),
@@ -197,7 +196,7 @@ class LicensesScreen extends StatelessWidget {
                 width: 48,
                 height: 48,
                 decoration: BoxDecoration(
-                  color: iconColor.withOpacity(0.1),
+                  color: iconColor.withValues(alpha: 0.1),
                   borderRadius: BorderRadius.circular(12),
                 ),
                 child: Icon(icon, color: iconColor, size: 24),
@@ -209,14 +208,14 @@ class LicensesScreen extends StatelessWidget {
                   children: [
                     Text(
                       title,
-                      style: AppTheme.bodyLarge.copyWith(
+                      style: Theme.of(context).textTheme.bodyLarge!.copyWith(
                         fontWeight: FontWeight.bold,
                       ),
                     ),
                     const SizedBox(height: 4),
                     Text(
                       subtitle,
-                      style: AppTheme.bodySmall,
+                      style: Theme.of(context).textTheme.bodySmall!,
                     ),
                   ],
                 ),
@@ -231,12 +230,12 @@ class LicensesScreen extends StatelessWidget {
               Icon(
                 Icons.person_outline,
                 size: 16,
-                color: AppTheme.textSecondaryColor,
+                color: Theme.of(context).colorScheme.onSurfaceVariant,
               ),
               const SizedBox(width: 8),
               Text(
                 author,
-                style: AppTheme.bodySmall,
+                style: Theme.of(context).textTheme.bodySmall!,
               ),
             ],
           ),
@@ -246,12 +245,12 @@ class LicensesScreen extends StatelessWidget {
               Icon(
                 Icons.description_outlined,
                 size: 16,
-                color: AppTheme.textSecondaryColor,
+                color: Theme.of(context).colorScheme.onSurfaceVariant,
               ),
               const SizedBox(width: 8),
               Text(
                 license,
-                style: AppTheme.bodySmall,
+                style: Theme.of(context).textTheme.bodySmall!,
               ),
             ],
           ),
@@ -263,8 +262,8 @@ class LicensesScreen extends StatelessWidget {
               icon: const Icon(Icons.visibility_outlined, size: 18),
               label: const Text("View Full License"),
               style: OutlinedButton.styleFrom(
-                foregroundColor: AppTheme.primaryColor,
-                side: BorderSide(color: AppTheme.primaryColor.withOpacity(0.3)),
+                foregroundColor: Theme.of(context).colorScheme.primary,
+                side: BorderSide(color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.3)),
                 padding: const EdgeInsets.symmetric(vertical: 12),
               ),
             ),
@@ -291,7 +290,7 @@ class LicensesScreen extends StatelessWidget {
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
-      backgroundColor: AppTheme.cardColor,
+      backgroundColor: Theme.of(context).colorScheme.surface,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
@@ -307,7 +306,7 @@ class LicensesScreen extends StatelessWidget {
               width: 40,
               height: 4,
               decoration: BoxDecoration(
-                color: AppTheme.textSecondaryColor.withOpacity(0.3),
+                color: Theme.of(context).colorScheme.onSurfaceVariant.withValues(alpha: 0.3),
                 borderRadius: BorderRadius.circular(2),
               ),
             ),
@@ -317,7 +316,7 @@ class LicensesScreen extends StatelessWidget {
                 children: [
                   Text(
                     title,
-                    style: AppTheme.headingSmall,
+                    style: Theme.of(context).textTheme.titleLarge!,
                   ),
                   const Spacer(),
                   IconButton(
@@ -334,7 +333,7 @@ class LicensesScreen extends StatelessWidget {
                 padding: const EdgeInsets.all(16),
                 child: Text(
                   licenseText,
-                  style: AppTheme.bodyMedium.copyWith(
+                  style: Theme.of(context).textTheme.bodyMedium!.copyWith(
                     fontFamily: 'monospace',
                     fontSize: 12,
                     height: 1.5,

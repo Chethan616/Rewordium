@@ -1,5 +1,7 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'package:package_info_plus/package_info_plus.dart';
 import '../utils/app_logger.dart';
 
 /// Service for Google Play Integrity API
@@ -14,7 +16,68 @@ import '../utils/app_logger.dart';
 class PlayIntegrityService {
   static const MethodChannel _channel = MethodChannel('com.noxquill.rewordium/integrity');
 
-  /// Check if the device and app meet integrity requirements
+  // ── Cache keys & TTLs ─────────────────────────
+  static const String _kCacheResult  = 'pi_result';
+  static const String _kCacheTime    = 'pi_time';
+  static const String _kCacheVersion = 'pi_version';
+  /// Passed result stays valid for 24 hours.
+  static const int _kPassTTLMs = 86400000;
+  /// Failed result retries after 30 minutes.
+  static const int _kFailTTLMs = 1800000;
+
+  // ── Cached integrity check ────────────────────
+
+  /// Returns cached result when fresh; otherwise runs a live check and caches it.
+  /// Call this from the splash — it is fast (~50 ms) on every subsequent cold start.
+  static Future<bool> checkIntegrityWithCache() async {
+    if (defaultTargetPlatform != TargetPlatform.android) return true;
+
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final cachedResult  = prefs.getBool(_kCacheResult);
+      final cachedTime    = prefs.getInt(_kCacheTime);
+      final cachedVersion = prefs.getString(_kCacheVersion);
+
+      // Invalidate cache when the app is updated
+      final info = await PackageInfo.fromPlatform();
+      final currentVersion = '${info.version}+${info.buildNumber}';
+
+      if (cachedResult != null && cachedTime != null && cachedVersion == currentVersion) {
+        final ageMs = DateTime.now().millisecondsSinceEpoch - cachedTime;
+        final ttlMs = cachedResult ? _kPassTTLMs : _kFailTTLMs;
+        if (ageMs < ttlMs) {
+          AppLogger.info(
+            'Play Integrity: Cache HIT (${cachedResult ? "PASS" : "FAIL"}, '
+            'age=${ageMs ~/ 1000}s / ttl=${ttlMs ~/ 1000}s)',
+          );
+          return cachedResult;
+        }
+      }
+
+      // Cache miss or expired — run live check and persist result
+      AppLogger.info('Play Integrity: Cache MISS — running live check...');
+      final result = await checkIntegrity();
+      await prefs.setBool(_kCacheResult, result);
+      await prefs.setInt(_kCacheTime, DateTime.now().millisecondsSinceEpoch);
+      await prefs.setString(_kCacheVersion, currentVersion);
+      return result;
+    } catch (e) {
+      AppLogger.error('Play Integrity: Cache error, falling back to live check', e);
+      return checkIntegrity();
+    }
+  }
+
+  /// Clears the cached integrity result (e.g. on force-update or logout).
+  static Future<void> clearCache() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.remove(_kCacheResult);
+      await prefs.remove(_kCacheTime);
+      await prefs.remove(_kCacheVersion);
+    } catch (_) {}
+  }
+
+
   /// Returns true ONLY if ALL conditions pass:
   /// - MEETS_STRONG_INTEGRITY (device is genuine, not rooted)
   /// - PLAY_RECOGNIZED (app is the real, unmodified APK)

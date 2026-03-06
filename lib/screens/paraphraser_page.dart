@@ -4,8 +4,8 @@ import 'package:animate_do/animate_do.dart';
 import 'package:flutter/services.dart';
 import 'package:shimmer/shimmer.dart';
 import 'package:provider/provider.dart';
+import 'package:m3e_collection/m3e_collection.dart';
 
-import '../theme/app_theme.dart';
 import '../widgets/custom_app_bar.dart';
 import '../widgets/custom_button.dart';
 import '../utils/lottie_assets.dart';
@@ -518,7 +518,7 @@ class _ParaphraserPageState extends State<ParaphraserPage> {
                   title: "Paraphraser",
                   leadingIcon: Icon(
                     CupertinoIcons.pencil_outline,
-                    color: AppTheme.primaryColor,
+                    color: Theme.of(context).colorScheme.primary,
                   ),
                   actions: [
                     if (!isLoggedIn)
@@ -539,19 +539,27 @@ class _ParaphraserPageState extends State<ParaphraserPage> {
                     if (!isLoggedIn) const SizedBox(width: 8),
                   ],
                 ),
+                if (_isLoading)
+                  LinearProgressIndicatorM3E(
+                    shape: ProgressM3EShape.wavy,
+                    size: LinearProgressM3ESize.s,
+                    activeColor: Theme.of(context).colorScheme.primary,
+                  ),
                 Padding(
                   padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
                   child: DocumentInputWidget(
                     onTextExtracted: _onDocumentTextExtracted,
                     currentDocument: _loadedDocument,
                     onClear: _clearDocument,
-                    accentColor: AppTheme.primaryColor,
+                    accentColor: Theme.of(context).colorScheme.primary,
+                    initialToolForViewer: 'paraphrase',
                     onViewDocument: (doc) {
                       Navigator.push(
                         context,
                         MaterialPageRoute(
                           builder: (_) => DocumentViewerScreen(
                             document: doc,
+                            initialTool: 'paraphrase',
                             onUseText: (text) {
                               _controller.text = text;
                             },
@@ -574,7 +582,7 @@ class _ParaphraserPageState extends State<ParaphraserPage> {
                         maxLines: null,
                         expands: true,
                         textAlignVertical: TextAlignVertical.top,
-                        style: AppTheme.bodyMedium,
+                        style: Theme.of(context).textTheme.bodyMedium!,
                         decoration: InputDecoration(
                           hintText: "Enter text to paraphrase...",
                           contentPadding: const EdgeInsets.symmetric(
@@ -584,7 +592,7 @@ class _ParaphraserPageState extends State<ParaphraserPage> {
                             borderSide: BorderSide.none,
                           ),
                           filled: true,
-                          fillColor: AppTheme.cardColor,
+                          fillColor: Theme.of(context).colorScheme.surface,
                         ),
                       ),
                     ),
@@ -616,8 +624,8 @@ class _ParaphraserPageState extends State<ParaphraserPage> {
                             child: Text(
                               "Enter or paste your text and tap\n\"Paraphrase\"",
                               textAlign: TextAlign.center,
-                              style: AppTheme.bodyMedium.copyWith(
-                                color: AppTheme.textSecondaryColor,
+                              style: Theme.of(context).textTheme.bodyMedium!.copyWith(
+                                color: Theme.of(context).colorScheme.onSurfaceVariant,
                               ),
                             ),
                           ),
@@ -757,7 +765,7 @@ class _ParaphraserPageState extends State<ParaphraserPage> {
       padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 8),
       margin: const EdgeInsets.only(top: 4),
       decoration: BoxDecoration(
-        color: AppTheme.cardColor,
+        color: Theme.of(context).colorScheme.surface,
         borderRadius: const BorderRadius.only(
           topLeft: Radius.circular(24),
           topRight: Radius.circular(24),
@@ -790,7 +798,7 @@ class _ParaphraserPageState extends State<ParaphraserPage> {
                     border: Border(
                       bottom: BorderSide(
                         color: !_usePersona
-                            ? AppTheme.primaryColor
+                            ? Theme.of(context).colorScheme.primary
                             : Colors.transparent,
                         width: 2,
                       ),
@@ -798,19 +806,19 @@ class _ParaphraserPageState extends State<ParaphraserPage> {
                   ),
                   child: Text(
                     "Modes",
-                    style: AppTheme.bodyMedium.copyWith(
+                    style: Theme.of(context).textTheme.bodyMedium!.copyWith(
                       fontWeight:
                           !_usePersona ? FontWeight.bold : FontWeight.normal,
                       color: !_usePersona
-                          ? AppTheme.primaryColor
-                          : AppTheme.textSecondaryColor,
+                          ? Theme.of(context).colorScheme.primary
+                          : Theme.of(context).colorScheme.onSurfaceVariant,
                     ),
                   ),
                 ),
               ),
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 8.0),
-                child: Text("|", style: AppTheme.bodyMedium),
+                child: Text("|", style: Theme.of(context).textTheme.bodyMedium!),
               ),
               GestureDetector(
                 onTap: () {
@@ -825,7 +833,7 @@ class _ParaphraserPageState extends State<ParaphraserPage> {
                     border: Border(
                       bottom: BorderSide(
                         color: _usePersona
-                            ? AppTheme.primaryColor
+                            ? Theme.of(context).colorScheme.primary
                             : Colors.transparent,
                         width: 2,
                       ),
@@ -833,12 +841,12 @@ class _ParaphraserPageState extends State<ParaphraserPage> {
                   ),
                   child: Text(
                     "Personas",
-                    style: AppTheme.bodyMedium.copyWith(
+                    style: Theme.of(context).textTheme.bodyMedium!.copyWith(
                       fontWeight:
                           _usePersona ? FontWeight.bold : FontWeight.normal,
                       color: _usePersona
-                          ? AppTheme.primaryColor
-                          : AppTheme.textSecondaryColor,
+                          ? Theme.of(context).colorScheme.primary
+                          : Theme.of(context).colorScheme.onSurfaceVariant,
                     ),
                   ),
                 ),
@@ -849,7 +857,7 @@ class _ParaphraserPageState extends State<ParaphraserPage> {
 
           // Modes section
           if (!_usePersona) ...[
-            Text("Select Mode", style: AppTheme.bodySmall),
+            Text("Select Mode", style: Theme.of(context).textTheme.bodySmall!),
             const SizedBox(height: 8),
             SingleChildScrollView(
               scrollDirection: Axis.horizontal,
@@ -881,7 +889,7 @@ class _ParaphraserPageState extends State<ParaphraserPage> {
 
           // Personas section
           if (_usePersona) ...[
-            Text("Select Persona", style: AppTheme.bodySmall),
+            Text("Select Persona", style: Theme.of(context).textTheme.bodySmall!),
             const SizedBox(height: 8),
             SingleChildScrollView(
               scrollDirection: Axis.horizontal,
@@ -929,7 +937,7 @@ class _ParaphraserPageState extends State<ParaphraserPage> {
           ),
           decoration: BoxDecoration(
             color: isSelected
-                ? AppTheme.primaryColor.withOpacity(0.1)
+                ? Theme.of(context).colorScheme.primary.withValues(alpha: 0.1)
                 : Colors.transparent,
             borderRadius: BorderRadius.circular(16),
           ),
@@ -938,11 +946,11 @@ class _ParaphraserPageState extends State<ParaphraserPage> {
             children: [
               Text(
                 name,
-                style: AppTheme.bodyMedium.copyWith(
+                style: Theme.of(context).textTheme.bodyMedium!.copyWith(
                   fontSize: isSmallScreen ? 12 : 14,
                   color: isSelected
-                      ? AppTheme.primaryColor
-                      : AppTheme.textSecondaryColor,
+                      ? Theme.of(context).colorScheme.primary
+                      : Theme.of(context).colorScheme.onSurfaceVariant,
                   fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
                 ),
               ),
@@ -956,7 +964,7 @@ class _ParaphraserPageState extends State<ParaphraserPage> {
                     child: Icon(
                       Icons.edit,
                       size: isSmallScreen ? 14 : 16,
-                      color: AppTheme.primaryColor,
+                      color: Theme.of(context).colorScheme.primary,
                     ),
                   ),
                 ),
@@ -968,7 +976,7 @@ class _ParaphraserPageState extends State<ParaphraserPage> {
           Container(
               width: 40,
               height: 2,
-              color: AppTheme.primaryColor), // Reduced height
+              color: Theme.of(context).colorScheme.primary), // Reduced height
       ],
     );
   }
@@ -985,7 +993,7 @@ class _ParaphraserPageState extends State<ParaphraserPage> {
           ),
           decoration: BoxDecoration(
             color: isSelected
-                ? AppTheme.primaryColor.withOpacity(0.1)
+                ? Theme.of(context).colorScheme.primary.withValues(alpha: 0.1)
                 : Colors.transparent,
             borderRadius: BorderRadius.circular(16),
           ),
@@ -996,11 +1004,11 @@ class _ParaphraserPageState extends State<ParaphraserPage> {
               const SizedBox(width: 4),
               Text(
                 persona.name,
-                style: AppTheme.bodyMedium.copyWith(
+                style: Theme.of(context).textTheme.bodyMedium!.copyWith(
                   fontSize: isSmallScreen ? 12 : 14,
                   color: isSelected
-                      ? AppTheme.primaryColor
-                      : AppTheme.textSecondaryColor,
+                      ? Theme.of(context).colorScheme.primary
+                      : Theme.of(context).colorScheme.onSurfaceVariant,
                   fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
                 ),
               ),
@@ -1009,7 +1017,7 @@ class _ParaphraserPageState extends State<ParaphraserPage> {
         ),
         const SizedBox(height: 6),
         if (isSelected)
-          Container(width: 40, height: 3, color: AppTheme.primaryColor),
+          Container(width: 40, height: 3, color: Theme.of(context).colorScheme.primary),
       ],
     );
   }

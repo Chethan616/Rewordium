@@ -3,7 +3,6 @@ import 'package:flutter/cupertino.dart';
 import 'package:provider/provider.dart';
 
 import '../../providers/auth_provider.dart';
-import '../../theme/app_theme.dart';
 import '../../widgets/custom_button.dart';
 import 'signup_screen.dart';
 import '../legal/terms_conditions_screen.dart';
@@ -120,7 +119,7 @@ class _LoginScreenState extends State<LoginScreen> {
     final size = MediaQuery.of(context).size;
 
     return Scaffold(
-      backgroundColor: AppTheme.backgroundColor,
+      backgroundColor: Theme.of(context).colorScheme.surfaceContainerLow,
       body: SafeArea(
         child: SingleChildScrollView(
           physics: const BouncingScrollPhysics(),
@@ -141,13 +140,13 @@ class _LoginScreenState extends State<LoginScreen> {
                         height: 80,
                         width: 80,
                         decoration: BoxDecoration(
-                          color: AppTheme.primaryColor.withOpacity(0.1),
+                          color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.1),
                           shape: BoxShape.circle,
                         ),
                         child: Icon(
                           CupertinoIcons.person,
                           size: 40,
-                          color: AppTheme.primaryColor,
+                          color: Theme.of(context).colorScheme.primary,
                         ),
                       ),
                       const SizedBox(height: 16),
@@ -155,7 +154,7 @@ class _LoginScreenState extends State<LoginScreen> {
                       // Heading
                       Text(
                         'Welcome Back',
-                        style: AppTheme.headingMedium.copyWith(
+                        style: Theme.of(context).textTheme.headlineMedium!.copyWith(
                           fontWeight: FontWeight.w900,
                         ),
                         textAlign: TextAlign.center,
@@ -163,8 +162,8 @@ class _LoginScreenState extends State<LoginScreen> {
                       const SizedBox(height: 8),
                       Text(
                         'Sign in to continue',
-                        style: AppTheme.bodyMedium.copyWith(
-                          color: AppTheme.textSecondaryColor,
+                        style: Theme.of(context).textTheme.bodyMedium!.copyWith(
+                          color: Theme.of(context).colorScheme.onSurfaceVariant,
                         ),
                         textAlign: TextAlign.center,
                       ),
@@ -197,7 +196,7 @@ class _LoginScreenState extends State<LoginScreen> {
                         _passwordVisible
                             ? CupertinoIcons.eye_slash
                             : CupertinoIcons.eye,
-                        color: AppTheme.textSecondaryColor,
+                        color: Theme.of(context).colorScheme.onSurfaceVariant,
                         size: 18,
                       ),
                       onPressed: () {
@@ -220,8 +219,8 @@ class _LoginScreenState extends State<LoginScreen> {
                       ),
                       child: Text(
                         'Forgot Password?',
-                        style: AppTheme.bodySmall.copyWith(
-                          color: AppTheme.primaryColor,
+                        style: Theme.of(context).textTheme.bodySmall!.copyWith(
+                          color: Theme.of(context).colorScheme.primary,
                           fontWeight: FontWeight.w600,
                         ),
                       ),
@@ -245,7 +244,7 @@ class _LoginScreenState extends State<LoginScreen> {
                     children: [
                       Expanded(
                         child: Divider(
-                          color: AppTheme.textSecondaryColor.withOpacity(0.3),
+                          color: Theme.of(context).colorScheme.onSurfaceVariant.withOpacity(0.3),
                           thickness: 0.5,
                         ),
                       ),
@@ -253,15 +252,15 @@ class _LoginScreenState extends State<LoginScreen> {
                         padding: const EdgeInsets.symmetric(horizontal: 16),
                         child: Text(
                           'OR',
-                          style: AppTheme.bodySmall.copyWith(
-                            color: AppTheme.textSecondaryColor,
+                          style: Theme.of(context).textTheme.bodySmall!.copyWith(
+                            color: Theme.of(context).colorScheme.onSurfaceVariant,
                             fontWeight: FontWeight.w500,
                           ),
                         ),
                       ),
                       Expanded(
                         child: Divider(
-                          color: AppTheme.textSecondaryColor.withOpacity(0.3),
+                          color: Theme.of(context).colorScheme.onSurfaceVariant.withOpacity(0.3),
                           thickness: 0.5,
                         ),
                       ),
@@ -276,7 +275,7 @@ class _LoginScreenState extends State<LoginScreen> {
                     decoration: BoxDecoration(
                       borderRadius: BorderRadius.circular(16),
                       border: Border.all(
-                        color: AppTheme.textSecondaryColor.withOpacity(0.3),
+                        color: Theme.of(context).colorScheme.onSurfaceVariant.withOpacity(0.3),
                       ),
                     ),
                     child: Material(
@@ -296,7 +295,7 @@ class _LoginScreenState extends State<LoginScreen> {
                               const SizedBox(width: 12),
                               Text(
                                 'Continue with Google',
-                                style: AppTheme.bodyMedium.copyWith(
+                                style: Theme.of(context).textTheme.bodyMedium!.copyWith(
                                   fontWeight: FontWeight.w500,
                                 ),
                               ),
@@ -315,8 +314,8 @@ class _LoginScreenState extends State<LoginScreen> {
                     children: [
                       Text(
                         'Don\'t have an account?',
-                        style: AppTheme.bodyMedium.copyWith(
-                          color: AppTheme.textSecondaryColor,
+                        style: Theme.of(context).textTheme.bodyMedium!.copyWith(
+                          color: Theme.of(context).colorScheme.onSurfaceVariant,
                         ),
                       ),
                       TextButton(
@@ -334,8 +333,8 @@ class _LoginScreenState extends State<LoginScreen> {
                         ),
                         child: Text(
                           'Sign Up',
-                          style: AppTheme.bodyMedium.copyWith(
-                            color: AppTheme.primaryColor,
+                          style: Theme.of(context).textTheme.bodyMedium!.copyWith(
+                            color: Theme.of(context).colorScheme.primary,
                             fontWeight: FontWeight.bold,
                           ),
                         ),
@@ -352,8 +351,8 @@ class _LoginScreenState extends State<LoginScreen> {
                       children: [
                         Text(
                           'By continuing, you agree to our',
-                          style: AppTheme.bodySmall.copyWith(
-                            color: AppTheme.textSecondaryColor,
+                          style: Theme.of(context).textTheme.bodySmall!.copyWith(
+                            color: Theme.of(context).colorScheme.onSurfaceVariant,
                           ),
                           textAlign: TextAlign.center,
                         ),
@@ -379,16 +378,16 @@ class _LoginScreenState extends State<LoginScreen> {
                                 decoration: BoxDecoration(
                                   border: Border(
                                     bottom: BorderSide(
-                                      color: AppTheme.primaryColor
-                                          .withOpacity(0.5),
+                                      color: Theme.of(context).colorScheme.primary
+                                          .withValues(alpha: 0.5),
                                       width: 1,
                                     ),
                                   ),
                                 ),
                                 child: Text(
                                   'Terms & Conditions',
-                                  style: AppTheme.bodySmall.copyWith(
-                                    color: AppTheme.primaryColor,
+                                  style: Theme.of(context).textTheme.bodySmall!.copyWith(
+                                    color: Theme.of(context).colorScheme.primary,
                                     fontWeight: FontWeight.w600,
                                   ),
                                 ),
@@ -399,8 +398,8 @@ class _LoginScreenState extends State<LoginScreen> {
                                   const EdgeInsets.symmetric(horizontal: 8),
                               child: Text(
                                 'and',
-                                style: AppTheme.bodySmall.copyWith(
-                                  color: AppTheme.textSecondaryColor,
+                                style: Theme.of(context).textTheme.bodySmall!.copyWith(
+                                  color: Theme.of(context).colorScheme.onSurfaceVariant,
                                 ),
                               ),
                             ),
@@ -422,16 +421,16 @@ class _LoginScreenState extends State<LoginScreen> {
                                 decoration: BoxDecoration(
                                   border: Border(
                                     bottom: BorderSide(
-                                      color: AppTheme.primaryColor
-                                          .withOpacity(0.5),
+                                      color: Theme.of(context).colorScheme.primary
+                                          .withValues(alpha: 0.5),
                                       width: 1,
                                     ),
                                   ),
                                 ),
                                 child: Text(
                                   'Privacy Policy',
-                                  style: AppTheme.bodySmall.copyWith(
-                                    color: AppTheme.primaryColor,
+                                  style: Theme.of(context).textTheme.bodySmall!.copyWith(
+                                    color: Theme.of(context).colorScheme.primary,
                                     fontWeight: FontWeight.w600,
                                   ),
                                 ),
@@ -443,10 +442,10 @@ class _LoginScreenState extends State<LoginScreen> {
                         Container(
                           padding: const EdgeInsets.all(12),
                           decoration: BoxDecoration(
-                            color: AppTheme.primaryColor.withOpacity(0.05),
+                            color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.05),
                             borderRadius: BorderRadius.circular(8),
                             border: Border.all(
-                              color: AppTheme.primaryColor.withOpacity(0.1),
+                              color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.1),
                             ),
                           ),
                           child: Row(
@@ -454,14 +453,14 @@ class _LoginScreenState extends State<LoginScreen> {
                               Icon(
                                 CupertinoIcons.shield_fill,
                                 size: 16,
-                                color: AppTheme.primaryColor,
+                                color: Theme.of(context).colorScheme.primary,
                               ),
                               const SizedBox(width: 8),
                               Expanded(
                                 child: Text(
                                   'Your privacy matters. We protect your data with industry-standard security.',
-                                  style: AppTheme.bodySmall.copyWith(
-                                    color: AppTheme.primaryColor,
+                                  style: Theme.of(context).textTheme.bodySmall!.copyWith(
+                                    color: Theme.of(context).colorScheme.primary,
                                     fontWeight: FontWeight.w500,
                                   ),
                                 ),
@@ -501,7 +500,7 @@ class _LoginScreenState extends State<LoginScreen> {
           padding: const EdgeInsets.only(left: 4, bottom: 8),
           child: Text(
             label,
-            style: AppTheme.bodyMedium.copyWith(
+            style: Theme.of(context).textTheme.bodyMedium!.copyWith(
               fontWeight: FontWeight.w600,
             ),
           ),
@@ -511,14 +510,14 @@ class _LoginScreenState extends State<LoginScreen> {
           validator: validator,
           keyboardType: keyboardType,
           obscureText: obscureText,
-          style: AppTheme.bodyMedium,
+          style: Theme.of(context).textTheme.bodyMedium!,
           decoration: InputDecoration(
             hintText: hint,
-            hintStyle: AppTheme.bodyMedium.copyWith(
-              color: AppTheme.textSecondaryColor.withOpacity(0.5),
+            hintStyle: Theme.of(context).textTheme.bodyMedium!.copyWith(
+              color: Theme.of(context).colorScheme.onSurfaceVariant.withOpacity(0.5),
             ),
             prefixIcon: icon != null
-                ? Icon(icon, color: AppTheme.textSecondaryColor, size: 18)
+                ? Icon(icon, color: Theme.of(context).colorScheme.onSurfaceVariant, size: 18)
                 : null,
             suffixIcon: suffixIcon,
             contentPadding: const EdgeInsets.symmetric(
@@ -526,7 +525,7 @@ class _LoginScreenState extends State<LoginScreen> {
               vertical: 16,
             ),
             filled: true,
-            fillColor: AppTheme.textSecondaryColor.withOpacity(0.05),
+            fillColor: Theme.of(context).colorScheme.onSurfaceVariant.withOpacity(0.05),
             border: OutlineInputBorder(
               borderRadius: BorderRadius.circular(12),
               borderSide: BorderSide.none,
@@ -538,7 +537,7 @@ class _LoginScreenState extends State<LoginScreen> {
             focusedBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(12),
               borderSide: BorderSide(
-                color: AppTheme.primaryColor.withOpacity(0.3),
+                color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.3),
                 width: 1.5,
               ),
             ),
@@ -610,7 +609,7 @@ class _ForgotPasswordSheetState extends State<_ForgotPasswordSheet> {
         bottom: MediaQuery.of(context).viewInsets.bottom,
       ),
       decoration: BoxDecoration(
-        color: AppTheme.backgroundColor,
+        color: Theme.of(context).colorScheme.surfaceContainerLow,
         borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
       ),
       child: Padding(
@@ -625,7 +624,7 @@ class _ForgotPasswordSheetState extends State<_ForgotPasswordSheet> {
                 width: 40,
                 height: 4,
                 decoration: BoxDecoration(
-                  color: AppTheme.textSecondaryColor.withOpacity(0.3),
+                  color: Theme.of(context).colorScheme.onSurfaceVariant.withOpacity(0.3),
                   borderRadius: BorderRadius.circular(2),
                 ),
               ),
@@ -661,15 +660,15 @@ class _ForgotPasswordSheetState extends State<_ForgotPasswordSheet> {
                     const SizedBox(height: 16),
                     Text(
                       'Reset Email Sent!',
-                      style: AppTheme.headingSmall.copyWith(
+                      style: Theme.of(context).textTheme.titleLarge!.copyWith(
                         fontWeight: FontWeight.w700,
                       ),
                     ),
                     const SizedBox(height: 8),
                     Text(
                       'Check your inbox at\n${widget.emailController.text.trim()}\nfor password reset instructions.',
-                      style: AppTheme.bodyMedium.copyWith(
-                        color: AppTheme.textSecondaryColor,
+                      style: Theme.of(context).textTheme.bodyMedium!.copyWith(
+                        color: Theme.of(context).colorScheme.onSurfaceVariant,
                       ),
                       textAlign: TextAlign.center,
                     ),
@@ -686,34 +685,34 @@ class _ForgotPasswordSheetState extends State<_ForgotPasswordSheet> {
               // Input state
               Text(
                 'Reset Password',
-                style: AppTheme.headingSmall.copyWith(
+                style: Theme.of(context).textTheme.titleLarge!.copyWith(
                   fontWeight: FontWeight.w700,
                 ),
               ),
               const SizedBox(height: 8),
               Text(
                 'Enter your email and we\'ll send you a link to reset your password.',
-                style: AppTheme.bodyMedium.copyWith(
-                  color: AppTheme.textSecondaryColor,
+                style: Theme.of(context).textTheme.bodyMedium!.copyWith(
+                  color: Theme.of(context).colorScheme.onSurfaceVariant,
                 ),
               ),
               const SizedBox(height: 20),
               TextFormField(
                 controller: widget.emailController,
                 keyboardType: TextInputType.emailAddress,
-                style: AppTheme.bodyMedium,
+                style: Theme.of(context).textTheme.bodyMedium!,
                 decoration: InputDecoration(
                   hintText: 'Enter your email',
-                  hintStyle: AppTheme.bodyMedium.copyWith(
-                    color: AppTheme.textSecondaryColor.withOpacity(0.5),
+                  hintStyle: Theme.of(context).textTheme.bodyMedium!.copyWith(
+                    color: Theme.of(context).colorScheme.onSurfaceVariant.withOpacity(0.5),
                   ),
                   prefixIcon: Icon(
                     CupertinoIcons.mail,
-                    color: AppTheme.textSecondaryColor,
+                    color: Theme.of(context).colorScheme.onSurfaceVariant,
                     size: 18,
                   ),
                   filled: true,
-                  fillColor: AppTheme.textSecondaryColor.withOpacity(0.05),
+                  fillColor: Theme.of(context).colorScheme.onSurfaceVariant.withOpacity(0.05),
                   border: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(12),
                     borderSide: BorderSide.none,
@@ -721,7 +720,7 @@ class _ForgotPasswordSheetState extends State<_ForgotPasswordSheet> {
                   focusedBorder: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(12),
                     borderSide: BorderSide(
-                      color: AppTheme.primaryColor.withOpacity(0.3),
+                      color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.3),
                       width: 1.5,
                     ),
                   ),

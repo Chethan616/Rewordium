@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import '../../theme/app_theme.dart';
 import '../../utils/lottie_assets.dart';
 import '../animated_card.dart';
 import '../custom_button.dart'; // Import the CustomButton widget
@@ -159,7 +158,7 @@ class _AssistantStatusCardState extends State<AssistantStatusCard>
             const SizedBox(width: 8),
             Text(
               "Assistant Status",
-              style: AppTheme.bodyLarge.copyWith(fontWeight: FontWeight.w600),
+              style: Theme.of(context).textTheme.bodyLarge?.copyWith(fontWeight: FontWeight.w600),
             ),
             const SizedBox(width: 8),
             SizedBox(
@@ -184,12 +183,12 @@ class _AssistantStatusCardState extends State<AssistantStatusCard>
                 children: [
                   Text(
                     "AI Assistant is Active",
-                    style: AppTheme.bodyMedium,
+                    style: Theme.of(context).textTheme.bodyMedium!,
                   ),
                   const SizedBox(height: 4),
                   Text(
                     "Ready to help in other apps",
-                    style: AppTheme.bodySmall,
+                    style: Theme.of(context).textTheme.bodySmall!,
                   ),
                 ],
               ),
@@ -241,7 +240,7 @@ class _AssistantStatusCardState extends State<AssistantStatusCard>
             const SizedBox(width: 8),
             Text(
               "Assistant Status",
-              style: AppTheme.bodyLarge.copyWith(fontWeight: FontWeight.w600),
+              style: Theme.of(context).textTheme.bodyLarge?.copyWith(fontWeight: FontWeight.w600),
             ),
             const Spacer(),
             const Text(
@@ -262,12 +261,12 @@ class _AssistantStatusCardState extends State<AssistantStatusCard>
                 children: [
                   Text(
                     "Enable AI Assistant",
-                    style: AppTheme.bodyMedium,
+                    style: Theme.of(context).textTheme.bodyMedium!,
                   ),
                   const SizedBox(height: 4),
                   Text(
                     "Get AI help in any app",
-                    style: AppTheme.bodySmall,
+                    style: Theme.of(context).textTheme.bodySmall!,
                   ),
                 ],
               ),

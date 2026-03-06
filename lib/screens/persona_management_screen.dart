@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:provider/provider.dart';
 import '../providers/keyboard_provider.dart';
-import '../theme/app_theme.dart';
 import '../widgets/custom_app_bar.dart';
 import 'package:lottie/lottie.dart';
 
@@ -93,17 +92,17 @@ class _PersonaManagementScreenState extends State<PersonaManagementScreen> with 
       child: Container(
         margin: const EdgeInsets.symmetric(vertical: 8, horizontal: 16),
         decoration: BoxDecoration(
-          color: isSelected ? AppTheme.primaryColor.withOpacity(0.1) : Colors.white,
+          color: isSelected ? Theme.of(context).colorScheme.primary.withValues(alpha: 0.1) : Colors.white,
           borderRadius: BorderRadius.circular(16),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withOpacity(0.05),
+              color: Colors.black.withValues(alpha: 0.05),
               blurRadius: 10,
               offset: const Offset(0, 4),
             ),
           ],
           border: isSelected 
-              ? Border.all(color: AppTheme.primaryColor, width: 2)
+              ? Border.all(color: Theme.of(context).colorScheme.primary, width: 2)
               : Border.all(color: Colors.grey.shade200),
         ),
         child: Padding(
@@ -114,7 +113,7 @@ class _PersonaManagementScreenState extends State<PersonaManagementScreen> with 
                 width: 50,
                 height: 50,
                 decoration: BoxDecoration(
-                  color: isSelected ? AppTheme.primaryColor : Colors.grey.shade200,
+                  color: isSelected ? Theme.of(context).colorScheme.primary : Colors.grey.shade200,
                   shape: BoxShape.circle,
                 ),
                 child: Center(
@@ -135,7 +134,7 @@ class _PersonaManagementScreenState extends State<PersonaManagementScreen> with 
                       style: TextStyle(
                         fontSize: 18,
                         fontWeight: FontWeight.bold,
-                        color: isSelected ? AppTheme.primaryColor : Colors.black,
+                        color: isSelected ? Theme.of(context).colorScheme.primary : Colors.black,
                       ),
                     ),
                     const SizedBox(height: 4),
@@ -152,9 +151,9 @@ class _PersonaManagementScreenState extends State<PersonaManagementScreen> with 
                 ),
               ),
               if (isSelected)
-                const Icon(
+                Icon(
                   Icons.check_circle,
-                  color: AppTheme.primaryColor,
+                  color: Theme.of(context).colorScheme.primary,
                   size: 24,
                 ),
             ],
@@ -228,7 +227,7 @@ class _PersonaManagementScreenState extends State<PersonaManagementScreen> with 
       ),
       floatingActionButton: FloatingActionButton(
         onPressed: _showAddPersonaDialog,
-        backgroundColor: AppTheme.primaryColor,
+        backgroundColor: Theme.of(context).colorScheme.primary,
         child: const Icon(Icons.add, color: Colors.white),
       ),
     );

@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import '../theme/app_theme.dart';
 
 class AccessibilityDisclosureDialog extends StatelessWidget {
   final VoidCallback? onAccept;
@@ -47,12 +46,12 @@ class AccessibilityDisclosureDialog extends StatelessWidget {
                   Container(
                     padding: const EdgeInsets.all(8),
                     decoration: BoxDecoration(
-                      color: AppTheme.primaryColor.withOpacity(0.1),
+                      color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.1),
                       borderRadius: BorderRadius.circular(8),
                     ),
                     child: Icon(
                       Icons.accessibility,
-                      color: AppTheme.primaryColor,
+                      color: Theme.of(context).colorScheme.primary,
                       size: 24,
                     ),
                   ),
@@ -91,21 +90,25 @@ class AccessibilityDisclosureDialog extends StatelessWidget {
                   child: Column(
                     children: [
                       _buildCompactFeature(
+                        context,
                         Icons.smart_toy,
                         'Read text context for AI suggestions',
                       ),
                       const SizedBox(height: 12),
                       _buildCompactFeature(
+                        context,
                         Icons.edit,
                         'Insert AI-generated content seamlessly',
                       ),
                       const SizedBox(height: 12),
                       _buildCompactFeature(
+                        context,
                         Icons.auto_awesome,
                         'Provide context-aware writing help',
                       ),
                       const SizedBox(height: 12),
                       _buildCompactFeature(
+                        context,
                         Icons.auto_awesome,
                         'Provide context-aware writing help',
                       ),
@@ -207,7 +210,7 @@ class AccessibilityDisclosureDialog extends StatelessWidget {
                     child: ElevatedButton(
                       onPressed: onAccept,
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: AppTheme.primaryColor,
+                        backgroundColor: Theme.of(context).colorScheme.primary,
                         foregroundColor: Colors.white,
                         padding: const EdgeInsets.symmetric(vertical: 14),
                         shape: RoundedRectangleBorder(
@@ -231,18 +234,18 @@ class AccessibilityDisclosureDialog extends StatelessWidget {
     );
   }
 
-  Widget _buildCompactFeature(IconData icon, String text) {
+  Widget _buildCompactFeature(BuildContext context, IconData icon, String text) {
     return Row(
       children: [
         Container(
           padding: const EdgeInsets.all(6),
           decoration: BoxDecoration(
-            color: AppTheme.primaryColor.withOpacity(0.1),
+            color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.1),
             borderRadius: BorderRadius.circular(6),
           ),
           child: Icon(
             icon,
-            color: AppTheme.primaryColor,
+            color: Theme.of(context).colorScheme.primary,
             size: 16,
           ),
         ),

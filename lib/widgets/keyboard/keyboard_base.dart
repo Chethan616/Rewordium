@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:vibration/vibration.dart';
 import '../../providers/keyboard_provider.dart';
-import '../../theme/app_theme.dart';
 
 // Base class for all keyboard layouts
 abstract class KeyboardBase extends StatelessWidget {
@@ -142,7 +141,7 @@ abstract class KeyboardBase extends StatelessWidget {
         color: Theme.of(context).cardColor,
         border: Border(
           bottom: BorderSide(
-            color: Colors.grey.withOpacity(0.3),
+            color: Colors.grey.withValues(alpha: 0.3),
             width: 1,
           ),
         ),
@@ -179,16 +178,16 @@ abstract class KeyboardBase extends StatelessWidget {
               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
               margin: const EdgeInsets.symmetric(vertical: 6),
               decoration: BoxDecoration(
-                color: AppTheme.cardColor,
+              color: Theme.of(context).colorScheme.surface,
                 borderRadius: BorderRadius.circular(16),
                 border: Border.all(
-                  color: Colors.grey.withOpacity(0.3),
+                  color: Colors.grey.withValues(alpha: 0.3),
                 ),
               ),
               child: Text(
                 suggestions[index],
                 style: TextStyle(
-                  color: AppTheme.textPrimaryColor,
+                  color: Theme.of(context).colorScheme.onSurface,
                   fontSize: 14,
                 ),
               ),

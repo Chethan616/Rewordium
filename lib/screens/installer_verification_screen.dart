@@ -2,9 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/foundation.dart';
 import 'package:provider/provider.dart';
+import 'package:m3e_collection/m3e_collection.dart';
 import 'dart:async';
 
-import '../theme/app_theme.dart';
 import '../services/play_integrity_service.dart';
 import '../services/force_update_service.dart';
 import '../providers/auth_provider.dart';
@@ -229,7 +229,7 @@ class _InstallerVerificationScreenState
     return PopScope(
       canPop: false,
       child: Scaffold(
-        backgroundColor: AppTheme.backgroundColor,
+        backgroundColor: Theme.of(context).colorScheme.surfaceContainerLow,
         body: SafeArea(
           child: Center(
             child: Padding(
@@ -251,10 +251,10 @@ class _InstallerVerificationScreenState
                       height: 96,
                       decoration: BoxDecoration(
                         color: _hasFailed
-                            ? AppTheme.errorColor.withOpacity(0.1)
+                            ? Theme.of(context).colorScheme.error.withValues(alpha: 0.1)
                             : _isComplete
-                                ? AppTheme.primaryColor.withOpacity(0.1)
-                                : AppTheme.primaryColor.withOpacity(0.08),
+                                ? Theme.of(context).colorScheme.primary.withValues(alpha: 0.1)
+                                : Theme.of(context).colorScheme.primary.withValues(alpha: 0.08),
                         shape: BoxShape.circle,
                       ),
                       child: Icon(
@@ -265,8 +265,8 @@ class _InstallerVerificationScreenState
                                 : CupertinoIcons.shield_lefthalf_fill,
                         size: 48,
                         color: _hasFailed
-                            ? AppTheme.errorColor
-                            : AppTheme.primaryColor,
+                            ? Theme.of(context).colorScheme.error
+                            : Theme.of(context).colorScheme.primary,
                       ),
                     ),
                   ),
@@ -276,8 +276,8 @@ class _InstallerVerificationScreenState
                   // Title
                   Text(
                     _hasFailed ? 'Verification Failed' : 'Verifying Installation',
-                    style: AppTheme.headingMedium.copyWith(
-                      color: AppTheme.textPrimaryColor,
+                    style: Theme.of(context).textTheme.headlineSmall!.copyWith(
+                      color: Theme.of(context).colorScheme.onSurface,
                     ),
                   ),
 
@@ -289,8 +289,8 @@ class _InstallerVerificationScreenState
                     child: Text(
                       _statusText,
                       key: ValueKey(_statusText),
-                      style: AppTheme.bodyMedium.copyWith(
-                        color: AppTheme.textSecondaryColor,
+                      style: Theme.of(context).textTheme.bodyMedium!.copyWith(
+                        color: Theme.of(context).colorScheme.onSurfaceVariant,
                       ),
                     ),
                   ),
@@ -301,21 +301,31 @@ class _InstallerVerificationScreenState
                   Container(
                     width: double.infinity,
                     padding: const EdgeInsets.all(20),
-                    decoration: AppTheme.cardDecoration,
+                    decoration: BoxDecoration(
+                      color: Theme.of(context).colorScheme.surface,
+                      borderRadius: BorderRadius.circular(28),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withValues(alpha: Theme.of(context).brightness == Brightness.dark ? 0.25 : 0.06),
+                          offset: const Offset(0, 2),
+                          blurRadius: 12,
+                        ),
+                      ],
+                    ),
                     child: Column(
                       children: [
                         _buildStepRow(
                           'Installation source',
                           'Checking Play Store vendor',
                           _step1State,
-                          AppTheme.primaryColor,
+                          Theme.of(context).colorScheme.primary,
                         ),
                         Padding(
                           padding: const EdgeInsets.symmetric(vertical: 12),
                           child: Divider(
                             height: 1,
                             color:
-                                AppTheme.textSecondaryColor.withOpacity(0.15),
+                                Theme.of(context).colorScheme.onSurfaceVariant.withValues(alpha: 0.15),
                           ),
                         ),
                         _buildStepRow(
@@ -329,7 +339,7 @@ class _InstallerVerificationScreenState
                           child: Divider(
                             height: 1,
                             color:
-                                AppTheme.textSecondaryColor.withOpacity(0.15),
+                                Theme.of(context).colorScheme.onSurfaceVariant.withValues(alpha: 0.15),
                           ),
                         ),
                         _buildStepRow(
@@ -347,8 +357,8 @@ class _InstallerVerificationScreenState
                   // Footer
                   Text(
                     'Rewordium Security',
-                    style: AppTheme.bodySmall.copyWith(
-                      color: AppTheme.textSecondaryColor.withOpacity(0.5),
+                    style: Theme.of(context).textTheme.bodySmall!.copyWith(
+                      color: Theme.of(context).colorScheme.onSurfaceVariant.withValues(alpha: 0.5),
                       letterSpacing: 1.0,
                       fontSize: 11,
                     ),
@@ -375,7 +385,7 @@ class _InstallerVerificationScreenState
           width: 40,
           height: 40,
           decoration: BoxDecoration(
-            color: _getStepColor(state, accentColor).withOpacity(0.12),
+            color: _getStepColor(state, accentColor).withValues(alpha: 0.12),
             borderRadius: BorderRadius.circular(10),
           ),
           child: Center(
@@ -390,15 +400,15 @@ class _InstallerVerificationScreenState
             children: [
               Text(
                 title,
-                style: AppTheme.bodyMedium.copyWith(
+                style: Theme.of(context).textTheme.bodyMedium!.copyWith(
                   fontWeight: FontWeight.w600,
                 ),
               ),
               const SizedBox(height: 2),
               Text(
                 subtitle,
-                style: AppTheme.bodySmall.copyWith(
-                  color: AppTheme.textSecondaryColor,
+                style: Theme.of(context).textTheme.bodySmall!.copyWith(
+                  color: Theme.of(context).colorScheme.onSurfaceVariant,
                   fontSize: 12,
                 ),
               ),
@@ -417,10 +427,10 @@ class _InstallerVerificationScreenState
                       ? CupertinoIcons.exclamationmark_triangle_fill
                       : CupertinoIcons.xmark_circle_fill,
               color: state == _StepState.passed
-                  ? AppTheme.primaryColor
+                  ? Theme.of(context).colorScheme.primary
                   : state == _StepState.warning
                       ? Colors.orange
-                      : AppTheme.errorColor,
+                      : Theme.of(context).colorScheme.error,
               size: 22,
             ),
           ),
@@ -434,28 +444,29 @@ class _InstallerVerificationScreenState
         return Icon(
           CupertinoIcons.circle,
           size: 20,
-          color: AppTheme.textSecondaryColor.withOpacity(0.4),
+          color: Theme.of(context).colorScheme.onSurfaceVariant.withValues(alpha: 0.4),
         );
       case _StepState.checking:
         return SizedBox(
           width: 20,
           height: 20,
-          child: CircularProgressIndicator(
-            strokeWidth: 2,
-            valueColor: AlwaysStoppedAnimation<Color>(accentColor),
+          child: CircularProgressIndicatorM3E(
+            shape: ProgressM3EShape.wavy,
+            size: CircularProgressM3ESize.s,
+            activeColor: accentColor,
           ),
         );
       case _StepState.passed:
         return Icon(
           CupertinoIcons.checkmark,
           size: 20,
-          color: AppTheme.primaryColor,
+          color: Theme.of(context).colorScheme.primary,
         );
       case _StepState.failed:
         return Icon(
           CupertinoIcons.xmark,
           size: 20,
-          color: AppTheme.errorColor,
+          color: Theme.of(context).colorScheme.error,
         );
       case _StepState.warning:
         return Icon(
@@ -469,13 +480,13 @@ class _InstallerVerificationScreenState
   Color _getStepColor(_StepState state, Color accentColor) {
     switch (state) {
       case _StepState.pending:
-        return AppTheme.textSecondaryColor;
+        return Theme.of(context).colorScheme.onSurfaceVariant;
       case _StepState.checking:
         return accentColor;
       case _StepState.passed:
-        return AppTheme.primaryColor;
+        return Theme.of(context).colorScheme.primary;
       case _StepState.failed:
-        return AppTheme.errorColor;
+        return Theme.of(context).colorScheme.error;
       case _StepState.warning:
         return Colors.orange;
     }

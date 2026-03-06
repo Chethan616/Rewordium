@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:url_launcher/url_launcher.dart';
-import '../../theme/app_theme.dart';
 import '../../utils/lottie_assets.dart';
 import '../animated_card.dart';
 import '../custom_button.dart';
@@ -89,13 +88,13 @@ class _FeedbackCardState extends State<FeedbackCard> {
         children: [
           Text(
             "Enjoying Rewordium?",
-            style: AppTheme.bodyLarge.copyWith(fontWeight: FontWeight.w600),
+            style: Theme.of(context).textTheme.bodyLarge?.copyWith(fontWeight: FontWeight.w600),
           ),
           const SizedBox(height: 4),
           Text(
             "Your rating helps us grow!",
-            style: AppTheme.bodySmall.copyWith(
-              color: AppTheme.textSecondaryColor,
+            style: Theme.of(context).textTheme.bodySmall?.copyWith(
+              color: Theme.of(context).colorScheme.onSurfaceVariant,
             ),
           ),
           const SizedBox(height: 12),
@@ -119,8 +118,8 @@ class _FeedbackCardState extends State<FeedbackCard> {
             ),
             child: Text(
               'Maybe Later',
-              style: AppTheme.bodySmall.copyWith(
-                color: AppTheme.textSecondaryColor,
+              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                color: Theme.of(context).colorScheme.onSurfaceVariant,
               ),
             ),
           ),

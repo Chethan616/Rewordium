@@ -10,6 +10,7 @@ import 'package:archive/archive.dart';
 import 'package:xml/xml.dart' as xml;
 import 'package:cunning_document_scanner/cunning_document_scanner.dart';
 import 'package:google_mlkit_text_recognition/google_mlkit_text_recognition.dart';
+import 'package:syncfusion_flutter_pdf/pdf.dart' as spdf;
 import '../models/document_result.dart';
 import '../utils/app_logger.dart';
 
@@ -120,6 +121,7 @@ class DocumentService {
         text: fullText,
         type: DocumentType.scan,
         pageCount: imagePaths.length,
+        imagePaths: imagePaths,
         title:
             'Scanned Document (${imagePaths.length} page${imagePaths.length > 1 ? 's' : ''})',
       );
@@ -175,18 +177,21 @@ class DocumentService {
   //  PDF EXTRACTION
   // ──────────────────────────────────────────────
 
-  /// Extract text from a local PDF file using pure Dart stream parsing.
-  /// This handles common text-based PDFs. For scanned/image PDFs, users
-  /// should use the camera scan feature with OCR instead.
+  /// Extract text from a local PDF file using Syncfusion PDF library.
+  /// Handles FlateDecode, CIDFont/CMap, ToUnicode, and all standard encodings.
   static Future<DocumentResult?> extractFromPdf(
       String filePath, String fileName) async {
     try {
       final file = File(filePath);
       final bytes = await file.readAsBytes();
-      final text = _extractTextFromPdfBytes(bytes);
 
-      // Estimate page count from PDF page tree
-      final pageCount = _estimatePdfPageCount(bytes);
+      final document = spdf.PdfDocument(inputBytes: bytes);
+      final pageCount = document.pages.count;
+
+      // Extract text from all pages
+      final extractor = spdf.PdfTextExtractor(document);
+      final text = extractor.extractText();
+      document.dispose();
 
       return DocumentResult(
         text: text,
@@ -204,96 +209,6 @@ class DocumentService {
         title: fileName,
       );
     }
-  }
-
-  /// Pure-Dart PDF text extraction.
-  /// Parses PDF content streams for text operators (Tj, TJ, ').
-  static String _extractTextFromPdfBytes(Uint8List bytes) {
-    final content = latin1.decode(bytes);
-    final textParts = <String>[];
-
-    // Find all stream...endstream blocks
-    final streamRegex = RegExp(r'stream\r?\n([\s\S]*?)endstream', multiLine: true);
-    for (final match in streamRegex.allMatches(content)) {
-      final streamData = match.group(1) ?? '';
-
-      // Try to decode if FlateDecode compressed
-      String decoded = streamData;
-      // Check if this is a content stream with text operators
-      if (decoded.contains('Tj') ||
-          decoded.contains('TJ') ||
-          decoded.contains("'") ||
-          decoded.contains('BT')) {
-        _extractTextFromContentStream(decoded, textParts);
-      }
-    }
-
-    // Also try to find raw text between BT...ET blocks outside streams
-    final btEtRegex = RegExp(r'BT\s([\s\S]*?)ET', multiLine: true);
-    for (final match in btEtRegex.allMatches(content)) {
-      final block = match.group(1) ?? '';
-      _extractTextFromContentStream(block, textParts);
-    }
-
-    // Deduplicate and join
-    final seen = <String>{};
-    final uniqueParts = <String>[];
-    for (final part in textParts) {
-      final trimmed = part.trim();
-      if (trimmed.isNotEmpty && seen.add(trimmed)) {
-        uniqueParts.add(trimmed);
-      }
-    }
-
-    return uniqueParts.join('\n');
-  }
-
-  static void _extractTextFromContentStream(
-      String stream, List<String> textParts) {
-    // Extract text from Tj operator: (text) Tj
-    final tjRegex = RegExp(r'\(([^)]*)\)\s*Tj');
-    for (final match in tjRegex.allMatches(stream)) {
-      final text = _decodePdfString(match.group(1) ?? '');
-      if (text.isNotEmpty) textParts.add(text);
-    }
-
-    // Extract text from TJ operator: [(text) -kern (text)] TJ
-    final tjArrayRegex = RegExp(r'\[(.*?)\]\s*TJ');
-    for (final match in tjArrayRegex.allMatches(stream)) {
-      final array = match.group(1) ?? '';
-      final stringRegex = RegExp(r'\(([^)]*)\)');
-      final buffer = StringBuffer();
-      for (final strMatch in stringRegex.allMatches(array)) {
-        buffer.write(_decodePdfString(strMatch.group(1) ?? ''));
-      }
-      if (buffer.isNotEmpty) textParts.add(buffer.toString());
-    }
-    
-    // Extract text from ' operator: (text) '
-    final quoteRegex = RegExp(r"\(([^)]*)\)\s*'");
-    for (final match in quoteRegex.allMatches(stream)) {
-      final text = _decodePdfString(match.group(1) ?? '');
-      if (text.isNotEmpty) textParts.add(text);
-    }
-  }
-
-  static String _decodePdfString(String raw) {
-    // Handle common PDF escape sequences
-    return raw
-        .replaceAll(r'\n', '\n')
-        .replaceAll(r'\r', '\r')
-        .replaceAll(r'\t', '\t')
-        .replaceAll(r'\(', '(')
-        .replaceAll(r'\)', ')')
-        .replaceAll(r'\\', '\\');
-  }
-
-  static int _estimatePdfPageCount(Uint8List bytes) {
-    final content = latin1.decode(bytes);
-    // Count /Type /Page entries (not /Pages)
-    final pageRegex = RegExp(r'/Type\s*/Page\b(?!\s*s)', multiLine: true);
-    final count = pageRegex.allMatches(content).length;
-    return count > 0 ? count : 1;
   }
 
   // ──────────────────────────────────────────────

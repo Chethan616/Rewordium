@@ -4,8 +4,8 @@ import 'package:animate_do/animate_do.dart';
 import 'package:flutter/services.dart';
 import 'package:shimmer/shimmer.dart';
 import 'package:provider/provider.dart';
+import 'package:m3e_collection/m3e_collection.dart';
 
-import '../theme/app_theme.dart';
 import '../widgets/custom_app_bar.dart';
 import '../widgets/custom_button.dart';
 import '../utils/lottie_assets.dart';
@@ -297,6 +297,12 @@ class _AIDetectorPageState extends State<AIDetectorPage> {
                 if (!isLoggedIn) const SizedBox(width: 8),
               ],
             ),
+            if (_isLoading)
+              LinearProgressIndicatorM3E(
+                shape: ProgressM3EShape.wavy,
+                size: LinearProgressM3ESize.s,
+                activeColor: Colors.purple,
+              ),
             Padding(
               padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
               child: DocumentInputWidget(
@@ -304,12 +310,14 @@ class _AIDetectorPageState extends State<AIDetectorPage> {
                 currentDocument: _loadedDocument,
                 onClear: _clearDocument,
                 accentColor: Colors.purple,
+                initialToolForViewer: 'ai_detect',
                 onViewDocument: (doc) {
                   Navigator.push(
                     context,
                     MaterialPageRoute(
                       builder: (_) => DocumentViewerScreen(
                         document: doc,
+                        initialTool: 'ai_detect',
                         onUseText: (text) {
                           _controller.text = text;
                         },
@@ -331,7 +339,7 @@ class _AIDetectorPageState extends State<AIDetectorPage> {
                     maxLines: null,
                     expands: true,
                     textAlignVertical: TextAlignVertical.top,
-                    style: AppTheme.bodyMedium,
+                    style: Theme.of(context).textTheme.bodyMedium!,
                     decoration: InputDecoration(
                       hintText: "Enter text to analyze for AI detection...",
                       contentPadding: const EdgeInsets.symmetric(
@@ -341,7 +349,7 @@ class _AIDetectorPageState extends State<AIDetectorPage> {
                         borderSide: BorderSide.none,
                       ),
                       filled: true,
-                      fillColor: AppTheme.cardColor,
+                      fillColor: Theme.of(context).colorScheme.surface,
                     ),
                   ),
                 ),
@@ -372,8 +380,8 @@ class _AIDetectorPageState extends State<AIDetectorPage> {
                         child: Text(
                           "Enter or paste text to check if it was written by AI",
                           textAlign: TextAlign.center,
-                          style: AppTheme.bodyMedium.copyWith(
-                            color: AppTheme.textSecondaryColor,
+                          style: Theme.of(context).textTheme.bodyMedium!.copyWith(
+                            color: Theme.of(context).colorScheme.onSurfaceVariant,
                           ),
                         ),
                       ),

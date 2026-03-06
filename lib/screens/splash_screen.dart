@@ -1,12 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:lottie/lottie.dart';
+import 'package:provider/provider.dart';
+import 'package:m3e_collection/m3e_collection.dart';
 import 'dart:async';
 
-import '../theme/app_theme.dart';
-import '../main.dart';
-import '../services/unified_ai_service.dart';
-import '../services/firebase_service.dart';
-import '../screens/installer_verification_screen.dart';
+import '../providers/auth_provider.dart';
+import '../services/play_integrity_service.dart';
+import '../services/force_update_service.dart';
+import 'auth/login_screen.dart';
+import 'integrity_blocked_screen.dart';
 
 class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});
@@ -18,275 +20,171 @@ class SplashScreen extends StatefulWidget {
 class _SplashScreenState extends State<SplashScreen>
     with SingleTickerProviderStateMixin {
   late AnimationController _animationController;
-  bool _animationCompleted = false;
-  bool _servicesInitialized = false;
-  bool _hasError = false;
-  String _errorMessage = '';
-  Timer? _serviceCheckTimer;
-  bool _isLoading = true;
+  String _statusText = '';
+  bool _integrityPassed = true;
+  String _failReason = '';
 
   @override
   void initState() {
     super.initState();
 
-    // If services are already initialized (e.g. returning from another Activity),
-    // skip the splash animation and navigate immediately.
-    if (isFirebaseInitialized && isGroqInitialized) {
-      _animationController = AnimationController(
-        vsync: this,
-        duration: Duration.zero,
+    // Start the Lottie animation immediately.
+    _animationController = AnimationController(vsync: this);
+
+    // Kick off startup logic: gate on max(1.5 s, _doStartup()).
+    // This means we show the splash for at least 1.5 s (so it doesn't flash),
+    // and no longer than however long the async work takes.
+    Future.wait([
+      Future.delayed(const Duration(milliseconds: 1500)),
+      _doStartup(),
+    ]).then((_) => _navigate());
+  }
+
+  // ── Startup work ──────────────────────────────
+
+  Future<void> _doStartup() async {
+    _setStatus('Verifying installation...');
+
+    // Play Integrity check — uses a 24-hour cache so it is fast on subsequent
+    // cold starts (typically < 50 ms).  Only hits the network on first open
+    // after install or app update.
+    try {
+      _integrityPassed = await PlayIntegrityService.checkIntegrityWithCache();
+      if (!_integrityPassed) {
+        final verdict = await PlayIntegrityService.getIntegrityVerdict();
+        _failReason =
+            verdict?['reason'] as String? ?? 'Installation verification failed.';
+      }
+    } catch (_) {
+      // On unexpected error, allow the app through (network issue ≠ tampered).
+      _integrityPassed = true;
+    }
+
+    _setStatus('');
+  }
+
+  void _setStatus(String text) {
+    if (mounted) setState(() => _statusText = text);
+  }
+
+  // ── Navigation ────────────────────────────────
+
+  void _navigate() {
+    if (!mounted) return;
+
+    if (!_integrityPassed) {
+      Navigator.of(context).pushReplacement(
+        PageRouteBuilder(
+          pageBuilder: (_, __, ___) =>
+              IntegrityBlockedScreen(reason: _failReason),
+          transitionDuration: const Duration(milliseconds: 400),
+          transitionsBuilder: (_, anim, __, child) =>
+              FadeTransition(opacity: anim, child: child),
+        ),
       );
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (!mounted) return;
-        // Go to verification screen (it handles auth routing after checks)
-        Navigator.of(context).pushReplacement(
-          MaterialPageRoute(builder: (_) => const InstallerVerificationScreen()),
-        );
-      });
       return;
     }
 
-    _animationController = AnimationController(
-      vsync: this,
-      duration: const Duration(seconds: 3),
-    );
-
-    _animationController.addStatusListener((status) {
-      if (status == AnimationStatus.completed) {
-        setState(() {
-          _animationCompleted = true;
-        });
-        // Check if we can navigate to home page
-        _checkAndNavigate();
-      }
-    });
-
-    // Start the initialization process
-    _initializeApp();
-
-    // Auto-play the animation
-    _animationController.forward();
-  }
-
-  Future<void> _initializeApp() async {
-    try {
-      setState(() => _isLoading = true);
-
-      // Initialize Firebase if not already done
-      if (!isFirebaseInitialized) {
-        try {
-          await FirebaseService.initializeFirebase();
-          isFirebaseInitialized = true;
-          debugPrint('Firebase initialized successfully');
-        } catch (e) {
-          debugPrint('Error initializing Firebase: $e');
-          _showError(
-              'Failed to initialize Firebase. Some features may not work correctly.');
-        }
-      }
-
-      // Initialize Groq service
-      if (!isGroqInitialized) {
-        try {
-          await UnifiedAIService.initialize();
-          isGroqInitialized = true;
-          debugPrint('Groq service initialized successfully');
-        } catch (e) {
-          debugPrint('Error initializing Groq service: $e');
-          _showError(
-              'Failed to initialize AI services. Some features may be limited.');
-        }
-      }
-
-      // Mark services as initialized
-      if (mounted) {
-        setState(() {
-          _servicesInitialized = isFirebaseInitialized && isGroqInitialized;
-          _isLoading = false;
-        });
-        _checkAndNavigate();
-      }
-    } catch (e) {
-      debugPrint('Error during app initialization: $e');
-      _showError(
-          'An error occurred during initialization. Please restart the app.');
+    // Integrity passed — route based on auth state.
+    final authProvider = Provider.of<AuthProvider>(context, listen: false);
+    if (authProvider.isLoggedIn) {
+      Navigator.of(context).pushReplacementNamed('/home');
+    } else {
+      Navigator.of(context).pushReplacement(
+        PageRouteBuilder(
+          pageBuilder: (_, __, ___) => const LoginScreen(),
+          transitionDuration: const Duration(milliseconds: 500),
+          transitionsBuilder: (_, anim, __, child) =>
+              FadeTransition(opacity: anim, child: child),
+        ),
+      );
     }
+
+    // Initialize force-update service after navigation.
+    ForceUpdateService.initialize();
   }
 
-  void _showError(String message) {
-    if (mounted) {
-      setState(() {
-        _hasError = true;
-        _errorMessage = message;
-        _isLoading = false;
-      });
-    }
-  }
-
-  // Check if both animation is complete and services are initialized before navigating
-  void _checkAndNavigate() {
-    if (_animationCompleted && (_servicesInitialized || _hasError)) {
-      // Add a small delay before navigation for a smoother transition
-      Timer(const Duration(milliseconds: 500), () {
-        if (mounted) {
-          // Show error if there were initialization errors
-          if (_hasError) {
-            WidgetsBinding.instance.addPostFrameCallback((_) {
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(
-                  content: Text(_errorMessage),
-                  duration: const Duration(seconds: 5),
-                ),
-              );
-            });
-          }
-
-          // Navigate to installer verification screen
-          // It handles integrity checks and then routes to Home/Login
-          Navigator.of(context).pushReplacement(
-            PageRouteBuilder(
-              pageBuilder: (context, animation, secondaryAnimation) =>
-                  const InstallerVerificationScreen(),
-              transitionDuration: const Duration(milliseconds: 600),
-              transitionsBuilder:
-                  (context, animation, secondaryAnimation, child) {
-                return FadeTransition(
-                  opacity: animation,
-                  child: child,
-                );
-              },
-            ),
-          );
-        }
-      });
-    }
-  }
-
-  Widget _buildLottieAnimation() {
-    return Lottie.asset(
-      'assets/lottie/loading.json',
-      controller: _animationController,
-      fit: BoxFit.contain,
-      frameRate: FrameRate(60),
-      onLoaded: (composition) {
-        _animationController.duration = composition.duration;
-        _animationController.forward();
-      },
-    );
-  }
+  // ── Dispose ───────────────────────────────────
 
   @override
   void dispose() {
     _animationController.dispose();
-    _serviceCheckTimer?.cancel();
     super.dispose();
   }
 
+  // ── Build ─────────────────────────────────────
+
   @override
   Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+    final textTheme = Theme.of(context).textTheme;
+
     return Scaffold(
-      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
-      body: Center(
+      backgroundColor: colorScheme.surfaceContainerLow,
+      body: SafeArea(
         child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            // App logo or name with animation
-            AnimatedOpacity(
-              opacity: _animationCompleted ? 0.0 : 1.0,
-              duration: const Duration(milliseconds: 500),
-              child: Text(
-                'Rewordium',
-                style: TextStyle(
-                  fontFamily: 'Pacifico',
-                  fontSize: 42,
-                  fontWeight: FontWeight.bold,
-                  color: AppTheme.primaryColor,
-                  letterSpacing: 0.5,
-                ),
-              ),
-            ),
-
-            const SizedBox(height: 40),
-
-            // Loading animation
-            SizedBox(
-              height: 200,
-              width: 200,
-              child: _buildLottieAnimation(),
-            ),
-
-            // Error message (shown below the animation if there's an error)
-            if (_hasError)
-              Padding(
-                padding: const EdgeInsets.only(top: 20.0),
+            // ── Branding (centre) ──────────────
+            Expanded(
+              child: Center(
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    const Icon(
-                      Icons.error_outline,
-                      color: Colors.orange,
-                      size: 32,
-                    ),
-                    const SizedBox(height: 12),
-                    Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 24.0),
-                      child: Text(
-                        _errorMessage,
-                        textAlign: TextAlign.center,
-                        style: TextStyle(
-                          color: Theme.of(context).colorScheme.error,
-                          fontSize: 14,
-                        ),
+                    Text(
+                      'Rewordium',
+                      style: TextStyle(
+                        fontFamily: 'Pacifico',
+                        fontSize: 42,
+                        fontWeight: FontWeight.bold,
+                        color: colorScheme.primary,
+                        letterSpacing: 0.5,
                       ),
                     ),
-                    const SizedBox(height: 16),
-                    ElevatedButton(
-                      onPressed: _initializeApp,
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: AppTheme.primaryColor,
-                        foregroundColor: Colors.white,
+                    const SizedBox(height: 32),
+                    SizedBox(
+                      height: 180,
+                      width: 180,
+                      child: Lottie.asset(
+                        'assets/lottie/loading.json',
+                        controller: _animationController,
+                        fit: BoxFit.contain,
+                        frameRate: FrameRate(60),
+                        onLoaded: (composition) {
+                          _animationController.duration = composition.duration;
+                          _animationController.repeat();
+                        },
                       ),
-                      child: const Text('Retry'),
                     ),
                   ],
                 ),
               ),
+            ),
 
-            const SizedBox(height: 40),
-
-            // Status or tagline
-            AnimatedOpacity(
-              opacity: _animationCompleted ? 0.0 : 1.0,
-              duration: const Duration(milliseconds: 500),
-              child: Column(
-                children: [
-                  const SizedBox(height: 20),
-                  Text(
-                    _isLoading
-                        ? 'Initializing services...'
-                        : 'Your AI Writing Assistant',
-                    style: TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.w500,
-                      color: _isLoading
-                          ? Colors.grey
-                          : Theme.of(context).textTheme.bodyLarge?.color,
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                  if (!_servicesInitialized && !_hasError)
-                    Text(
-                      'Loading services...',
-                      style: TextStyle(
-                        fontSize: 14,
-                        color: Theme.of(context)
-                            .textTheme
-                            .bodySmall
-                            ?.color
-                            ?.withOpacity(0.7),
+            // ── Status text (bottom) ───────────
+            Padding(
+              padding: const EdgeInsets.only(bottom: 40),
+              child: AnimatedSwitcher(
+                duration: const Duration(milliseconds: 300),
+                child: _statusText.isEmpty
+                    ? const SizedBox(key: ValueKey('empty'), height: 20)
+                    : Row(
+                        key: const ValueKey('status'),
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          LoadingIndicatorM3E(
+                            color: colorScheme.primary,
+                            constraints: const BoxConstraints(
+                                maxWidth: 16, maxHeight: 16),
+                          ),
+                          const SizedBox(width: 8),
+                          Text(
+                            _statusText,
+                            style: textTheme.bodySmall?.copyWith(
+                              color: colorScheme.onSurfaceVariant,
+                            ),
+                          ),
+                        ],
                       ),
-                    ),
-                ],
               ),
             ),
           ],

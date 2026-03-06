@@ -3,9 +3,9 @@ import 'package:flutter/services.dart';
 import 'package:animate_do/animate_do.dart';
 import 'package:provider/provider.dart';
 import 'package:flutter_svg/flutter_svg.dart';
+import 'package:m3e_collection/m3e_collection.dart';
 
 import '../models/advanced_ai_settings.dart';
-import '../theme/app_theme.dart';
 import '../theme/theme_provider.dart';
 import '../widgets/custom_app_bar.dart';
 import '../widgets/animated_card.dart';
@@ -130,17 +130,19 @@ class _AdvancedAISettingsScreenState extends State<AdvancedAISettingsScreen> {
 
     if (_isLoading) {
       return Scaffold(
-        backgroundColor: AppTheme.backgroundColor,
+        backgroundColor: Theme.of(context).colorScheme.surfaceContainerLow,
         body: Center(
-          child: CircularProgressIndicator(
-            color: AppTheme.primaryColor,
+          child: CircularProgressIndicatorM3E(
+            shape: ProgressM3EShape.wavy,
+            size: CircularProgressM3ESize.m,
+            activeColor: Theme.of(context).colorScheme.primary,
           ),
         ),
       );
     }
 
     return Scaffold(
-      backgroundColor: AppTheme.backgroundColor,
+      backgroundColor: Theme.of(context).colorScheme.surfaceContainerLow,
       appBar: CustomAppBar(
         title: "Advanced AI Settings",
         showBackButton: true,
@@ -193,7 +195,7 @@ class _AdvancedAISettingsScreenState extends State<AdvancedAISettingsScreen> {
             Container(
               padding: const EdgeInsets.all(12),
               decoration: BoxDecoration(
-                color: AppTheme.primaryColor,
+                color: Theme.of(context).colorScheme.primary,
                 borderRadius: BorderRadius.circular(12),
               ),
               child: const Icon(
@@ -209,12 +211,12 @@ class _AdvancedAISettingsScreenState extends State<AdvancedAISettingsScreen> {
                 children: [
                   Text(
                     'Advanced AI Settings',
-                    style: AppTheme.headingSmall,
+                    style: Theme.of(context).textTheme.titleLarge!,
                   ),
                   const SizedBox(height: 4),
                   Text(
                     'Use your own LLM API key for better quality',
-                    style: AppTheme.bodySmall,
+                    style: Theme.of(context).textTheme.bodySmall!,
                   ),
                 ],
               ),
@@ -238,15 +240,15 @@ class _AdvancedAISettingsScreenState extends State<AdvancedAISettingsScreen> {
         },
         title: Text(
           'Use Custom AI Provider',
-          style: AppTheme.bodyLarge.copyWith(fontWeight: FontWeight.w600),
+          style: Theme.of(context).textTheme.bodyLarge!.copyWith(fontWeight: FontWeight.w600),
         ),
         subtitle: Text(
           _settings.enabled
               ? 'Using your own API key'
               : 'Using default Groq + LLaMA 3',
-          style: AppTheme.bodySmall,
+          style: Theme.of(context).textTheme.bodySmall!,
         ),
-        activeColor: AppTheme.primaryColor,
+        activeColor: Theme.of(context).colorScheme.primary,
       ),
     );
   }
@@ -260,7 +262,7 @@ class _AdvancedAISettingsScreenState extends State<AdvancedAISettingsScreen> {
             padding: const EdgeInsets.all(16),
             child: Text(
               'AI Provider',
-              style: AppTheme.headingSmall,
+              style: Theme.of(context).textTheme.titleLarge!,
             ),
           ),
           const Divider(height: 1),
@@ -272,8 +274,8 @@ class _AdvancedAISettingsScreenState extends State<AdvancedAISettingsScreen> {
                 height: 40,
                 decoration: BoxDecoration(
                   color: isSelected
-                      ? provider.brandColor.withOpacity(0.15)
-                      : Colors.grey.withOpacity(0.1),
+                      ? provider.brandColor.withValues(alpha: 0.15)
+                      : Colors.grey.withValues(alpha: 0.1),
                   borderRadius: BorderRadius.circular(10),
                 ),
                 child: Center(
@@ -289,13 +291,13 @@ class _AdvancedAISettingsScreenState extends State<AdvancedAISettingsScreen> {
               ),
               title: Text(
                 provider.displayName,
-                style: AppTheme.bodyMedium.copyWith(
+                style: Theme.of(context).textTheme.bodyMedium!.copyWith(
                   fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
                 ),
               ),
               subtitle: Text(
                 provider.description,
-                style: AppTheme.bodySmall,
+                style: Theme.of(context).textTheme.bodySmall!,
               ),
               trailing: isSelected
                   ? Icon(Icons.check_circle, color: provider.brandColor)
@@ -329,14 +331,14 @@ class _AdvancedAISettingsScreenState extends State<AdvancedAISettingsScreen> {
           children: [
             Text(
               'API Key',
-              style: AppTheme.headingSmall,
+              style: Theme.of(context).textTheme.titleLarge!,
             ),
             const SizedBox(height: 12),
             TextField(
               controller: _apiKeyController,
               obscureText: !_showApiKey,
               onChanged: (_) => _onSettingsChanged(),
-              style: AppTheme.bodyMedium,
+              style: Theme.of(context).textTheme.bodyMedium!,
               decoration: InputDecoration(
                 hintText:
                     'Enter your ${_settings.provider.displayName} API key',
@@ -366,14 +368,14 @@ class _AdvancedAISettingsScreenState extends State<AdvancedAISettingsScreen> {
                   borderRadius: BorderRadius.circular(12),
                   borderSide: BorderSide(
                     color: isValid
-                        ? Colors.grey.withOpacity(0.3)
-                        : Colors.red.withOpacity(0.5),
+                        ? Colors.grey.withValues(alpha: 0.3)
+                        : Colors.red.withValues(alpha: 0.5),
                   ),
                 ),
                 focusedBorder: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(12),
                   borderSide: BorderSide(
-                    color: isValid ? AppTheme.primaryColor : Colors.red,
+                    color: isValid ? Theme.of(context).colorScheme.primary : Colors.red,
                     width: 2,
                   ),
                 ),
@@ -384,7 +386,7 @@ class _AdvancedAISettingsScreenState extends State<AdvancedAISettingsScreen> {
                 padding: const EdgeInsets.only(top: 8),
                 child: Text(
                   'Invalid API key format for ${_settings.provider.displayName}',
-                  style: AppTheme.bodySmall.copyWith(color: Colors.red),
+                  style: Theme.of(context).textTheme.bodySmall!.copyWith(color: Colors.red),
                 ),
               ),
           ],
@@ -402,13 +404,13 @@ class _AdvancedAISettingsScreenState extends State<AdvancedAISettingsScreen> {
           children: [
             Text(
               'Model Configuration',
-              style: AppTheme.headingSmall,
+              style: Theme.of(context).textTheme.titleLarge!,
             ),
             const SizedBox(height: 16),
             TextField(
               controller: _modelNameController,
               onChanged: (_) => _onSettingsChanged(),
-              style: AppTheme.bodyMedium,
+              style: Theme.of(context).textTheme.bodyMedium!,
               decoration: InputDecoration(
                 labelText: 'Model Name',
                 hintText: _settings.getDefaultModelName(),
@@ -423,7 +425,7 @@ class _AdvancedAISettingsScreenState extends State<AdvancedAISettingsScreen> {
               controller: _maxTokensController,
               keyboardType: TextInputType.number,
               onChanged: (_) => _onSettingsChanged(),
-              style: AppTheme.bodyMedium,
+              style: Theme.of(context).textTheme.bodyMedium!,
               decoration: InputDecoration(
                 labelText: 'Max Tokens',
                 hintText: _settings.getDefaultMaxTokens().toString(),
@@ -438,7 +440,7 @@ class _AdvancedAISettingsScreenState extends State<AdvancedAISettingsScreen> {
               TextField(
                 controller: _customEndpointController,
                 onChanged: (_) => _onSettingsChanged(),
-                style: AppTheme.bodyMedium,
+                style: Theme.of(context).textTheme.bodyMedium!,
                 decoration: InputDecoration(
                   labelText: 'Custom Endpoint URL',
                   hintText: 'https://your-api-endpoint.com/v1/chat',
@@ -464,7 +466,7 @@ class _AdvancedAISettingsScreenState extends State<AdvancedAISettingsScreen> {
             Container(
               padding: const EdgeInsets.all(8),
               decoration: BoxDecoration(
-                color: Colors.green.withOpacity(0.1),
+                color: Colors.green.withValues(alpha: 0.1),
                 borderRadius: BorderRadius.circular(8),
               ),
               child: const Icon(
@@ -480,14 +482,14 @@ class _AdvancedAISettingsScreenState extends State<AdvancedAISettingsScreen> {
                 children: [
                   Text(
                     'Secure Storage',
-                    style: AppTheme.bodyMedium.copyWith(
+                    style: Theme.of(context).textTheme.bodyMedium!.copyWith(
                       fontWeight: FontWeight.w600,
                     ),
                   ),
                   const SizedBox(height: 4),
                   Text(
                     'Your API keys never leave your device. Stored securely using Android Keystore / iOS Keychain.',
-                    style: AppTheme.bodySmall,
+                    style: Theme.of(context).textTheme.bodySmall!,
                   ),
                 ],
               ),
@@ -507,19 +509,19 @@ class _AdvancedAISettingsScreenState extends State<AdvancedAISettingsScreen> {
             Icon(
               Icons.flash_on,
               size: 48,
-              color: AppTheme.primaryColor,
+              color: Theme.of(context).colorScheme.primary,
             ),
             const SizedBox(height: 16),
             Text(
               'Using Default Groq + LLaMA 3',
-              style: AppTheme.headingSmall,
+              style: Theme.of(context).textTheme.titleLarge!,
               textAlign: TextAlign.center,
             ),
             const SizedBox(height: 8),
             Text(
               'Fast, free, and reliable AI responses. Enable advanced settings above to use your own API key.',
               textAlign: TextAlign.center,
-              style: AppTheme.bodyMedium,
+              style: Theme.of(context).textTheme.bodyMedium!,
             ),
           ],
         ),
@@ -536,7 +538,7 @@ class _AdvancedAISettingsScreenState extends State<AdvancedAISettingsScreen> {
           children: [
             Text(
               'Provider Comparison',
-              style: AppTheme.headingSmall,
+              style: Theme.of(context).textTheme.titleLarge!,
             ),
             const SizedBox(height: 16),
             _buildComparisonRow('Groq (Default)', 'Fast', 'Free', '8K tokens'),
@@ -550,23 +552,23 @@ class _AdvancedAISettingsScreenState extends State<AdvancedAISettingsScreen> {
   }
 
   Widget _buildComparisonRow(
-      String provider, String speed, String cost, String context) {
+      String provider, String speed, String cost, String contextInfo) {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 8),
       child: Row(
         children: [
           Expanded(
             flex: 2,
-            child: Text(provider, style: AppTheme.bodyMedium),
+            child: Text(provider, style: Theme.of(context).textTheme.bodyMedium!),
           ),
           Expanded(
-            child: Text(speed, style: AppTheme.bodySmall),
+            child: Text(speed, style: Theme.of(context).textTheme.bodySmall!),
           ),
           Expanded(
-            child: Text(cost, style: AppTheme.bodySmall),
+            child: Text(cost, style: Theme.of(context).textTheme.bodySmall!),
           ),
           Expanded(
-            child: Text(context, style: AppTheme.bodySmall),
+            child: Text(contextInfo, style: Theme.of(context).textTheme.bodySmall!),
           ),
         ],
       ),
@@ -580,9 +582,9 @@ class _AdvancedAISettingsScreenState extends State<AdvancedAISettingsScreen> {
       child: ElevatedButton(
         onPressed: _hasUnsavedChanges ? _saveSettings : null,
         style: ElevatedButton.styleFrom(
-          backgroundColor: AppTheme.primaryColor,
+          backgroundColor: Theme.of(context).colorScheme.primary,
           foregroundColor: Colors.white,
-          disabledBackgroundColor: Colors.grey.withOpacity(0.3),
+          disabledBackgroundColor: Colors.grey.withValues(alpha: 0.3),
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(12),
           ),

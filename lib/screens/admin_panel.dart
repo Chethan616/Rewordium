@@ -5,7 +5,6 @@ import 'package:path_provider/path_provider.dart';
 import 'package:share_plus/share_plus.dart';
 import '../services/admin_service.dart';
 import '../models/user_model.dart';
-import '../theme/app_theme.dart';
 
 class AdminPanel extends StatefulWidget {
   const AdminPanel({super.key});
@@ -318,9 +317,9 @@ class _AdminPanelState extends State<AdminPanel> with TickerProviderStateMixin {
   }
 
   Widget _buildAdminDashboard() {
-    final isDark = AppTheme.isDarkMode;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     return Scaffold(
-      backgroundColor: isDark ? AppTheme.darkBackgroundColor : AppTheme.lightBackgroundColor,
+      backgroundColor: Theme.of(context).colorScheme.surfaceContainerLow,
       appBar: AppBar(
         title: Row(
           children: [
@@ -330,7 +329,7 @@ class _AdminPanelState extends State<AdminPanel> with TickerProviderStateMixin {
           ],
         ),
         elevation: 0,
-        backgroundColor: AppTheme.primaryColor,
+        backgroundColor: Theme.of(context).colorScheme.primary,
         foregroundColor: Colors.white,
         iconTheme: const IconThemeData(color: Colors.white),
         actionsIconTheme: const IconThemeData(color: Colors.white),
@@ -383,7 +382,7 @@ class _AdminPanelState extends State<AdminPanel> with TickerProviderStateMixin {
   }
 
   Widget _buildOverviewTab() {
-    final isDark = AppTheme.isDarkMode;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     return SingleChildScrollView(
       padding: const EdgeInsets.all(20),
       child: Column(
@@ -394,7 +393,7 @@ class _AdminPanelState extends State<AdminPanel> with TickerProviderStateMixin {
             width: double.infinity,
             padding: const EdgeInsets.all(24),
             decoration: BoxDecoration(
-              color: AppTheme.primaryColor,
+              color: Theme.of(context).colorScheme.primary,
               borderRadius: BorderRadius.circular(16),
             ),
             child: Row(
@@ -414,7 +413,7 @@ class _AdminPanelState extends State<AdminPanel> with TickerProviderStateMixin {
                       Text(
                         'Here\'s your app overview for today',
                         style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                              color: Colors.white.withOpacity(0.85),
+                              color: Colors.white.withValues(alpha: 0.85),
                             ),
                       ),
                     ],
@@ -432,7 +431,7 @@ class _AdminPanelState extends State<AdminPanel> with TickerProviderStateMixin {
                   label: Text(_isLoading ? 'Loading...' : 'Refresh'),
                   style: ElevatedButton.styleFrom(
                     backgroundColor: Colors.white,
-                    foregroundColor: AppTheme.primaryColor,
+                    foregroundColor: Theme.of(context).colorScheme.primary,
                     elevation: 0,
                     padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
                     shape: RoundedRectangleBorder(
@@ -450,7 +449,7 @@ class _AdminPanelState extends State<AdminPanel> with TickerProviderStateMixin {
             '📊 User Statistics',
             style: Theme.of(context).textTheme.titleLarge?.copyWith(
                   fontWeight: FontWeight.bold,
-                  color: isDark ? AppTheme.darkTextPrimaryColor : AppTheme.lightTextPrimaryColor,
+                  color: Theme.of(context).colorScheme.onSurface,
                 ),
           ),
           const SizedBox(height: 16),
@@ -497,7 +496,7 @@ class _AdminPanelState extends State<AdminPanel> with TickerProviderStateMixin {
                     'Free Users',
                     _userStats['free'].toString(),
                     Icons.person,
-                    AppTheme.primaryColor,
+                    Theme.of(context).colorScheme.primary,
                   ),
                 ),
                 const SizedBox(width: 16),
@@ -516,7 +515,7 @@ class _AdminPanelState extends State<AdminPanel> with TickerProviderStateMixin {
               '⚡ Quick Actions',
               style: Theme.of(context).textTheme.headlineSmall?.copyWith(
                     fontWeight: FontWeight.bold,
-                    color: isDark ? AppTheme.darkTextPrimaryColor : AppTheme.lightTextPrimaryColor,
+                    color: Theme.of(context).colorScheme.onSurface,
                   ),
             ),
             const SizedBox(height: 16),
@@ -539,7 +538,7 @@ class _AdminPanelState extends State<AdminPanel> with TickerProviderStateMixin {
                 _buildQuickActionCard(
                   'History',
                   Icons.history,
-                  AppTheme.primaryColor,
+                  Theme.of(context).colorScheme.primary,
                   () => _tabController.animateTo(4),
                 ),
               ],
@@ -552,10 +551,10 @@ class _AdminPanelState extends State<AdminPanel> with TickerProviderStateMixin {
 
   Widget _buildStatCard(
       String title, String value, IconData icon, Color color) {
-    final isDark = AppTheme.isDarkMode;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     return Container(
       decoration: BoxDecoration(
-        color: isDark ? AppTheme.darkCardColor : Colors.white,
+        color: isDark ? Theme.of(context).colorScheme.surface : Colors.white,
         borderRadius: BorderRadius.circular(16),
         border: Border.all(color: isDark ? Colors.grey.shade800 : Colors.grey.shade200),
       ),
@@ -567,7 +566,7 @@ class _AdminPanelState extends State<AdminPanel> with TickerProviderStateMixin {
             Container(
               padding: const EdgeInsets.all(12),
               decoration: BoxDecoration(
-                color: color.withOpacity(0.15),
+                color: color.withValues(alpha: 0.15),
                 borderRadius: BorderRadius.circular(12),
               ),
               child: Icon(icon, color: color, size: 28),
@@ -586,7 +585,7 @@ class _AdminPanelState extends State<AdminPanel> with TickerProviderStateMixin {
               title,
               style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                     fontWeight: FontWeight.w600,
-                    color: isDark ? AppTheme.darkTextSecondaryColor : AppTheme.lightTextSecondaryColor,
+                    color: isDark ? Theme.of(context).colorScheme.onSurfaceVariant : Theme.of(context).colorScheme.onSurfaceVariant,
                   ),
             ),
           ],
@@ -601,7 +600,7 @@ class _AdminPanelState extends State<AdminPanel> with TickerProviderStateMixin {
     Color color,
     VoidCallback onTap,
   ) {
-    final isDark = AppTheme.isDarkMode;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     return Expanded(
       child: Material(
         color: Colors.transparent,
@@ -611,7 +610,7 @@ class _AdminPanelState extends State<AdminPanel> with TickerProviderStateMixin {
           child: Container(
             padding: const EdgeInsets.symmetric(vertical: 24, horizontal: 16),
             decoration: BoxDecoration(
-              color: isDark ? AppTheme.darkCardColor : Colors.white,
+              color: isDark ? Theme.of(context).colorScheme.surface : Colors.white,
               borderRadius: BorderRadius.circular(16),
               border: Border.all(color: isDark ? Colors.grey.shade800 : Colors.grey.shade200),
             ),
@@ -620,7 +619,7 @@ class _AdminPanelState extends State<AdminPanel> with TickerProviderStateMixin {
                 Container(
                   padding: const EdgeInsets.all(16),
                   decoration: BoxDecoration(
-                    color: color.withOpacity(0.15),
+                    color: color.withValues(alpha: 0.15),
                     borderRadius: BorderRadius.circular(14),
                   ),
                   child: Icon(icon, color: color, size: 32),
@@ -631,7 +630,7 @@ class _AdminPanelState extends State<AdminPanel> with TickerProviderStateMixin {
                   textAlign: TextAlign.center,
                   style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                         fontWeight: FontWeight.w600,
-                        color: isDark ? AppTheme.darkTextPrimaryColor : AppTheme.lightTextPrimaryColor,
+                        color: isDark ? Theme.of(context).colorScheme.onSurface : Theme.of(context).colorScheme.onSurface,
                       ),
                 ),
               ],
@@ -643,7 +642,7 @@ class _AdminPanelState extends State<AdminPanel> with TickerProviderStateMixin {
   }
 
   Widget _buildRevenueTab() {
-    final isDark = AppTheme.isDarkMode;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     final totalRevenue = _revenueStats['totalRevenue'] ?? 0.0;
     final mrr = _revenueStats['mrr'] ?? 0.0;
     final thisMonthRevenue = _revenueStats['thisMonthRevenue'] ?? 0.0;
@@ -667,7 +666,7 @@ class _AdminPanelState extends State<AdminPanel> with TickerProviderStateMixin {
             width: double.infinity,
             padding: const EdgeInsets.all(24),
             decoration: BoxDecoration(
-              color: AppTheme.primaryColor,
+              color: Theme.of(context).colorScheme.primary,
               borderRadius: BorderRadius.circular(16),
             ),
             child: Row(
@@ -687,17 +686,17 @@ class _AdminPanelState extends State<AdminPanel> with TickerProviderStateMixin {
                       Container(
                         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                         decoration: BoxDecoration(
-                          color: Colors.white.withOpacity(0.2),
+                          color: Colors.white.withValues(alpha: 0.2),
                           borderRadius: BorderRadius.circular(20),
                         ),
                         child: Row(
                           mainAxisSize: MainAxisSize.min,
                           children: [
-                            Icon(Icons.flag, size: 14, color: Colors.white.withOpacity(0.9)),
+                            Icon(Icons.flag, size: 14, color: Colors.white.withValues(alpha: 0.9)),
                             const SizedBox(width: 6),
                             Text(
                               'From: Jan 16, 2026',
-                              style: TextStyle(color: Colors.white.withOpacity(0.9), fontSize: 12, fontWeight: FontWeight.w500),
+                              style: TextStyle(color: Colors.white.withValues(alpha: 0.9), fontSize: 12, fontWeight: FontWeight.w500),
                             ),
                           ],
                         ),
@@ -717,7 +716,7 @@ class _AdminPanelState extends State<AdminPanel> with TickerProviderStateMixin {
                   label: Text(_isLoading ? 'Loading...' : 'Refresh'),
                   style: ElevatedButton.styleFrom(
                     backgroundColor: Colors.white,
-                    foregroundColor: AppTheme.primaryColor,
+                    foregroundColor: Theme.of(context).colorScheme.primary,
                     elevation: 0,
                     padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
                     shape: RoundedRectangleBorder(
@@ -741,7 +740,7 @@ class _AdminPanelState extends State<AdminPanel> with TickerProviderStateMixin {
                     'Total Revenue',
                     '\$${totalRevenue.toStringAsFixed(2)}',
                     Icons.account_balance_wallet,
-                    AppTheme.primaryColor,
+                    Theme.of(context).colorScheme.primary,
                     subtitle: 'All time earnings',
                   ),
                 ),
@@ -789,14 +788,14 @@ class _AdminPanelState extends State<AdminPanel> with TickerProviderStateMixin {
               '📊 Subscription Breakdown',
               style: Theme.of(context).textTheme.titleLarge?.copyWith(
                     fontWeight: FontWeight.bold,
-                    color: isDark ? AppTheme.darkTextPrimaryColor : AppTheme.lightTextPrimaryColor,
+                    color: Theme.of(context).colorScheme.onSurface,
                   ),
             ),
             const SizedBox(height: 12),
             
             Container(
               decoration: BoxDecoration(
-                color: isDark ? AppTheme.darkCardColor : Colors.white,
+                color: isDark ? Theme.of(context).colorScheme.surface : Colors.white,
                 borderRadius: BorderRadius.circular(16),
                 border: Border.all(color: isDark ? Colors.grey.shade800 : Colors.grey.shade200),
               ),
@@ -806,7 +805,7 @@ class _AdminPanelState extends State<AdminPanel> with TickerProviderStateMixin {
                   children: [
                     _buildSubscriptionRow('Monthly Subscribers', monthlySubscribers, Colors.blue, '\$2.98/mo'),
                     Divider(color: isDark ? Colors.grey.shade700 : Colors.grey.shade200),
-                    _buildSubscriptionRow('Yearly Subscribers', yearlySubscribers, AppTheme.primaryColor, '\$19.00/yr'),
+                    _buildSubscriptionRow('Yearly Subscribers', yearlySubscribers, Theme.of(context).colorScheme.primary, '\$19.00/yr'),
                     Divider(color: isDark ? Colors.grey.shade700 : Colors.grey.shade200),
                     _buildSubscriptionRow('Lifetime/One-time', onetimeSubscribers, Colors.purple, '\$49.99'),
                     Divider(color: isDark ? Colors.grey.shade600 : Colors.grey.shade300, thickness: 2),
@@ -825,7 +824,7 @@ class _AdminPanelState extends State<AdminPanel> with TickerProviderStateMixin {
               '🎯 Performance Metrics',
               style: Theme.of(context).textTheme.titleLarge?.copyWith(
                     fontWeight: FontWeight.bold,
-                    color: isDark ? AppTheme.darkTextPrimaryColor : AppTheme.lightTextPrimaryColor,
+                    color: Theme.of(context).colorScheme.onSurface,
                   ),
             ),
             const SizedBox(height: 12),
@@ -837,7 +836,7 @@ class _AdminPanelState extends State<AdminPanel> with TickerProviderStateMixin {
                     'Conversion Rate',
                     '${conversionRate.toStringAsFixed(1)}%',
                     Icons.pie_chart,
-                    AppTheme.secondaryColor,
+                    Theme.of(context).colorScheme.secondary,
                   ),
                 ),
                 const SizedBox(width: 12),
@@ -859,27 +858,27 @@ class _AdminPanelState extends State<AdminPanel> with TickerProviderStateMixin {
               '📝 Recent Transactions',
               style: Theme.of(context).textTheme.titleLarge?.copyWith(
                     fontWeight: FontWeight.bold,
-                    color: isDark ? AppTheme.darkTextPrimaryColor : AppTheme.lightTextPrimaryColor,
+                    color: Theme.of(context).colorScheme.onSurface,
                   ),
             ),
             const SizedBox(height: 12),
             
             if (_recentTransactions.isEmpty)
               Card(
-                color: isDark ? AppTheme.darkCardColor : Colors.white,
+                color: isDark ? Theme.of(context).colorScheme.surface : Colors.white,
                 child: Padding(
                   padding: const EdgeInsets.all(32),
                   child: Center(
                     child: Text(
                       'No transactions yet',
-                      style: TextStyle(color: isDark ? AppTheme.darkTextSecondaryColor : Colors.grey[600]),
+                      style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant),
                     ),
                   ),
                 ),
               )
             else
               Card(
-                color: isDark ? AppTheme.darkCardColor : Colors.white,
+                color: isDark ? Theme.of(context).colorScheme.surface : Colors.white,
                 child: ListView.separated(
                   shrinkWrap: true,
                   physics: const NeverScrollableScrollPhysics(),
@@ -893,7 +892,7 @@ class _AdminPanelState extends State<AdminPanel> with TickerProviderStateMixin {
                     
                     return ListTile(
                       leading: CircleAvatar(
-                        backgroundColor: _getPlanColor(planType).withOpacity(0.2),
+                        backgroundColor: _getPlanColor(planType).withValues(alpha: 0.2),
                         child: Icon(
                           _getPlanIcon(planType),
                           color: _getPlanColor(planType),
@@ -902,11 +901,11 @@ class _AdminPanelState extends State<AdminPanel> with TickerProviderStateMixin {
                       ),
                       title: Text(
                         tx['userName'] ?? 'Unknown',
-                        style: TextStyle(color: isDark ? AppTheme.darkTextPrimaryColor : AppTheme.lightTextPrimaryColor),
+                        style: TextStyle(color: Theme.of(context).colorScheme.onSurface),
                       ),
                       subtitle: Text(
                         tx['email'] ?? '',
-                        style: TextStyle(color: isDark ? AppTheme.darkTextSecondaryColor : AppTheme.lightTextSecondaryColor),
+                        style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant),
                       ),
                       trailing: Column(
                         mainAxisAlignment: MainAxisAlignment.center,
@@ -924,7 +923,7 @@ class _AdminPanelState extends State<AdminPanel> with TickerProviderStateMixin {
                               _formatDate(date),
                               style: TextStyle(
                                 fontSize: 12,
-                                color: isDark ? AppTheme.darkTextSecondaryColor : Colors.grey[600],
+                                color: Theme.of(context).colorScheme.onSurfaceVariant,
                               ),
                             ),
                         ],
@@ -940,10 +939,10 @@ class _AdminPanelState extends State<AdminPanel> with TickerProviderStateMixin {
   }
 
   Widget _buildRevenueCard(String title, String value, IconData icon, Color color, {String? subtitle}) {
-    final isDark = AppTheme.isDarkMode;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     return Container(
       decoration: BoxDecoration(
-        color: isDark ? AppTheme.darkCardColor : Colors.white,
+        color: isDark ? Theme.of(context).colorScheme.surface : Colors.white,
         borderRadius: BorderRadius.circular(16),
         border: Border.all(color: isDark ? Colors.grey.shade800 : Colors.grey.shade200),
       ),
@@ -955,7 +954,7 @@ class _AdminPanelState extends State<AdminPanel> with TickerProviderStateMixin {
             Container(
               padding: const EdgeInsets.all(10),
               decoration: BoxDecoration(
-                color: color.withOpacity(0.15),
+                color: color.withValues(alpha: 0.15),
                 borderRadius: BorderRadius.circular(12),
               ),
               child: Icon(icon, color: color, size: 22),
@@ -975,7 +974,7 @@ class _AdminPanelState extends State<AdminPanel> with TickerProviderStateMixin {
               title,
               style: TextStyle(
                 fontSize: 14,
-                color: isDark ? AppTheme.darkTextSecondaryColor : AppTheme.lightTextSecondaryColor,
+                color: Theme.of(context).colorScheme.onSurfaceVariant,
                 fontWeight: FontWeight.w600,
               ),
             ),
@@ -984,7 +983,7 @@ class _AdminPanelState extends State<AdminPanel> with TickerProviderStateMixin {
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                 decoration: BoxDecoration(
-                  color: color.withOpacity(0.1),
+                  color: color.withValues(alpha: 0.1),
                   borderRadius: BorderRadius.circular(8),
                 ),
                 child: Text(
@@ -1004,7 +1003,7 @@ class _AdminPanelState extends State<AdminPanel> with TickerProviderStateMixin {
   }
 
   Widget _buildSubscriptionRow(String label, int count, Color color, String price) {
-    final isDark = AppTheme.isDarkMode;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 12),
       child: Row(
@@ -1013,7 +1012,7 @@ class _AdminPanelState extends State<AdminPanel> with TickerProviderStateMixin {
             width: 40,
             height: 40,
             decoration: BoxDecoration(
-              color: color.withOpacity(0.15),
+              color: color.withValues(alpha: 0.15),
               borderRadius: BorderRadius.circular(12),
             ),
             child: Center(
@@ -1036,13 +1035,13 @@ class _AdminPanelState extends State<AdminPanel> with TickerProviderStateMixin {
                   label,
                   style: TextStyle(
                     fontWeight: FontWeight.w600,
-                    color: isDark ? AppTheme.darkTextPrimaryColor : AppTheme.lightTextPrimaryColor,
+                    color: Theme.of(context).colorScheme.onSurface,
                   ),
                 ),
                 if (price.isNotEmpty)
                   Text(
                     price,
-                    style: TextStyle(color: isDark ? AppTheme.darkTextSecondaryColor : Colors.grey[500], fontSize: 12),
+                    style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant, fontSize: 12),
                   ),
               ],
             ),
@@ -1050,7 +1049,7 @@ class _AdminPanelState extends State<AdminPanel> with TickerProviderStateMixin {
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
             decoration: BoxDecoration(
-              color: color.withOpacity(0.1),
+              color: color.withValues(alpha: 0.1),
               borderRadius: BorderRadius.circular(20),
             ),
             child: Text(
@@ -1068,10 +1067,10 @@ class _AdminPanelState extends State<AdminPanel> with TickerProviderStateMixin {
   }
 
   Widget _buildMetricCard(String title, String value, IconData icon, Color color) {
-    final isDark = AppTheme.isDarkMode;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     return Container(
       decoration: BoxDecoration(
-        color: isDark ? AppTheme.darkCardColor : Colors.white,
+        color: isDark ? Theme.of(context).colorScheme.surface : Colors.white,
         borderRadius: BorderRadius.circular(16),
         border: Border.all(color: isDark ? Colors.grey.shade800 : Colors.grey.shade200),
       ),
@@ -1082,7 +1081,7 @@ class _AdminPanelState extends State<AdminPanel> with TickerProviderStateMixin {
             Container(
               padding: const EdgeInsets.all(14),
               decoration: BoxDecoration(
-                color: color.withOpacity(0.15),
+                color: color.withValues(alpha: 0.15),
                 borderRadius: BorderRadius.circular(14),
               ),
               child: Icon(icon, color: color, size: 26),
@@ -1102,7 +1101,7 @@ class _AdminPanelState extends State<AdminPanel> with TickerProviderStateMixin {
               style: TextStyle(
                 fontSize: 13,
                 fontWeight: FontWeight.w500,
-                color: isDark ? AppTheme.darkTextSecondaryColor : AppTheme.lightTextSecondaryColor,
+color: Theme.of(context).colorScheme.onSurfaceVariant,
               ),
             ),
           ],
@@ -1568,7 +1567,7 @@ class _AdminPanelState extends State<AdminPanel> with TickerProviderStateMixin {
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                 decoration: BoxDecoration(
-                  color: Colors.blue.withOpacity(0.1),
+                  color: Colors.blue.withValues(alpha: 0.1),
                   borderRadius: BorderRadius.circular(8),
                 ),
                 child: Row(
@@ -1606,9 +1605,9 @@ class _AdminPanelState extends State<AdminPanel> with TickerProviderStateMixin {
                 Container(
                   padding: const EdgeInsets.all(16),
                   decoration: BoxDecoration(
-                    color: Colors.orange.withOpacity(0.1),
+                    color: Colors.orange.withValues(alpha: 0.1),
                     borderRadius: BorderRadius.circular(8),
-                    border: Border.all(color: Colors.orange.withOpacity(0.3)),
+                    border: Border.all(color: Colors.orange.withValues(alpha: 0.3)),
                   ),
                   child: Row(
                     children: [
@@ -1721,7 +1720,7 @@ class _AdminPanelState extends State<AdminPanel> with TickerProviderStateMixin {
                   Container(
                     padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                     decoration: BoxDecoration(
-                      color: Colors.green.withOpacity(0.2),
+                      color: Colors.green.withValues(alpha: 0.2),
                       borderRadius: BorderRadius.circular(4),
                     ),
                     child: const Text(

@@ -4,8 +4,8 @@ import 'package:animate_do/animate_do.dart';
 import 'package:flutter/services.dart';
 import 'package:shimmer/shimmer.dart';
 import 'package:provider/provider.dart';
+import 'package:m3e_collection/m3e_collection.dart';
 
-import '../theme/app_theme.dart';
 import '../widgets/custom_app_bar.dart';
 import '../widgets/custom_button.dart';
 import '../utils/lottie_assets.dart';
@@ -284,6 +284,12 @@ class _TranslatorPageState extends State<TranslatorPage> {
                 if (!isLoggedIn) const SizedBox(width: 8),
               ],
             ),
+            if (_isLoading)
+              LinearProgressIndicatorM3E(
+                shape: ProgressM3EShape.wavy,
+                size: LinearProgressM3ESize.s,
+                activeColor: Colors.blue,
+              ),
             Padding(
               padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
               child: DocumentInputWidget(
@@ -291,12 +297,14 @@ class _TranslatorPageState extends State<TranslatorPage> {
                 currentDocument: _loadedDocument,
                 onClear: _clearDocument,
                 accentColor: Colors.blue,
+                initialToolForViewer: 'translate',
                 onViewDocument: (doc) {
                   Navigator.push(
                     context,
                     MaterialPageRoute(
                       builder: (_) => DocumentViewerScreen(
                         document: doc,
+                        initialTool: 'translate',
                         onUseText: (text) {
                           _controller.text = text;
                         },
@@ -318,7 +326,7 @@ class _TranslatorPageState extends State<TranslatorPage> {
                     maxLines: null,
                     expands: true,
                     textAlignVertical: TextAlignVertical.top,
-                    style: AppTheme.bodyMedium,
+                    style: Theme.of(context).textTheme.bodyMedium!,
                     decoration: InputDecoration(
                       hintText: "Enter text to translate...",
                       contentPadding: const EdgeInsets.symmetric(
@@ -328,7 +336,7 @@ class _TranslatorPageState extends State<TranslatorPage> {
                         borderSide: BorderSide.none,
                       ),
                       filled: true,
-                      fillColor: AppTheme.cardColor,
+                      fillColor: Theme.of(context).colorScheme.surface,
                     ),
                   ),
                 ),
@@ -338,7 +346,7 @@ class _TranslatorPageState extends State<TranslatorPage> {
               padding: const EdgeInsets.symmetric(horizontal: 16),
               child: Row(
                 children: [
-                  Text("Translate to:", style: AppTheme.bodySmall.copyWith(fontWeight: FontWeight.w600)),
+                  Text("Translate to:", style: Theme.of(context).textTheme.bodySmall!.copyWith(fontWeight: FontWeight.w600)),
                   SizedBox(width: 8),
                   Expanded(
                     child: Container(
@@ -365,8 +373,8 @@ class _TranslatorPageState extends State<TranslatorPage> {
                             size: 16,
                           ),
                           borderRadius: BorderRadius.circular(10),
-                          dropdownColor: AppTheme.cardColor,
-                          style: AppTheme.bodyMedium.copyWith(
+                          dropdownColor: Theme.of(context).colorScheme.surface,
+                          style: Theme.of(context).textTheme.bodyMedium!.copyWith(
                             color: Colors.blue.shade700,
                             fontWeight: FontWeight.w500,
                           ),
@@ -378,7 +386,7 @@ class _TranslatorPageState extends State<TranslatorPage> {
                                 style: TextStyle(
                                   color: language == _selectedLanguage
                                       ? Colors.blue
-                                      : AppTheme.textPrimaryColor,
+                                      : Theme.of(context).colorScheme.onSurface,
                                 ),
                               ),
                             );
@@ -422,8 +430,8 @@ class _TranslatorPageState extends State<TranslatorPage> {
                         child: Text(
                           "Enter or paste text and select a language",
                           textAlign: TextAlign.center,
-                          style: AppTheme.bodyMedium.copyWith(
-                            color: AppTheme.textSecondaryColor,
+                          style: Theme.of(context).textTheme.bodyMedium!.copyWith(
+                            color: Theme.of(context).colorScheme.onSurfaceVariant,
                           ),
                         ),
                       ),

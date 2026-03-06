@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import '../theme/app_theme.dart';
+import 'package:m3e_collection/m3e_collection.dart';
 
 enum ButtonType { primary, secondary }
 
@@ -25,89 +25,76 @@ class CustomButton extends StatelessWidget {
     this.customColor,
   });
 
-  // In lib/widgets/custom_button.dart
+  ButtonM3ESize _sizeFromHeight() {
+    final h = height ?? 50;
+    if (h <= 36) return ButtonM3ESize.xs;
+    if (h <= 44) return ButtonM3ESize.sm;
+    if (h <= 64) return ButtonM3ESize.md;
+    return ButtonM3ESize.lg;
+  }
 
-@override
-Widget build(BuildContext context) {
-  final Color backgroundColor = type == ButtonType.primary
-      ? (customColor ?? AppTheme.primaryColor)
-      : Colors.transparent;
+  @override
+  Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+    final m3eSize = _sizeFromHeight();
 
-  final Color textColor = type == ButtonType.primary
-      ? Colors.white
-      : (customColor ?? AppTheme.primaryColor);
+    final ButtonM3EStyle m3eStyle;
+    final Color? overrideColor;
 
-  final Color borderColor = (customColor ?? AppTheme.primaryColor)
-      .withOpacity(type == ButtonType.primary ? 0.0 : 0.5);
+    if (type == ButtonType.primary) {
+      m3eStyle = ButtonM3EStyle.filled;
+      overrideColor = customColor;
+    } else {
+      m3eStyle = ButtonM3EStyle.outlined;
+      overrideColor = customColor;
+    }
 
-  final double buttonHeight = height ?? 50;
-  final double buttonWidth = width ?? double.infinity;
-  final double fontSize = buttonHeight <= 40 ? 14 : 16;
-
-  // The core button content, which will be shared
-  final buttonContent = Ink(
-    decoration: BoxDecoration(
-      borderRadius: BorderRadius.circular(16),
-      border: type == ButtonType.secondary
-          ? Border.all(color: borderColor, width: 1.5)
-          : null,
-    ),
-    child: Center(
-      child: isLoading
-          ? SizedBox(
-              width: 24,
-              height: 24,
-              child: CircularProgressIndicator(
-                strokeWidth: 2.5,
-                color: textColor,
-              ),
-            )
-          : FittedBox(
-              fit: BoxFit.scaleDown,
-              child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 8.0),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    if (icon != null) ...[
-                      Icon(icon, size: 18, color: textColor),
-                      const SizedBox(width: 6),
-                    ],
-                    Text(
-                      text,
-                      style: TextStyle(
-                        color: textColor,
-                        fontSize: fontSize,
-                        fontWeight: FontWeight.w600,
-                      ),
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                  ],
-                ),
-              ),
-            ),
-    ),
-  );
-
-  return SizedBox(
-    width: buttonWidth,
-    height: buttonHeight,
-    // Use a GestureDetector to reliably capture taps over the entire area.
-    child: GestureDetector(
-      onTap: isLoading ? null : onPressed,
-      // This is the key: it prevents taps from passing through empty areas.
-      behavior: HitTestBehavior.opaque,
-      // The Material provides the background color and clipping for the InkWell's ripple.
-      child: Material(
-        color: backgroundColor,
-        borderRadius: BorderRadius.circular(16),
-        // The InkWell is now just for the ripple effect, not for tap detection.
-        child: InkWell(
-          borderRadius: BorderRadius.circular(16),
-          child: buttonContent,
+    Widget label;
+    if (isLoading) {
+      final loaderColor = type == ButtonType.primary
+          ? (customColor != null ? Colors.white : colorScheme.onPrimary)
+          : (customColor ?? colorScheme.primary);
+      label = SizedBox(
+        width: 24,
+        height: 24,
+        child: LoadingIndicatorM3E(
+          color: loaderColor,
+          constraints: const BoxConstraints(maxWidth: 24, maxHeight: 24),
         ),
-      ),
-    ),
-  );
-}
+      );
+    } else {
+      label = Text(text);
+    }
+
+    Widget button = ButtonM3E(
+      onPressed: isLoading ? null : onPressed,
+      label: label,
+      icon: (!isLoading && icon != null) ? Icon(icon) : null,
+      style: m3eStyle,
+      size: m3eSize,
+      shape: ButtonM3EShape.round,
+    );
+
+    // Apply custom color overlay via theme override when needed
+    if (overrideColor != null) {
+      final customScheme = type == ButtonType.primary
+          ? colorScheme.copyWith(
+              primary: overrideColor,
+              onPrimary: Colors.white,
+            )
+          : colorScheme.copyWith(
+              primary: overrideColor,
+              outline: overrideColor,
+            );
+      button = Theme(
+        data: Theme.of(context).copyWith(colorScheme: customScheme),
+        child: button,
+      );
+    }
+
+    if (width != null) {
+      return SizedBox(width: width, child: button);
+    }
+    return button;
+  }
 }

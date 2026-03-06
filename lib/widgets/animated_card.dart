@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import '../theme/app_theme.dart';
 
 class AnimatedCard extends StatefulWidget {
   final Widget child;
@@ -105,7 +104,19 @@ class _AnimatedCardState extends State<AnimatedCard>
       height: widget.height,
       margin: const EdgeInsets.symmetric(vertical: 8, horizontal: 16),
       padding: widget.padding,
-      decoration: AppTheme.cardDecoration,
+      decoration: BoxDecoration(
+        color: Theme.of(context).colorScheme.surface,
+        borderRadius: BorderRadius.circular(28),
+        boxShadow: [
+          BoxShadow(
+            color: Theme.of(context).brightness == Brightness.dark
+                ? Colors.black.withValues(alpha: 0.25)
+                : Colors.black.withValues(alpha: 0.06),
+            offset: const Offset(0, 2),
+            blurRadius: 12,
+          ),
+        ],
+      ),
       child: widget.child,
     );
 

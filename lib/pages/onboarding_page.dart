@@ -4,7 +4,6 @@ import 'dart:math'
     as math; // Kept for potential future use, but not used in this version.
 
 import '../main.dart';
-import '../theme/app_theme.dart';
 
 class OnboardingPage extends StatefulWidget {
   const OnboardingPage({super.key});
@@ -75,7 +74,7 @@ class _OnboardingPageState extends State<OnboardingPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       // THEME UPDATE: Use the scaffold background color from the theme.
-      backgroundColor: AppTheme.scaffoldBackgroundColor,
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       body: SafeArea(
         child: Column(
           children: [
@@ -92,7 +91,7 @@ class _OnboardingPageState extends State<OnboardingPage> {
                           icon: Icon(
                             CupertinoIcons.chevron_left,
                             // THEME UPDATE: Use primary text color.
-                            color: AppTheme.textPrimaryColor,
+                            color: Theme.of(context).colorScheme.onSurface,
                             size: 28,
                           ),
                         )
@@ -109,8 +108,8 @@ class _OnboardingPageState extends State<OnboardingPage> {
                         decoration: BoxDecoration(
                           // THEME UPDATE: Use theme colors for the indicator.
                           color: _currentPage == index
-                              ? AppTheme.primaryColor
-                              : AppTheme.disabledColor,
+                              ? Theme.of(context).colorScheme.primary
+                              : Theme.of(context).disabledColor,
                           borderRadius: BorderRadius.circular(4),
                         ),
                       );
@@ -123,8 +122,8 @@ class _OnboardingPageState extends State<OnboardingPage> {
                     child: Text(
                       'Skip',
                       // THEME UPDATE: Use a theme style for the button text.
-                      style: AppTheme.bodyMedium.copyWith(
-                        color: AppTheme.primaryColor,
+                      style: Theme.of(context).textTheme.bodyMedium!.copyWith(
+                        color: Theme.of(context).colorScheme.primary,
                         fontWeight: FontWeight.w600,
                       ),
                     ),
@@ -182,13 +181,13 @@ class _OnboardingPageState extends State<OnboardingPage> {
       width: 120,
       height: 120,
       decoration: BoxDecoration(
-        color: AppTheme.primaryColor.withOpacity(0.1),
+        color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.1),
         shape: BoxShape.circle,
       ),
       child: Icon(
         icon,
         size: 60,
-        color: AppTheme.primaryColor,
+        color: Theme.of(context).colorScheme.primary,
       ),
     );
   }
@@ -205,15 +204,15 @@ class _OnboardingPageState extends State<OnboardingPage> {
             'Welcome to Rewordium AI',
             textAlign: TextAlign.center,
             // THEME UPDATE: Use heading style from AppTheme.
-            style: AppTheme.headingLarge,
+            style: Theme.of(context).textTheme.headlineMedium!,
           ),
           const SizedBox(height: 24),
           Text(
             'Your ultimate AI-powered writing assistant that works seamlessly across all your apps.',
             textAlign: TextAlign.center,
             // THEME UPDATE: Use body style with secondary text color.
-            style: AppTheme.bodyLarge.copyWith(
-              color: AppTheme.textSecondaryColor,
+            style: Theme.of(context).textTheme.bodyLarge!.copyWith(
+              color: Theme.of(context).colorScheme.onSurfaceVariant,
               height: 1.5,
             ),
           ),
@@ -233,14 +232,14 @@ class _OnboardingPageState extends State<OnboardingPage> {
           Text(
             'Smart AI Keyboard',
             textAlign: TextAlign.center,
-            style: AppTheme.headingLarge,
+            style: Theme.of(context).textTheme.headlineMedium!,
           ),
           const SizedBox(height: 24),
           Text(
             'Experience intelligent typing with real-time AI suggestions, smart autocorrect, and context-aware predictions.',
             textAlign: TextAlign.center,
-            style: AppTheme.bodyLarge.copyWith(
-              color: AppTheme.textSecondaryColor,
+            style: Theme.of(context).textTheme.bodyLarge!.copyWith(
+              color: Theme.of(context).colorScheme.onSurfaceVariant,
               height: 1.6,
             ),
           ),
@@ -269,14 +268,14 @@ class _OnboardingPageState extends State<OnboardingPage> {
           Text(
             'Accessibility Service',
             textAlign: TextAlign.center,
-            style: AppTheme.headingLarge,
+            style: Theme.of(context).textTheme.headlineMedium!,
           ),
           const SizedBox(height: 24),
           Text(
             'Enable our service to get AI assistance in any app via a floating bubble. We respect your privacy.',
             textAlign: TextAlign.center,
-            style: AppTheme.bodyLarge.copyWith(
-              color: AppTheme.textSecondaryColor,
+            style: Theme.of(context).textTheme.bodyLarge!.copyWith(
+              color: Theme.of(context).colorScheme.onSurfaceVariant,
               height: 1.6,
             ),
           ),
@@ -294,23 +293,22 @@ class _OnboardingPageState extends State<OnboardingPage> {
           Container(
             padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
-              color: AppTheme.primaryColor.withOpacity(0.05),
+              color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.05),
               borderRadius: BorderRadius.circular(16),
-              border: Border.all(color: AppTheme.primaryColor.withOpacity(0.1)),
+              border: Border.all(color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.1)),
             ),
             child: Row(
               children: [
                 Icon(
                   CupertinoIcons.info_circle,
-                  color: AppTheme.primaryColor,
+                  color: Theme.of(context).colorScheme.primary,
                   size: 20,
                 ),
                 const SizedBox(width: 12),
                 Expanded(
                   child: Text(
                     'We\'ll guide you through enabling this service later.',
-                    style: AppTheme.bodyMedium
-                        .copyWith(color: AppTheme.textSecondaryColor),
+                    style: Theme.of(context).textTheme.bodyMedium!.copyWith(color: Theme.of(context).colorScheme.onSurfaceVariant),
                   ),
                 ),
               ],
@@ -332,14 +330,14 @@ class _OnboardingPageState extends State<OnboardingPage> {
           Text(
             'You\'re All Set!',
             textAlign: TextAlign.center,
-            style: AppTheme.headingLarge,
+            style: Theme.of(context).textTheme.headlineMedium!,
           ),
           const SizedBox(height: 24),
           Text(
             'Start creating amazing content with intelligent assistance at your fingertips. Ready to transform your writing?',
             textAlign: TextAlign.center,
-            style: AppTheme.bodyLarge.copyWith(
-              color: AppTheme.textSecondaryColor,
+            style: Theme.of(context).textTheme.bodyLarge!.copyWith(
+              color: Theme.of(context).colorScheme.onSurfaceVariant,
               height: 1.5,
             ),
           ),
@@ -357,14 +355,14 @@ class _OnboardingPageState extends State<OnboardingPage> {
           Icon(
             icon,
             size: 20,
-            color: AppTheme.primaryColor,
+            color: Theme.of(context).colorScheme.primary,
           ),
           const SizedBox(width: 16),
           Text(
             title,
-            style: AppTheme.bodyMedium.copyWith(
+            style: Theme.of(context).textTheme.bodyMedium!.copyWith(
               fontWeight: FontWeight.w500,
-              color: AppTheme.textPrimaryColor,
+              color: Theme.of(context).colorScheme.onSurface,
             ),
           ),
         ],
