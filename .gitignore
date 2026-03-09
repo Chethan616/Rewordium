@@ -42,9 +42,10 @@ android/*.keystore
 key.properties
 upload-keystore.jks
 
-# Firebase options (contains API keys)
-lib/firebase_options.dart
-android/app/google-services.json
+# Firebase options — committed intentionally (no private keys, only project config)
+# lib/firebase_options.dart
+# android/app/google-services.json
+# Secret files that must be supplied via CI environment variables:
 ios/Runner/GoogleService-Info.plist
 ios/firebase_app_id_file.json
 
@@ -81,7 +82,8 @@ desktop.ini
 .packages
 .pub-cache/
 .pub/
-pubspec.lock
+# pubspec.lock is committed for reproducible CI builds
+# pubspec.lock
 
 /build/
 **/build/
