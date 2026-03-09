@@ -1,0 +1,47 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/persona_buttons_container"
+    android:layout_width="wrap_content"
+    android:layout_height="wrap_content"
+    android:orientation="horizontal"
+    android:gravity="center_vertical"
+    android:alpha="0"
+    android:visibility="invisible">
+
+    <!-- Happy Persona Button -->
+    <TextView
+        android:id="@+id/persona_happy_button"
+        android:layout_width="40dp"
+        android:layout_height="40dp"
+        android:background="@drawable/round_button_background"
+        android:text="😊"
+        android:textSize="18sp"
+        android:gravity="center"
+        android:layout_marginStart="8dp"
+        android:layout_marginEnd="8dp" />
+
+    <!-- Sad Persona Button -->
+    <TextView
+        android:id="@+id/persona_sad_button"
+        android:layout_width="40dp"
+        android:layout_height="40dp"
+        android:background="@drawable/round_button_background"
+        android:text="😢"
+        android:textSize="18sp"
+        android:gravity="center"
+        android:layout_marginEnd="8dp" />
+
+    <!-- Humor Persona Button -->
+    <TextView
+        android:id="@+id/persona_humor_button"
+        android:layout_width="40dp"
+        android:layout_height="40dp"
+        android:background="@drawable/round_button_background"
+        android:text="😂"
+        android:textSize="18sp"
+        android:gravity="center"
+        android:layout_marginEnd="8dp" />
+
+    <!-- Add button removed as requested -->
+
+</LinearLayout>

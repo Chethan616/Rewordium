@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="utf-8"?>
+<layer-list xmlns:android="http://schemas.android.com/apk/res/android">
+    <!-- Icon container shadow -->
+    <item android:top="1dp" android:left="1dp" android:right="1dp">
+        <shape android:shape="rectangle">
+            <corners android:radius="12dp" />
+            <solid android:color="#15000000" />
+        </shape>
+    </item>
+    
+    <!-- Icon container background -->
+    <item>
+        <shape android:shape="rectangle">
+            <corners android:radius="12dp" />
+            <gradient
+                android:type="radial"
+                android:gradientRadius="24dp"
+                android:centerX="0.5"
+                android:centerY="0.3"
+                android:startColor="#25007AFF"
+                android:endColor="#15007AFF" />
+        </shape>
+    </item>
+    
+    <!-- Subtle shine effect -->
+    <item android:top="1dp" android:left="1dp" android:right="1dp" android:bottom="12dp">
+        <shape android:shape="rectangle">
+            <corners android:topLeftRadius="11dp" android:topRightRadius="11dp" />
+            <gradient
+                android:type="linear"
+                android:angle="270"
+                android:startColor="#20FFFFFF"
+                android:endColor="#00FFFFFF" />
+        </shape>
+    </item>
+</layer-list>

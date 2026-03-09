@@ -1,0 +1,45 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="horizontal"
+    android:background="@drawable/bg_focused_editor_bar"
+    android:padding="12dp"
+    android:gravity="bottom">
+
+    <!-- Themed EditText -->
+    <EditText
+        android:id="@+id/focused_edit_text"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_weight="1"
+        android:background="@drawable/bg_edit_text_enhanced"
+        android:gravity="top"
+        android:hint="Your text or /generate command"
+        android:inputType="textMultiLine|textCapSentences"
+        android:maxLines="6"
+        android:minHeight="52dp"
+        android:padding="12dp"
+        android:textColor="@color/accessibility_dialog_text"
+        android:textColorHint="@color/accessibility_dialog_hint"
+        android:textSize="15sp"
+        android:fontFamily="sans-serif"/>
+
+    <!-- Themed Generate Button -->
+    <com.google.android.material.button.MaterialButton
+        android:id="@+id/focused_button_generate"
+        android:layout_width="52dp"
+        android:layout_height="52dp"
+        android:layout_marginStart="12dp"
+        android:backgroundTint="@color/accessibility_generate_button_bg"
+        android:contentDescription="Generate"
+        android:elevation="2dp"
+        app:icon="@drawable/ic_auto_awesome"
+        app:iconTint="@color/accessibility_generate_button_text"
+        app:cornerRadius="32dp"
+        app:iconPadding="0dp"
+        app:iconGravity="textStart"
+        style="@style/Widget.Material3.Button.Icon"/>
+
+</LinearLayout>

@@ -1,0 +1,194 @@
+# ===========================================================
+# 🚨 CRITICAL SECURITY - NEVER COMMIT THESE FILES
+# ===========================================================
+
+# Firebase / Google Cloud service account keys (HIGHEST PRIORITY)
+**/rewordium-*.json
+**/*-service-account*.json
+**/*-credentials*.json
+**/service-account*.json
+**/serviceAccount*.json
+**/firebase-adminsdk*.json
+config/service-account-key.json
+config/*.json
+!config/example-*.json
+
+# Private keys
+*.pem
+*.p12
+*.key
+**/private_key*
+**/*private*.key
+
+# Environment files with secrets
+.env
+.env.*
+.env.local
+.env.development
+.env.production
+!.env.example
+
+# API keys files
+**/api-keys.json
+**/secrets.json
+**/credentials.json
+
+# Android signing
+android/key.properties
+android/*.jks
+android/*.keystore
+*.jks
+*.keystore
+key.properties
+upload-keystore.jks
+
+# Firebase options (contains API keys)
+lib/firebase_options.dart
+android/app/google-services.json
+ios/Runner/GoogleService-Info.plist
+ios/firebase_app_id_file.json
+
+# ===========================================================
+# OS / Editor files
+# ===========================================================
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+desktop.ini
+
+.idea/
+*.iml
+*.ipr
+*.iws
+.vscode/
+!.vscode/settings.json
+!.vscode/tasks.json
+!.vscode/launch.json
+!.vscode/extensions.json
+*.code-workspace
+*.sublime-*
+
+# ===========================================================
+# Flutter / Dart
+# ===========================================================
+.dart_tool/
+.flutter-plugins
+.flutter-plugins-dependencies
+.packages
+.pub-cache/
+.pub/
+pubspec.lock
+
+/build/
+**/build/
+.fvm/
+
+# ===========================================================
+# Android
+# ===========================================================
+/android/.gradle/
+/android/app/build/
+/android/build/
+/android/captures/
+/android/*/build/
+/android/**/build/
+/android/.externalNativeBuild/
+/android/.cxx/
+android/local.properties
+local.properties
+
+# Reboard native build folders
+android/reboard_lib/**/build/
+android/reboard_keyboard/**/build/
+android/reboard_libnative/**/build/
+**/target/
+
+# ===========================================================
+# iOS / macOS
+# ===========================================================
+/ios/Pods/
+/ios/.symlinks/
+/ios/Flutter/Flutter.framework
+/ios/Flutter/Flutter.podspec
+/ios/.generated/
+/ios/Flutter/Generated.xcconfig
+/ios/Runner/GeneratedPluginRegistrant.*
+
+/macos/Pods/
+/macos/Flutter/ephemeral/
+/macos/.symlinks/
+
+# ===========================================================
+# Web / Windows / Linux
+# ===========================================================
+/web/build/
+/windows/flutter/ephemeral/
+/linux/flutter/ephemeral/
+
+# ===========================================================
+# Node.js (for Firebase Functions)
+# ===========================================================
+node_modules/
+npm-debug.log
+yarn-error.log
+.pnp.*
+
+# ===========================================================
+# Build outputs / Binaries
+# ===========================================================
+*.zip
+*.rar
+*.tar
+*.tar.gz
+*.7z
+*.apk
+*.aab
+*.ipa
+*.app
+/releases/
+/playstore_releases/
+
+# ===========================================================
+# Server / Functions (sensitive)
+# ===========================================================
+functions/node_modules/
+functions/*.json
+!functions/package.json
+!functions/tsconfig.json
+server/
+
+# ===========================================================
+# Misc / Temp files
+# ===========================================================
+*.class
+*.log
+*.pyc
+*.swp
+*.swo
+*~
+*.bak
+*.tmp
+*.temp
+temp/
+tmp/
+
+# Debug files
+debug_*.dart
+**/debug_*.dart
+
+# Internal docs
+plan.md
+todo.md
+BUILD_SUCCESS_SUMMARY.md
+*_COMPLETE.md
+*_OPTIMIZATION_GUIDE.md
+
+# Other local folders
+delete_account/
+payment_portal/
+.copilot/
+.venv/

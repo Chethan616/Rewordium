@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- General Key Dimensions -->
+    <dimen name="ios_key_height">46dp</dimen>
+    <dimen name="ios_key_margin">3dp</dimen>
+    <dimen name="emoji_key_height">46dp</dimen>
+    <dimen name="keyboard_bottom_margin">24dp</dimen>
+
+
+    <!-- Text Sizes -->
+    <dimen name="key_text_size">22sp</dimen>
+    <dimen name="key_special_text_size">16sp</dimen>
+
+    <!-- Specific Key Elements -->
+    <dimen name="caps_lock_indicator_size">8dp</dimen>
+
+    <!-- Keyboard Layout Paddings & Margins -->
+    <dimen name="keyboard_padding_horizontal">4dp</dimen>
+    <dimen name="keyboard_padding_vertical">5dp</dimen>
+    <dimen name="ios_key_row_margin_bottom">6dp</dimen>
+
+    <!-- Values for XML Drawables -->
+    <dimen name="key_radius">6dp</dimen>
+    <dimen name="key_padding">2dp</dimen>
+    
+    <!-- ADD THESE TWO LINES BACK FOR keyboard_layout.xml -->
+    <dimen name="keyboard_bottom_padding">10dp</dimen>
+    <dimen name="keyboard_row_spacing">8dp</dimen>
+    
+    <!-- ADD THIS LINE BACK FOR suggestions_bar.xml -->
+    <dimen name="suggestion_bar_height">44dp</dimen>
+    
+    <!-- Bottom Sheet Settings -->
+    <dimen name="bottom_sheet_peek_height">56dp</dimen>
+</resources>

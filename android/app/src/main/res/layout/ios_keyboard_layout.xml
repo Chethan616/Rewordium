@@ -1,0 +1,65 @@
+<?xml version="1.0" encoding="utf-8"?>
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content">
+
+    <!-- SWIPE TYPING FIX: Use custom SwipeInterceptorLayout for gesture detection -->
+    <com.noxquill.rewordium.keyboard.SwipeInterceptorLayout
+        android:id="@+id/keyboard_root_container"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:background="@color/keyboard_background"
+        android:elevation="4dp">
+        
+
+        <LinearLayout
+            android:id="@+id/top_bar_container"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content">
+            <include layout="@layout/suggestions_bar" />
+        </LinearLayout>
+
+        <ViewAnimator
+            android:id="@+id/keyboard_switcher"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content">
+
+            <!-- Child 0: Main Keyboard -->
+            <LinearLayout
+                android:id="@+id/keyboard_container"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:paddingTop="6dp"
+                android:paddingBottom="8dp"
+                android:paddingStart="4dp"
+                android:paddingEnd="4dp">
+                <LinearLayout android:id="@+id/number_row" style="@style/KeyboardRow" />
+                <LinearLayout android:id="@+id/row_qwerty" style="@style/KeyboardRow" />
+                <LinearLayout android:id="@+id/row_asdfghjkl" style="@style/KeyboardRow" />
+                <LinearLayout android:id="@+id/row_zxcvbnm" style="@style/KeyboardRow" />
+                <LinearLayout android:id="@+id/bottom_row" style="@style/KeyboardRow" />
+            </LinearLayout>
+
+            <!--
+            ========================================================================
+            START OF THE FIX: The emoji container is now an empty shell.
+            Its contents will be built entirely in Kotlin code for reliability.
+            ========================================================================
+            -->
+            <LinearLayout
+                android:id="@+id/emoji_keyboard_container"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical">
+                <!-- This will be populated programmatically -->
+            </LinearLayout>
+            <!-- ======================================================================== -->
+            <!-- END OF THE FIX -->
+            <!-- ======================================================================== -->
+            
+        </ViewAnimator>
+    </com.noxquill.rewordium.keyboard.SwipeInterceptorLayout>
+
+</FrameLayout>

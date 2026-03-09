@@ -1,0 +1,95 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="vertical"
+    android:background="@drawable/dialog_background"
+    android:padding="20dp">
+
+    <!-- Dialog Title -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:gravity="center_vertical"
+        android:orientation="horizontal">
+
+        <TextView
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:fontFamily="sans-serif-medium"
+            android:text="Custom Persona"
+            android:textColor="@color/accessibility_dialog_title"
+            android:textSize="16sp" />
+            
+        <Button
+            android:id="@+id/dialog_button_cancel"
+            android:layout_width="wrap_content"
+            android:layout_height="32dp"
+            android:background="@drawable/button_red_rounded"
+            android:minWidth="80dp"
+            android:minHeight="0dp"
+            android:paddingHorizontal="16dp"
+            android:text="CANCEL"
+            android:textAllCaps="true"
+            android:textColor="#FF3B30"
+            android:textSize="12sp"
+            android:stateListAnimator="@null"
+            android:gravity="center" />
+    </LinearLayout>
+
+    <!-- Simple EditText -->
+    <EditText
+        android:id="@+id/dialog_edit_text_persona"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="12dp"
+        android:background="@drawable/edit_text_background"
+        android:gravity="top"
+        android:hint="Describe AI behavior (e.g., a witty pirate captain)"
+        android:inputType="textMultiLine|textCapSentences"
+        android:minLines="2"
+        android:maxLines="4"
+        android:textColor="@color/accessibility_dialog_text"
+        android:textColorHint="@color/accessibility_dialog_hint"
+        android:textSize="14sp" />
+
+    <!-- Buttons Container -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="16dp"
+        android:orientation="horizontal"
+        android:gravity="center_vertical">
+
+        <!-- Set Button -->
+        <Button
+            android:id="@+id/dialog_button_set"
+            android:layout_width="0dp"
+            android:layout_height="48dp"
+            android:layout_weight="1"
+            android:layout_marginEnd="12dp"
+            android:background="@drawable/button_black_rounded"
+            android:text="SET PERSONA"
+            android:textAllCaps="true"
+            android:textColor="#FFFFFF"
+            android:textSize="13sp"
+            android:stateListAnimator="@null"
+            android:gravity="center" />
+
+        <!-- Random Generator Button -->
+        <Button
+            android:id="@+id/dialog_button_random"
+            android:layout_width="48dp"
+            android:layout_height="48dp"
+            android:background="@drawable/button_circular_primary"
+            android:text="ᝰ.ᐟ"
+            android:textSize="20sp"
+            android:textColor="#FFFFFF"
+            android:gravity="center"
+            android:stateListAnimator="@null"
+            android:elevation="2dp" />
+
+    </LinearLayout>
+
+</LinearLayout>

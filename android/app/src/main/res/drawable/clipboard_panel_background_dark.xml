@@ -1,0 +1,50 @@
+<?xml version="1.0" encoding="utf-8"?>
+<layer-list xmlns:android="http://schemas.android.com/apk/res/android">
+    <!-- Shadow layer -->
+    <item android:top="2dp" android:left="1dp" android:right="1dp">
+        <shape android:shape="rectangle">
+            <corners android:topLeftRadius="28dp" android:topRightRadius="28dp" />
+            <solid android:color="#35000000" />
+        </shape>
+    </item>
+    
+    <!-- Main background with dark clipboard gradient -->
+    <item>
+        <shape android:shape="rectangle">
+            <corners android:topLeftRadius="28dp" android:topRightRadius="28dp" />
+            <gradient
+                android:type="linear"
+                android:angle="270"
+                android:startColor="#F51C1C22"
+                android:centerColor="#F0161620" 
+                android:endColor="#EB121218" />
+            <stroke 
+                android:width="1dp" 
+                android:color="#40FFFFFF" />
+        </shape>
+    </item>
+    
+    <!-- Glass effect overlay -->
+    <item android:top="1dp" android:left="1dp" android:right="1dp" android:bottom="1dp">
+        <shape android:shape="rectangle">
+            <corners android:topLeftRadius="27dp" android:topRightRadius="27dp" />
+            <gradient
+                android:type="linear"
+                android:angle="270"
+                android:startColor="#22FFFFFF"
+                android:endColor="#08FFFFFF" />
+        </shape>
+    </item>
+    
+    <!-- Subtle clipboard accent -->
+    <item android:top="0dp" android:left="0dp" android:right="0dp" android:bottom="240dp">
+        <shape android:shape="rectangle">
+            <corners android:topLeftRadius="28dp" android:topRightRadius="28dp" />
+            <gradient
+                android:type="linear"
+                android:angle="0"
+                android:startColor="#15FFFFFF"
+                android:endColor="#08FFFFFF" />
+        </shape>
+    </item>
+</layer-list>

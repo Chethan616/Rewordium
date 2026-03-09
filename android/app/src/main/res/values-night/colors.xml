@@ -1,0 +1,88 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Dark Theme Keyboard Background -->
+    <color name="keyboard_background">#1E1E2E</color>
+    <color name="keyboard_secondary">#252535</color>
+    <color name="keyboard_tertiary">#2A2A3A</color>
+    
+    <!-- Dark Theme Key Colors -->
+    <color name="key_background">#2D2D3D</color>
+    <color name="key_pressed">#3D3D4D</color>
+    <color name="key_ripple">#40FFFFFF</color>
+    <color name="key_text">#E0E0E0</color>
+    <color name="key_text_secondary">#A0A0B0</color>
+    <color name="key_border">#3A3A4A</color>
+    
+    <!-- Dark Theme Accent Colors -->
+    <color name="accent_primary">#7C4DFF</color>
+    <color name="accent_secondary">#5E35B1</color>
+    <color name="accent_tertiary">#4527A0</color>
+    
+    <!-- Dark Theme Text Colors -->
+    <color name="text_primary">#E0E0E0</color>
+    <color name="text_secondary">#A0A0B0</color>
+    <color name="text_tertiary">#707080</color>
+    
+    <!-- Status Colors (same for dark/light) -->
+    <color name="success">#4CAF50</color>
+    <color name="warning">#FFC107</color>
+    <color name="error">#F44336</color>
+    
+    <!-- Dark Theme Shadow Colors -->
+    <color name="shadow_dark">#4A000000</color>
+    <color name="shadow_light">#1AFFFFFF</color>
+    
+    <!-- Dark Theme Overlay Colors -->
+    <color name="overlay_dark">#80000000</color>
+    <color name="overlay_light">#33FFFFFF</color>
+    
+    <!-- Dark Theme Suggestion Colors -->
+    <color name="suggestion_background">#2A2A3A</color>
+    <color name="suggestion_background_pressed">#3A3A4A</color>
+    <color name="suggestion_stroke">#4A4A5A</color>
+    
+    <!-- Dark Theme Settings Colors -->
+    <color name="settings_background">#1E1E2E</color>
+    <color name="settings_card_background">#2A2A3A</color>
+    <color name="settings_title">#E0E0E0</color>
+    <color name="settings_subtitle">#A0A0B0</color>
+    <color name="settings_text">#E0E0E0</color>
+    <color name="settings_divider">#3A3A4A</color>
+    
+    <!-- Material Design 3 Color System - Dark Theme -->
+    <color name="colorSurface">#2D2D3D</color>
+    <color name="colorOnSurface">#E0E0E0</color>
+    <color name="colorPrimaryContainer">#7C4DFF</color>
+    <color name="colorOnPrimaryContainer">#FFFFFF</color>
+    <color name="colorSecondaryContainer">#3A3A4A</color>
+    <color name="colorOnSecondaryContainer">#E0E0E0</color>
+    <color name="settings_switch_thumb">#7C4DFF</color>
+    <color name="settings_switch_track">#4A4A5A</color>
+    <color name="settings_button_text">#E0E0E0</color>
+    <color name="settings_popup_background">#2A2A3A</color>
+    
+    <!-- Dark Theme Clipboard Colors -->
+    <color name="clipboard_background">#2D2D3D</color>
+    <color name="clipboard_header_background">#252535</color>
+    <color name="clipboard_item_background">#2A2A3A</color>
+    <color name="clipboard_card_background">#2A2A3A</color>
+    <color name="clipboard_item_hover">#3A3A4A</color>
+    <color name="clipboard_item_text">#E0E0E0</color>
+    <color name="clipboard_item_text_secondary">#A0A0B0</color>
+    <color name="clipboard_action_button">#7C4DFF</color>
+    <color name="clipboard_action_button_text">#FFFFFF</color>
+    <color name="clipboard_delete_button">#FF453A</color>
+    <color name="clipboard_border">#3A3A4A</color>
+    <color name="clipboard_shadow">#4A000000</color>
+    <color name="clipboard_divider">#3A3A4A</color>
+    <color name="clipboard_empty_text">#707080</color>
+    
+    <!-- Dark Theme Accessibility Service Colors -->
+    <color name="accessibility_persona_text">#FFFFFF</color>
+    <color name="accessibility_generate_button_bg">#FFFFFF</color>
+    <color name="accessibility_generate_button_text">#000000</color>
+    <color name="accessibility_dialog_text">#FFFFFF</color>
+    <color name="accessibility_dialog_title">#FFFFFF</color>
+    <color name="accessibility_dialog_hint">#B0B0B0</color>
+    <color name="accessibility_suggestion_text">#FFFFFF</color>
+</resources>

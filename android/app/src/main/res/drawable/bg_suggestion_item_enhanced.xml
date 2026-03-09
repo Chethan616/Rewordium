@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<ripple xmlns:android="http://schemas.android.com/apk/res/android"
+    android:color="#4033A1FF"> <!-- Ripple effect color is now neon blue -->
+    <item>
+        <shape android:shape="rectangle">
+            <solid android:color="#25FFFFFF" />
+            <corners android:radius="16dp" />
+             <!-- Updated stroke color to a subtle neon blue -->
+            <stroke android:width="1dp" android:color="#3033A1FF" />
+        </shape>
+    </item>
+</ripple>

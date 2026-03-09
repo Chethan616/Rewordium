@@ -1,0 +1,201 @@
+name: rewordium
+description: A Writing Assistant.
+# The following line prevents the package from being accidentally published to
+# pub.dev using `flutter pub publish`. This is preferred for private packages.
+publish_to: 'none' # Remove this line if you wish to publish to pub.dev
+
+# The following defines the version and build number for your application.
+# A version number is three numbers separated by dots, like 1.2.43
+# followed by an optional build number separated by a +.
+# Both the version and the builder number may be overridden in flutter
+# build by specifying --build-name and --build-number, respectively.
+# In Android, build-name is used as versionName while build-number used as versionCode.
+# Read more about Android versioning at https://developer.android.com/studio/publish/versioning
+# In iOS, build-name is used as CFBundleShortVersionString while build-number is used as CFBundleVersion.
+# Read more about iOS versioning at
+# https://developer.apple.com/library/archive/documentation/General/Reference/InfoPlistKeyReference/Articles/CoreFoundationKeys.html
+# In Windows, build-name is used as the major, minor, and patch parts
+# of the product and file versions while build-number is used as the build suffix.
+version: 2.0.0+67
+
+environment:
+  sdk: '>=3.5.0 <4.0.0'
+
+# Dependencies specify other packages that your package needs in order to work.
+# To automatically upgrade your package dependencies to the latest versions
+# consider running `flutter pub upgrade --major-versions`. Alternatively,
+# dependencies can be manually updated by changing the version numbers below to
+# the latest version available on pub.dev. To see which dependencies have newer
+# versions available, run `flutter pub outdated`.
+dependencies:
+  flutter:
+    sdk: flutter
+
+  # The following adds the Cupertino Icons font to your application.
+  # Use with the CupertinoIcons class for iOS style icons.
+  cupertino_icons: ^1.0.6
+  lottie: ^2.7.0
+  google_fonts: ^5.1.0
+  flutter_svg: ^2.1.0
+  animate_do: ^3.0.2
+  shimmer: ^3.0.0
+  glassmorphism: ^3.0.0
+  provider: ^6.1.1
+  shared_preferences: ^2.2.2
+  permission_handler: ^12.0.0+1
+  http: ^1.4.0
+  flutter_dotenv: ^5.1.0
+  flutter_secure_storage: ^9.0.0
+
+  # Notification packages
+  flutter_local_notifications: ^21.0.0
+
+  # Firebase packages
+  firebase_core: ^4.5.0
+  firebase_auth: ^6.2.0
+  firebase_messaging: ^16.1.2
+  google_sign_in: ^7.2.0
+  cloud_firestore: ^6.1.3
+  cloud_functions: ^6.0.7
+  
+  # JWT and Cryptography for FCM OAuth2
+  dart_jsonwebtoken: ^2.14.0
+  crypto: ^3.0.3
+  vibration: ^3.1.8
+  flutter_colorpicker: ^1.0.3
+  url_launcher: ^6.2.4
+  logging: ^1.3.0
+  package_info_plus: ^9.0.0
+  connectivity_plus: ^7.0.0
+  android_intent_plus: ^5.1.0
+  
+  # Google Play In-App Purchases
+  in_app_purchase: ^3.2.3
+  in_app_purchase_android: ^0.4.0+8
+  
+  # File handling and sharing
+  path_provider: ^2.1.2
+  share_plus: ^12.0.1
+  
+  # PDF creation & export (save to file, share via share_plus)
+  pdf: ^3.11.3
+  
+  # PDF text extraction (reading/parsing)
+  syncfusion_flutter_pdf: ^28.2.12
+  
+  # DOCX handling
+  archive: any
+  xml: ^6.3.0
+  
+  # File picker & open external
+  file_picker: ^8.0.7
+  open_filex: ^4.5.0
+  
+  # Document scanning & OCR (mobile only)
+  cunning_document_scanner: ^1.4.0
+  google_mlkit_text_recognition: ^0.15.1
+  
+  # URL content extraction
+  html: ^0.15.6
+  beautiful_soup_dart: ^0.3.0
+
+  # Material 3 Expressive Design System
+  m3e_collection:
+    path: material_3_expressive-main/packages/m3e_collection
+  expressive_refresh: ^0.1.2
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+
+  # The "flutter_lints" package below contains a set of recommended lints to
+  # encourage good coding practices. The lint set provided by the package is
+  # activated in the `analysis_options.yaml` file located at the root of your
+  # package. See that file for information about deactivating specific lint
+  # rules and activating additional ones.
+  flutter_lints: ^2.0.0
+
+# Force archive v4 so pdfrx and lottie resolve (lottie 2.x pins archive ^3 but works fine with 4)
+dependency_overrides:
+  archive: ^4.0.0
+  m3e_design:
+    path: material_3_expressive-main/packages/m3e_design
+  button_m3e:
+    path: material_3_expressive-main/packages/button_m3e
+  button_group_m3e:
+    path: material_3_expressive-main/packages/button_group_m3e
+  fab_m3e:
+    path: material_3_expressive-main/packages/fab_m3e
+  icon_button_m3e:
+    path: material_3_expressive-main/packages/icon_button_m3e
+  loading_indicator_m3e:
+    path: material_3_expressive-main/packages/loading_indicator_m3e
+  navigation_bar_m3e:
+    path: material_3_expressive-main/packages/navigation_bar_m3e
+  navigation_rail_m3e:
+    path: material_3_expressive-main/packages/navigation_rail_m3e
+  progress_indicator_m3e:
+    path: material_3_expressive-main/packages/progress_indicator_m3e
+  slider_m3e:
+    path: material_3_expressive-main/packages/slider_m3e
+  split_button_m3e:
+    path: material_3_expressive-main/packages/split_button_m3e
+  toolbar_m3e:
+    path: material_3_expressive-main/packages/toolbar_m3e
+  app_bar_m3e:
+    path: material_3_expressive-main/packages/app_bar_m3e
+
+# For information on the generic Dart part of this file, see the
+# following page: https://dart.dev/tools/pub/pubspec
+
+# The following section is specific to Flutter packages.
+flutter:
+
+  # The following line ensures that the Material Icons font is
+  # included with your application, so that you can use the icons in
+  # the material Icons class.
+  uses-material-design: true
+
+  # To add assets to your application, add an assets section, like this:
+  assets:
+    - assets/lottie/
+    - assets/images/
+    - assets/images/ai_icons/
+    - assets/config/
+    - assets/licenses/
+    - assets/templates/
+    - .env
+
+  # Custom fonts bundled with the app
+  fonts:
+    - family: Pacifico
+      fonts:
+        - asset: assets/fonts/Pacifico-Regular.ttf
+
+  # An image asset can refer to one or more resolution-specific "variants", see
+  # https://flutter.dev/to/resolution-aware-images
+
+  # For details regarding adding assets from package dependencies, see
+  # https://flutter.dev/to/asset-from-package
+
+  # To add custom fonts to your application, add a fonts section here,
+  # in this "flutter" section. Each entry in this list should have a
+  # "family" key with the font family name, and a "fonts" key with a
+  # list giving the asset and other descriptors for the font. For
+  # example:
+  # Google Fonts are now loaded dynamically via the google_fonts package
+  # No need to declare them in pubspec.yaml
+  #       - asset: fonts/Schyler-Italic.ttf
+  #         style: italic
+  #   - family: Trajan Pro
+  #     fonts:
+  #       - asset: fonts/TrajanPro.ttf
+  #       - asset: fonts/TrajanPro_Bold.ttf
+  #         weight: 700
+  #
+  # For details regarding fonts from package dependencies,
+  # see https://flutter.dev/to/font-from-package
+
+# Assets
+assets:
+  - assets/images/google_logo.png

@@ -1,0 +1,20 @@
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="24dp"
+    android:height="24dp"
+    android:viewportWidth="24"
+    android:viewportHeight="24">
+  <!-- Computer/Laptop -->
+  <path
+      android:fillColor="@android:color/white"
+      android:pathData="M20,18C20.55,18 21,17.55 21,17V5C21,4.45 20.55,4 20,4H4C3.45,4 3,4.45 3,5V17C3,17.55 3.45,18 4,18H1V20H23V18H20ZM5,6H19V16H5V6Z"/>
+  <!-- Phone -->
+  <path
+      android:fillColor="@android:color/white"
+      android:pathData="M17,1.01L7,1C5.9,1 5,1.9 5,3V21C5,22.1 5.9,23 7,23H17C18.1,23 19,22.1 19,21V3C19,1.9 18.1,1.01 17,1.01ZM17,19H7V5H17V19Z"
+      android:fillAlpha="0.8"/>
+  <!-- Additional objects -->
+  <path
+      android:fillColor="@android:color/white"
+      android:pathData="M15,7.5C15,8.33 14.33,9 13.5,9C12.67,9 12,8.33 12,7.5C12,6.67 12.67,6 13.5,6C14.33,6 15,6.67 15,7.5Z"
+      android:fillAlpha="0.6"/>
+</vector>

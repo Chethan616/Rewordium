@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<ImageButton xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@drawable/ios_key_special_background"
+    android:scaleType="centerInside"
+    android:padding="8dp"
+    android:stateListAnimator="@null"
+    android:focusable="true"
+    android:clickable="true"
+    android:focusableInTouchMode="true"
+    android:minHeight="0dp"
+    android:minWidth="0dp"
+    android:elevation="2dp"
+    android:contentDescription="@string/keyboard_key"/>

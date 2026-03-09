@@ -1,0 +1,128 @@
+<?xml version="1.0" encoding="utf-8"?>
+<layer-list xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <!-- Layer 1: Subtle glass base -->
+    <item>
+        <shape android:shape="rectangle">
+            <solid android:color="#08FFFFFF" />
+            <corners android:radius="32dp" />
+        </shape>
+    </item>
+
+    <!-- Layer 2: Background blur simulation with gradient -->
+    <item>
+        <shape android:shape="rectangle">
+            <gradient
+                android:angle="135"
+                android:startColor="#0AFFFFFF"
+                android:centerColor="#05FFFFFF"
+                android:endColor="#03FFFFFF"
+                android:type="linear" />
+            <corners android:radius="32dp" />
+        </shape>
+    </item>
+
+    <!-- Layer 3: Primary radial highlight from top-left -->
+    <item>
+        <shape android:shape="rectangle">
+            <gradient
+                android:type="radial"
+                android:gradientRadius="300dp"
+                android:startColor="#15FFFFFF"
+                android:centerColor="#08FFFFFF"
+                android:endColor="@android:color/transparent"
+                android:centerX="0.15"
+                android:centerY="0.15" />
+            <corners android:radius="32dp" />
+        </shape>
+    </item>
+
+    <!-- Layer 4: Secondary smaller highlight for depth -->
+    <item>
+        <shape android:shape="rectangle">
+            <gradient
+                android:type="radial"
+                android:gradientRadius="150dp"
+                android:startColor="#0AFFFFFF"
+                android:endColor="@android:color/transparent"
+                android:centerX="0.8"
+                android:centerY="0.2" />
+            <corners android:radius="32dp" />
+        </shape>
+    </item>
+
+    <!-- Layer 5: Top glossy streak -->
+    <item android:bottom="24dp">
+        <shape android:shape="rectangle">
+            <gradient
+                android:angle="270"
+                android:startColor="#12FFFFFF"
+                android:centerColor="#06FFFFFF"
+                android:endColor="@android:color/transparent"
+                android:type="linear" />
+            <corners android:radius="32dp" />
+        </shape>
+    </item>
+
+    <!-- Layer 6: Subtle inner glow -->
+    <item android:top="2dp" android:left="2dp" android:right="2dp" android:bottom="2dp">
+        <shape android:shape="rectangle">
+            <gradient
+                android:type="radial"
+                android:gradientRadius="200dp"
+                android:startColor="#08FFFFFF"
+                android:endColor="@android:color/transparent"
+                android:centerX="0.5"
+                android:centerY="0.5" />
+            <corners android:radius="30dp" />
+        </shape>
+    </item>
+
+    <!-- Layer 7: Bottom subtle shadow for depth -->
+    <item android:top="20dp">
+        <shape android:shape="rectangle">
+            <gradient
+                android:angle="90"
+                android:startColor="@android:color/transparent"
+                android:centerColor="#0A000000"
+                android:endColor="#1A000000"
+                android:type="linear" />
+            <corners android:radius="32dp" />
+        </shape>
+    </item>
+
+    <!-- Layer 8: Refined outer border -->
+    <item>
+        <shape android:shape="rectangle">
+            <solid android:color="@android:color/transparent" />
+            <stroke
+                android:width="0.5dp"
+                android:color="#40FFFFFF" />
+            <corners android:radius="32dp" />
+        </shape>
+    </item>
+
+    <!-- Layer 9: Inner border for premium glass effect -->
+    <item android:top="1dp" android:left="1dp" android:right="1dp" android:bottom="1dp">
+        <shape android:shape="rectangle">
+            <solid android:color="@android:color/transparent" />
+            <stroke
+                android:width="0.5dp"
+                android:color="#20FFFFFF" />
+            <corners android:radius="31dp" />
+        </shape>
+    </item>
+
+    <!-- Layer 10: Micro highlight at top edge -->
+    <item android:bottom="28dp">
+        <shape android:shape="rectangle">
+            <gradient
+                android:angle="270"
+                android:startColor="#18FFFFFF"
+                android:endColor="@android:color/transparent"
+                android:type="linear" />
+            <corners android:radius="32dp" />
+        </shape>
+    </item>
+
+</layer-list>

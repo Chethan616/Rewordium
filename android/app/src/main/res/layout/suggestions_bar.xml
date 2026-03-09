@@ -1,0 +1,152 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:id="@+id/suggestions_container"
+    android:layout_width="match_parent"
+    android:layout_height="@dimen/suggestion_bar_height"
+    android:gravity="center_vertical"
+    android:orientation="horizontal"
+    android:paddingStart="12dp"
+    android:paddingEnd="12dp"
+    android:background="@color/suggestion_bar_background"
+    android:elevation="2dp">
+
+    <Button
+        android:id="@+id/ai_button"
+        style="@style/KeyboardKey.AI"
+        android:layout_width="32dp"
+        android:layout_height="32dp"
+        android:layout_gravity="center_vertical"
+        android:layout_marginEnd="12dp"
+        android:text="Ai"
+        android:gravity="center"
+        android:stateListAnimator="@null"
+        android:elevation="4dp"
+        android:minWidth="0dp"
+        android:minHeight="0dp"
+        android:padding="0dp"
+        android:scaleType="center"
+        android:contentDescription="@string/ai_button" />
+        
+    <!-- Regular Suggestions -->
+    <LinearLayout
+        android:id="@+id/regular_suggestions_container"
+        android:layout_width="0dp"
+        android:layout_height="match_parent"
+        android:layout_weight="1"
+        android:orientation="horizontal"
+        android:gravity="center_vertical">
+
+        <TextView
+            android:id="@+id/suggestion_1"
+            style="@style/SuggestionTextStyle"
+            tools:text="Hello" />
+
+        <View
+            android:id="@+id/separator_1"
+            style="@style/SuggestionSeparatorStyle" />
+
+        <TextView
+            android:id="@+id/suggestion_2"
+            style="@style/SuggestionTextStyle"
+            tools:text="World" />
+
+        <View
+            android:id="@+id/separator_2"
+            style="@style/SuggestionSeparatorStyle" />
+
+        <TextView
+            android:id="@+id/suggestion_3"
+            style="@style/SuggestionTextStyle"
+            tools:text="Correct" />
+    </LinearLayout>
+
+    <!-- Special Features Container (GIF, Stickers, etc.) -->
+    <LinearLayout
+        android:id="@+id/features_container"
+        android:layout_width="0dp"
+        android:layout_height="match_parent"
+        android:layout_weight="1"
+        android:orientation="horizontal"
+        android:gravity="center_vertical|end"
+        android:visibility="gone">
+        
+        <!-- GIF Button -->
+        <ImageView
+            android:id="@+id/gif_button"
+            android:layout_width="32dp"
+            android:layout_height="32dp"
+            android:layout_gravity="center_vertical"
+            android:src="@drawable/ic_gif"
+            android:contentDescription="GIF"
+            android:padding="4dp"
+            android:background="?attr/selectableItemBackgroundBorderless"
+            android:layout_marginEnd="8dp"
+            android:tint="#888888" />
+            
+        <!-- Stickers Button -->
+        <ImageView
+            android:id="@+id/stickers_button"
+            android:layout_width="32dp"
+            android:layout_height="32dp"
+            android:layout_gravity="center_vertical"
+            android:src="@drawable/ic_stickers"
+            android:contentDescription="Stickers"
+            android:padding="4dp"
+            android:background="?attr/selectableItemBackgroundBorderless"
+            android:layout_marginEnd="8dp"
+            android:tint="#888888" />
+            
+        <!-- Clipboard Button -->
+        <ImageView
+            android:id="@+id/clipboard_button"
+            android:layout_width="32dp"
+            android:layout_height="32dp"
+            android:layout_gravity="center_vertical"
+            android:src="@drawable/ic_clipboard"
+            android:contentDescription="Clipboard"
+            android:padding="4dp"
+            android:background="?attr/selectableItemBackgroundBorderless"
+            android:layout_marginEnd="8dp"
+            android:tint="#888888" />
+            
+        <!-- Theme Button -->
+        <ImageView
+            android:id="@+id/theme_button"
+            android:layout_width="32dp"
+            android:layout_height="32dp"
+            android:layout_gravity="center_vertical"
+            android:src="@drawable/ic_theme"
+            android:contentDescription="Theme"
+            android:padding="4dp"
+            android:background="?attr/selectableItemBackgroundBorderless"
+            android:layout_marginEnd="8dp"
+            android:tint="#888888" />
+            
+        <!-- Keyboard Settings Button -->
+        <ImageView
+            android:id="@+id/keyboard_settings_button"
+            android:layout_width="32dp"
+            android:layout_height="32dp"
+            android:layout_gravity="center_vertical"
+            android:src="@drawable/ic_settings"
+            android:contentDescription="Keyboard Settings"
+            android:padding="4dp"
+            android:background="?attr/selectableItemBackgroundBorderless"
+            android:layout_marginEnd="8dp"
+            android:tint="#888888" />
+    </LinearLayout>
+
+    <!-- Mic Icon -->
+    <ImageView
+        android:id="@+id/settings_icon"
+        android:layout_width="32dp"
+        android:layout_height="32dp"
+        android:layout_gravity="center_vertical|end"
+        android:src="@drawable/ic_mic"
+        android:contentDescription="@string/settings"
+        android:padding="4dp"
+        android:background="?attr/selectableItemBackgroundBorderless"
+        android:tint="#888888" />
+
+</LinearLayout>

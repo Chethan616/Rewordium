@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="utf-8"?>
+<selector xmlns:android="http://schemas.android.com/apk/res/android">
+    <!-- State when pressed -->
+    <item android:state_pressed="true">
+        <shape android:shape="rectangle">
+            <!-- A slightly darker, more solid blue when pressed -->
+            <gradient
+                android:angle="270"
+                android:endColor="#0052D4"
+                android:startColor="#0062FF" />
+            <corners android:radius="16dp" />
+        </shape>
+    </item>
+    
+    <!-- Default state -->
+    <item>
+        <layer-list>
+            <!-- Layer 1: The main blue gradient -->
+            <item>
+                <shape android:shape="rectangle">
+                    <gradient
+                        android:angle="270"
+                        android:endColor="#0062FF"
+                        android:startColor="#00A2FF" />
+                    <corners android:radius="16dp" />
+                </shape>
+            </item>
+            <!-- Layer 2: A subtle white highlight for the "glossy" effect -->
+            <item android:bottom="30dp">
+                <shape android:shape="rectangle">
+                    <gradient
+                        android:angle="270"
+                        android:endColor="#00FFFFFF"
+                        android:startColor="#33FFFFFF" />
+                    <corners android:radius="16dp" />
+                </shape>
+            </item>
+        </layer-list>
+    </item>
+</selector>

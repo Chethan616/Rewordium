@@ -1,0 +1,92 @@
+name: Pull Request Checks
+
+on:
+  pull_request:
+    branches: [ main, develop ]
+    types: [ opened, synchronize, reopened ]
+
+jobs:
+  pr-checks:
+    name: PR Quality Checks
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.24.0'
+          channel: 'stable'
+          cache: true
+      
+      - name: Get dependencies
+        run: flutter pub get
+      
+      - name: Check formatting
+        id: format
+        run: |
+          dart format --output=none --set-exit-if-changed . || echo "needs_formatting=true" >> $GITHUB_OUTPUT
+        continue-on-error: true
+      
+      - name: Analyze code
+        id: analyze
+        run: |
+          flutter analyze --no-fatal-infos > analysis_output.txt 2>&1 || true
+          cat analysis_output.txt
+        continue-on-error: true
+      
+      - name: Run tests
+        id: test
+        run: flutter test --coverage
+        continue-on-error: true
+      
+      - name: Comment PR with results
+        if: always()
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+            let analysisOutput = '';
+            try {
+              analysisOutput = fs.readFileSync('analysis_output.txt', 'utf8');
+            } catch (e) {
+              analysisOutput = 'No analysis output available';
+            }
+            
+            const formatStatus = '${{ steps.format.outputs.needs_formatting }}' === 'true' ? '❌ Needs formatting' : '✅ Well formatted';
+            const analyzeStatus = '${{ steps.analyze.outcome }}' === 'success' ? '✅ No issues' : '⚠️ Has issues';
+            const testStatus = '${{ steps.test.outcome }}' === 'success' ? '✅ All passing' : '❌ Some failing';
+            
+            const body = `## 🔍 PR Quality Check Results
+            
+            | Check | Status |
+            |-------|--------|
+            | Code Formatting | ${formatStatus} |
+            | Static Analysis | ${analyzeStatus} |
+            | Tests | ${testStatus} |
+            
+            ### Analysis Output (first 1000 chars):
+            \`\`\`
+            ${analysisOutput.substring(0, 1000)}
+            \`\`\`
+            
+            ---
+            💡 **Tip**: Run \`dart format .\` locally to fix formatting issues.
+            `;
+            
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: body
+            });
+      
+      - name: Check if all steps passed
+        if: steps.format.outputs.needs_formatting == 'true' || steps.analyze.outcome != 'success' || steps.test.outcome != 'success'
+        run: |
+          echo "❌ Some quality checks failed. Please fix the issues before merging."
+          exit 1

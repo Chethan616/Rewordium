@@ -1,0 +1,911 @@
+import 'package:flutter/material.dart';
+import 'package:flutter/cupertino.dart';
+import 'package:flutter/services.dart';
+import 'package:animate_do/animate_do.dart';
+import 'package:provider/provider.dart';
+import 'package:url_launcher/url_launcher.dart';
+import '../services/billing_service.dart';
+import '../providers/auth_provider.dart';
+import '../theme/app_theme.dart';
+
+/// Full-screen Pro upgrade experience with proper state handling
+class ProUpgradeScreen extends StatefulWidget {
+  const ProUpgradeScreen({Key? key}) : super(key: key);
+
+  @override
+  State<ProUpgradeScreen> createState() => _ProUpgradeScreenState();
+}
+
+class _ProUpgradeScreenState extends State<ProUpgradeScreen> {
+  String? _selectedPlan; // 'monthly' or 'yearly'
+
+  static const _goldLight = Color(0xFFFBBF24);
+  static const _goldDark = Color(0xFFF59E0B);
+  static const _proGreen = Color(0xFF10B981);
+  static const _proGreenDark = Color(0xFF059669);
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      context.read<BillingService>().resetState();
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Consumer2<AuthProvider, BillingService>(
+      builder: (context, authProvider, billingService, child) {
+        final state = billingService.purchaseState;
+        if (state == PurchaseState.success) {
+          return _buildSuccessScreen(context, billingService);
+        }
+        if (state == PurchaseState.alreadyOwned) {
+          return _buildAlreadyOwnedScreen(context, billingService);
+        }
+        if (state == PurchaseState.error ||
+            state == PurchaseState.billingUnavailable) {
+          return _buildErrorScreen(context, billingService);
+        }
+        if (state == PurchaseState.processing) {
+          return _buildProcessingScreen(context, billingService);
+        }
+        return _buildPlanSelectionScreen(context, authProvider, billingService);
+      },
+    );
+  }
+
+  // ─── PLAN SELECTION ───────────────────────────────────────────────────
+
+  Widget _buildPlanSelectionScreen(
+    BuildContext context,
+    AuthProvider authProvider,
+    BillingService billingService,
+  ) {
+    final monthlyProduct = billingService.monthlyProduct;
+    final yearlyProduct = billingService.yearlyProduct;
+    final isLoading = billingService.loading;
+
+    return Scaffold(
+      backgroundColor: AppTheme.backgroundColor,
+      body: isLoading
+          ? const Center(child: CircularProgressIndicator())
+          : CustomScrollView(
+              slivers: [
+                // Collapsing header
+                SliverAppBar(
+                  expandedHeight: 260,
+                  pinned: true,
+                  backgroundColor: AppTheme.backgroundColor,
+                  leading: IconButton(
+                    icon: Container(
+                      padding: const EdgeInsets.all(6),
+                      decoration: BoxDecoration(
+                        color: Colors.black.withOpacity(0.15),
+                        shape: BoxShape.circle,
+                      ),
+                      child: const Icon(CupertinoIcons.xmark,
+                          color: Colors.white, size: 16),
+                    ),
+                    onPressed: () => Navigator.of(context).pop(),
+                  ),
+                  flexibleSpace: FlexibleSpaceBar(
+                    background: Container(
+                      decoration: const BoxDecoration(
+                        gradient: LinearGradient(
+                          begin: Alignment.topLeft,
+                          end: Alignment.bottomRight,
+                          colors: [
+                            Color(0xFF1A1A2E),
+                            Color(0xFF16213E),
+                            Color(0xFF0F3460),
+                          ],
+                        ),
+                      ),
+                      child: SafeArea(
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            const SizedBox(height: 20),
+                            FadeInDown(
+                              child: Container(
+                                width: 72,
+                                height: 72,
+                                decoration: BoxDecoration(
+                                  gradient: const LinearGradient(
+                                    colors: [_goldLight, _goldDark],
+                                  ),
+                                  shape: BoxShape.circle,
+                                  boxShadow: [
+                                    BoxShadow(
+                                      color: _goldDark.withOpacity(0.5),
+                                      blurRadius: 24,
+                                      spreadRadius: 4,
+                                    ),
+                                  ],
+                                ),
+                                child: const Icon(CupertinoIcons.star_fill,
+                                    color: Colors.white, size: 36),
+                              ),
+                            ),
+                            const SizedBox(height: 16),
+                            FadeIn(
+                              delay: const Duration(milliseconds: 200),
+                              child: const Text(
+                                'Unlock Your Full\nPotential',
+                                style: TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 24,
+                                  fontWeight: FontWeight.w800,
+                                  height: 1.2,
+                                ),
+                                textAlign: TextAlign.center,
+                              ),
+                            ),
+                            const SizedBox(height: 8),
+                            FadeIn(
+                              delay: const Duration(milliseconds: 400),
+                              child: Text(
+                                'Unlimited AI access • Priority support',
+                                style: TextStyle(
+                                  color: Colors.white.withOpacity(0.7),
+                                  fontSize: 14,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+
+                SliverToBoxAdapter(
+                  child: Padding(
+                    padding: const EdgeInsets.all(20),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        // Features
+                        _buildFeaturesSection(),
+                        const SizedBox(height: 28),
+
+                        // Plan selection
+                        if (!billingService.isAvailable)
+                          _buildUnavailableCard()
+                        else if (billingService.products.isEmpty)
+                          _buildLoadingPlansCard()
+                        else ...[
+                          Text('Choose Your Plan',
+                              style: AppTheme.headingSmall,
+                              textAlign: TextAlign.center),
+                          const SizedBox(height: 14),
+
+                          if (monthlyProduct != null)
+                            _buildPlanCard(
+                              title: 'Monthly',
+                              price: monthlyProduct.price,
+                              period: '/month',
+                              subtitle: 'Cancel anytime',
+                              isSelected: _selectedPlan == 'monthly',
+                              onTap: () =>
+                                  setState(() => _selectedPlan = 'monthly'),
+                            ),
+                          const SizedBox(height: 10),
+
+                          if (yearlyProduct != null)
+                            _buildPlanCard(
+                              title: 'Yearly',
+                              price: yearlyProduct.price,
+                              period: '/year',
+                              subtitle: 'Best value — Save 40%',
+                              badge: 'BEST VALUE',
+                              isSelected: _selectedPlan == 'yearly',
+                              onTap: () =>
+                                  setState(() => _selectedPlan = 'yearly'),
+                            ),
+
+                          const SizedBox(height: 20),
+                          _buildSubscribeButton(billingService),
+                        ],
+
+                        const SizedBox(height: 20),
+                        _buildTermsText(),
+                        const SizedBox(height: 8),
+
+                        Center(
+                          child: TextButton.icon(
+                            onPressed: () => _handleRestorePurchases(
+                                context, billingService),
+                            icon: const Icon(CupertinoIcons.arrow_counterclockwise,
+                                size: 16),
+                            label: const Text('Restore Purchases'),
+                            style: TextButton.styleFrom(
+                              foregroundColor: _proGreen,
+                            ),
+                          ),
+                        ),
+                        const SizedBox(height: 20),
+                      ],
+                    ),
+                  ),
+                ),
+              ],
+            ),
+    );
+  }
+
+  Widget _buildFeaturesSection() {
+    final features = [
+      ('Unlimited AI rewrites', CupertinoIcons.infinite, 'No daily limits on the default model'),
+      ('Priority support', CupertinoIcons.chat_bubble_2, 'Faster help from our team'),
+      ('Experimental features', CupertinoIcons.lab_flask, 'Early access to new tools'),
+    ];
+
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: AppTheme.cardColor,
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(color: _proGreen.withOpacity(0.15)),
+        boxShadow: [
+          BoxShadow(
+            color: _proGreen.withOpacity(0.05),
+            blurRadius: 12,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Column(
+        children: features.map((f) {
+          return Padding(
+            padding: const EdgeInsets.symmetric(vertical: 8),
+            child: Row(
+              children: [
+                Container(
+                  width: 38, height: 38,
+                  decoration: BoxDecoration(
+                    color: _proGreen.withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: Icon(f.$2, color: _proGreen, size: 18),
+                ),
+                const SizedBox(width: 14),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(f.$1,
+                          style: AppTheme.bodyMedium
+                              .copyWith(fontWeight: FontWeight.w600)),
+                      Text(f.$3,
+                          style: AppTheme.bodySmall
+                              .copyWith(color: AppTheme.textSecondaryColor)),
+                    ],
+                  ),
+                ),
+                Icon(CupertinoIcons.checkmark_circle_fill,
+                    color: _proGreen, size: 20),
+              ],
+            ),
+          );
+        }).toList(),
+      ),
+    );
+  }
+
+  Widget _buildPlanCard({
+    required String title,
+    required String price,
+    required String period,
+    required String subtitle,
+    String? badge,
+    required bool isSelected,
+    required VoidCallback onTap,
+  }) {
+    return GestureDetector(
+      onTap: onTap,
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 200),
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: isSelected
+              ? _proGreen.withOpacity(0.06)
+              : AppTheme.cardColor,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(
+            color: isSelected ? _proGreen : AppTheme.textSecondaryColor.withOpacity(0.15),
+            width: isSelected ? 2 : 1,
+          ),
+          boxShadow: isSelected
+              ? [BoxShadow(color: _proGreen.withOpacity(0.15), blurRadius: 12)]
+              : null,
+        ),
+        child: Row(
+          children: [
+            Container(
+              width: 22, height: 22,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                border: Border.all(
+                  color: isSelected ? _proGreen : Colors.grey.withOpacity(0.4),
+                  width: 2,
+                ),
+                color: isSelected ? _proGreen : Colors.transparent,
+              ),
+              child: isSelected
+                  ? const Icon(Icons.check, size: 14, color: Colors.white)
+                  : null,
+            ),
+            const SizedBox(width: 14),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Text(title,
+                          style: AppTheme.bodyLarge
+                              .copyWith(fontWeight: FontWeight.w700)),
+                      if (badge != null) ...[
+                        const SizedBox(width: 8),
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 7, vertical: 3),
+                          decoration: BoxDecoration(
+                            gradient: const LinearGradient(
+                                colors: [_goldLight, _goldDark]),
+                            borderRadius: BorderRadius.circular(6),
+                          ),
+                          child: Text(badge,
+                              style: const TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 9,
+                                  fontWeight: FontWeight.w800)),
+                        ),
+                      ],
+                    ],
+                  ),
+                  const SizedBox(height: 2),
+                  Text(subtitle,
+                      style: AppTheme.bodySmall
+                          .copyWith(color: AppTheme.textSecondaryColor)),
+                ],
+              ),
+            ),
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.end,
+              children: [
+                Text(price,
+                    style: TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.w800,
+                        color: isSelected ? _proGreen : AppTheme.textPrimaryColor)),
+                Text(period,
+                    style: AppTheme.bodySmall
+                        .copyWith(color: AppTheme.textSecondaryColor)),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildSubscribeButton(BillingService billingService) {
+    final active = _selectedPlan != null;
+    return GestureDetector(
+      onTap: active ? () => _handlePurchase(billingService) : null,
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 200),
+        height: 54,
+        decoration: BoxDecoration(
+          gradient: active
+              ? const LinearGradient(colors: [_proGreen, _proGreenDark])
+              : null,
+          color: active ? null : Colors.grey.withOpacity(0.2),
+          borderRadius: BorderRadius.circular(16),
+          boxShadow: active
+              ? [BoxShadow(color: _proGreen.withOpacity(0.35),
+                  blurRadius: 16, offset: const Offset(0, 6))]
+              : null,
+        ),
+        child: Center(
+          child: Text(
+            active ? 'Subscribe Now' : 'Select a Plan',
+            style: TextStyle(
+              color: active ? Colors.white : AppTheme.textSecondaryColor,
+              fontSize: 16,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildTermsText() {
+    return Text(
+      'Subscriptions auto-renew until canceled. Manage or cancel anytime in Google Play settings. By subscribing, you agree to our Terms of Service.',
+      style: TextStyle(fontSize: 11, color: AppTheme.textSecondaryColor),
+      textAlign: TextAlign.center,
+    );
+  }
+
+  Widget _buildUnavailableCard() {
+    return Container(
+      padding: const EdgeInsets.all(24),
+      decoration: BoxDecoration(
+        color: Colors.orange.withOpacity(0.08),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: Colors.orange.withOpacity(0.2)),
+      ),
+      child: Column(
+        children: [
+          Icon(Icons.cloud_off, color: Colors.orange, size: 44),
+          const SizedBox(height: 12),
+          Text('Store Unavailable',
+              style: AppTheme.bodyLarge.copyWith(fontWeight: FontWeight.w700)),
+          const SizedBox(height: 6),
+          Text('Check your internet connection and try again.',
+              style: AppTheme.bodyMedium, textAlign: TextAlign.center),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildLoadingPlansCard() {
+    return Container(
+      padding: const EdgeInsets.all(24),
+      decoration: BoxDecoration(
+        color: AppTheme.cardColor,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: AppTheme.textSecondaryColor.withOpacity(0.15)),
+      ),
+      child: Column(
+        children: [
+          const CircularProgressIndicator(color: _proGreen),
+          const SizedBox(height: 16),
+          Text('Loading plans...', style: AppTheme.bodyMedium),
+        ],
+      ),
+    );
+  }
+
+  // ─── PROCESSING ───────────────────────────────────────────────────────
+
+  Widget _buildProcessingScreen(
+      BuildContext context, BillingService billingService) {
+    return PopScope(
+      canPop: false,
+      onPopInvokedWithResult: (didPop, result) {
+        if (!didPop) _showExitWarningDialog(context);
+      },
+      child: Scaffold(
+        backgroundColor: AppTheme.backgroundColor,
+        body: SafeArea(
+          child: Center(
+            child: Padding(
+              padding: const EdgeInsets.all(32),
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Container(
+                    width: 90, height: 90,
+                    decoration: BoxDecoration(
+                      color: _proGreen.withOpacity(0.08),
+                      shape: BoxShape.circle,
+                    ),
+                    child: const Center(
+                      child: SizedBox(
+                        width: 44, height: 44,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 3.5,
+                          valueColor: AlwaysStoppedAnimation<Color>(_proGreen),
+                        ),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 28),
+                  Text(billingService.stateTitle,
+                      style: AppTheme.headingMedium,
+                      textAlign: TextAlign.center),
+                  const SizedBox(height: 12),
+                  Text(billingService.stateMessage,
+                      style: AppTheme.bodyMedium
+                          .copyWith(color: AppTheme.textSecondaryColor),
+                      textAlign: TextAlign.center),
+                  const SizedBox(height: 28),
+                  Icon(CupertinoIcons.lock_shield,
+                      color: Colors.grey.withOpacity(0.4), size: 22),
+                  const SizedBox(height: 6),
+                  Text('Secure payment powered by Google Play',
+                      style: AppTheme.bodySmall
+                          .copyWith(color: AppTheme.textSecondaryColor)),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  // ─── SUCCESS ──────────────────────────────────────────────────────────
+
+  Widget _buildSuccessScreen(
+      BuildContext context, BillingService billingService) {
+    return Scaffold(
+      backgroundColor: AppTheme.backgroundColor,
+      body: SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.all(32),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              FadeInDown(
+                child: Container(
+                  width: 100, height: 100,
+                  decoration: BoxDecoration(
+                    color: _proGreen.withOpacity(0.1),
+                    shape: BoxShape.circle,
+                  ),
+                  child: const Icon(CupertinoIcons.checkmark_circle_fill,
+                      color: _proGreen, size: 64),
+                ),
+              ),
+              const SizedBox(height: 28),
+              FadeIn(
+                delay: const Duration(milliseconds: 200),
+                child: Text(billingService.stateTitle,
+                    style: AppTheme.headingLarge,
+                    textAlign: TextAlign.center),
+              ),
+              const SizedBox(height: 12),
+              FadeIn(
+                delay: const Duration(milliseconds: 400),
+                child: Text(billingService.stateMessage,
+                    style: AppTheme.bodyMedium
+                        .copyWith(color: AppTheme.textSecondaryColor),
+                    textAlign: TextAlign.center),
+              ),
+              const SizedBox(height: 40),
+              FadeInUp(
+                delay: const Duration(milliseconds: 500),
+                child: SizedBox(
+                  width: double.infinity,
+                  child: GestureDetector(
+                    onTap: () {
+                      billingService.resetState();
+                      Navigator.of(context).pop(true);
+                    },
+                    child: Container(
+                      height: 52,
+                      decoration: BoxDecoration(
+                        gradient: const LinearGradient(
+                            colors: [_proGreen, _proGreenDark]),
+                        borderRadius: BorderRadius.circular(16),
+                        boxShadow: [
+                          BoxShadow(color: _proGreen.withOpacity(0.35),
+                              blurRadius: 16, offset: const Offset(0, 6)),
+                        ],
+                      ),
+                      child: const Center(
+                        child: Text('Continue',
+                            style: TextStyle(color: Colors.white,
+                                fontSize: 16, fontWeight: FontWeight.w700)),
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  // ─── ALREADY OWNED ────────────────────────────────────────────────────
+
+  Widget _buildAlreadyOwnedScreen(
+      BuildContext context, BillingService billingService) {
+    return Scaffold(
+      backgroundColor: AppTheme.backgroundColor,
+      appBar: AppBar(
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+        leading: IconButton(
+          icon: Icon(CupertinoIcons.xmark, color: AppTheme.textPrimaryColor),
+          onPressed: () {
+            billingService.resetState();
+            Navigator.of(context).pop();
+          },
+        ),
+      ),
+      body: SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.all(32),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Container(
+                width: 100, height: 100,
+                decoration: BoxDecoration(
+                  color: Colors.blue.withOpacity(0.1),
+                  shape: BoxShape.circle,
+                ),
+                child: const Icon(CupertinoIcons.checkmark_seal_fill,
+                    color: Color(0xFF3B82F6), size: 64),
+              ),
+              const SizedBox(height: 28),
+              Text(billingService.stateTitle,
+                  style: AppTheme.headingLarge,
+                  textAlign: TextAlign.center),
+              const SizedBox(height: 12),
+              Text(billingService.stateMessage,
+                  style: AppTheme.bodyMedium
+                      .copyWith(color: AppTheme.textSecondaryColor),
+                  textAlign: TextAlign.center),
+              const SizedBox(height: 40),
+              SizedBox(
+                width: double.infinity,
+                child: GestureDetector(
+                  onTap: () {
+                    launchUrl(
+                      Uri.parse(
+                          'https://play.google.com/store/account/subscriptions'),
+                      mode: LaunchMode.externalApplication,
+                    );
+                  },
+                  child: Container(
+                    height: 52,
+                    decoration: BoxDecoration(
+                      gradient: const LinearGradient(
+                          colors: [Color(0xFF3B82F6), Color(0xFF2563EB)]),
+                      borderRadius: BorderRadius.circular(16),
+                    ),
+                    child: const Center(
+                      child: Text('Manage Subscription',
+                          style: TextStyle(color: Colors.white,
+                              fontSize: 16, fontWeight: FontWeight.w700)),
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 12),
+              TextButton(
+                onPressed: () {
+                  billingService.resetState();
+                  Navigator.of(context).pop();
+                },
+                child: Text('Continue to App',
+                    style: TextStyle(color: AppTheme.textSecondaryColor)),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  // ─── ERROR ────────────────────────────────────────────────────────────
+
+  Widget _buildErrorScreen(
+      BuildContext context, BillingService billingService) {
+    return Scaffold(
+      backgroundColor: AppTheme.backgroundColor,
+      appBar: AppBar(
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+        leading: IconButton(
+          icon: Icon(CupertinoIcons.xmark, color: AppTheme.textPrimaryColor),
+          onPressed: () {
+            billingService.resetState();
+            Navigator.of(context).pop();
+          },
+        ),
+      ),
+      body: SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.all(32),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Container(
+                width: 100, height: 100,
+                decoration: BoxDecoration(
+                  color: Colors.red.withOpacity(0.08),
+                  shape: BoxShape.circle,
+                ),
+                child: const Icon(CupertinoIcons.exclamationmark_circle,
+                    color: Colors.redAccent, size: 64),
+              ),
+              const SizedBox(height: 28),
+              Text(billingService.stateTitle,
+                  style: AppTheme.headingLarge,
+                  textAlign: TextAlign.center),
+              const SizedBox(height: 12),
+              Text(billingService.stateMessage,
+                  style: AppTheme.bodyMedium
+                      .copyWith(color: AppTheme.textSecondaryColor),
+                  textAlign: TextAlign.center),
+              const SizedBox(height: 40),
+              SizedBox(
+                width: double.infinity,
+                child: GestureDetector(
+                  onTap: () => billingService.resetState(),
+                  child: Container(
+                    height: 52,
+                    decoration: BoxDecoration(
+                      gradient: const LinearGradient(
+                          colors: [_proGreen, _proGreenDark]),
+                      borderRadius: BorderRadius.circular(16),
+                      boxShadow: [
+                        BoxShadow(color: _proGreen.withOpacity(0.35),
+                            blurRadius: 16, offset: const Offset(0, 6)),
+                      ],
+                    ),
+                    child: const Center(
+                      child: Text('Try Again',
+                          style: TextStyle(color: Colors.white,
+                              fontSize: 16, fontWeight: FontWeight.w700)),
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 12),
+              TextButton(
+                onPressed: () {
+                  billingService.resetState();
+                  Navigator.of(context).pop();
+                },
+                child: Text('Cancel',
+                    style: TextStyle(color: AppTheme.textSecondaryColor)),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  // ─── DIALOGS & ACTIONS ────────────────────────────────────────────────
+
+  void _showExitWarningDialog(BuildContext context) {
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: const Text('Payment in Progress'),
+        content: const Text(
+          'Your payment is still being processed. Leaving now may cancel your purchase.\n\nAre you sure you want to leave?',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: const Text('Stay'),
+          ),
+          TextButton(
+            onPressed: () {
+              Navigator.of(context).pop();
+              context.read<BillingService>().resetState();
+              Navigator.of(context).pop();
+            },
+            style: TextButton.styleFrom(foregroundColor: Colors.red),
+            child: const Text('Leave Anyway'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _handlePurchase(BillingService billingService) async {
+    if (_selectedPlan == 'monthly') {
+      await billingService.purchaseMonthly();
+    } else if (_selectedPlan == 'yearly') {
+      await billingService.purchaseYearly();
+    }
+  }
+
+  Future<void> _handleRestorePurchases(
+      BuildContext context, BillingService billingService) async {
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        content: Row(
+          children: [
+            const CircularProgressIndicator(color: _proGreen),
+            const SizedBox(width: 20),
+            Text('Restoring purchases...', style: AppTheme.bodyMedium),
+          ],
+        ),
+      ),
+    );
+
+    try {
+      final authProvider = context.read<AuthProvider>();
+      final success = await billingService.restorePurchases();
+      if (success) await authProvider.refreshSubscriptionStatus();
+
+      if (context.mounted) {
+        Navigator.of(context).pop();
+        if (success &&
+            (billingService.purchaseState == PurchaseState.success ||
+                billingService.purchaseState == PurchaseState.alreadyOwned ||
+                billingService.hasActiveSubscription)) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: const Row(
+                children: [
+                  Icon(CupertinoIcons.checkmark_circle, color: Colors.white),
+                  SizedBox(width: 12),
+                  Expanded(
+                      child: Text('Pro subscription restored successfully!')),
+                ],
+              ),
+              backgroundColor: _proGreenDark,
+              behavior: SnackBarBehavior.floating,
+              shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(10)),
+            ),
+          );
+          await Future.delayed(const Duration(seconds: 1));
+          if (context.mounted) Navigator.of(context).pop(true);
+        } else {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: const Row(
+                children: [
+                  Icon(CupertinoIcons.info, color: Colors.white),
+                  SizedBox(width: 12),
+                  Expanded(
+                    child: Text(
+                        'No previous purchases found. Contact support if this is an error.'),
+                  ),
+                ],
+              ),
+              backgroundColor: Colors.orange.shade700,
+              behavior: SnackBarBehavior.floating,
+              shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(10)),
+            ),
+          );
+        }
+      }
+    } catch (e) {
+      if (context.mounted) {
+        Navigator.of(context).pop();
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Row(
+              children: [
+                const Icon(CupertinoIcons.exclamationmark_circle,
+                    color: Colors.white),
+                const SizedBox(width: 12),
+                Expanded(child: Text('Error restoring purchases: $e')),
+              ],
+            ),
+            backgroundColor: Colors.red,
+            behavior: SnackBarBehavior.floating,
+            shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(10)),
+          ),
+        );
+      }
+    }
+  }
+}
+
+/// Navigate to Pro upgrade screen
+void showProUpgradeScreen(BuildContext context) {
+  Navigator.of(context).push(
+    MaterialPageRoute(
+      builder: (context) => const ProUpgradeScreen(),
+      fullscreenDialog: true,
+    ),
+  );
+}

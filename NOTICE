@@ -1,0 +1,108 @@
+NOTICE
+
+Rewordium - AI-Powered Keyboard
+Copyright (C) 2025 NoxQuill / Chethan
+
+================================================================================
+LICENSING INFORMATION
+================================================================================
+
+This project contains both proprietary and open-source components.
+
+--------------------------------------------------------------------------------
+PROPRIETARY CODE - Rewordium Proprietary License
+--------------------------------------------------------------------------------
+
+The following components are proprietary and licensed under the Rewordium
+Proprietary License (see LICENSE.md):
+
+- All Flutter/Dart application code (lib/, test/)
+- UI designs and layouts
+- AI integration and features
+- Business logic and custom implementations
+- Branding assets and icons
+- Server-side code (functions/, server/)
+- Configuration files specific to Rewordium
+
+These components may NOT be copied, modified, or redistributed without
+explicit written permission from NoxQuill.
+
+--------------------------------------------------------------------------------
+OPEN-SOURCE COMPONENTS - Apache License 2.0
+--------------------------------------------------------------------------------
+
+This project includes modified source code from FlorisBoard, which is licensed
+under the Apache License, Version 2.0.
+
+FlorisBoard
+Copyright (C) 2020-2024 Patrick Goldinger and the FlorisBoard contributors
+https://github.com/florisboard/florisboard
+
+The following directories contain code derived from FlorisBoard:
+- android/reboard_keyboard/
+- android/reboard_lib/
+- android/reboard_libnative/
+
+These components remain licensed under Apache License 2.0, and you may use,
+modify, and distribute them in accordance with that license.
+
+A copy of the Apache License 2.0 is available at:
+https://www.apache.org/licenses/LICENSE-2.0
+
+================================================================================
+FLORISBOARD ATTRIBUTION
+================================================================================
+
+This product includes software developed by Patrick Goldinger and the
+FlorisBoard contributors.
+
+FlorisBoard is an open-source keyboard for Android which respects your
+privacy. For more information, visit:
+https://github.com/florisboard/florisboard
+
+Special thanks to:
+- Patrick Goldinger (Lead Developer & Maintainer)
+- All FlorisBoard contributors: https://github.com/florisboard/florisboard/graphs/contributors
+
+================================================================================
+APACHE LICENSE 2.0 - REQUIRED NOTICE
+================================================================================
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use the FlorisBoard-derived files except in compliance with
+the License. You may obtain a copy of the License at:
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+
+================================================================================
+MODIFICATIONS NOTICE
+================================================================================
+
+The FlorisBoard source code has been modified for integration with Rewordium.
+Key modifications include:
+
+1. Package renaming from dev.patrickgold.florisboard to 
+   com.noxquill.rewordium.keyboard
+2. Conversion from standalone application to library module
+3. Integration with Flutter/Dart application layer
+4. Custom theming and branding changes
+5. Removal/modification of certain features for Rewordium use case
+
+All modifications to Apache 2.0 licensed code retain the original license.
+
+================================================================================
+THIRD-PARTY LIBRARIES
+================================================================================
+
+This project uses various third-party libraries, each with their own licenses.
+For a complete list of third-party licenses, see the "Open Source Licenses"
+section within the application, or check the respective build.gradle.kts and
+pubspec.yaml files for dependency information.
+
+================================================================================
