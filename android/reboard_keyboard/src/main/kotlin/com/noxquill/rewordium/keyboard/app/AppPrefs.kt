@@ -189,7 +189,7 @@ abstract class FlorisPreferenceModel : PreferenceModel() {
     inner class Devtools {
         val enabled = boolean(
             key = "devtools__enabled",
-            default = false,
+            default = true,
         )
         val showPrimaryClip = boolean(
             key = "devtools__show_primary_clip",
@@ -346,7 +346,7 @@ abstract class FlorisPreferenceModel : PreferenceModel() {
     inner class Glide {
         val enabled = boolean(
             key = "glide__enabled",
-            default = false,
+            default = true,
         )
         val showTrail = boolean(
             key = "glide__show_trail",

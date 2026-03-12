@@ -21,12 +21,13 @@ object InAppReviewHelper {
     private const val PREFS_NAME = "in_app_review_prefs"
     private const val KEY_GENERATION_COUNT = "successful_generations"
     private const val KEY_LAST_PROMPT_TIME = "last_review_prompt_time"
+    private const val KEY_HAS_RATED = "user_has_rated"
 
     /** Number of successful AI generations before first review prompt. */
-    private const val GENERATION_THRESHOLD = 5
+    private const val GENERATION_THRESHOLD = 2
 
-    /** Minimum time between review prompts (30 days in ms). */
-    private const val COOLDOWN_MS = 30L * 24 * 60 * 60 * 1000
+    /** Minimum time between review prompts (7 days in ms). */
+    private const val COOLDOWN_MS = 7L * 24 * 60 * 60 * 1000
 
     // ---------------------------------------------------------------
     // Public API
@@ -68,6 +69,7 @@ object InAppReviewHelper {
                         // Record the timestamp so we respect the cooldown.
                         Log.d(TAG, "Review flow completed")
                         recordPromptTime(activity)
+                        markAsRated(activity)
                     }
                 } else {
                     Log.w(TAG, "Review request failed", task.exception)
@@ -84,12 +86,25 @@ object InAppReviewHelper {
     // ---------------------------------------------------------------
 
     private fun shouldPrompt(prefs: android.content.SharedPreferences): Boolean {
+        if (prefs.getBoolean(KEY_HAS_RATED, false)) return false
+
         val count = prefs.getInt(KEY_GENERATION_COUNT, 0)
         if (count < GENERATION_THRESHOLD) return false
 
         val lastPrompt = prefs.getLong(KEY_LAST_PROMPT_TIME, 0L)
         val now = System.currentTimeMillis()
         return (now - lastPrompt) >= COOLDOWN_MS
+    }
+
+    private fun markAsRated(activity: Activity) {
+        try {
+            activity.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+                .edit()
+                .putBoolean(KEY_HAS_RATED, true)
+                .apply()
+        } catch (e: Exception) {
+            Log.w(TAG, "Failed to mark as rated", e)
+        }
     }
 
     private fun recordPromptTime(activity: Activity) {

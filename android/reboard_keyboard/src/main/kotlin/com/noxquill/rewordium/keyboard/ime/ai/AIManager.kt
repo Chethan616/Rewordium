@@ -121,6 +121,20 @@ class AIManager(private val context: Context) {
     fun setCustomPrompt(prompt: String) {
         customPersonaPrompt = prompt
     }
+
+    /**
+     * Check if user is logged in by reading from SharedPreferences.
+     * The Flutter app syncs login state to keyboard_settings prefs.
+     */
+    private fun isUserLoggedIn(): Boolean {
+        return try {
+            val prefs = context.getSharedPreferences("keyboard_settings", Context.MODE_PRIVATE)
+            prefs.getBoolean("user_logged_in", false)
+        } catch (e: Exception) {
+            Log.w(TAG, "Error checking login status", e)
+            false
+        }
+    }
     
     /**
      * Make an API request with the given config and prompt
@@ -288,6 +302,10 @@ class AIManager(private val context: Context) {
      * Rewrite text using the current persona
      */
     suspend fun rewriteText(text: String, action: AIAction = AIAction.REWRITE): Result<String> {
+        if (!isUserLoggedIn()) {
+            return Result.failure(AIException("⚠️ Please log in to use AI features"))
+        }
+
         val config = getConfig()
         
         if (!config.hasValidApiKey()) {
@@ -309,6 +327,10 @@ class AIManager(private val context: Context) {
      * This is used by the 3-row AI panel
      */
     suspend fun rewriteTextWithPrompt(fullPrompt: String, action: AIAction = AIAction.REWRITE): Result<String> {
+        if (!isUserLoggedIn()) {
+            return Result.failure(AIException("⚠️ Please log in to use AI features"))
+        }
+
         val config = getConfig()
         
         if (!config.hasValidApiKey()) {
@@ -339,6 +361,10 @@ You're helping improve English text, not translating."""
      * Used by the "Add Below" mode in AI panels.
      */
     suspend fun continueText(existingText: String, persona: String = "", task: String = "", length: String = ""): Result<String> {
+        if (!isUserLoggedIn()) {
+            return Result.failure(AIException("⚠️ Please log in to use AI features"))
+        }
+
         val config = getConfig()
         
         if (!config.hasValidApiKey()) {
@@ -377,6 +403,10 @@ You're adding to existing text, not replacing it."""
      * Generate contextual continuation using persona/action enums (for compact AiPanel)
      */
     suspend fun continueTextWithAction(existingText: String, action: AIAction = AIAction.EXPAND): Result<String> {
+        if (!isUserLoggedIn()) {
+            return Result.failure(AIException("⚠️ Please log in to use AI features"))
+        }
+
         val config = getConfig()
         
         if (!config.hasValidApiKey()) {
@@ -461,6 +491,10 @@ CRITICAL RULES:
      * @return Enhanced prompt text
      */
     suspend fun enhancePrompt(prompt: String, aiAppName: String? = null): Result<String> {
+        if (!isUserLoggedIn()) {
+            return Result.failure(AIException("⚠️ Please log in to use AI features"))
+        }
+
         val config = getConfig()
         
         if (!config.hasValidApiKey()) {

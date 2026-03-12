@@ -16,9 +16,11 @@
 
 package com.noxquill.rewordium.keyboard.app.settings
 
+import android.app.Activity
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.height
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.outlined.Assignment
 import androidx.compose.material.icons.filled.Extension
 import androidx.compose.material.icons.filled.Gesture
@@ -76,6 +78,29 @@ fun HomeScreen() = FlorisScreen {
             )
         }
 
+        // Navigation Section
+        SectionHeader(title = "Navigation")
+        
+        SettingsGroup {
+            SettingItem(
+                title = "Go Back",
+                subtitle = "Return to the previous screen",
+                icon = Icons.AutoMirrored.Filled.ArrowBack,
+                iconTint = MaterialTheme.colorScheme.primary,
+                showDivider = false,
+                onClick = {
+                    val activity = context as? Activity
+                    if (activity != null) {
+                        activity.finish()
+                    } else {
+                        navController.popBackStack()
+                    }
+                },
+            )
+        }
+
+        Spacer(modifier = Modifier.height(8.dp))
+
         // Hero Card
         HeroCard(
             title = "ReBoard",
@@ -86,7 +111,7 @@ fun HomeScreen() = FlorisScreen {
                 MaterialTheme.colorScheme.tertiary
             ),
         )
-        
+
         Spacer(modifier = Modifier.height(8.dp))
 
         // Input & Languages Section

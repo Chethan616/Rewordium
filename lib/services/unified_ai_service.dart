@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
+import 'package:firebase_auth/firebase_auth.dart';
 
 import '../models/advanced_ai_settings.dart';
 import 'groq_service.dart';
@@ -15,6 +16,15 @@ class UnifiedAIService {
     double temperature = 0.7,
     bool requireJson = false,
   }) async {
+    // Gate: require login for all AI features
+    if (FirebaseAuth.instance.currentUser == null) {
+      return {
+        'error': 'NOT_LOGGED_IN',
+        'errorType': 'NOT_LOGGED_IN',
+        'content': '⚠️ Please log in to use AI features.',
+      };
+    }
+
     try {
       final config = await AdvancedAISettingsService.getAPIConfig();
       final provider = config['provider'] as String;

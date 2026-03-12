@@ -1,4 +1,5 @@
 import 'package:flutter/services.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 /// Flutter-side bridge for Google Play In-App Review.
 /// Communicates with InAppReviewHelper.kt via MethodChannel.
@@ -16,9 +17,14 @@ class InAppReviewService {
   }
 
   /// Directly show the review dialog (e.g. from "Rate Us" button).
+  /// Also marks the user as having rated in SharedPreferences so the
+  /// FeedbackCard stops appearing.
   static Future<void> showReview() async {
     try {
       await _channel.invokeMethod('showReview');
+      // Mark as rated in Flutter SharedPreferences
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setBool('has_rated_app', true);
     } catch (_) {
       // Non-critical — silently ignore
     }

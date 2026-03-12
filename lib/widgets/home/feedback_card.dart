@@ -1,7 +1,6 @@
-import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:url_launcher/url_launcher.dart';
+import '../../services/in_app_review_service.dart';
 import '../../utils/lottie_assets.dart';
 import '../animated_card.dart';
 import '../custom_button.dart';
@@ -47,34 +46,13 @@ class _FeedbackCardState extends State<FeedbackCard> {
     }
   }
 
-  Future<void> _launchPlayStore() async {
-    const String packageName = 'com.noxquill.rewordium';
-
+  Future<void> _rateApp() async {
     // Mark as rated
     final prefs = await SharedPreferences.getInstance();
     await prefs.setBool(FeedbackCard._hasRatedKey, true);
 
-    if (Platform.isIOS) {
-      // TODO: Replace with actual App Store ID when available
-      final Uri appStoreUri = Uri.parse('https://apps.apple.com/app/rewordium/id0000000000');
-      try {
-        await launchUrl(appStoreUri, mode: LaunchMode.externalApplication);
-      } catch (_) {}
-    } else {
-      final Uri playStoreUri = Uri.parse('market://details?id=$packageName');
-      final Uri webUri =
-          Uri.parse('https://play.google.com/store/apps/details?id=$packageName');
-
-      try {
-        if (await canLaunchUrl(playStoreUri)) {
-          await launchUrl(playStoreUri);
-        } else {
-          await launchUrl(webUri, mode: LaunchMode.externalApplication);
-        }
-      } catch (e) {
-        await launchUrl(webUri, mode: LaunchMode.externalApplication);
-      }
-    }
+    // Use In-App Review API
+    await InAppReviewService.showReview();
 
     if (mounted) setState(() => _visible = false);
   }
@@ -115,7 +93,7 @@ class _FeedbackCardState extends State<FeedbackCard> {
           const SizedBox(height: 12),
           CustomButton(
             text: "Rate Now",
-            onPressed: _launchPlayStore,
+            onPressed: _rateApp,
             type: ButtonType.secondary,
             width: 200,
           ),

@@ -15,6 +15,7 @@ import '../services/news_subscription_service.dart';
 import '../services/rewordium_keyboard_service.dart';
 import '../services/force_update_service.dart';
 import '../services/in_app_update_service.dart';
+import '../services/in_app_review_service.dart';
 import '../services/billing_service.dart';
 import '../theme/theme_provider.dart';
 import '../utils/lottie_assets.dart';
@@ -848,8 +849,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 trailing: const Icon(CupertinoIcons.chevron_right,
                     color: Colors.grey, size: 18),
                 onTap: () {
-                  const channel = MethodChannel('com.noxquill.rewordium/review');
-                  channel.invokeMethod('showReview');
+                  InAppReviewService.showReview();
                 },
               ),
               const Divider(height: 1, indent: 72),

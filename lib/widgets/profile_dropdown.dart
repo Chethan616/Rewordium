@@ -134,68 +134,101 @@ class ProfileDropdown extends StatelessWidget {
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
-      builder: (ctx) {
-        final colorScheme = Theme.of(ctx).colorScheme;
-        return SafeArea(
-          child: Padding(
-            padding: const EdgeInsets.fromLTRB(24, 16, 24, 24),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Container(
-                  width: 36, height: 5,
-                  decoration: BoxDecoration(
-                    color: colorScheme.onSurfaceVariant.withValues(alpha: 0.3),
-                    borderRadius: BorderRadius.circular(3),
-                  ),
-                ),
-                const SizedBox(height: 20),
-                Icon(Icons.logout_rounded, size: 40, color: colorScheme.error),
-                const SizedBox(height: 12),
-                Text('Sign Out?', style: Theme.of(ctx).textTheme.titleLarge),
-                const SizedBox(height: 8),
-                Text(
-                  'You will need to sign in again to access your account.',
-                  style: Theme.of(ctx).textTheme.bodyMedium!.copyWith(
-                    color: colorScheme.onSurfaceVariant,
-                  ),
-                  textAlign: TextAlign.center,
-                ),
-                const SizedBox(height: 24),
-                Row(
-                  children: [
-                    Expanded(
-                      child: CustomButton(
-                        text: 'Cancel',
-                        onPressed: () => Navigator.pop(ctx),
-                        type: ButtonType.secondary,
-                      ),
-                    ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: CustomButton(
-                        text: 'Sign Out',
-                        onPressed: () async {
-                          Navigator.pop(ctx);
-                          await authProvider.signOut();
-                          if (context.mounted) {
-                            Navigator.of(context).pushAndRemoveUntil(
-                              MaterialPageRoute(builder: (_) => const LoginScreen()),
-                              (route) => false,
-                            );
-                          }
-                        },
-                        type: ButtonType.primary,
-                        customColor: colorScheme.error,
-                      ),
-                    ),
-                  ],
-                ),
-              ],
-            ),
-          ),
+      builder: (ctx) => _SignOutConfirmationSheet(
+        authProvider: authProvider,
+      ),
+    );
+  }
+}
+
+class _SignOutConfirmationSheet extends StatefulWidget {
+  final AuthProvider authProvider;
+
+  const _SignOutConfirmationSheet({
+    required this.authProvider,
+  });
+
+  @override
+  State<_SignOutConfirmationSheet> createState() => _SignOutConfirmationSheetState();
+}
+
+class _SignOutConfirmationSheetState extends State<_SignOutConfirmationSheet> {
+  bool _isLoggingOut = false;
+
+  Future<void> _handleSignOut() async {
+    setState(() => _isLoggingOut = true);
+    try {
+      await widget.authProvider.signOut();
+      if (mounted) {
+        // Use root navigator so all sheets are dismissed and we land on LoginScreen
+        Navigator.of(context, rootNavigator: true).pushAndRemoveUntil(
+          MaterialPageRoute(builder: (_) => const LoginScreen()),
+          (route) => false,
         );
-      },
+      }
+    } catch (_) {
+      if (mounted) setState(() => _isLoggingOut = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+    return SafeArea(
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(24, 16, 24, 24),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              width: 36, height: 5,
+              decoration: BoxDecoration(
+                color: colorScheme.onSurfaceVariant.withValues(alpha: 0.3),
+                borderRadius: BorderRadius.circular(3),
+              ),
+            ),
+            const SizedBox(height: 20),
+            Icon(Icons.logout_rounded, size: 40, color: colorScheme.error),
+            const SizedBox(height: 12),
+            Text('Sign Out?', style: Theme.of(context).textTheme.titleLarge),
+            const SizedBox(height: 8),
+            Text(
+              'You will need to sign in again to access your account.',
+              style: Theme.of(context).textTheme.bodyMedium!.copyWith(
+                color: colorScheme.onSurfaceVariant,
+              ),
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 24),
+            if (_isLoggingOut)
+              const Padding(
+                padding: EdgeInsets.symmetric(vertical: 12),
+                child: LoadingIndicatorM3E(),
+              )
+            else
+              Row(
+                children: [
+                  Expanded(
+                    child: CustomButton(
+                      text: 'Cancel',
+                      onPressed: () => Navigator.pop(context),
+                      type: ButtonType.secondary,
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: CustomButton(
+                      text: 'Sign Out',
+                      onPressed: _handleSignOut,
+                      type: ButtonType.primary,
+                      customColor: colorScheme.error,
+                    ),
+                  ),
+                ],
+              ),
+          ],
+        ),
+      ),
     );
   }
 }
