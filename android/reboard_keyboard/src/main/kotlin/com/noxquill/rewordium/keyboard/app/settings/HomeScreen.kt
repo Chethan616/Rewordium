@@ -16,7 +16,8 @@
 
 package com.noxquill.rewordium.keyboard.app.settings
 
-import android.app.Activity
+import android.content.Intent
+import android.widget.Toast
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.height
 import androidx.compose.material.icons.Icons
@@ -89,11 +90,19 @@ fun HomeScreen() = FlorisScreen {
                 iconTint = MaterialTheme.colorScheme.primary,
                 showDivider = false,
                 onClick = {
-                    val activity = context as? Activity
-                    if (activity != null) {
-                        activity.finish()
-                    } else {
-                        navController.popBackStack()
+                    val popped = navController.popBackStack()
+                    if (!popped) {
+                        try {
+                            val intent = Intent().apply {
+                                setClassName("com.noxquill.rewordium", "com.noxquill.rewordium.MainActivity")
+                                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                                addFlags(Intent.FLAG_ACTIVITY_SINGLE_TOP)
+                                addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP)
+                            }
+                            context.startActivity(intent)
+                        } catch (e: Exception) {
+                            Toast.makeText(context, "Unable to go back", Toast.LENGTH_SHORT).show()
+                        }
                     }
                 },
             )
