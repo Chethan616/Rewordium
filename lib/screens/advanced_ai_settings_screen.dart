@@ -194,9 +194,11 @@ class _AdvancedAISettingsScreenState extends State<AdvancedAISettingsScreen> {
                 color: Theme.of(context).colorScheme.primary,
                 borderRadius: BorderRadius.circular(12),
               ),
-              child: const Icon(
+              child: Icon(
                 Icons.psychology,
-                color: Colors.white,
+                color: Theme.of(context).brightness == Brightness.dark
+                    ? Colors.black
+                    : Colors.white,
                 size: 24,
               ),
             ),
@@ -271,7 +273,7 @@ class _AdvancedAISettingsScreenState extends State<AdvancedAISettingsScreen> {
                 decoration: BoxDecoration(
                   color: isSelected
                       ? provider.brandColor.withValues(alpha: 0.15)
-                      : Colors.grey.withValues(alpha: 0.1),
+                      : Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.08),
                   borderRadius: BorderRadius.circular(10),
                 ),
                 child: Center(
@@ -281,7 +283,7 @@ class _AdvancedAISettingsScreenState extends State<AdvancedAISettingsScreen> {
                     height: 24,
                     colorFilter: isSelected
                         ? null // Use original colors when selected
-                        : ColorFilter.mode(Colors.grey, BlendMode.srcIn),
+                        : ColorFilter.mode(Theme.of(context).colorScheme.onSurfaceVariant, BlendMode.srcIn),
                   ),
                 ),
               ),
@@ -364,7 +366,7 @@ class _AdvancedAISettingsScreenState extends State<AdvancedAISettingsScreen> {
                   borderRadius: BorderRadius.circular(12),
                   borderSide: BorderSide(
                     color: isValid
-                        ? Colors.grey.withValues(alpha: 0.3)
+                        ? Theme.of(context).colorScheme.outline
                         : Colors.red.withValues(alpha: 0.5),
                   ),
                 ),
@@ -579,8 +581,8 @@ class _AdvancedAISettingsScreenState extends State<AdvancedAISettingsScreen> {
         onPressed: _hasUnsavedChanges ? _saveSettings : null,
         style: ElevatedButton.styleFrom(
           backgroundColor: Theme.of(context).colorScheme.primary,
-          foregroundColor: Colors.white,
-          disabledBackgroundColor: Colors.grey.withValues(alpha: 0.3),
+          foregroundColor: Theme.of(context).colorScheme.onPrimary,
+          disabledBackgroundColor: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.12),
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(12),
           ),

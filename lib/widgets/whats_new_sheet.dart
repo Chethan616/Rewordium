@@ -31,7 +31,44 @@ class WhatsNewSheet {
   // Add a new entry for each release. Older entries are kept for reference
   // but only the *current* version's items are displayed.
   static final Map<String, List<_WhatsNewItem>> _features = {
-    '2.0.0': [
+    '2.1.6': [
+      _WhatsNewItem(
+        icon: CupertinoIcons.moon_stars_fill,
+        color: const Color(0xFF6366F1),
+        title: 'Perfect Dark Mode',
+        description:
+            'Fixed icon visibility issues in dark mode for AI settings and accessibility features. Now every element looks crisp and clear.',
+      ),
+      _WhatsNewItem(
+        icon: CupertinoIcons.person_badge_minus,
+        color: const Color(0xFFEF4444),
+        title: 'Smooth Sign Out Experience',
+        description:
+            'Added loading indicator when signing out and improved navigation flow to ensure you\'re always taken to the right screen.',
+      ),
+      _WhatsNewItem(
+        icon: CupertinoIcons.heart_circle_fill,
+        color: const Color(0xFFF59E0B),
+        title: 'Native App Rating',
+        description:
+            'Rate Us now uses Google Play\'s built-in review system for a seamless experience. We\'ll ask for your feedback after just 2 writing generations.',
+      ),
+      _WhatsNewItem(
+        icon: CupertinoIcons.lock_shield_fill,
+        color: const Color(0xFF10B981),
+        title: 'Enhanced Security',
+        description:
+            'All AI features now require login for better security and personalization. This applies to both the main app and keyboard writing assistant.',
+      ),
+      _WhatsNewItem(
+        icon: CupertinoIcons.arrow_right_circle_fill,
+        color: const Color(0xFF06B6D4),
+        title: 'Easy App Navigation',
+        description:
+            'Added "Open Rewordium" button in keyboard settings so you can quickly switch back to the main app whenever needed.',
+      ),
+    ],
+    '2.1.5': [
       _WhatsNewItem(
         icon: CupertinoIcons.paintbrush_fill,
         color: const Color(0xFF4F46E5),
