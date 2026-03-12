@@ -250,6 +250,10 @@ dependencies {
     implementation("com.google.android.play:app-update:2.1.0")
     implementation("com.google.android.play:app-update-ktx:2.1.0")
     
+    // Google Play In-App Review
+    implementation("com.google.android.play:review:2.0.1")
+    implementation("com.google.android.play:review-ktx:2.0.1")
+    
     // Google Play Integrity API
     implementation("com.google.android.play:integrity:1.4.0")
     

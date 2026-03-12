@@ -3,6 +3,7 @@ import 'package:http/http.dart' as http;
 
 import '../models/advanced_ai_settings.dart';
 import 'groq_service.dart';
+import 'in_app_review_service.dart';
 
 /// Unified AI Service that supports multiple LLM providers
 /// Falls back to Groq + LLaMA if no custom API key is configured
@@ -18,51 +19,62 @@ class UnifiedAIService {
       final config = await AdvancedAISettingsService.getAPIConfig();
       final provider = config['provider'] as String;
 
+      Map<String, dynamic> result;
+
       if (provider == 'groq') {
         // Use default Groq service
-        return await _makeGroqRequest(
+        result = await _makeGroqRequest(
           systemPrompt: systemPrompt,
           userMessage: userMessage,
           temperature: temperature,
           requireJson: requireJson,
         );
+      } else {
+        // Use custom provider
+        switch (provider) {
+          case 'gemini':
+            result = await _makeGeminiRequest(
+              config: config,
+              systemPrompt: systemPrompt,
+              userMessage: userMessage,
+              temperature: temperature,
+            );
+            break;
+          case 'openai':
+            result = await _makeOpenAIRequest(
+              config: config,
+              systemPrompt: systemPrompt,
+              userMessage: userMessage,
+              temperature: temperature,
+              requireJson: requireJson,
+            );
+            break;
+          case 'anthropic':
+            result = await _makeClaudeRequest(
+              config: config,
+              systemPrompt: systemPrompt,
+              userMessage: userMessage,
+              temperature: temperature,
+            );
+            break;
+          case 'custom':
+            result = await _makeCustomRequest(
+              config: config,
+              systemPrompt: systemPrompt,
+              userMessage: userMessage,
+              temperature: temperature,
+              requireJson: requireJson,
+            );
+            break;
+          default:
+            throw Exception('Unknown AI provider: $provider');
+        }
       }
 
-      // Use custom provider
-      switch (provider) {
-        case 'gemini':
-          return await _makeGeminiRequest(
-            config: config,
-            systemPrompt: systemPrompt,
-            userMessage: userMessage,
-            temperature: temperature,
-          );
-        case 'openai':
-          return await _makeOpenAIRequest(
-            config: config,
-            systemPrompt: systemPrompt,
-            userMessage: userMessage,
-            temperature: temperature,
-            requireJson: requireJson,
-          );
-        case 'anthropic':
-          return await _makeClaudeRequest(
-            config: config,
-            systemPrompt: systemPrompt,
-            userMessage: userMessage,
-            temperature: temperature,
-          );
-        case 'custom':
-          return await _makeCustomRequest(
-            config: config,
-            systemPrompt: systemPrompt,
-            userMessage: userMessage,
-            temperature: temperature,
-            requireJson: requireJson,
-          );
-        default:
-          throw Exception('Unknown AI provider: $provider');
-      }
+      // Track successful generation for in-app review prompts
+      InAppReviewService.onSuccessfulGeneration();
+
+      return result;
     } catch (e) {
       print('UnifiedAIService error: $e');
       final errorString = e.toString().toLowerCase();

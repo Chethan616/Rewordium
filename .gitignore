@@ -194,3 +194,9 @@ delete_account/
 payment_portal/
 .copilot/
 .venv/
+
+# Backup files (may contain secrets from previous edits)
+*.bak2
+*.dart.bak
+*.dart.bak2
+*.orig

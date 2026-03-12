@@ -43,6 +43,7 @@ object AIConfigProvider {
     const val PROVIDER_OPENAI = "openai"
     const val PROVIDER_GEMINI = "gemini"
     const val PROVIDER_CLAUDE = "claude"
+    const val PROVIDER_ANTHROPIC = "anthropic"
     const val PROVIDER_CUSTOM = "custom"
     
     // Default values
@@ -65,7 +66,7 @@ object AIConfigProvider {
                 PROVIDER_GROQ -> "https://api.groq.com/openai/v1/chat/completions"
                 PROVIDER_OPENAI -> "https://api.openai.com/v1/chat/completions"
                 PROVIDER_GEMINI -> "https://generativelanguage.googleapis.com/v1beta/models/$model:generateContent"
-                PROVIDER_CLAUDE -> "https://api.anthropic.com/v1/messages"
+                PROVIDER_CLAUDE, PROVIDER_ANTHROPIC -> "https://api.anthropic.com/v1/messages"
                 PROVIDER_CUSTOM -> {
                     if (customEndpoint.isNotBlank()) customEndpoint else "https://api.groq.com/openai/v1/chat/completions"
                 }
@@ -79,7 +80,7 @@ object AIConfigProvider {
         fun getAuthHeader(): String {
             return when (provider.lowercase()) {
                 PROVIDER_GEMINI -> apiKey // Gemini uses key as query param
-                PROVIDER_CLAUDE -> apiKey // Claude uses x-api-key header
+                PROVIDER_CLAUDE, PROVIDER_ANTHROPIC -> apiKey // Claude uses x-api-key header
                 else -> "Bearer $apiKey"
             }
         }
@@ -94,7 +95,7 @@ object AIConfigProvider {
         /**
          * Check if this is using Claude API (which has different format)
          */
-        fun isClaude(): Boolean = provider.lowercase() == PROVIDER_CLAUDE
+        fun isClaude(): Boolean = provider.lowercase() in listOf(PROVIDER_CLAUDE, PROVIDER_ANTHROPIC)
         
         /**
          * Check if this is using Gemini API (which has different format)

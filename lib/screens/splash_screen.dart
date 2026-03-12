@@ -7,6 +7,7 @@ import 'dart:async';
 import '../providers/auth_provider.dart';
 import '../services/play_integrity_service.dart';
 import '../services/force_update_service.dart';
+import '../services/in_app_update_service.dart';
 import 'auth/login_screen.dart';
 import 'integrity_blocked_screen.dart';
 
@@ -126,6 +127,10 @@ class _SplashScreenState extends State<SplashScreen>
 
     // Initialize force-update service after navigation.
     ForceUpdateService.initialize();
+
+    // Initialize Google Play In-App Update (flexible background download).
+    InAppUpdateService.initialize();
+    InAppUpdateService.checkForUpdate();
   }
 
   // ── Dispose ───────────────────────────────────

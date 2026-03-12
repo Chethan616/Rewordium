@@ -26,11 +26,12 @@ object AIConfigProvider {
     const val PROVIDER_OPENAI = "openai"
     const val PROVIDER_GEMINI = "gemini"
     const val PROVIDER_CLAUDE = "claude"
+    const val PROVIDER_ANTHROPIC = "anthropic"
     const val PROVIDER_CUSTOM = "custom"
     
     // Default values
     private const val DEFAULT_MODEL = "llama-3.1-8b-instant"
-    private const val DEFAULT_MAX_TOKENS = 1024
+    private const val DEFAULT_MAX_TOKENS = 8192
     
     data class AIConfig(
         val isAdvancedEnabled: Boolean,
@@ -48,7 +49,7 @@ object AIConfigProvider {
                 PROVIDER_GROQ -> "https://api.groq.com/"
                 PROVIDER_OPENAI -> "https://api.openai.com/"
                 PROVIDER_GEMINI -> "https://generativelanguage.googleapis.com/"
-                PROVIDER_CLAUDE -> "https://api.anthropic.com/"
+                PROVIDER_CLAUDE, PROVIDER_ANTHROPIC -> "https://api.anthropic.com/"
                 PROVIDER_CUSTOM -> {
                     if (customEndpoint.isNotBlank()) {
                         // Ensure the endpoint ends with /
@@ -69,7 +70,7 @@ object AIConfigProvider {
                 PROVIDER_GROQ -> "openai/v1/chat/completions"
                 PROVIDER_OPENAI -> "v1/chat/completions"
                 PROVIDER_GEMINI -> "v1beta/models/$model:generateContent"
-                PROVIDER_CLAUDE -> "v1/messages"
+                PROVIDER_CLAUDE, PROVIDER_ANTHROPIC -> "v1/messages"
                 PROVIDER_CUSTOM -> "v1/chat/completions" // Assume OpenAI-compatible
                 else -> "openai/v1/chat/completions"
             }
@@ -81,7 +82,7 @@ object AIConfigProvider {
         fun getAuthHeader(): String {
             return when (provider.lowercase()) {
                 PROVIDER_GEMINI -> apiKey // Gemini uses key as query param, but we'll handle it differently
-                PROVIDER_CLAUDE -> apiKey // Claude uses x-api-key header
+                PROVIDER_CLAUDE, PROVIDER_ANTHROPIC -> apiKey // Claude uses x-api-key header
                 else -> "Bearer $apiKey"
             }
         }

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/cupertino.dart';
+import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import 'package:android_intent_plus/android_intent.dart';
 import 'package:flutter/foundation.dart';
@@ -13,6 +14,7 @@ import '../providers/keyboard_provider.dart';
 import '../services/news_subscription_service.dart';
 import '../services/rewordium_keyboard_service.dart';
 import '../services/force_update_service.dart';
+import '../services/in_app_update_service.dart';
 import '../services/billing_service.dart';
 import '../theme/theme_provider.dart';
 import '../utils/lottie_assets.dart';
@@ -187,109 +189,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
       context: context,
       backgroundColor: Colors.transparent,
       isScrollControlled: true,
-      builder: (context) => Container(
-        decoration: BoxDecoration(
-          color: Theme.of(context).colorScheme.surface,
-          borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
-        ),
-        padding: const EdgeInsets.fromLTRB(20, 12, 20, 32),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            // Handle
-            Container(
-              width: 36,
-              height: 5,
-              decoration: BoxDecoration(
-                color: Theme.of(context).colorScheme.onSurfaceVariant.withValues(alpha: 0.3),
-                borderRadius: BorderRadius.circular(3),
-              ),
-            ),
-            const SizedBox(height: 20),
-            // Icon
-            Container(
-              width: 56,
-              height: 56,
-              decoration: BoxDecoration(
-                color: Theme.of(context).colorScheme.error.withValues(alpha: 0.1),
-                shape: BoxShape.circle,
-              ),
-              child: Icon(
-                CupertinoIcons.arrow_right_square,
-                color: Theme.of(context).colorScheme.error,
-                size: 28,
-              ),
-            ),
-            const SizedBox(height: 16),
-            Text(
-              'Sign Out',
-              style: Theme.of(context).textTheme.titleLarge!.copyWith(
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-            const SizedBox(height: 8),
-            Text(
-              'Are you sure you want to sign out?',
-              style: Theme.of(context).textTheme.bodyMedium!.copyWith(
-                color: Theme.of(context).colorScheme.onSurfaceVariant,
-              ),
-              textAlign: TextAlign.center,
-            ),
-            const SizedBox(height: 24),
-            // Sign Out button
-            SizedBox(
-              width: double.infinity,
-              height: 48,
-              child: FilledButton(
-                onPressed: () async {
-                  Navigator.of(context).pop();
-                  final authProvider =
-                      Provider.of<AuthProvider>(context, listen: false);
-                  await authProvider.signOut();
-                  if (context.mounted) {
-                    Navigator.of(context).pushAndRemoveUntil(
-                      MaterialPageRoute(builder: (context) => const LoginScreen()),
-                      (route) => false,
-                    );
-                  }
-                },
-                style: FilledButton.styleFrom(
-                  backgroundColor: Theme.of(context).colorScheme.error,
-                  foregroundColor: Theme.of(context).colorScheme.onError,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(16),
-                  ),
-                ),
-                child: const Text('Sign Out', style: TextStyle(fontWeight: FontWeight.w600)),
-              ),
-            ),
-            const SizedBox(height: 12),
-            // Cancel button
-            SizedBox(
-              width: double.infinity,
-              height: 48,
-              child: OutlinedButton(
-                onPressed: () => Navigator.of(context).pop(),
-                style: OutlinedButton.styleFrom(
-                  side: BorderSide(
-                    color: Theme.of(context).colorScheme.onSurfaceVariant.withValues(alpha: 0.3),
-                  ),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(16),
-                  ),
-                ),
-                child: Text(
-                  'Cancel',
-                  style: TextStyle(
-                    color: Theme.of(context).colorScheme.onSurfaceVariant,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-              ),
-            ),
-          ],
-        ),
-      ),
+      builder: (context) => _SignOutSheet(parentContext: this.context),
     );
   }
 
@@ -933,7 +833,24 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 subtitle: "Download the latest version",
                 trailing: const Icon(CupertinoIcons.chevron_right,
                     color: Colors.grey, size: 18),
-                onTap: () => ForceUpdateService.manualUpdateCheck(context),
+                onTap: () {
+                  ForceUpdateService.manualUpdateCheck(context);
+                  InAppUpdateService.checkForUpdate();
+                },
+              ),
+              const Divider(height: 1, indent: 72),
+              // Rate Us
+              _buildSettingItem(
+                icon: CupertinoIcons.star_fill,
+                iconColor: Colors.amber,
+                title: "Rate Us",
+                subtitle: "Love Rewordium? Leave a review",
+                trailing: const Icon(CupertinoIcons.chevron_right,
+                    color: Colors.grey, size: 18),
+                onTap: () {
+                  const channel = MethodChannel('com.noxquill.rewordium/review');
+                  channel.invokeMethod('showReview');
+                },
               ),
               const Divider(height: 1, indent: 72),
               // Credits & Licenses
@@ -1373,6 +1290,124 @@ class _DeleteAccountSheetState extends State<_DeleteAccountSheet> {
                 'Cancel',
                 style: TextStyle(
                   color: cs.onSurfaceVariant,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// Bottom sheet widget for sign-out confirmation with loading state.
+class _SignOutSheet extends StatefulWidget {
+  final BuildContext parentContext;
+  const _SignOutSheet({required this.parentContext});
+
+  @override
+  State<_SignOutSheet> createState() => _SignOutSheetState();
+}
+
+class _SignOutSheetState extends State<_SignOutSheet> {
+  bool _isLoggingOut = false;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      decoration: BoxDecoration(
+        color: Theme.of(context).colorScheme.surface,
+        borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      padding: const EdgeInsets.fromLTRB(20, 12, 20, 32),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Container(
+            width: 36,
+            height: 5,
+            decoration: BoxDecoration(
+              color: Theme.of(context).colorScheme.onSurfaceVariant.withValues(alpha: 0.3),
+              borderRadius: BorderRadius.circular(3),
+            ),
+          ),
+          const SizedBox(height: 20),
+          Container(
+            width: 56,
+            height: 56,
+            decoration: BoxDecoration(
+              color: Theme.of(context).colorScheme.error.withValues(alpha: 0.1),
+              shape: BoxShape.circle,
+            ),
+            child: Icon(
+              CupertinoIcons.arrow_right_square,
+              color: Theme.of(context).colorScheme.error,
+              size: 28,
+            ),
+          ),
+          const SizedBox(height: 16),
+          Text(
+            'Sign Out',
+            style: Theme.of(context).textTheme.titleLarge!.copyWith(
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            'Are you sure you want to sign out?',
+            style: Theme.of(context).textTheme.bodyMedium!.copyWith(
+              color: Theme.of(context).colorScheme.onSurfaceVariant,
+            ),
+            textAlign: TextAlign.center,
+          ),
+          const SizedBox(height: 24),
+          SizedBox(
+            width: double.infinity,
+            height: 48,
+            child: _isLoggingOut
+                ? const Center(child: LoadingIndicatorM3E())
+                : FilledButton(
+                    onPressed: () async {
+                      setState(() => _isLoggingOut = true);
+                      final authProvider =
+                          Provider.of<AuthProvider>(context, listen: false);
+                      await authProvider.signOut();
+                      if (widget.parentContext.mounted) {
+                        Navigator.of(widget.parentContext).pushAndRemoveUntil(
+                          MaterialPageRoute(builder: (context) => const LoginScreen()),
+                          (route) => false,
+                        );
+                      }
+                    },
+                    style: FilledButton.styleFrom(
+                      backgroundColor: Theme.of(context).colorScheme.error,
+                      foregroundColor: Theme.of(context).colorScheme.onError,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(16),
+                      ),
+                    ),
+                    child: const Text('Sign Out', style: TextStyle(fontWeight: FontWeight.w600)),
+                  ),
+          ),
+          const SizedBox(height: 12),
+          SizedBox(
+            width: double.infinity,
+            height: 48,
+            child: OutlinedButton(
+              onPressed: _isLoggingOut ? null : () => Navigator.of(context).pop(),
+              style: OutlinedButton.styleFrom(
+                side: BorderSide(
+                  color: Theme.of(context).colorScheme.onSurfaceVariant.withValues(alpha: 0.3),
+                ),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(16),
+                ),
+              ),
+              child: Text(
+                'Cancel',
+                style: TextStyle(
+                  color: Theme.of(context).colorScheme.onSurfaceVariant,
                   fontWeight: FontWeight.w600,
                 ),
               ),

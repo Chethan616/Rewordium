@@ -2,6 +2,7 @@ package com.noxquill.rewordium.service
 
 import android.accessibilityservice.AccessibilityService
 import android.app.AlertDialog
+import android.app.KeyguardManager
 import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
@@ -229,8 +230,9 @@ class MyAccessibilityService : AccessibilityService(), BubbleInteractionListener
                 Intent.ACTION_SCREEN_ON -> {
                     if (BuildConfig.DEBUG) Log.d(TAG, "Screen turned on")
                     isScreenOn = true
+                    // Delay check — user may still be on lockscreen
+                    // checkAndShowBubble() will verify lockscreen state
                     startPeriodicCheck()
-                    // Check immediately when screen turns on
                     serviceScope.launch {
                         delay(WINDOW_STATE_DELAY)
                         checkAndShowBubble()
@@ -2187,9 +2189,22 @@ class MyAccessibilityService : AccessibilityService(), BubbleInteractionListener
         return false
     }
 
+    private fun isDeviceLocked(): Boolean {
+        val keyguardManager = getSystemService(Context.KEYGUARD_SERVICE) as? KeyguardManager
+        return keyguardManager?.isKeyguardLocked == true
+    }
+
     private fun checkAndShowBubble() {
         if (!isScreenOn || isPerformingManualTransition || isGenerating || generatingFromFocusedEditor || isTransitioningFromFocusedEditor) {
             if (BuildConfig.DEBUG) Log.d(TAG, "checkAndShowBubble blocked - screenOn: $isScreenOn, transition: $isPerformingManualTransition, generating: $isGenerating, fromFocused: $generatingFromFocusedEditor, transitioning: $isTransitioningFromFocusedEditor")
+            return
+        }
+
+        // Don't show overlay on lockscreen
+        if (isDeviceLocked()) {
+            if (BuildConfig.DEBUG) Log.d(TAG, "checkAndShowBubble blocked - device is locked")
+            if (floatingBubbleView != null) hideFloatingBubble()
+            if (bottomSheetView != null) hideBottomSheetInstantly()
             return
         }
         

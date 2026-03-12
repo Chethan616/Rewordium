@@ -97,7 +97,7 @@ class _AdvancedAISettingsScreenState extends State<AdvancedAISettingsScreen> {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
             content: Text(
-                '✅ Settings saved and synced! Your API key never leaves your device.'),
+                'Settings saved and synced! Your API key never leaves your device.'),
             backgroundColor: Colors.green,
             duration: Duration(seconds: 3),
           ),
@@ -673,7 +673,7 @@ class _AdvancedAISettingsScreenState extends State<AdvancedAISettingsScreen> {
               if (mounted) {
                 ScaffoldMessenger.of(context).showSnackBar(
                   const SnackBar(
-                    content: Text('✅ Reset to default Groq + LLaMA 3'),
+                    content: Text('Reset to default Groq + LLaMA 3'),
                     backgroundColor: Colors.green,
                   ),
                 );
