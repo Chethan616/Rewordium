@@ -142,40 +142,51 @@ class AccessibilityDisclosureDialog extends StatelessWidget {
                       const SizedBox(height: 20),
 
                       // Compact privacy notice
-                      Container(
-                        padding: const EdgeInsets.all(16),
-                        decoration: BoxDecoration(
-                          color: Colors.green.shade50,
-                          borderRadius: BorderRadius.circular(12),
-                          border: Border.all(color: Colors.green.shade200),
-                        ),
-                        child: Row(
-                          children: [
-                            Icon(Icons.shield,
-                                color: Colors.green.shade700, size: 20),
-                            const SizedBox(width: 12),
-                            const Expanded(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text(
-                                    'Privacy Protected',
-                                    style: TextStyle(
-                                      fontWeight: FontWeight.w600,
-                                      fontSize: 14,
-                                    ),
-                                  ),
-                                  SizedBox(height: 4),
-                                  Text(
-                                    'No passwords stored • Local processing • Disable anytime',
-                                    style: TextStyle(
-                                        fontSize: 12, color: Colors.black87),
-                                  ),
-                                ],
+                      Builder(
+                        builder: (context) {
+                          final isDark = Theme.of(context).brightness == Brightness.dark;
+                          return Container(
+                            padding: const EdgeInsets.all(16),
+                            decoration: BoxDecoration(
+                              color: isDark ? Colors.green.shade900 : Colors.green.shade50,
+                              borderRadius: BorderRadius.circular(12),
+                              border: Border.all(
+                                color: isDark ? Colors.green.shade700 : Colors.green.shade200,
                               ),
                             ),
-                          ],
-                        ),
+                            child: Row(
+                              children: [
+                                Icon(Icons.shield,
+                                    color: isDark ? Colors.green.shade300 : Colors.green.shade700,
+                                    size: 20),
+                                const SizedBox(width: 12),
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      Text(
+                                        'Privacy Protected',
+                                        style: TextStyle(
+                                          fontWeight: FontWeight.w600,
+                                          fontSize: 14,
+                                          color: Theme.of(context).colorScheme.onSurface,
+                                        ),
+                                      ),
+                                      const SizedBox(height: 4),
+                                      Text(
+                                        'No passwords stored • Local processing • Disable anytime',
+                                        style: TextStyle(
+                                          fontSize: 12,
+                                          color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ],
+                            ),
+                          );
+                        },
                       ),
                     ],
                   ),
@@ -191,11 +202,11 @@ class AccessibilityDisclosureDialog extends StatelessWidget {
                     child: TextButton(
                       onPressed: onDecline,
                       style: TextButton.styleFrom(
-                        foregroundColor: Colors.grey.shade600,
+                        foregroundColor: Theme.of(context).colorScheme.onSurfaceVariant,
                         padding: const EdgeInsets.symmetric(vertical: 14),
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(8),
-                          side: BorderSide(color: Colors.grey.shade300),
+                          side: BorderSide(color: Theme.of(context).colorScheme.outlineVariant),
                         ),
                       ),
                       child: const Text(

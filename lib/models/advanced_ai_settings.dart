@@ -275,7 +275,7 @@ class AdvancedAISettingsService {
       return {
         'provider': 'groq',
         'apiKey': '', // Will use default from .env
-        'model': 'llama3-70b-8192',
+        'model': 'llama-3.1-8b-instant',
         'maxTokens': 8192,
       };
     }

@@ -1,0 +1,12 @@
+# Android SDK and Flutter paths (set by Android Studio / Flutter CLI)
+sdk.dir=/path/to/your/Android/sdk
+flutter.sdk=/path/to/your/flutter
+
+# Build settings
+flutter.buildMode=release
+flutter.versionName=2.0.0
+flutter.versionCode=67
+
+# Groq API Key for default AI provider
+# Get your key from: https://console.groq.com/keys
+GROQ_API_KEY=your_groq_api_key_here

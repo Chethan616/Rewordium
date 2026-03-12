@@ -74,7 +74,7 @@ object DynamicRetrofitClient {
                     request = request
                 )
             }
-            AIConfigProvider.PROVIDER_CLAUDE -> {
+            AIConfigProvider.PROVIDER_CLAUDE, AIConfigProvider.PROVIDER_ANTHROPIC -> {
                 // Claude uses a different format, but we'll adapt
                 val request = GroqRequest(
                     model = config.getEffectiveModel(),

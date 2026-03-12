@@ -16,6 +16,8 @@ import androidx.annotation.NonNull
 import com.noxquill.rewordium.util.KeyboardConstants
 import com.noxquill.rewordium.service.KeyboardSettingsBroadcastReceiver
 import com.noxquill.rewordium.integrity.PlayIntegrityHandler
+import com.noxquill.rewordium.review.InAppReviewHelper
+import com.noxquill.rewordium.update.InAppUpdateHelper
 import io.flutter.embedding.android.FlutterActivity
 import io.flutter.embedding.engine.FlutterEngine
 import io.flutter.plugin.common.MethodChannel
@@ -33,6 +35,8 @@ class MainActivity : FlutterActivity() {
         
         // <-- ADDED: A new channel specifically for syncing user status and credits.
         private const val USER_STATUS_CHANNEL = "com.noxquill.rewordium/user_status"
+        private const val REVIEW_CHANNEL = "com.noxquill.rewordium/review"
+        private const val UPDATE_CHANNEL = "com.noxquill.rewordium/update"
     }
 
     private var deepLinkChannel: MethodChannel? = null
@@ -62,6 +66,11 @@ class MainActivity : FlutterActivity() {
             registerReceiver(creditConsumptionReceiver, filter)
         }
         Log.d(TAG, "Registered credit consumption broadcast receiver")
+    }
+
+    override fun onResume() {
+        super.onResume()
+        InAppUpdateHelper.resumeUpdateIfNeeded(this)
     }
 
     override fun onDestroy() {
@@ -659,6 +668,44 @@ class MainActivity : FlutterActivity() {
         } catch (e: Exception) {
             Log.e(TAG, "Error initializing keyboard settings broadcast receiver: ${e.message}")
         }
+
+        // --- IN-APP REVIEW CHANNEL ---
+        val reviewChannel = MethodChannel(flutterEngine.dartExecutor.binaryMessenger, REVIEW_CHANNEL)
+        reviewChannel.setMethodCallHandler { call, result ->
+            when (call.method) {
+                "showReview" -> {
+                    InAppReviewHelper.showInAppReview(this)
+                    result.success(true)
+                }
+                "onSuccessfulGeneration" -> {
+                    InAppReviewHelper.onSuccessfulGeneration(this)
+                    result.success(true)
+                }
+                else -> result.notImplemented()
+            }
+        }
+        Log.d(TAG, "In-App Review channel configured")
+
+        // --- IN-APP UPDATE CHANNEL ---
+        val updateChannel = MethodChannel(flutterEngine.dartExecutor.binaryMessenger, UPDATE_CHANNEL)
+        updateChannel.setMethodCallHandler { call, result ->
+            when (call.method) {
+                "checkForUpdate" -> {
+                    val preferImmediate = call.argument<Boolean>("preferImmediate") ?: false
+                    InAppUpdateHelper.checkForUpdate(this, preferImmediate)
+                    result.success(true)
+                }
+                "completeFlexibleUpdate" -> {
+                    InAppUpdateHelper.completeFlexibleUpdate(this)
+                    result.success(true)
+                }
+                else -> result.notImplemented()
+            }
+        }
+        InAppUpdateHelper.onFlexibleUpdateReady = {
+            updateChannel.invokeMethod("onUpdateDownloaded", null)
+        }
+        Log.d(TAG, "In-App Update channel configured")
     }
     
     // ========================================================================
