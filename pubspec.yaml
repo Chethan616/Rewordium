@@ -103,6 +103,7 @@ dependencies:
   m3e_collection:
     path: material_3_expressive-main/packages/m3e_collection
   expressive_refresh: ^0.1.2
+  dynamic_color: ^1.8.1
 
 dev_dependencies:
   flutter_test:

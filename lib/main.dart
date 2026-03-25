@@ -4,6 +4,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter/foundation.dart';
 import 'package:provider/provider.dart';
 import 'package:m3e_collection/m3e_collection.dart';
+import 'package:dynamic_color/dynamic_color.dart';
 import 'dart:async';
 
 import 'screens/home_screen.dart';
@@ -222,52 +223,65 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
       keyboardProvider.ensureKeyboardEnabled(context);
     });
 
-    // Update system UI overlay style based on theme
-    SystemChrome.setSystemUIOverlayStyle(
-      SystemUiOverlayStyle(
-        statusBarColor: Colors.transparent,
-        statusBarIconBrightness:
-            isDarkMode ? Brightness.light : Brightness.dark,
-        systemNavigationBarColor:
-            isDarkMode
-                ? AppTheme.darkSurfaceContainer
-                : AppTheme.lightSurfaceContainer,
-        systemNavigationBarIconBrightness:
-            isDarkMode ? Brightness.light : Brightness.dark,
-      ),
-    );
+    final useDynamicColors = themeProvider.useDynamicColors;
 
     // Performance optimized app structure
-    return MaterialApp(
-      debugShowCheckedModeBanner: false,
-      title: 'Rewordium',
-      theme: themeProvider.lightTheme,
-      darkTheme: themeProvider.darkTheme,
-      themeMode: themeProvider.themeMode,
-      navigatorKey: navigatorKey,
-      home: const SplashScreen(),
-      routes: {
-        '/home': (context) => const HomePage(),
-        '/settings': (context) => const SettingsScreen(),
-        '/admin': (context) => const AdminPanel(),
-      },
-      // Performance optimizations
-      builder: (context, child) {
-        // Apply global performance optimizations to the entire app
-        return MediaQuery(
-          // Avoid unnecessary rebuilds when keyboard appears
-          data: MediaQuery.of(context).copyWith(textScaleFactor: 1.0),
-          child: RepaintBoundary(
-            child: child!,
+    return DynamicColorBuilder(
+      builder: (lightDynamic, darkDynamic) {
+        final lightTheme = AppTheme.lightThemeWith(
+          useDynamicColors ? lightDynamic : null,
+        );
+        final darkTheme = AppTheme.darkThemeWith(
+          useDynamicColors ? darkDynamic : null,
+        );
+        final activeScheme = isDarkMode ? darkTheme.colorScheme : lightTheme.colorScheme;
+
+        themeProvider.syncKeyboardAccent(activeScheme.primary);
+
+        // Update system UI overlay style based on effective active color scheme.
+        SystemChrome.setSystemUIOverlayStyle(
+          SystemUiOverlayStyle(
+            statusBarColor: Colors.transparent,
+            statusBarIconBrightness:
+                isDarkMode ? Brightness.light : Brightness.dark,
+            systemNavigationBarColor: activeScheme.surfaceContainerLow,
+            systemNavigationBarIconBrightness:
+                isDarkMode ? Brightness.light : Brightness.dark,
+          ),
+        );
+
+        return MaterialApp(
+          debugShowCheckedModeBanner: false,
+          title: 'Rewordium',
+          theme: lightTheme,
+          darkTheme: darkTheme,
+          themeMode: themeProvider.themeMode,
+          navigatorKey: navigatorKey,
+          home: const SplashScreen(),
+          routes: {
+            '/home': (context) => const HomePage(),
+            '/settings': (context) => const SettingsScreen(),
+            '/admin': (context) => const AdminPanel(),
+          },
+          // Performance optimizations
+          builder: (context, child) {
+            // Apply global performance optimizations to the entire app
+            return MediaQuery(
+              // Avoid unnecessary rebuilds when keyboard appears
+              data: MediaQuery.of(context).copyWith(textScaleFactor: 1.0),
+              child: RepaintBoundary(
+                child: child!,
+              ),
+            );
+          },
+          // Optimize scrolling performance
+          scrollBehavior: const MaterialScrollBehavior().copyWith(
+            scrollbars: false,
+            overscroll: false,
+            physics: const ClampingScrollPhysics(),
           ),
         );
       },
-      // Optimize scrolling performance
-      scrollBehavior: const MaterialScrollBehavior().copyWith(
-        scrollbars: false,
-        overscroll: false,
-        physics: const ClampingScrollPhysics(),
-      ),
     );
   }
 }

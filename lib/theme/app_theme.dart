@@ -191,6 +191,16 @@ class AppTheme {
       );
 
   // ─── M3E Theme Builder ──────────────────────────────────────────
+  static ColorScheme _coerceScheme(ColorScheme scheme, Brightness brightness) {
+    if (scheme.brightness == brightness) {
+      return scheme;
+    }
+    return ColorScheme.fromSeed(
+      seedColor: scheme.primary,
+      brightness: brightness,
+    );
+  }
+
   static ThemeData _buildTheme(ColorScheme scheme) {
     final m3e = M3ETheme.defaults(scheme);
     final base = ThemeData(
@@ -399,7 +409,21 @@ class AppTheme {
       );
 
   // ─── Public Theme Getters ───────────────────────────────────────
-  static ThemeData get lightTheme => _buildTheme(_lightScheme);
-  static ThemeData get darkTheme => _buildTheme(_darkScheme);
+  static ThemeData lightThemeWith([ColorScheme? dynamicScheme]) {
+    final scheme = dynamicScheme == null
+        ? _lightScheme
+        : _coerceScheme(dynamicScheme, Brightness.light);
+    return _buildTheme(scheme);
+  }
+
+  static ThemeData darkThemeWith([ColorScheme? dynamicScheme]) {
+    final scheme = dynamicScheme == null
+        ? _darkScheme
+        : _coerceScheme(dynamicScheme, Brightness.dark);
+    return _buildTheme(scheme);
+  }
+
+  static ThemeData get lightTheme => lightThemeWith();
+  static ThemeData get darkTheme => darkThemeWith();
   static ThemeData get currentTheme => _isDarkMode ? darkTheme : lightTheme;
 }

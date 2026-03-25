@@ -527,6 +527,17 @@ class _SettingsScreenState extends State<SettingsScreen> {
                             ),
                           ),
                         ),
+                        const SizedBox(height: 10),
+                        _buildSettingItem(
+                          icon: Icons.palette_outlined,
+                          iconColor: Theme.of(context).colorScheme.primary,
+                          title: "Dynamic system colors",
+                          subtitle: "Use wallpaper-based colors on supported devices",
+                          trailing: Switch(
+                            value: themeProvider.useDynamicColors,
+                            onChanged: themeProvider.setDynamicColorsEnabled,
+                          ),
+                        ),
                       ],
                     ),
                   ),
