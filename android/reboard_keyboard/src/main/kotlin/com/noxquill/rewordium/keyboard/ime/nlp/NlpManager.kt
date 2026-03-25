@@ -43,8 +43,8 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
-import org.florisboard.lib.kotlin.guardedByLock
 import org.florisboard.lib.kotlin.collectLatestIn
+import org.florisboard.lib.kotlin.guardedByLock
 import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.atomic.AtomicInteger
 import kotlin.properties.Delegates
@@ -107,22 +107,10 @@ class NlpManager(context: Context) {
         }
     }
 
-    /**
-     * Gets the punctuation rule from the currently active subtype and returns it. Falls back to a default one if the
-     * subtype does not exist or defines an invalid punctuation rule.
-     *
-     * @return The punctuation rule or a fallback.
-     */
     fun getActivePunctuationRule(): PunctuationRule {
         return getPunctuationRule(subtypeManager.activeSubtype)
     }
 
-    /**
-     * Gets the punctuation rule from the given subtype and returns it. Falls back to a default one if the subtype does
-     * not exist or defines an invalid punctuation rule.
-     *
-     * @return The punctuation rule or a fallback.
-     */
     fun getPunctuationRule(subtype: Subtype): PunctuationRule {
         return keyboardManager.resources.punctuationRules.value
             ?.get(subtype.punctuationRule) ?: PunctuationRule.Fallback
@@ -152,10 +140,6 @@ class NlpManager(context: Context) {
         }
     }
 
-    /**
-     * Spell wrapper helper which calls the spelling provider and returns the result. Coroutine management must be done
-     * by the source spell checker service.
-     */
     suspend fun spell(
         subtype: Subtype,
         word: String,
@@ -175,15 +159,16 @@ class NlpManager(context: Context) {
     }
 
     suspend fun determineLocalComposing(
-        textBeforeSelection: CharSequence, breakIterators: BreakIteratorGroup, localLastCommitPosition: Int
+        textBeforeSelection: CharSequence,
+        breakIterators: BreakIteratorGroup,
+        localLastCommitPosition: Int,
     ): EditorRange {
         return getSuggestionProvider(subtypeManager.activeSubtype).determineLocalComposing(
-            subtypeManager.activeSubtype, textBeforeSelection, breakIterators, localLastCommitPosition
+            subtypeManager.activeSubtype, textBeforeSelection, breakIterators, localLastCommitPosition,
         )
     }
 
     fun providerForcesSuggestionOn(subtype: Subtype): Boolean {
-        // Using a cache because I have no idea how fast the runBlocking is
         return providersForceSuggestionOn.getOrPut(subtype.nlpProviders.suggestion) {
             runBlocking {
                 getSuggestionProvider(subtype).forcesSuggestionOn
@@ -192,9 +177,9 @@ class NlpManager(context: Context) {
     }
 
     fun isSuggestionOn(): Boolean =
-        prefs.suggestion.enabled.get()
-            || prefs.emoji.suggestionEnabled.get()
-            || providerForcesSuggestionOn(subtypeManager.activeSubtype)
+        prefs.suggestion.enabled.get() ||
+            prefs.emoji.suggestionEnabled.get() ||
+            providerForcesSuggestionOn(subtypeManager.activeSubtype)
 
     fun suggest(subtype: Subtype, content: EditorContent) {
         val reqTime = SystemClock.uptimeMillis()
@@ -212,9 +197,7 @@ class NlpManager(context: Context) {
                 else -> emptyList()
             }
             val suggestions = when {
-                emojiSuggestions.isNotEmpty() && prefs.emoji.suggestionType.get().prefix.isNotEmpty() -> {
-                    emptyList()
-                }
+                emojiSuggestions.isNotEmpty() && prefs.emoji.suggestionType.get().prefix.isNotEmpty() -> emptyList()
                 else -> {
                     getSuggestionProvider(subtype).suggest(
                         subtype = subtype,
@@ -238,14 +221,14 @@ class NlpManager(context: Context) {
 
     fun suggestDirectly(suggestions: List<SuggestionCandidate>) {
         val reqTime = SystemClock.uptimeMillis()
-        runBlocking {
+        scope.launch {
             internalSuggestions = reqTime to suggestions
         }
     }
 
     fun clearSuggestions() {
         val reqTime = SystemClock.uptimeMillis()
-        runBlocking {
+        scope.launch {
             internalSuggestions = reqTime to emptyList()
         }
     }
@@ -258,7 +241,6 @@ class NlpManager(context: Context) {
         return runBlocking { candidate.sourceProvider?.removeSuggestion(subtype, candidate) == true }.also { result ->
             if (result) {
                 scope.launch {
-                    // Need to re-trigger the suggestions algorithm
                     if (candidate is ClipboardSuggestionCandidate) {
                         assembleCandidates()
                     } else {
@@ -303,18 +285,9 @@ class NlpManager(context: Context) {
     }
 
     fun autoExpandCollapseSmartbarActions(list1: List<*>?, list2: List<*>?) {
-        if (!prefs.smartbar.enabled.get()) {// || !prefs.smartbar.sharedActionsAutoExpandCollapse.get()) {
+        if (!prefs.smartbar.enabled.get()) {
             return
         }
-        // TODO: this is a mess and needs to be cleaned up in v0.5 with the NLP development
-        /*if (keyboardManager.inputEventDispatcher.isRepeatableCodeLastDown()
-            && !keyboardManager.inputEventDispatcher.isPressed(KeyCode.DELETE)
-            && !keyboardManager.inputEventDispatcher.isPressed(KeyCode.FORWARD_DELETE)
-            || keyboardManager.activeState.isActionsOverflowVisible
-        ) {
-            return // We do not auto switch if a repeatable action key was last pressed or if the actions overflow
-                   // menu is visible to prevent annoying UI changes
-        }*/
         val isSelection = editorInstance.activeContent.selection.isSelectionMode
         val isExpanded = list1.isNullOrEmpty() && list2.isNullOrEmpty() || isSelection
         scope.launch {
@@ -357,11 +330,9 @@ class NlpManager(context: Context) {
         override val providerId = "org.florisboard.nlp.providers.clipboard"
 
         override suspend fun create() {
-            // Do nothing
         }
 
         override suspend fun preload(subtype: Subtype) {
-            // Do nothing
         }
 
         override suspend fun suggest(
@@ -371,7 +342,6 @@ class NlpManager(context: Context) {
             allowPossiblyOffensive: Boolean,
             isPrivateSession: Boolean,
         ): List<SuggestionCandidate> {
-            // Check if enabled
             if (!prefs.clipboard.suggestionEnabled.get()) return emptyList()
 
             val currentItem = validateClipboardItem(clipboardManager.primaryClip, lastClipboardItemId, content.text)
@@ -380,7 +350,13 @@ class NlpManager(context: Context) {
             return buildList {
                 val now = System.currentTimeMillis()
                 if ((now - currentItem.creationTimestampMs) < prefs.clipboard.suggestionTimeout.get() * 1000) {
-                    add(ClipboardSuggestionCandidate(currentItem, sourceProvider = this@ClipboardSuggestionProvider, context = context))
+                    add(
+                        ClipboardSuggestionCandidate(
+                            currentItem,
+                            sourceProvider = this@ClipboardSuggestionProvider,
+                            context = context,
+                        ),
+                    )
                     if (currentItem.isSensitive) {
                         return@buildList
                     }
@@ -396,19 +372,19 @@ class NlpManager(context: Context) {
                                 prevMatch.value != match.value && prevMatch.range.intersect(match.range).isEmpty()
                             }
                             if (match.value != text && isUniqueMatch) {
-                                add(ClipboardSuggestionCandidate(
-                                    clipboardItem = currentItem.copy(
-                                        // TODO: adjust regex of phone number so we don't need to manually strip the
-                                        //  parentheses from the match results
-                                        text = if (match.value.startsWith("(") && match.value.endsWith(")")) {
-                                            match.value.substring(1, match.value.length - 1)
-                                        } else {
-                                            match.value
-                                        }
+                                add(
+                                    ClipboardSuggestionCandidate(
+                                        clipboardItem = currentItem.copy(
+                                            text = if (match.value.startsWith("(") && match.value.endsWith(")")) {
+                                                match.value.substring(1, match.value.length - 1)
+                                            } else {
+                                                match.value
+                                            },
+                                        ),
+                                        sourceProvider = this@ClipboardSuggestionProvider,
+                                        context = context,
                                     ),
-                                    sourceProvider = this@ClipboardSuggestionProvider,
-                                    context = context,
-                                ))
+                                )
                             }
                         }
                     }
@@ -423,7 +399,6 @@ class NlpManager(context: Context) {
         }
 
         override suspend fun notifySuggestionReverted(subtype: Subtype, candidate: SuggestionCandidate) {
-            // Do nothing
         }
 
         override suspend fun removeSuggestion(subtype: Subtype, candidate: SuggestionCandidate): Boolean {
@@ -443,18 +418,14 @@ class NlpManager(context: Context) {
         }
 
         override suspend fun destroy() {
-            // Do nothing
         }
 
         private fun validateClipboardItem(currentItem: ClipboardItem?, lastItemId: Long, contentText: String) =
             currentItem?.takeIf {
-                // Check if already used
-                it.id != lastItemId
-                    // Check if content is empty
-                    && contentText.isBlank()
-                    // Check if clipboard content has any valid characters
-                    && !currentItem.text.isNullOrBlank()
-                    && !blankStrRegex.matches(currentItem.text)
+                it.id != lastItemId &&
+                    contentText.isBlank() &&
+                    !currentItem.text.isNullOrBlank() &&
+                    !blankStrRegex.matches(currentItem.text)
             }
     }
 }

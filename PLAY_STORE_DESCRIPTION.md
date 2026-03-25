@@ -79,6 +79,9 @@ Long-press the AI button on the keyboard to access advanced writing tools instan
 
 Experience the future of writing with Rewordium - where artificial intelligence meets seamless accessibility to enhance your communication across every app.
 
+**📜 Open Source Attribution**
+The keyboard component is based on FlorisBoard (Patrick Goldinger and contributors), licensed under Apache License 2.0.
+
 ---
 
 **Video Demonstration**: [Link to video showing AccessibilityService features]

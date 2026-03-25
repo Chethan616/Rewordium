@@ -75,7 +75,7 @@ class StatisticalGlideTypingClassifier(context: Context) : GlideTypingClassifier
         /**
          * describes the number of points to sample a gesture at, i.e the resolution.
          */
-        private const val SAMPLING_POINTS: Int = 200
+        private const val SAMPLING_POINTS: Int = 240
 
         /**
          * Standard deviation of the distribution of distances between the shapes of two gestures
@@ -95,12 +95,12 @@ class StatisticalGlideTypingClassifier(context: Context) : GlideTypingClassifier
          * This is a very small cache that caches suggestions, so that they aren't recalculated e.g when releasing
          * a pointer when the suggestions were already calculated. Avoids a lot of micro pauses.
          */
-        private const val SUGGESTION_CACHE_SIZE = 5
+        private const val SUGGESTION_CACHE_SIZE = 12
 
         /**
          * For multiple subtypes, the pruner is cached.
          */
-        private const val PRUNER_CACHE_SIZE = 5
+        private const val PRUNER_CACHE_SIZE = 8
     }
 
     override fun addGesturePoint(position: GlideTypingGesture.Detector.Position) {
@@ -203,10 +203,15 @@ class StatisticalGlideTypingClassifier(context: Context) : GlideTypingClassifier
         val candidateWeights = arrayListOf<Float>()
         val key = keys.firstOrNull() ?: return listOf()
         val radius = min(key.visibleBounds.height, key.visibleBounds.width)
-        var remainingWords = pruner.pruneByExtremities(gesture, this.keys)
+        val extremityCandidates = pruner.pruneByExtremities(gesture, this.keys)
         val userGesture = gesture.resample(SAMPLING_POINTS)
         val normalizedUserGesture: Gesture = userGesture.normalizeByBoxSide()
-        remainingWords = pruner.pruneByLength(gesture, remainingWords, keysByCharacter, keys)
+        val lengthCandidates = pruner.pruneByLength(gesture, extremityCandidates, keysByCharacter, keys)
+        val remainingWords = if (lengthCandidates.isNotEmpty()) {
+            lengthCandidates
+        } else {
+            extremityCandidates
+        }
 
         for (i in remainingWords.indices) {
             val word = remainingWords[i]
@@ -217,9 +222,9 @@ class StatisticalGlideTypingClassifier(context: Context) : GlideTypingClassifier
                 val normalizedGesture: Gesture = wordGesture.normalizeByBoxSide()
                 val shapeDistance = calcShapeDistance(normalizedGesture, normalizedUserGesture)
                 val locationDistance = calcLocationDistance(wordGesture, userGesture)
-                val shapeProbability = calcGaussianProbability(shapeDistance, 0.0f, SHAPE_STD)
-                val locationProbability = calcGaussianProbability(locationDistance, 0.0f, LOCATION_STD * radius)
-                val frequency = 255f * nlpManager.getFrequencyForWord(currentSubtype!!, word).toFloat()
+                val shapeProbability = max(0.000001f, calcGaussianProbability(shapeDistance, 0.0f, SHAPE_STD))
+                val locationProbability = max(0.000001f, calcGaussianProbability(locationDistance, 0.0f, LOCATION_STD * radius))
+                val frequency = max(1f, 255f * nlpManager.getFrequencyForWord(currentSubtype!!, word).toFloat())
                 val confidence = 1.0f / (shapeProbability * locationProbability * frequency)
 
                 var candidateDistanceSortedIndex = 0
@@ -318,8 +323,8 @@ class StatisticalGlideTypingClassifier(context: Context) : GlideTypingClassifier
             val startY = userGesture.getFirstY()
             val endX = userGesture.getLastX()
             val endY = userGesture.getLastY()
-            val startKeys = findNClosestKeys(startX, startY, 2, keys)
-            val endKeys = findNClosestKeys(endX, endY, 2, keys)
+            val startKeys = findNClosestKeys(startX, startY, 3, keys)
+            val endKeys = findNClosestKeys(endX, endY, 3, keys)
             for (startKey in startKeys) {
                 for (endKey in endKeys) {
                     val keyPair = Pair(startKey, endKey)

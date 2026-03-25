@@ -137,3 +137,15 @@ cd Rewordium
 flutter pub get
 flutter run
 flutter build apk --release
+```
+
+---
+
+## Attribution
+
+Rewordium includes modified keyboard components based on FlorisBoard.
+
+- FlorisBoard: https://github.com/florisboard/florisboard
+- License: Apache License 2.0
+- Copyright: Patrick Goldinger and contributors
+- Notices: See NOTICE and in-app Credits & Licenses
