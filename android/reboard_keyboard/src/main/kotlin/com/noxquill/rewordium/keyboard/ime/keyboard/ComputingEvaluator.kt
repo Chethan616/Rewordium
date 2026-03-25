@@ -19,6 +19,7 @@ package com.noxquill.rewordium.keyboard.ime.keyboard
 import android.content.Context
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowRightAlt
+import androidx.compose.material.icons.automirrored.filled.Backspace
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowLeft
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.automirrored.filled.KeyboardReturn
@@ -26,7 +27,7 @@ import androidx.compose.material.icons.automirrored.filled.Redo
 import androidx.compose.material.icons.automirrored.filled.Send
 import androidx.compose.material.icons.automirrored.filled.Undo
 import androidx.compose.material.icons.automirrored.outlined.Assignment
-import androidx.compose.material.icons.automirrored.outlined.Backspace
+import androidx.compose.material.icons.filled.ArrowUpward
 import androidx.compose.material.icons.filled.AutoAwesome
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.ContentCopy
@@ -130,6 +131,16 @@ private fun computeLanguageDisplayName(locale: FlorisLocale, displayLanguageName
     return displayName
 }
 
+private val BrowserPackages = setOf(
+    "com.android.chrome",
+    "com.brave.browser",
+    "com.microsoft.emmx",
+    "org.mozilla.firefox",
+    "com.sec.android.app.sbrowser",
+    "com.opera.browser",
+    "com.vivaldi.browser",
+)
+
 fun ComputingEvaluator.computeLabel(data: KeyData): String? {
     val evaluator = this
     return if (data.type == KeyType.CHARACTER && data.code != KeyCode.SPACE && data.code != KeyCode.CJK_SPACE
@@ -181,6 +192,8 @@ fun ComputingEvaluator.computeLabel(data: KeyData): String? {
 
 fun ComputingEvaluator.computeImageVector(data: KeyData): ImageVector? {
     val evaluator = this
+    val packageName = evaluator.editorInfo.packageName
+    val isBrowserApp = packageName != null && packageName in BrowserPackages
     return when (data.code) {
         KeyCode.ARROW_LEFT -> {
             Icons.AutoMirrored.Filled.KeyboardArrowLeft
@@ -225,7 +238,7 @@ fun ComputingEvaluator.computeImageVector(data: KeyData): ImageVector? {
             Icons.Default.KeyboardHide
         }
         KeyCode.DELETE -> {
-            Icons.AutoMirrored.Outlined.Backspace
+            Icons.AutoMirrored.Filled.Backspace
         }
         KeyCode.ENTER -> {
             val imeOptions = evaluator.editorInfo.imeOptions
@@ -235,10 +248,10 @@ fun ComputingEvaluator.computeImageVector(data: KeyData): ImageVector? {
             } else {
                 when (imeOptions.action) {
                     ImeOptions.Action.DONE -> Icons.Default.Done
-                    ImeOptions.Action.GO -> Icons.AutoMirrored.Filled.ArrowRightAlt
-                    ImeOptions.Action.NEXT -> Icons.AutoMirrored.Filled.ArrowRightAlt
+                    ImeOptions.Action.GO -> if (isBrowserApp) Icons.Default.Search else Icons.AutoMirrored.Filled.ArrowRightAlt
+                    ImeOptions.Action.NEXT -> if (isBrowserApp) Icons.Default.Search else Icons.AutoMirrored.Filled.ArrowRightAlt
                     ImeOptions.Action.NONE -> Icons.AutoMirrored.Filled.KeyboardReturn
-                    ImeOptions.Action.PREVIOUS -> Icons.AutoMirrored.Filled.ArrowRightAlt
+                    ImeOptions.Action.PREVIOUS -> if (isBrowserApp) Icons.Default.Search else Icons.AutoMirrored.Filled.ArrowRightAlt
                     ImeOptions.Action.SEARCH -> Icons.Default.Search
                     ImeOptions.Action.SEND -> Icons.AutoMirrored.Filled.Send
                     ImeOptions.Action.UNSPECIFIED -> Icons.AutoMirrored.Filled.KeyboardReturn
@@ -263,7 +276,7 @@ fun ComputingEvaluator.computeImageVector(data: KeyData): ImageVector? {
         KeyCode.SHIFT -> {
             when (evaluator.state.inputShiftState != InputShiftState.UNSHIFTED) {
                 true -> Icons.Default.KeyboardCapslock
-                else -> Icons.Default.KeyboardArrowUp
+                else -> Icons.Default.ArrowUpward
             }
         }
         KeyCode.SPACE, KeyCode.CJK_SPACE -> {

@@ -2,11 +2,13 @@ import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'app_theme.dart';
 import 'package:rewordium/services/keyboard_service.dart';
+import 'package:rewordium/services/rewordium_keyboard_service.dart';
 
 class ThemeProvider extends ChangeNotifier {
   // Theme preferences keys
   static const String _themePreferenceKey = 'is_dark_mode';
   static const String _themeModeKey = 'theme_mode'; // 'system', 'light', 'dark'
+  static const String _dynamicColorsEnabledKey = 'dynamic_colors_enabled';
 
   // Current theme mode (system, light, dark)
   ThemeMode _themeMode = ThemeMode.system;
@@ -17,6 +19,9 @@ class ThemeProvider extends ChangeNotifier {
   bool get isDarkMode => _isDarkMode;
 
   final KeyboardService _keyboardService = KeyboardService();
+  bool _useDynamicColors = true;
+  bool get useDynamicColors => _useDynamicColors;
+  String? _lastKeyboardAccentHex;
 
   // Get light and dark themes for MaterialApp
   ThemeData get lightTheme => AppTheme.lightTheme;
@@ -65,6 +70,7 @@ class ThemeProvider extends ChangeNotifier {
       }
 
       AppTheme.setDarkMode(_isDarkMode);
+      _useDynamicColors = prefs.getBool(_dynamicColorsEnabledKey) ?? true;
       notifyListeners();
     } catch (e) {
       debugPrint('Error loading theme preference: $e');
@@ -139,6 +145,35 @@ class ThemeProvider extends ChangeNotifier {
       debugPrint('Keyboard theme update completed.');
     }).catchError((error) {
       debugPrint('Error calling updateKeyboardTheme: $error');
+    });
+
+    RewordiumKeyboardService.setDarkMode(isDark).catchError((error) {
+      debugPrint('Error syncing keyboard dark mode: $error');
+    });
+  }
+
+  Future<void> setDynamicColorsEnabled(bool enabled) async {
+    if (_useDynamicColors == enabled) {
+      return;
+    }
+    _useDynamicColors = enabled;
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setBool(_dynamicColorsEnabledKey, enabled);
+    } catch (e) {
+      debugPrint('Error saving dynamic color preference: $e');
+    }
+    notifyListeners();
+  }
+
+  void syncKeyboardAccent(Color color) {
+    final hex = '#${color.value.toRadixString(16).padLeft(8, '0').substring(2).toUpperCase()}';
+    if (_lastKeyboardAccentHex == hex) {
+      return;
+    }
+    _lastKeyboardAccentHex = hex;
+    RewordiumKeyboardService.updateThemeColor(hex).catchError((error) {
+      debugPrint('Error syncing keyboard accent color: $error');
     });
   }
 }
