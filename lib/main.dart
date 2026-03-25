@@ -12,6 +12,8 @@ import 'screens/paraphraser_page.dart';
 import 'screens/grammar_page.dart';
 import 'screens/settings_screen.dart';
 import 'screens/splash_screen.dart';
+import 'screens/auth/login_screen.dart';
+import 'screens/admin_panel.dart';
 import 'theme/theme_provider.dart';
 import 'providers/auth_provider.dart';
 import 'providers/keyboard_provider.dart';
@@ -31,9 +33,9 @@ import 'services/ai_settings_bridge.dart';
 import 'services/billing_service.dart';
 import 'services/deep_link_service.dart';
 import 'services/play_integrity_service.dart';
+import 'services/usage_analytics_service.dart';
 import 'widgets/tool_popup.dart';
 import 'widgets/whats_new_sheet.dart';
-import 'admin.dart';
 
 // Global navigator key for app-wide navigation
 final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
@@ -335,6 +337,10 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (mounted) WhatsNewSheet.showIfNeeded(context);
     });
+
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      UsageAnalyticsService.touchUserActivity();
+    });
   }
 
   Future<void> _requestPermissions() async {
@@ -377,7 +383,12 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
   @override
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
+    final authProvider = Provider.of<AuthProvider>(context);
     final r = Responsive.of(context);
+
+    if (!authProvider.isLoggedIn) {
+      return const LoginScreen();
+    }
 
     return Scaffold(
       body: TabBarView(
@@ -419,9 +430,7 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
             size: NavBarM3ESize.medium,
             labelBehavior: NavBarM3ELabelBehavior.alwaysShow,
             backgroundColor: colorScheme.surface,
-            indicatorColor: Theme.of(context).brightness == Brightness.dark
-                ? const Color(0xFF1B5E20)
-                : const Color(0xFFD1FAE5),
+            indicatorColor: colorScheme.secondaryContainer,
             destinations: const [
               NavigationDestinationM3E(
                 icon: Icon(CupertinoIcons.home),

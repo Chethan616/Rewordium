@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:animate_do/animate_do.dart';
 
-import '../theme/app_theme.dart';
 import '../screens/paraphraser_page.dart';
 import '../screens/grammar_page.dart';
 import '../screens/ai_detector_page.dart';
@@ -108,22 +107,24 @@ class ToolPopup extends StatelessWidget {
   Widget build(BuildContext context) {
     final size = MediaQuery.of(context).size;
     final popupHeight = size.height * 0.6;
+    final colorScheme = Theme.of(context).colorScheme;
+    final textTheme = Theme.of(context).textTheme;
 
-    final tools = _toolList;
+    final tools = _toolList(colorScheme);
 
     return SlideInUp(
       duration: const Duration(milliseconds: 400),
       child: Container(
         height: popupHeight,
         decoration: BoxDecoration(
-          color: AppTheme.cardColor,
+          color: colorScheme.surfaceContainerLow,
           borderRadius: const BorderRadius.only(
             topLeft: Radius.circular(30),
             topRight: Radius.circular(30),
           ),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withOpacity(0.15),
+              color: colorScheme.scrim.withValues(alpha: 0.15),
               blurRadius: 20,
               offset: const Offset(0, -8),
             ),
@@ -143,7 +144,7 @@ class ToolPopup extends StatelessWidget {
                   children: [
                     Text(
                       "Tools",
-                      style: AppTheme.headingMedium.copyWith(
+                      style: textTheme.titleLarge?.copyWith(
                         fontWeight: FontWeight.w700,
                         letterSpacing: -0.5,
                       ),
@@ -151,12 +152,12 @@ class ToolPopup extends StatelessWidget {
                     Container(
                       padding: const EdgeInsets.all(6),
                       decoration: BoxDecoration(
-                        color: AppTheme.primaryColor.withOpacity(0.12),
+                        color: colorScheme.primaryContainer,
                         borderRadius: BorderRadius.circular(10),
                       ),
                       child: Icon(
                         CupertinoIcons.square_grid_2x2,
-                        color: AppTheme.primaryColor,
+                        color: colorScheme.onPrimaryContainer,
                         size: 22,
                       ),
                     ),
@@ -226,7 +227,7 @@ class _Handle extends StatelessWidget {
           height: 5,
           margin: const EdgeInsets.only(top: 12, bottom: 12),
           decoration: BoxDecoration(
-            color: Colors.grey.withOpacity(0.25),
+            color: Theme.of(context).colorScheme.onSurfaceVariant.withValues(alpha: 0.35),
             borderRadius: BorderRadius.circular(2.5),
           ),
         ),
@@ -250,6 +251,8 @@ class _ToolCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+    final textTheme = Theme.of(context).textTheme;
     return Material(
       color: Colors.transparent,
       borderRadius: BorderRadius.circular(20),
@@ -289,9 +292,9 @@ class _ToolCard extends StatelessWidget {
               Text(
                 title,
                 textAlign: TextAlign.center,
-                style: AppTheme.bodyLarge.copyWith(
+                style: textTheme.bodyLarge?.copyWith(
                   fontWeight: FontWeight.w600,
-                  color: AppTheme.textPrimaryColor,
+                  color: colorScheme.onSurface,
                   letterSpacing: -0.2,
                 ),
               ),
@@ -308,25 +311,27 @@ class _BottomButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+    final textTheme = Theme.of(context).textTheme;
     return CupertinoButton(
       padding: EdgeInsets.zero,
       onPressed: () => Navigator.pop(context),
       child: Container(
         padding: const EdgeInsets.symmetric(vertical: 14),
         decoration: BoxDecoration(
-          color: Colors.grey.withOpacity(0.06),
+          color: colorScheme.surfaceContainerHighest,
           borderRadius: BorderRadius.circular(16),
           border: Border.all(
-            color: Colors.grey.withOpacity(0.15),
+            color: colorScheme.outlineVariant,
             width: 1.0,
           ),
         ),
         child: Center(
           child: Text(
             "Close",
-            style: AppTheme.bodyLarge.copyWith(
+            style: textTheme.bodyLarge?.copyWith(
               fontWeight: FontWeight.w500,
-              color: AppTheme.textSecondaryColor,
+              color: colorScheme.onSurfaceVariant,
             ),
           ),
         ),
@@ -344,37 +349,37 @@ class ToolItem {
       {required this.title, required this.icon, required this.color});
 }
 
-const List<ToolItem> _toolList = [
-  ToolItem(
+List<ToolItem> _toolList(ColorScheme colorScheme) => [
+    ToolItem(
       title: "AI Detector",
       icon: CupertinoIcons.sparkles,
-      color: Color(0xFF2E7BFF)),
-  ToolItem(
+      color: colorScheme.primary),
+    ToolItem(
       title: "Translator",
       icon: CupertinoIcons.globe,
-      color: Color(0xFF4CAF50)),
-  ToolItem(
+      color: colorScheme.secondary),
+    ToolItem(
       title: "Paraphraser",
       icon: CupertinoIcons.text_badge_checkmark,
-      color: Color(0xFFFF9800)),
-  ToolItem(
+      color: colorScheme.tertiary),
+    ToolItem(
       title: "Grammar",
       icon: CupertinoIcons.checkmark_seal_fill,
-      color: Color(0xFFE91E63)),
-  ToolItem(
+      color: colorScheme.error),
+    ToolItem(
       title: "Summarizer",
       icon: CupertinoIcons.doc_text_search,
-      color: Color(0xFF9C27B0)),
-  ToolItem(
+      color: colorScheme.primaryContainer),
+    ToolItem(
       title: "Tone Editor",
       icon: CupertinoIcons.waveform_path,
-      color: Color(0xFF00BCD4)),
-  ToolItem(
+      color: colorScheme.secondaryContainer),
+    ToolItem(
       title: "Scan Document",
       icon: CupertinoIcons.camera_viewfinder,
-      color: Color(0xFF7C3AED)),
-  ToolItem(
+      color: colorScheme.tertiaryContainer),
+    ToolItem(
       title: "Import File",
       icon: CupertinoIcons.doc_on_doc,
-      color: Color(0xFF1E3A8A)),
-];
+      color: colorScheme.inversePrimary),
+  ];

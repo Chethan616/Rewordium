@@ -24,6 +24,7 @@ import '../services/document_service.dart';
 import '../screens/document_viewer_screen.dart';
 import '../utils/responsive.dart';
 import '../utils/doc_gate.dart';
+import '../theme/theme_provider.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -50,13 +51,15 @@ class _HomeScreenState extends State<HomeScreen> {
     final colorScheme = Theme.of(context).colorScheme;
     final textTheme = Theme.of(context).textTheme;
     final isDarkMode = Theme.of(context).brightness == Brightness.dark;
+    final themeProvider = Provider.of<ThemeProvider>(context);
     final r = Responsive.of(context);
-    final heroBackgroundColor = isDarkMode
-      ? const Color(0xFF1E1E1E)
-      : Colors.white;
-    final heroAccentColor = isDarkMode
-      ? const Color(0xFFAFFF99)
-      : colorScheme.primary;
+    final useOriginalThemeProfileUi = !themeProvider.useDynamicColors;
+    final heroBackgroundColor = useOriginalThemeProfileUi
+      ? (isDarkMode ? const Color(0xFF1E1E1E) : Colors.white)
+      : colorScheme.secondaryContainer;
+    final heroAccentColor = useOriginalThemeProfileUi
+      ? (isDarkMode ? const Color(0xFFAFFF99) : colorScheme.primary)
+      : colorScheme.onSecondaryContainer;
 
     return ExpressiveRefreshIndicator(
       onRefresh: () async {
@@ -194,6 +197,17 @@ class _ToolsRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final r = Responsive.of(context);
+    final colorScheme = Theme.of(context).colorScheme;
+    final toolColors = <Color>[
+      colorScheme.primary,
+      colorScheme.secondary,
+      colorScheme.tertiary,
+      colorScheme.error,
+      colorScheme.primaryContainer,
+      colorScheme.secondaryContainer,
+      colorScheme.tertiaryContainer,
+      colorScheme.inversePrimary,
+    ];
 
     return SizedBox(
       height: r.h(150),
@@ -209,7 +223,7 @@ class _ToolsRow extends StatelessWidget {
             icon: LottieAssets.getParaphrasingAnimation(
               height: r.r(55),
             ),
-            color: Colors.green,
+            color: toolColors[0],
             r: r,
           ),
           _cleanToolCard(
@@ -219,7 +233,7 @@ class _ToolsRow extends StatelessWidget {
             icon: LottieAssets.getGrammarCheckAnimation(
               height: r.r(55),
             ),
-            color: Colors.red,
+            color: toolColors[1],
             r: r,
           ),
           _cleanToolCard(
@@ -229,7 +243,7 @@ class _ToolsRow extends StatelessWidget {
             icon: LottieAssets.getTranslatorAnimation(
               height: r.r(55),
             ),
-            color: Colors.blue,
+            color: toolColors[2],
             r: r,
           ),
           _cleanToolCard(
@@ -239,7 +253,7 @@ class _ToolsRow extends StatelessWidget {
             icon: LottieAssets.getAIDetectorAnimation(
               height: r.r(55),
             ),
-            color: Colors.purple,
+            color: toolColors[3],
             r: r,
           ),
           _cleanToolCard(
@@ -249,7 +263,7 @@ class _ToolsRow extends StatelessWidget {
             icon: LottieAssets.getSummarizerAnimation(
               height: r.r(55),
             ),
-            color: Colors.orange,
+            color: toolColors[4],
             r: r,
           ),
           _cleanToolCard(
@@ -259,7 +273,7 @@ class _ToolsRow extends StatelessWidget {
             icon: LottieAssets.getToneEditorAnimation(
               height: r.r(55),
             ),
-            color: Colors.teal,
+            color: toolColors[5],
             r: r,
           ),
           _cleanToolCard(
@@ -269,7 +283,7 @@ class _ToolsRow extends StatelessWidget {
             icon: LottieAssets.getAssistantAnimation(
               height: r.r(55),
             ),
-            color: Colors.deepPurple,
+            color: toolColors[6],
             r: r,
           ),
           _buildDocActionCard(
@@ -277,7 +291,7 @@ class _ToolsRow extends StatelessWidget {
             title: "Scan Doc",
             subtitle: "Camera scan to text",
             icon: CupertinoIcons.camera_viewfinder,
-            color: const Color(0xFF7C3AED),
+            color: toolColors[7],
             r: r,
             onTap: () async {
               try {
@@ -306,7 +320,7 @@ class _ToolsRow extends StatelessWidget {
             title: "Import File",
             subtitle: "PDF, DOCX, TXT",
             icon: CupertinoIcons.doc_on_doc,
-            color: const Color(0xFF1E3A8A),
+            color: colorScheme.primary,
             r: r,
             onTap: () async {
               try {

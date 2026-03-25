@@ -5,6 +5,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import '../models/advanced_ai_settings.dart';
 import 'groq_service.dart';
 import 'in_app_review_service.dart';
+import 'usage_analytics_service.dart';
 
 /// Unified AI Service that supports multiple LLM providers
 /// Falls back to Groq + LLaMA if no custom API key is configured
@@ -25,9 +26,11 @@ class UnifiedAIService {
       };
     }
 
+    String provider = 'unknown';
+
     try {
       final config = await AdvancedAISettingsService.getAPIConfig();
-      final provider = config['provider'] as String;
+      provider = config['provider'] as String;
 
       Map<String, dynamic> result;
 
@@ -81,12 +84,30 @@ class UnifiedAIService {
         }
       }
 
+      final isSuccess = result['success'] == true && result['error'] == null;
+      await UsageAnalyticsService.recordApiCall(
+        feature: 'ai_request',
+        provider: provider,
+        success: isSuccess,
+        errorType: isSuccess ? null : result['errorType']?.toString(),
+      );
+
+      await UsageAnalyticsService.touchUserActivity();
+
       // Track successful generation for in-app review prompts
-      InAppReviewService.onSuccessfulGeneration();
+      if (isSuccess) {
+        InAppReviewService.onSuccessfulGeneration();
+      }
 
       return result;
     } catch (e) {
       print('UnifiedAIService error: $e');
+      await UsageAnalyticsService.recordApiCall(
+        feature: 'ai_request',
+        provider: provider,
+        success: false,
+        errorType: 'UNKNOWN',
+      );
       final errorString = e.toString().toLowerCase();
 
       // Check if error is related to missing API key

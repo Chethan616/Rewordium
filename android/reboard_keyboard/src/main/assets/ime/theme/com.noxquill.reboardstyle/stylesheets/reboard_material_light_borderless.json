@@ -11,8 +11,8 @@
 
     "--bg": "dynamic-light-color(surfaceContainerLow)",
     "--bg-alt": "dynamic-light-color(surfaceContainer)",
-    "--key-bg": "dynamic-light-color(surfaceContainerHigh)",
-    "--key-bg-pressed": "dynamic-light-color(surfaceContainerHighest)",
+    "--key-bg": "dynamic-light-color(surfaceContainerHighest)",
+    "--key-bg-pressed": "dynamic-light-color(surfaceContainerHigh)",
     "--key-fg": "dynamic-light-color(onSurface)",
     "--key-fg-dim": "dynamic-light-color(onSurfaceVariant)",
     "--key-fg-disabled": "rgb(175,175,175)",
@@ -81,15 +81,31 @@
     "foreground": "var(--accent-text)",
     "font-size": "20sp"
   },
+  "key[code=-11]:pressed": {
+    "background": "var(--accent-pressed)",
+    "foreground": "var(--accent-pressed-text)"
+  },
+  "key[code=-11][shiftstate=`shifted_manual`]": {
+    "background": "var(--accent)",
+    "foreground": "var(--accent-text)"
+  },
+  "key[code=-11][shiftstate=`shifted_automatic`]": {
+    "background": "var(--accent-pressed)",
+    "foreground": "var(--accent-pressed-text)"
+  },
   "key[code=-11][shiftstate=`caps_lock`]": {
-    "foreground": "var(--tertiary-text)",
-    "background": "var(--tertiary)"
+    "background": "var(--accent-pressed)",
+    "foreground": "var(--accent-pressed-text)"
   },
   "key[code=-201,-202,-203]": {
     "background": "var(--accent)",
     "foreground": "var(--accent-text)",
     "font-size": "18sp",
     "shape": "var(--r-pill)"
+  },
+  "key[code=-201,-202,-203]:pressed": {
+    "background": "var(--accent-pressed)",
+    "foreground": "var(--accent-pressed-text)"
   },
   "key[code=44]": {
     "background": "var(--accent)",
@@ -107,8 +123,20 @@
     "background": "var(--accent-pressed)",
     "foreground": "var(--accent-pressed-text)"
   },
+  "key[code=47]": {
+    "background": "var(--key-bg)",
+    "foreground": "var(--key-fg)"
+  },
+  "key[code=47]:pressed": {
+    "background": "var(--key-bg-pressed)",
+    "foreground": "var(--key-fg)"
+  },
   "key[code=-204,-205]": {
     "font-size": "12sp"
+  },
+  "key[code=-204,-205]:pressed": {
+    "background": "var(--accent-pressed)",
+    "foreground": "var(--accent-pressed-text)"
   },
   "key[code=-205]": {
     "text-max-lines": "2"

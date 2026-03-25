@@ -1,0 +1,2 @@
+-keep class org.florisboard.lib.snygg.** { *; }
+-keep interface org.florisboard.lib.snygg.** { *; }

@@ -372,7 +372,10 @@ fun EmojiPaletteView(
                                 header("header_pinned") {
                                     GridHeader(text = stringRes(R.string.emoji__history__pinned))
                                 }
-                                items(emojiMapping.pinned) { emojiSet ->
+                                items(
+                                    items = emojiMapping.pinned,
+                                    key = { emojiSet -> "pinned_${emojiSet.base().value}" },
+                                ) { emojiSet ->
                                     EmojiKeyWrapper(emojiSet, isPinned = true)
                                 }
                             }
@@ -380,12 +383,18 @@ fun EmojiPaletteView(
                                 header("header_recent") {
                                     GridHeader(text = stringRes(R.string.emoji__history__recent))
                                 }
-                                items(emojiMapping.recent) { emojiSet ->
+                                items(
+                                    items = emojiMapping.recent,
+                                    key = { emojiSet -> "recent_${emojiSet.base().value}" },
+                                ) { emojiSet ->
                                     EmojiKeyWrapper(emojiSet, isRecent = true)
                                 }
                             }
                             if (emojiMapping.simple.isNotEmpty()) {
-                                items(emojiMapping.simple) { emojiSet ->
+                                items(
+                                    items = emojiMapping.simple,
+                                    key = { emojiSet -> "simple_${emojiSet.base().value}" },
+                                ) { emojiSet ->
                                     EmojiKeyWrapper(emojiSet)
                                 }
                             }

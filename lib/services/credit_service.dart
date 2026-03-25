@@ -1,21 +1,27 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/foundation.dart';
+import 'usage_analytics_service.dart';
 
 class CreditService {
   static final FirebaseFirestore _firestore = FirebaseFirestore.instance;
   static final CollectionReference _usersCollection =
       _firestore.collection('users');
 
-  static Future<bool> consumeCredit(String uid) {
+  static Future<bool> consumeCredit(String uid) async {
     try {
-      _usersCollection.doc(uid).update({
+      await _usersCollection.doc(uid).update({
         'credits': FieldValue.increment(-1),
       });
+      await UsageAnalyticsService.recordCreditUsage(
+        uid: uid,
+        creditsUsed: 1,
+        source: 'credit_service',
+      );
       debugPrint('Successfully consumed one credit for user $uid.');
-      return Future.value(true);
+      return true;
     } catch (e) {
       debugPrint('Error consuming credit for user $uid: $e');
-      return Future.value(false);
+      return false;
     }
   }
 

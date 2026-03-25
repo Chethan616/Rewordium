@@ -1,22 +1,22 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:package_info_plus/package_info_plus.dart';
-import '../theme/app_theme.dart';
 
 class VersionScreen extends StatelessWidget {
   const VersionScreen({super.key});
 
   @override
   Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final colorScheme = Theme.of(context).colorScheme;
+    final textTheme = Theme.of(context).textTheme;
 
     return Scaffold(
-      backgroundColor: AppTheme.backgroundColor,
+      backgroundColor: colorScheme.surface,
       appBar: AppBar(
         backgroundColor: Colors.transparent,
         elevation: 0,
         leading: IconButton(
-          icon: Icon(CupertinoIcons.back, color: AppTheme.textPrimaryColor),
+          icon: Icon(CupertinoIcons.back, color: colorScheme.onSurface),
           onPressed: () => Navigator.of(context).pop(),
         ),
       ),
@@ -31,7 +31,7 @@ class VersionScreen extends StatelessWidget {
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
                 border: Border.all(
-                  color: AppTheme.primaryColor.withValues(alpha: 0.25),
+                  color: colorScheme.primary.withValues(alpha: 0.25),
                   width: 3,
                 ),
                 image: const DecorationImage(
@@ -40,7 +40,7 @@ class VersionScreen extends StatelessWidget {
                 ),
                 boxShadow: [
                   BoxShadow(
-                    color: AppTheme.primaryColor.withValues(alpha: 0.15),
+                    color: colorScheme.primary.withValues(alpha: 0.15),
                     blurRadius: 30,
                     spreadRadius: 6,
                   ),
@@ -53,10 +53,9 @@ class VersionScreen extends StatelessWidget {
             // Version codename
             Text(
               'Panda',
-              style: TextStyle(
-                fontSize: 32,
+              style: textTheme.headlineMedium?.copyWith(
                 fontWeight: FontWeight.bold,
-                color: AppTheme.textPrimaryColor,
+                color: colorScheme.onSurface,
                 letterSpacing: 1.2,
               ),
             ),
@@ -73,9 +72,8 @@ class VersionScreen extends StatelessWidget {
 
                 return Text(
                   version,
-                  style: TextStyle(
-                    fontSize: 15,
-                    color: AppTheme.textSecondaryColor,
+                  style: textTheme.bodyMedium?.copyWith(
+                    color: colorScheme.onSurfaceVariant,
                     fontWeight: FontWeight.w500,
                   ),
                 );
@@ -87,9 +85,8 @@ class VersionScreen extends StatelessWidget {
             // Subtle app name
             Text(
               'Rewordium',
-              style: TextStyle(
-                fontSize: 14,
-                color: AppTheme.textSecondaryColor.withOpacity(0.6),
+              style: textTheme.bodySmall?.copyWith(
+                color: colorScheme.onSurfaceVariant.withValues(alpha: 0.6),
                 fontWeight: FontWeight.w400,
                 letterSpacing: 0.5,
               ),
