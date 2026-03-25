@@ -1,0 +1,2 @@
+-keep class org.florisboard.lib.android.** { *; }
+-keep interface org.florisboard.lib.android.** { *; }

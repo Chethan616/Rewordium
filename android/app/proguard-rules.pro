@@ -412,3 +412,39 @@
 -dontwarn com.google.mlkit.vision.text.devanagari.**
 -dontwarn com.google.mlkit.vision.text.japanese.**
 -dontwarn com.google.mlkit.vision.text.korean.**
+
+# ==============================================================================
+# ROOM / FIREBASE / EMOJI SAFETY RULES
+# ==============================================================================
+
+# Room entities/DAOs/converters used by keyboard clipboard and dictionary layers
+-keep @androidx.room.Entity class * { *; }
+-keep @androidx.room.Dao interface * { *; }
+-keep @androidx.room.Dao class * { *; }
+-keepclassmembers class * {
+    @androidx.room.Query <methods>;
+    @androidx.room.Insert <methods>;
+    @androidx.room.Update <methods>;
+    @androidx.room.Delete <methods>;
+    @androidx.room.RawQuery <methods>;
+    @androidx.room.TypeConverter <methods>;
+}
+
+# Concrete database classes
+-keep class com.noxquill.rewordium.keyboard.ime.clipboard.provider.ClipboardHistoryDatabase { *; }
+-keep class com.noxquill.rewordium.keyboard.ime.clipboard.provider.ClipboardFilesDatabase { *; }
+-keep class com.noxquill.rewordium.keyboard.ime.dictionary.FlorisUserDictionaryDatabase { *; }
+
+# Firebase runtime reflection/serialization safety
+-keep class com.google.firebase.** { *; }
+-keep interface com.google.firebase.** { *; }
+-keep class com.google.firebase.firestore.** { *; }
+-keep class com.google.firebase.auth.** { *; }
+-keep class com.google.firebase.messaging.** { *; }
+-keep class com.google.android.gms.** { *; }
+-dontwarn com.google.firebase.**
+-dontwarn com.google.android.gms.**
+
+# EmojiCompat runtime classes used by keyboard emoji panel
+-keep class androidx.emoji2.** { *; }
+-keep class androidx.emoji.text.** { *; }

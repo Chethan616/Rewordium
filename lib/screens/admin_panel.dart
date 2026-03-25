@@ -28,8 +28,15 @@ class _AdminPanelState extends State<AdminPanel> with TickerProviderStateMixin {
 
   List<UserModel> _users = [];
   List<UserModel> _filteredUsers = [];
-  Map<String, int> _userStats = {'total': 0, 'pro': 0, 'free': 0};
+  Map<String, int> _userStats = {
+    'total': 0,
+    'pro': 0,
+    'free': 0,
+    'activeNow': 0,
+    'dau': 0,
+  };
   Map<String, dynamic> _revenueStats = {};
+  Map<String, dynamic> _apiUsageStats = {};
   List<Map<String, dynamic>> _recentTransactions = [];
   // Hardcoded baseline: Only count revenue from January 16, 2026 onwards
   final DateTime _revenueBaseline = DateTime(2026, 1, 16);
@@ -42,7 +49,7 @@ class _AdminPanelState extends State<AdminPanel> with TickerProviderStateMixin {
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 5, vsync: this);
+    _tabController = TabController(length: 6, vsync: this);
     _checkAdminAccess();
   }
 
@@ -72,6 +79,7 @@ class _AdminPanelState extends State<AdminPanel> with TickerProviderStateMixin {
       final users = await AdminService.getAllUsers();
       final stats = await AdminService.getUserStats();
       final revenueStats = await AdminService.getRevenueStats(from: _revenueBaseline);
+      final apiUsageStats = await AdminService.getApiUsageStats();
       final transactions = await AdminService.getRecentTransactions(from: _revenueBaseline);
 
       setState(() {
@@ -79,6 +87,7 @@ class _AdminPanelState extends State<AdminPanel> with TickerProviderStateMixin {
         _filteredUsers = users;
         _userStats = stats;
         _revenueStats = revenueStats;
+        _apiUsageStats = apiUsageStats;
         _recentTransactions = transactions;
       });
     } catch (e) {
@@ -363,6 +372,7 @@ class _AdminPanelState extends State<AdminPanel> with TickerProviderStateMixin {
           tabs: [
             Tab(icon: Icon(Icons.dashboard_rounded, color: colorScheme.onPrimary), text: 'Overview'),
             Tab(icon: Icon(Icons.attach_money_rounded, color: colorScheme.onPrimary), text: 'Revenue'),
+            Tab(icon: Icon(Icons.api_rounded, color: colorScheme.onPrimary), text: 'API Usage'),
             Tab(icon: Icon(Icons.send_rounded, color: colorScheme.onPrimary), text: 'Notifications'),
             Tab(icon: Icon(Icons.people_rounded, color: colorScheme.onPrimary), text: 'Users'),
             Tab(icon: Icon(Icons.history_rounded, color: colorScheme.onPrimary), text: 'History'),
@@ -374,6 +384,7 @@ class _AdminPanelState extends State<AdminPanel> with TickerProviderStateMixin {
         children: [
           _buildOverviewTab(),
           _buildRevenueTab(),
+          _buildApiUsageTab(),
           _buildNotificationsTab(),
           _buildUsersTab(),
           _buildHistoryTab(),
@@ -506,11 +517,26 @@ class _AdminPanelState extends State<AdminPanel> with TickerProviderStateMixin {
                 Expanded(
                   child: _buildStatCard(
                     'Active Now',
-                    '${(_userStats['total']! * 0.3).round()}',
+                    (_userStats['activeNow'] ?? 0).toString(),
                     Icons.radio_button_checked,
                     Colors.red,
                   ),
                 ),
+              ],
+            ),
+            const SizedBox(height: 16),
+            Row(
+              children: [
+                Expanded(
+                  child: _buildStatCard(
+                    'Daily Active Users',
+                    (_userStats['dau'] ?? 0).toString(),
+                    Icons.today,
+                    Colors.indigo,
+                  ),
+                ),
+                const SizedBox(width: 16),
+                const Expanded(child: SizedBox.shrink()),
               ],
             ),
             const SizedBox(height: 32),
@@ -525,24 +551,31 @@ class _AdminPanelState extends State<AdminPanel> with TickerProviderStateMixin {
             Row(
               children: [
                 _buildQuickActionCard(
+                  'API Usage',
+                  Icons.api,
+                  Colors.deepPurple,
+                  () => _tabController.animateTo(2),
+                ),
+                const SizedBox(width: 12),
+                _buildQuickActionCard(
                   'Broadcast',
                   Icons.campaign,
                   Colors.purple,
-                  () => _tabController.animateTo(2),
+                  () => _tabController.animateTo(3),
                 ),
                 const SizedBox(width: 12),
                 _buildQuickActionCard(
                   'Users',
                   Icons.manage_accounts,
                   Colors.teal,
-                  () => _tabController.animateTo(3),
+                  () => _tabController.animateTo(4),
                 ),
                 const SizedBox(width: 12),
                 _buildQuickActionCard(
                   'History',
                   Icons.history,
                   Theme.of(context).colorScheme.primary,
-                  () => _tabController.animateTo(4),
+                  () => _tabController.animateTo(5),
                 ),
               ],
             ),
@@ -1167,6 +1200,282 @@ color: Theme.of(context).colorScheme.onSurfaceVariant,
     } else {
       return '${date.day}/${date.month}/${date.year}';
     }
+  }
+
+  Widget _buildApiUsageTab() {
+    final totalApiCalls = (_apiUsageStats['totalApiCalls'] as num?)?.toInt() ?? 0;
+    final thisMonthApiCalls = (_apiUsageStats['thisMonthApiCalls'] as num?)?.toInt() ?? 0;
+    final thisMonthCreditsUsed =
+        (_apiUsageStats['thisMonthCreditsUsed'] as num?)?.toInt() ?? 0;
+    final activeNow = (_apiUsageStats['activeNow'] as num?)?.toInt() ?? 0;
+    final dau = (_apiUsageStats['dau'] as num?)?.toInt() ?? 0;
+    final trackingStartedAt = _apiUsageStats['trackingStartedAt'] as Timestamp?;
+    final hasHistoricalData = _apiUsageStats['hasHistoricalData'] == true;
+
+    final dailyCreditUsage =
+        (_apiUsageStats['dailyCreditUsage'] as List<dynamic>? ?? [])
+            .cast<Map<String, dynamic>>();
+    final dailyApiUsage = (_apiUsageStats['dailyApiUsage'] as List<dynamic>? ?? [])
+        .cast<Map<String, dynamic>>();
+    final leaderboard = (_apiUsageStats['leaderboard'] as List<dynamic>? ?? [])
+        .cast<Map<String, dynamic>>();
+
+    return SingleChildScrollView(
+      padding: const EdgeInsets.all(20),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.all(24),
+            decoration: BoxDecoration(
+              color: Theme.of(context).colorScheme.primary,
+              borderRadius: BorderRadius.circular(16),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Icon(
+                      Icons.api_rounded,
+                      color: Theme.of(context).colorScheme.onPrimary,
+                    ),
+                    const SizedBox(width: 10),
+                    Text(
+                      'API Usage Analytics',
+                      style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                            color: Theme.of(context).colorScheme.onPrimary,
+                            fontWeight: FontWeight.bold,
+                          ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  trackingStartedAt != null
+                      ? 'Tracking since ${_formatDate(trackingStartedAt.toDate())}'
+                      : 'Tracking data will appear once requests are recorded',
+                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                        color: Theme.of(context)
+                            .colorScheme
+                            .onPrimary
+                            .withValues(alpha: 0.88),
+                      ),
+                ),
+                if (!hasHistoricalData) ...[
+                  const SizedBox(height: 8),
+                  Text(
+                    'Historical data may be partial before telemetry was enabled.',
+                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                          color: Theme.of(context)
+                              .colorScheme
+                              .onPrimary
+                              .withValues(alpha: 0.9),
+                        ),
+                  ),
+                ],
+              ],
+            ),
+          ),
+          const SizedBox(height: 20),
+          Row(
+            children: [
+              Expanded(
+                child: _buildStatCard(
+                  'Total API Calls',
+                  totalApiCalls.toString(),
+                  Icons.cloud_done,
+                  Colors.blue,
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: _buildStatCard(
+                  'This Month Calls',
+                  thisMonthApiCalls.toString(),
+                  Icons.calendar_month,
+                  Colors.teal,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          Row(
+            children: [
+              Expanded(
+                child: _buildStatCard(
+                  'Credits This Month',
+                  thisMonthCreditsUsed.toString(),
+                  Icons.local_fire_department,
+                  Colors.deepOrange,
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: _buildStatCard(
+                  'Active (15m) / DAU',
+                  '$activeNow / $dau',
+                  Icons.groups,
+                  Colors.purple,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 20),
+          _buildUsageTrendCard(
+            title: 'Daily Credit Usage (This Month)',
+            icon: Icons.stacked_line_chart,
+            entries: dailyCreditUsage,
+            valueKey: 'credits',
+          ),
+          const SizedBox(height: 16),
+          _buildUsageTrendCard(
+            title: 'Daily API Calls (This Month)',
+            icon: Icons.timeline,
+            entries: dailyApiUsage,
+            valueKey: 'calls',
+          ),
+          const SizedBox(height: 16),
+          Card(
+            child: Padding(
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Top Users Leaderboard',
+                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                          fontWeight: FontWeight.bold,
+                        ),
+                  ),
+                  const SizedBox(height: 12),
+                  if (leaderboard.isEmpty)
+                    Text(
+                      'No API usage data yet.',
+                      style: TextStyle(
+                        color: Theme.of(context).colorScheme.onSurfaceVariant,
+                      ),
+                    )
+                  else
+                    ...leaderboard.asMap().entries.map((entry) {
+                      final index = entry.key;
+                      final user = entry.value;
+                      final name = user['name'] ?? 'Unknown User';
+                      final email = user['email'] ?? '';
+                      final calls = (user['totalApiCalls'] as num?)?.toInt() ?? 0;
+                      final credits =
+                          (user['totalCreditsUsed'] as num?)?.toInt() ?? 0;
+                      final successRate =
+                          (user['successRate'] as num?)?.toDouble() ?? 0;
+
+                      return ListTile(
+                        contentPadding: EdgeInsets.zero,
+                        leading: CircleAvatar(
+                          backgroundColor:
+                              Theme.of(context).colorScheme.secondaryContainer,
+                          child: Text(
+                            '${index + 1}',
+                            style: TextStyle(
+                              color: Theme.of(context)
+                                  .colorScheme
+                                  .onSecondaryContainer,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ),
+                        title: Text(name.toString()),
+                        subtitle: Text(
+                          '$email\n$calls calls • $credits credits • ${successRate.toStringAsFixed(1)}% success',
+                        ),
+                        isThreeLine: true,
+                      );
+                    }),
+                ],
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildUsageTrendCard({
+    required String title,
+    required IconData icon,
+    required List<Map<String, dynamic>> entries,
+    required String valueKey,
+  }) {
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Icon(icon, color: Theme.of(context).colorScheme.primary),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    title,
+                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                          fontWeight: FontWeight.bold,
+                        ),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 12),
+            if (entries.isEmpty)
+              Text(
+                'No data available yet.',
+                style: TextStyle(
+                  color: Theme.of(context).colorScheme.onSurfaceVariant,
+                ),
+              )
+            else
+              ...entries.reversed.take(14).toList().reversed.map((item) {
+                final date = item['date']?.toString() ?? '-';
+                final value = (item[valueKey] as num?)?.toInt() ?? 0;
+                return Padding(
+                  padding: const EdgeInsets.only(bottom: 8),
+                  child: Row(
+                    children: [
+                      SizedBox(
+                        width: 92,
+                        child: Text(
+                          date.length >= 10 ? date.substring(5, 10) : date,
+                          style: TextStyle(
+                            color: Theme.of(context).colorScheme.onSurfaceVariant,
+                          ),
+                        ),
+                      ),
+                      Expanded(
+                        child: LinearProgressIndicator(
+                          value: (value / ((entries
+                                      .map((e) => (e[valueKey] as num?)?.toInt() ?? 0)
+                                      .fold<int>(1, (a, b) => a > b ? a : b))))
+                              .clamp(0.0, 1.0),
+                          minHeight: 8,
+                          borderRadius: BorderRadius.circular(6),
+                          backgroundColor:
+                              Theme.of(context).colorScheme.surfaceContainerHighest,
+                        ),
+                      ),
+                      const SizedBox(width: 10),
+                      Text(
+                        value.toString(),
+                        style: const TextStyle(fontWeight: FontWeight.w600),
+                      ),
+                    ],
+                  ),
+                );
+              }),
+          ],
+        ),
+      ),
+    );
   }
 
   Widget _buildNotificationsTab() {

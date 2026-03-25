@@ -21,6 +21,7 @@ import android.annotation.SuppressLint
 import android.content.Context
 import android.view.MotionEvent
 import android.view.animation.AccelerateInterpolator
+import androidx.core.animation.doOnEnd
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
@@ -145,6 +146,7 @@ fun TextKeyboardLayout(
         onDispose {
             controller.glideTypingDetector.unregisterListener(controller)
             controller.glideTypingDetector.unregisterListener(glideTypingManager)
+            controller.dispose()
             resetAllKeys()
         }
     }
@@ -400,6 +402,7 @@ private class TextKeyboardLayoutController(
     private var initSelectionStart: Int = 0
     private var initSelectionEnd: Int = 0
     var isGliding by mutableStateOf(false)
+    private var glideFadeAnimator: ValueAnimator? = null
 
     val glideTypingDetector = GlideTypingGesture.Detector(context)
     val glideDataForDrawing = mutableStateListOf<Pair<GlideTypingGesture.Detector.Position, Long>>()
@@ -409,6 +412,15 @@ private class TextKeyboardLayoutController(
 
     lateinit var keyboard: TextKeyboard
     var size = Size.Zero
+
+    fun dispose() {
+        glideFadeAnimator?.cancel()
+        glideFadeAnimator = null
+        glideDataForDrawing.clear()
+        fadingGlide.clear()
+        fadingGlideRadius = 0.0f
+        isGliding = false
+    }
 
     val isGlideEnabled: Boolean get() = prefs.glide.enabled.get() && editorInstance.activeInfo.isRichInputEditor &&
         keyboardManager.activeState.keyVariation != KeyVariation.PASSWORD
@@ -924,6 +936,11 @@ private class TextKeyboardLayoutController(
 
     override fun onGlideAddPoint(point: GlideTypingGesture.Detector.Position) {
         if (isGlideEnabled) {
+            glideFadeAnimator?.cancel()
+            glideFadeAnimator = null
+            fadingGlide.clear()
+            fadingGlideRadius = 0.0f
+            isGliding = true
             glideDataForDrawing.add(point to System.currentTimeMillis())
         }
     }
@@ -933,21 +950,35 @@ private class TextKeyboardLayoutController(
     }
 
     override fun onGlideCancelled() {
-        if (prefs.glide.showTrail.get()) {
-            fadingGlide.clear()
-            fadingGlide.addAll(glideDataForDrawing)
+        glideFadeAnimator?.cancel()
+        glideFadeAnimator = null
 
-            val animator = ValueAnimator.ofFloat(20.0f, 0.0f)
-            animator.interpolator = AccelerateInterpolator()
-            animator.duration = prefs.glide.trailDuration.get().toLong()
-            animator.addUpdateListener {
-                fadingGlideRadius = it.animatedValue as Float
-            }
-            animator.start()
-
+        if (!prefs.glide.showTrail.get() || glideDataForDrawing.isEmpty()) {
             glideDataForDrawing.clear()
+            fadingGlide.clear()
+            fadingGlideRadius = 0.0f
             isGliding = false
+            return
         }
+
+        fadingGlide.clear()
+        fadingGlide.addAll(glideDataForDrawing)
+        glideDataForDrawing.clear()
+        isGliding = false
+
+        val animator = ValueAnimator.ofFloat(20.0f, 0.0f)
+        animator.interpolator = AccelerateInterpolator()
+        animator.duration = prefs.glide.trailDuration.get().toLong().coerceAtLeast(80L)
+        animator.addUpdateListener {
+            fadingGlideRadius = it.animatedValue as Float
+        }
+        animator.doOnEnd {
+            fadingGlide.clear()
+            fadingGlideRadius = 0.0f
+            glideFadeAnimator = null
+        }
+        glideFadeAnimator = animator
+        animator.start()
     }
 
     fun drawGlideTrail(

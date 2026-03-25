@@ -274,9 +274,11 @@ fun ComputingEvaluator.computeImageVector(data: KeyData): ImageVector? {
             Icons.Default.Settings
         }
         KeyCode.SHIFT -> {
-            when (evaluator.state.inputShiftState != InputShiftState.UNSHIFTED) {
-                true -> Icons.Default.KeyboardCapslock
-                else -> Icons.Default.ArrowUpward
+            when (evaluator.state.inputShiftState) {
+                InputShiftState.UNSHIFTED -> Icons.Default.ArrowUpward
+                InputShiftState.SHIFTED_MANUAL -> Icons.Default.ArrowUpward
+                InputShiftState.SHIFTED_AUTOMATIC -> Icons.Default.ArrowUpward
+                InputShiftState.CAPS_LOCK -> Icons.Default.KeyboardCapslock
             }
         }
         KeyCode.SPACE, KeyCode.CJK_SPACE -> {

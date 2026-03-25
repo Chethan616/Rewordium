@@ -1,0 +1,2 @@
+-keep class org.florisboard.lib.compose.** { *; }
+-keep interface org.florisboard.lib.compose.** { *; }

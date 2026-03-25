@@ -174,7 +174,7 @@ class AdminService {
 
       if (!isAdmin()) {
         debugPrint('Access denied: User is not admin');
-        return {'total': 0, 'pro': 0, 'free': 0};
+        return {'total': 0, 'pro': 0, 'free': 0, 'activeNow': 0, 'dau': 0};
       }
 
       // Get all users count
@@ -191,18 +191,193 @@ class AdminService {
       // Calculate free users
       final freeUsers = totalUsers - proUsers;
 
+      final now = DateTime.now();
+      final activeSince = Timestamp.fromDate(
+        now.subtract(const Duration(minutes: 15)),
+      );
+      final startOfDay = Timestamp.fromDate(
+        DateTime(now.year, now.month, now.day),
+      );
+
+      final activeNowSnapshot = await _firestore
+          .collection('users')
+          .where('lastActiveAt', isGreaterThanOrEqualTo: activeSince)
+          .get();
+
+      final dauSnapshot = await _firestore
+          .collection('users')
+          .where('lastActiveAt', isGreaterThanOrEqualTo: startOfDay)
+          .get();
+
+      final activeNow = activeNowSnapshot.size;
+      final dau = dauSnapshot.size;
+
       debugPrint(
-          'User statistics: Total: $totalUsers, Pro: $proUsers, Free: $freeUsers');
+          'User statistics: Total: $totalUsers, Pro: $proUsers, Free: $freeUsers, ActiveNow: $activeNow, DAU: $dau');
 
       return {
         'total': totalUsers,
         'pro': proUsers,
         'free': freeUsers,
+        'activeNow': activeNow,
+        'dau': dau,
       };
     } catch (e) {
       debugPrint('Error getting user stats: $e');
-      return {'total': 0, 'pro': 0, 'free': 0};
+      return {'total': 0, 'pro': 0, 'free': 0, 'activeNow': 0, 'dau': 0};
     }
+  }
+
+  static Future<Map<String, dynamic>> getApiUsageStats() async {
+    try {
+      if (!isAdmin()) {
+        return {
+          'totalApiCalls': 0,
+          'thisMonthApiCalls': 0,
+          'thisMonthCreditsUsed': 0,
+          'dailyCreditUsage': <Map<String, dynamic>>[],
+          'dailyApiUsage': <Map<String, dynamic>>[],
+          'leaderboard': <Map<String, dynamic>>[],
+          'trackingStartedAt': null,
+          'activeNow': 0,
+          'dau': 0,
+          'hasHistoricalData': false,
+        };
+      }
+
+      final now = DateTime.now();
+      final monthKey =
+          '${now.year}-${now.month.toString().padLeft(2, '0')}';
+
+      final globalDoc = await _firestore
+          .collection('analytics_global')
+          .doc('usage_counters')
+          .get();
+      final globalData = globalDoc.data() ?? <String, dynamic>{};
+
+      final monthlyApiCalls =
+          _toIntMap(globalData['monthlyApiCalls'] as Map<String, dynamic>?);
+      final monthlyCreditsUsed = _toIntMap(
+          globalData['monthlyCreditsUsed'] as Map<String, dynamic>?);
+      final dailyCreditsUsed =
+          _toIntMap(globalData['dailyCreditsUsed'] as Map<String, dynamic>?);
+      final dailyApiCalls =
+          _toIntMap(globalData['dailyApiCalls'] as Map<String, dynamic>?);
+
+      final thisMonthApiCalls = monthlyApiCalls[monthKey] ?? 0;
+      final thisMonthCreditsUsed = monthlyCreditsUsed[monthKey] ?? 0;
+
+      final dailyCreditUsageList = dailyCreditsUsed.entries
+          .where((entry) => entry.key.startsWith(monthKey))
+          .map((entry) => {
+                'date': entry.key,
+                'credits': entry.value,
+              })
+          .toList()
+        ..sort((a, b) =>
+            (a['date'] as String).compareTo(b['date'] as String));
+
+      final dailyApiUsageList = dailyApiCalls.entries
+          .where((entry) => entry.key.startsWith(monthKey))
+          .map((entry) => {
+                'date': entry.key,
+                'calls': entry.value,
+              })
+          .toList()
+        ..sort((a, b) =>
+            (a['date'] as String).compareTo(b['date'] as String));
+
+      final leaderboardSnapshot = await _firestore
+          .collection('user_usage_stats')
+          .orderBy('totalApiCalls', descending: true)
+          .limit(20)
+          .get();
+
+      final leaderboard = leaderboardSnapshot.docs.map((doc) {
+        final data = doc.data();
+        return {
+          'uid': doc.id,
+          'name': data['displayName'] ?? data['email'] ?? 'Unknown User',
+          'email': data['email'] ?? '',
+          'totalApiCalls': (data['totalApiCalls'] as num?)?.toInt() ?? 0,
+          'totalCreditsUsed': (data['totalCreditsUsed'] as num?)?.toInt() ?? 0,
+          'successRate': _calculateSuccessRate(
+            successful: (data['successfulApiCalls'] as num?)?.toInt() ?? 0,
+            failed: (data['failedApiCalls'] as num?)?.toInt() ?? 0,
+          ),
+        };
+      }).toList();
+
+      Timestamp? trackingStartedAt;
+      bool hasHistoricalData = false;
+      final firstEventSnapshot = await _firestore
+          .collection('usage_events')
+          .orderBy('createdAt')
+          .limit(1)
+          .get();
+      if (firstEventSnapshot.docs.isNotEmpty) {
+        trackingStartedAt =
+            firstEventSnapshot.docs.first.data()['createdAt'] as Timestamp?;
+        hasHistoricalData = trackingStartedAt != null;
+      }
+
+      final activeSince = Timestamp.fromDate(
+        now.subtract(const Duration(minutes: 15)),
+      );
+      final startOfDay = Timestamp.fromDate(
+        DateTime(now.year, now.month, now.day),
+      );
+
+      final activeNowSnapshot = await _firestore
+          .collection('users')
+          .where('lastActiveAt', isGreaterThanOrEqualTo: activeSince)
+          .get();
+      final dauSnapshot = await _firestore
+          .collection('users')
+          .where('lastActiveAt', isGreaterThanOrEqualTo: startOfDay)
+          .get();
+
+      return {
+        'totalApiCalls': (globalData['totalApiCalls'] as num?)?.toInt() ?? 0,
+        'thisMonthApiCalls': thisMonthApiCalls,
+        'thisMonthCreditsUsed': thisMonthCreditsUsed,
+        'dailyCreditUsage': dailyCreditUsageList,
+        'dailyApiUsage': dailyApiUsageList,
+        'leaderboard': leaderboard,
+        'trackingStartedAt': trackingStartedAt,
+        'activeNow': activeNowSnapshot.size,
+        'dau': dauSnapshot.size,
+        'hasHistoricalData': hasHistoricalData,
+      };
+    } catch (e) {
+      debugPrint('Error getting API usage stats: $e');
+      return {
+        'totalApiCalls': 0,
+        'thisMonthApiCalls': 0,
+        'thisMonthCreditsUsed': 0,
+        'dailyCreditUsage': <Map<String, dynamic>>[],
+        'dailyApiUsage': <Map<String, dynamic>>[],
+        'leaderboard': <Map<String, dynamic>>[],
+        'trackingStartedAt': null,
+        'activeNow': 0,
+        'dau': 0,
+        'hasHistoricalData': false,
+      };
+    }
+  }
+
+  static Map<String, int> _toIntMap(Map<String, dynamic>? raw) {
+    if (raw == null) return <String, int>{};
+    return raw.map((key, value) => MapEntry(key, (value as num).toInt()));
+  }
+
+  static double _calculateSuccessRate({
+    required int successful,
+    required int failed,
+  }) {
+    final total = successful + failed;
+    if (total == 0) return 0;
+    return (successful / total) * 100;
   }
 
   // Get revenue statistics (from subscription data)

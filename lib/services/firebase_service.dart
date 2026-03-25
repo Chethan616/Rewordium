@@ -5,6 +5,7 @@ import 'package:google_sign_in/google_sign_in.dart';
 import 'dart:async';
 
 import '../firebase_options.dart';
+import 'usage_analytics_service.dart';
 
 class FirebaseService {
   static final FirebaseAuth _auth = FirebaseAuth.instance;
@@ -142,6 +143,11 @@ class FirebaseService {
       }
 
       await updateUserCredits(uid, currentCredits - 1);
+      await UsageAnalyticsService.recordCreditUsage(
+        uid: uid,
+        creditsUsed: 1,
+        source: 'firebase_service',
+      );
       return true;
     } catch (e) {
       return false;

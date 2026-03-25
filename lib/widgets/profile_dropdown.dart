@@ -156,16 +156,14 @@ class _SignOutConfirmationSheetState extends State<_SignOutConfirmationSheet> {
   bool _isLoggingOut = false;
 
   Future<void> _handleSignOut() async {
+    final rootNavigator = Navigator.of(context, rootNavigator: true);
     setState(() => _isLoggingOut = true);
     try {
       await widget.authProvider.signOut();
-      if (mounted) {
-        // Use root navigator so all sheets are dismissed and we land on LoginScreen
-        Navigator.of(context, rootNavigator: true).pushAndRemoveUntil(
-          MaterialPageRoute(builder: (_) => const LoginScreen()),
-          (route) => false,
-        );
-      }
+      rootNavigator.pushAndRemoveUntil(
+        MaterialPageRoute(builder: (_) => const LoginScreen()),
+        (route) => false,
+      );
     } catch (_) {
       if (mounted) setState(() => _isLoggingOut = false);
     }
