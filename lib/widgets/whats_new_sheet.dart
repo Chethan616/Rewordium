@@ -65,7 +65,14 @@ class WhatsNewSheet {
         color: const Color(0xFF06B6D4),
         title: 'Easy App Navigation',
         description:
-            'Added "Open Rewordium" button in keyboard settings so you can quickly switch back to the main app whenever needed.',
+            'Replaced the launch shortcut with a dedicated Go Back action in keyboard settings for smoother in-app navigation.',
+      ),
+      _WhatsNewItem(
+        icon: CupertinoIcons.keyboard_chevron_compact_down,
+        color: const Color(0xFF22C55E),
+        title: 'Better Predictive Typing Base',
+        description:
+            'Started production integration of FlorisBoard-based autocorrect, suggestions, and glide typing improvements for more accurate typing.',
       ),
     ],
     '2.1.5': [

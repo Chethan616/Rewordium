@@ -24,6 +24,7 @@ import com.noxquill.rewordium.keyboard.ime.nlp.SpellingProvider
 import com.noxquill.rewordium.keyboard.ime.nlp.SpellingResult
 import com.noxquill.rewordium.keyboard.ime.nlp.SuggestionCandidate
 import com.noxquill.rewordium.keyboard.ime.nlp.SuggestionProvider
+import com.noxquill.rewordium.keyboard.ime.nlp.WordSuggestionCandidate
 import com.noxquill.rewordium.keyboard.lib.devtools.flogDebug
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -35,45 +36,25 @@ import org.florisboard.lib.kotlin.guardedByLock
 
 class LatinLanguageProvider(context: Context) : SpellingProvider, SuggestionProvider {
     companion object {
-        // Default user ID used for all subtypes, unless otherwise specified.
-        // See `ime/core/Subtype.kt` Line 210 and 211 for the default usage
         const val ProviderId = "org.florisboard.nlp.providers.latin"
     }
 
-    private val appContext by context.appContext()
+    override val providerId = ProviderId
 
+    private val appContext by context.appContext()
     private val wordData = guardedByLock { mutableMapOf<String, Int>() }
     private val wordDataSerializer = MapSerializer(String.serializer(), Int.serializer())
 
-    override val providerId = ProviderId
-
     override suspend fun create() {
-        // Here we initialize our provider, set up all things which are not language dependent.
+        // No-op
     }
 
     override suspend fun preload(subtype: Subtype) = withContext(Dispatchers.IO) {
-        // Here we have the chance to preload dictionaries and prepare a neural network for a specific language.
-        // Is kept in sync with the active keyboard subtype of the user, however a new preload does not necessary mean
-        // the previous language is not needed anymore (e.g. if the user constantly switches between two subtypes)
-
-        // To read a file from the APK assets the following methods can be used:
-        // appContext.assets.open()
-        // appContext.assets.reader()
-        // appContext.assets.bufferedReader()
-        // appContext.assets.readText()
-        // To copy an APK file/dir to the file system cache (appContext.cacheDir), the following methods are available:
-        // appContext.assets.copy()
-        // appContext.assets.copyRecursively()
-
-        // The subtype we get here contains a lot of data, however we are only interested in subtype.primaryLocale and
-        // subtype.secondaryLocales.
-
-        wordData.withLock { wordData ->
-            if (wordData.isEmpty()) {
-                // Here we use readText() because the test dictionary is a json dictionary
+        wordData.withLock { data ->
+            if (data.isEmpty()) {
                 val rawData = appContext.assets.readText("ime/dict/data.json")
                 val jsonData = Json.decodeFromString(wordDataSerializer, rawData)
-                wordData.putAll(jsonData)
+                data.putAll(jsonData)
             }
         }
     }
@@ -87,14 +68,27 @@ class LatinLanguageProvider(context: Context) : SpellingProvider, SuggestionProv
         allowPossiblyOffensive: Boolean,
         isPrivateSession: Boolean,
     ): SpellingResult {
-        return when (word.lowercase()) {
-            // Use typo for typing errors
-            "typo" -> SpellingResult.typo(arrayOf("typo1", "typo2", "typo3"))
-            // Use grammar error if the algorithm can detect this. On Android 11 and lower grammar errors are visually
-            // marked as typos due to a lack of support
-            "gerror" -> SpellingResult.grammarError(arrayOf("grammar1", "grammar2", "grammar3"))
-            // Use valid word for valid input
-            else -> SpellingResult.validWord()
+        val query = word.trim().lowercase()
+        if (query.isBlank()) return SpellingResult.unspecified()
+
+        val suggestions = wordData.withLock { data ->
+            if (data.containsKey(query)) {
+                return@withLock emptyList()
+            }
+            data.asSequence()
+                .filter { (candidate, _) -> candidate.startsWith(query.take(2)) && candidate != query }
+                .sortedByDescending { (_, score) -> score }
+                .map { (candidate, _) -> candidate }
+                .take(maxSuggestionCount)
+                .toList()
+        }
+
+        return if (suggestions.isEmpty() && wordData.withLock { it.containsKey(query) }) {
+            SpellingResult.validWord()
+        } else if (suggestions.isNotEmpty()) {
+            SpellingResult.typo(suggestions.toTypedArray())
+        } else {
+            SpellingResult.typo(emptyArray())
         }
     }
 
@@ -105,26 +99,34 @@ class LatinLanguageProvider(context: Context) : SpellingProvider, SuggestionProv
         allowPossiblyOffensive: Boolean,
         isPrivateSession: Boolean,
     ): List<SuggestionCandidate> {
-        return emptyList()
-        /*val word = content.composingText.ifBlank { "next" }
-        val suggestions = buildList {
-            for (n in 0 until maxCandidateCount) {
-                add(WordSuggestionCandidate(
-                    text = "$word$n",
-                    secondaryText = if (n % 2 == 1) "secondary" else null,
-                    confidence = 0.5,
-                    isEligibleForAutoCommit = false,//n == 0 && word.startsWith("auto"),
-                    // We set ourselves as the source provider so we can get notify events for our candidate
-                    sourceProvider = this@LatinLanguageProvider,
-                ))
-            }
+        val composingWord = content.composingText.ifBlank { content.currentWordText }.trim().lowercase()
+        if (composingWord.isBlank()) return emptyList()
+
+        return wordData.withLock { data ->
+            data.asSequence()
+                .filter { (candidate, _) -> candidate.startsWith(composingWord) && candidate != composingWord }
+                .sortedByDescending { (_, score) -> score }
+                .take(maxCandidateCount)
+                .map { (candidate, score) ->
+                    WordSuggestionCandidate(
+                        text = candidate,
+                        confidence = (score / 255.0).coerceIn(0.0, 1.0),
+                        isEligibleForAutoCommit = false,
+                        sourceProvider = this,
+                    )
+                }
+                .toList()
         }
-        return suggestions*/
     }
 
     override suspend fun notifySuggestionAccepted(subtype: Subtype, candidate: SuggestionCandidate) {
-        // We can use flogDebug, flogInfo, flogWarning and flogError for debug logging, which is a wrapper for Logcat
         flogDebug { candidate.toString() }
+        val accepted = candidate.text.toString().trim().lowercase()
+        if (accepted.isBlank()) return
+        wordData.withLock { data ->
+            val current = data.getOrDefault(accepted, 0)
+            data[accepted] = (current + 1).coerceAtMost(255)
+        }
     }
 
     override suspend fun notifySuggestionReverted(subtype: Subtype, candidate: SuggestionCandidate) {
@@ -133,7 +135,8 @@ class LatinLanguageProvider(context: Context) : SpellingProvider, SuggestionProv
 
     override suspend fun removeSuggestion(subtype: Subtype, candidate: SuggestionCandidate): Boolean {
         flogDebug { candidate.toString() }
-        return false
+        val key = candidate.text.toString().trim().lowercase()
+        return wordData.withLock { data -> data.remove(key) != null }
     }
 
     override suspend fun getListOfWords(subtype: Subtype): List<String> {
@@ -141,11 +144,10 @@ class LatinLanguageProvider(context: Context) : SpellingProvider, SuggestionProv
     }
 
     override suspend fun getFrequencyForWord(subtype: Subtype, word: String): Double {
-        return wordData.withLock { it.getOrDefault(word, 0) / 255.0 }
+        return wordData.withLock { it.getOrDefault(word.lowercase(), 0) / 255.0 }
     }
 
     override suspend fun destroy() {
-        // Here we have the chance to de-allocate memory and finish our work. However this might never be called if
-        // the app process is killed (which will most likely always be the case).
+        // No-op
     }
 }

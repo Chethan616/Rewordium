@@ -1,0 +1,34 @@
+package com.sameerasw.essentials.domain.diy
+
+import androidx.annotation.DrawableRes
+import androidx.annotation.StringRes
+import com.sameerasw.essentials.R
+
+sealed interface State {
+    @get:StringRes
+    val title: Int
+
+    @get:DrawableRes
+    val icon: Int
+
+    data object Charging : State {
+        override val title: Int = R.string.diy_state_charging
+        override val icon: Int = R.drawable.rounded_charger_24
+    }
+
+    data object ScreenOn : State {
+        override val title: Int = R.string.diy_state_screen_on
+        override val icon: Int = R.drawable.rounded_mobile_text_2_24
+    }
+ 
+    data class TimePeriod(
+        val startHour: Int = 0,
+        val startMinute: Int = 0,
+        val endHour: Int = 0,
+        val endMinute: Int = 0,
+        val days: Set<Int> = emptySet()
+    ) : State {
+        override val title: Int get() = R.string.diy_state_time_period
+        override val icon: Int get() = R.drawable.rounded_timelapse_24
+    }
+}

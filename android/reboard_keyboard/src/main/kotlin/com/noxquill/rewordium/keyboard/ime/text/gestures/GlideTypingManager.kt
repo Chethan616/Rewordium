@@ -36,7 +36,7 @@ import kotlin.math.min
  */
 class GlideTypingManager(context: Context) : GlideTypingGesture.Listener {
     companion object {
-        private const val MAX_SUGGESTION_COUNT = 8
+        private const val MAX_SUGGESTION_COUNT = 6
     }
 
     private val prefs by FlorisPreferenceStore
@@ -94,15 +94,16 @@ class GlideTypingManager(context: Context) : GlideTypingGesture.Listener {
         }
 
         scope.launch(Dispatchers.Default) {
-            val suggestions = glideTypingClassifier.getSuggestions(MAX_SUGGESTION_COUNT, true)
+            val suggestions = glideTypingClassifier.getSuggestions(MAX_SUGGESTION_COUNT, commit)
 
             withContext(Dispatchers.Main) {
+                val startIndex = if (commit) 1 else 0
+                val endIndex = min(suggestions.size, startIndex + maxSuggestionsToShow)
                 val suggestionList = buildList {
-                    suggestions.subList(
-                        1.coerceAtMost(min(commit.compareTo(false), suggestions.size)),
-                        maxSuggestionsToShow.coerceAtMost(suggestions.size)
-                    ).map { keyboardManager.fixCase(it) }.forEach {
-                        add(WordSuggestionCandidate(it, confidence = 1.0))
+                    if (startIndex < endIndex) {
+                        suggestions.subList(startIndex, endIndex)
+                            .map { keyboardManager.fixCase(it) }
+                            .forEach { add(WordSuggestionCandidate(it, confidence = 1.0)) }
                     }
                 }
 

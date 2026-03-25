@@ -858,7 +858,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 icon: CupertinoIcons.heart_fill,
                 iconColor: Colors.pink,
                 title: "Credits & Licenses",
-                subtitle: "Open source attributions",
+                subtitle: "FlorisBoard and open source attributions",
                 trailing: const Icon(CupertinoIcons.chevron_right,
                     color: Colors.grey, size: 18),
                 onTap: () {

@@ -64,8 +64,8 @@ fun TypingScreen() = FlorisScreen {
         FlorisErrorCard(
             modifier = Modifier.padding(8.dp),
             text = """
-                Suggestions (except system autofill) and spell checking are not available in this release. All
-                preferences in the "Corrections" group are properly implemented though.
+                Suggestions and spell checking are available. If you do not see spelling suggestions, enable
+                "Suggestions" below and set this keyboard as the active Android spell checker in system settings.
             """.trimIndent().replace('\n', ' '),
         )
 

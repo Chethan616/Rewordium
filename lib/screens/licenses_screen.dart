@@ -33,6 +33,57 @@ class LicensesScreen extends StatelessWidget {
                     licenseFile: "assets/licenses/florisboard_license.txt",
                   ),
                   const SizedBox(height: 16),
+                  Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.all(16),
+                    decoration: BoxDecoration(
+                      color: Theme.of(context).colorScheme.surface,
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(
+                        color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.2),
+                      ),
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: [
+                            Icon(
+                              Icons.volunteer_activism,
+                              color: Theme.of(context).colorScheme.primary,
+                              size: 20,
+                            ),
+                            const SizedBox(width: 8),
+                            Text(
+                              "FlorisBoard Credits",
+                              style: Theme.of(context).textTheme.bodyLarge!.copyWith(
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 10),
+                        Text(
+                          "Rewordium's keyboard is based on FlorisBoard. "
+                          "Autocorrect, suggestions, and glide typing improvements in this app "
+                          "build on that open-source work.",
+                          style: Theme.of(context).textTheme.bodyMedium!.copyWith(
+                            color: Theme.of(context).colorScheme.onSurfaceVariant,
+                            height: 1.45,
+                          ),
+                        ),
+                        const SizedBox(height: 8),
+                        Text(
+                          "Copyright (C) 2020-2026 Patrick Goldinger and contributors",
+                          style: Theme.of(context).textTheme.bodySmall!.copyWith(
+                            color: Theme.of(context).colorScheme.onSurfaceVariant,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 16),
                   _buildLicenseCard(
                     context,
                     title: "Apache License 2.0",
