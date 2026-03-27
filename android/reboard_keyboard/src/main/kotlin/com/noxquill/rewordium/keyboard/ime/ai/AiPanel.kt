@@ -190,7 +190,7 @@ fun AiPanel(
                                 shape = RoundedCornerShape(6.dp)
                             ) {
                                 Text(
-                                    "✨ ${aiAppName ?: "AI"}",
+                                    "\u2022 ${aiAppName ?: "AI"}",
                                     modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
                                     fontSize = 9.sp,
                                     fontWeight = FontWeight.Medium,
@@ -391,9 +391,14 @@ fun AiPanel(
                                                 Toast.makeText(context, toastRes, Toast.LENGTH_SHORT).show()
                                             }
                                             AiMode.APPEND -> {
-                                                val endPos = editorInstance.activeContent.text.length
-                                                editorInstance.setSelection(endPos, endPos)
-                                                editorInstance.commitText("\n\n$text")
+                                                val currentText = editorInstance.activeContent.text
+                                                if (currentText.isNotEmpty()) {
+                                                    val endPos = currentText.length
+                                                    editorInstance.setSelection(endPos, endPos)
+                                                    editorInstance.commitText("\n\n$text")
+                                                } else {
+                                                    editorInstance.commitText(text)
+                                                }
                                                 Toast.makeText(context, R.string.ai__text_inserted, Toast.LENGTH_SHORT).show()
                                             }
                                         }

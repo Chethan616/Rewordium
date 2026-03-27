@@ -17,6 +17,7 @@
 package com.noxquill.rewordium.keyboard.ime.nlp.latin
 
 import android.content.Context
+import android.content.SharedPreferences
 import com.noxquill.rewordium.keyboard.appContext
 import com.noxquill.rewordium.keyboard.ime.core.Subtype
 import com.noxquill.rewordium.keyboard.ime.editor.EditorContent
@@ -37,6 +38,9 @@ import org.florisboard.lib.kotlin.guardedByLock
 class LatinLanguageProvider(context: Context) : SpellingProvider, SuggestionProvider {
     companion object {
         const val ProviderId = "org.florisboard.nlp.providers.latin"
+        private const val LEARNED_BIGRAMS_PREFS = "reboard_learned_bigrams"
+        private const val MAX_LEARNED_SCORE = 200
+        private const val BIGRAM_BOOST_FACTOR = 1.5
     }
 
     override val providerId = ProviderId
@@ -44,6 +48,20 @@ class LatinLanguageProvider(context: Context) : SpellingProvider, SuggestionProv
     private val appContext by context.appContext()
     private val wordData = guardedByLock { mutableMapOf<String, Int>() }
     private val wordDataSerializer = MapSerializer(String.serializer(), Int.serializer())
+
+    // Bigram data: previousWord -> (nextWord -> score)
+    private val bigramData = guardedByLock { mutableMapOf<String, Map<String, Int>>() }
+    private val bigramDataSerializer = MapSerializer(
+        String.serializer(),
+        MapSerializer(String.serializer(), Int.serializer())
+    )
+
+    // User-learned bigrams stored in SharedPreferences
+    private val learnedBigrams = guardedByLock { mutableMapOf<String, MutableMap<String, Int>>() }
+    private var learnedBigramsPrefs: SharedPreferences? = null
+
+    // Track the last committed word for bigram learning
+    private var lastCommittedWord: String? = null
 
     override suspend fun create() {
         // No-op
@@ -57,6 +75,76 @@ class LatinLanguageProvider(context: Context) : SpellingProvider, SuggestionProv
                 data.putAll(jsonData)
             }
         }
+        // Load bigram dictionary
+        bigramData.withLock { data ->
+            if (data.isEmpty()) {
+                try {
+                    val rawBigrams = appContext.assets.readText("ime/dict/bigrams.json")
+                    val jsonBigrams = Json.decodeFromString(bigramDataSerializer, rawBigrams)
+                    data.putAll(jsonBigrams)
+                } catch (e: Exception) {
+                    flogDebug { "Failed to load bigrams: ${e.message}" }
+                }
+            }
+        }
+        // Load user-learned bigrams from SharedPreferences
+        if (learnedBigramsPrefs == null) {
+            learnedBigramsPrefs = appContext.getSharedPreferences(LEARNED_BIGRAMS_PREFS, Context.MODE_PRIVATE)
+        }
+        loadLearnedBigrams()
+    }
+
+    /**
+     * Load user-learned bigrams from SharedPreferences.
+     * Format: key = "prev_word", value = "next1:score1,next2:score2,..."
+     */
+    private suspend fun loadLearnedBigrams() {
+        learnedBigrams.withLock { data ->
+            if (data.isEmpty()) {
+                learnedBigramsPrefs?.all?.forEach { (key, value) ->
+                    if (value is String && value.isNotBlank()) {
+                        val nextWords = mutableMapOf<String, Int>()
+                        value.split(",").forEach { entry ->
+                            val parts = entry.split(":")
+                            if (parts.size == 2) {
+                                nextWords[parts[0]] = parts[1].toIntOrNull() ?: 1
+                            }
+                        }
+                        if (nextWords.isNotEmpty()) {
+                            data[key] = nextWords
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    /**
+     * Save a learned bigram to SharedPreferences.
+     */
+    private suspend fun saveLearnedBigram(prevWord: String, nextWord: String) {
+        learnedBigrams.withLock { data ->
+            val nextWords = data.getOrPut(prevWord) { mutableMapOf() }
+            val current = nextWords.getOrDefault(nextWord, 0)
+            nextWords[nextWord] = (current + 5).coerceAtMost(MAX_LEARNED_SCORE)
+
+            // Persist to SharedPreferences
+            val serialized = nextWords.entries.joinToString(",") { "${it.key}:${it.value}" }
+            learnedBigramsPrefs?.edit()?.putString(prevWord, serialized)?.apply()
+        }
+    }
+
+    /**
+     * Extract the previous word from text before the cursor.
+     * Handles edge cases like multiple spaces, punctuation, etc.
+     */
+    private fun extractPreviousWord(textBeforeCursor: CharSequence): String? {
+        val text = textBeforeCursor.toString().trimEnd()
+        if (text.isBlank()) return null
+        val lastSpace = text.lastIndexOf(' ')
+        val word = if (lastSpace >= 0) text.substring(lastSpace + 1) else text
+        val cleaned = word.lowercase().trim { !it.isLetter() && it != '\'' }
+        return cleaned.takeIf { it.length >= 1 }
     }
 
     override suspend fun spell(
@@ -100,17 +188,60 @@ class LatinLanguageProvider(context: Context) : SpellingProvider, SuggestionProv
         isPrivateSession: Boolean,
     ): List<SuggestionCandidate> {
         val composingWord = content.composingText.ifBlank { content.currentWordText }.trim().lowercase()
-        if (composingWord.isBlank()) return emptyList()
 
+        // Extract previous word for bigram context
+        val textBeforeCursor = content.textBeforeSelection
+        val previousWord = extractPreviousWord(
+            if (composingWord.isNotBlank() && textBeforeCursor.endsWith(composingWord, ignoreCase = true)) {
+                textBeforeCursor.substring(0, (textBeforeCursor.length - composingWord.length).coerceAtLeast(0))
+            } else {
+                textBeforeCursor
+            }
+        )
+
+        // Get bigram suggestions for the previous word
+        val bigramSuggestions = if (previousWord != null) {
+            getBigramSuggestions(previousWord, composingWord)
+        } else {
+            emptyMap()
+        }
+
+        // If composing word is blank, return pure next-word predictions
+        if (composingWord.isBlank()) {
+            if (previousWord == null || bigramSuggestions.isEmpty()) return emptyList()
+            return bigramSuggestions.entries
+                .sortedByDescending { it.value }
+                .take(maxCandidateCount)
+                .map { (word, score) ->
+                    WordSuggestionCandidate(
+                        text = word,
+                        confidence = (score / 255.0).coerceIn(0.0, 1.0),
+                        isEligibleForAutoCommit = false,
+                        sourceProvider = this,
+                    )
+                }
+        }
+
+        // Composing word is non-blank: blend prefix matches with bigram boosts
         return wordData.withLock { data ->
             data.asSequence()
                 .filter { (candidate, _) -> candidate.startsWith(composingWord) && candidate != composingWord }
+                .map { (candidate, score) ->
+                    // Boost score if this word is a bigram match for the previous word
+                    val bigramScore = bigramSuggestions[candidate] ?: 0
+                    val boostedScore = if (bigramScore > 0) {
+                        (score + (bigramScore * BIGRAM_BOOST_FACTOR).toInt()).coerceAtMost(510)
+                    } else {
+                        score
+                    }
+                    candidate to boostedScore
+                }
                 .sortedByDescending { (_, score) -> score }
                 .take(maxCandidateCount)
                 .map { (candidate, score) ->
                     WordSuggestionCandidate(
                         text = candidate,
-                        confidence = (score / 255.0).coerceIn(0.0, 1.0),
+                        confidence = (score / 510.0).coerceIn(0.0, 1.0),
                         isEligibleForAutoCommit = false,
                         sourceProvider = this,
                     )
@@ -119,14 +250,56 @@ class LatinLanguageProvider(context: Context) : SpellingProvider, SuggestionProv
         }
     }
 
+    /**
+     * Get combined bigram suggestions from both static and learned bigrams.
+     * If composingWord is non-blank, only returns bigrams that start with it.
+     */
+    private suspend fun getBigramSuggestions(previousWord: String, composingWord: String): Map<String, Int> {
+        val prev = previousWord.lowercase()
+        val result = mutableMapOf<String, Int>()
+
+        // Static bigrams
+        bigramData.withLock { data ->
+            data[prev]?.forEach { (word, score) ->
+                if (composingWord.isBlank() || word.startsWith(composingWord)) {
+                    result[word] = (result.getOrDefault(word, 0) + score).coerceAtMost(255)
+                }
+            }
+        }
+
+        // Learned bigrams (higher weight since personalized)
+        learnedBigrams.withLock { data ->
+            data[prev]?.forEach { (word, score) ->
+                if (composingWord.isBlank() || word.startsWith(composingWord)) {
+                    val learnedBoost = (score * 1.2).toInt() // Slightly favor learned patterns
+                    result[word] = (result.getOrDefault(word, 0) + learnedBoost).coerceAtMost(255)
+                }
+            }
+        }
+
+        return result
+    }
+
     override suspend fun notifySuggestionAccepted(subtype: Subtype, candidate: SuggestionCandidate) {
         flogDebug { candidate.toString() }
         val accepted = candidate.text.toString().trim().lowercase()
         if (accepted.isBlank()) return
+
+        // Boost the accepted word's frequency
         wordData.withLock { data ->
             val current = data.getOrDefault(accepted, 0)
             data[accepted] = (current + 1).coerceAtMost(255)
         }
+
+        // Learn bigram: if we have a previous word, save the pair
+        lastCommittedWord?.let { prev ->
+            if (prev.isNotBlank() && prev != accepted) {
+                saveLearnedBigram(prev, accepted)
+            }
+        }
+
+        // Update last committed word
+        lastCommittedWord = accepted
     }
 
     override suspend fun notifySuggestionReverted(subtype: Subtype, candidate: SuggestionCandidate) {

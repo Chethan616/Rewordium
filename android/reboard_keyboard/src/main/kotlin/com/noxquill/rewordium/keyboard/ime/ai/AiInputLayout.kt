@@ -247,7 +247,7 @@ fun AiInputLayout(
                             shape = RoundedCornerShape(6.dp)
                         ) {
                             Text(
-                                "✨ ${aiAppName ?: "AI"}",
+                                "• ${aiAppName ?: "AI"}",
                                 modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp),
                                 fontSize = 10.sp,
                                 fontWeight = FontWeight.Medium,
@@ -259,11 +259,11 @@ fun AiInputLayout(
 
                 // ════════ Mode segmented toggle ════════
                 Surface(
-                    color = surfaceVariant,
-                    shape = RoundedCornerShape(10.dp),
+                    color = surfaceVariant.copy(alpha = 0.5f),
+                    shape = RoundedCornerShape(50),
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(horizontal = 12.dp)
+                        .padding(horizontal = 16.dp)
                 ) {
                     val modeList = if (isInAiApp) {
                         listOf(
@@ -361,8 +361,9 @@ fun AiInputLayout(
                             ) {
                                 // Result card
                                 Card(
-                                    colors = CardDefaults.cardColors(containerColor = surfaceVariant),
-                                    shape = RoundedCornerShape(10.dp),
+                                    colors = CardDefaults.cardColors(containerColor = surfaceColor),
+                                    border = androidx.compose.foundation.BorderStroke(1.dp, outline),
+                                    shape = RoundedCornerShape(16.dp),
                                     modifier = Modifier.weight(1f).fillMaxWidth()
                                 ) {
                                     Column(
@@ -396,7 +397,13 @@ fun AiInputLayout(
                                     ) {
                                         Icon(Icons.Default.Refresh, null, modifier = Modifier.size(15.dp))
                                         Spacer(Modifier.width(4.dp))
-                                        Text("Regenerate", fontSize = 13.sp, fontWeight = FontWeight.Medium)
+                                        Text(
+                                            "Regenerate",
+                                            fontSize = 13.sp,
+                                            fontWeight = FontWeight.Medium,
+                                            maxLines = 1,
+                                            softWrap = false
+                                        )
                                     }
                                     OutlinedButton(
                                         onClick = {
@@ -408,7 +415,13 @@ fun AiInputLayout(
                                         shape = RoundedCornerShape(10.dp),
                                         modifier = Modifier.weight(1f)
                                     ) {
-                                        Text("New Prompt", fontSize = 13.sp, fontWeight = FontWeight.Medium)
+                                        Text(
+                                            "New Prompt",
+                                            fontSize = 13.sp,
+                                            fontWeight = FontWeight.Medium,
+                                            maxLines = 1,
+                                            softWrap = false
+                                        )
                                     }
                                 }
                             }
@@ -534,7 +547,7 @@ fun AiInputLayout(
                     color = surfaceVariant,
                     modifier = Modifier
                         .fillMaxWidth()
-                        .height(FlorisImeSizing.keyboardRowBaseHeight * 0.85f)
+                        .height(FlorisImeSizing.keyboardRowBaseHeight)
                 ) {
                     Row(
                         modifier = Modifier.fillMaxSize().padding(horizontal = 8.dp),
@@ -547,7 +560,13 @@ fun AiInputLayout(
                             keyData = TextKeyData.IME_UI_MODE_TEXT,
                             modifier = Modifier.weight(1f).fillMaxHeight(),
                         ) {
-                            Text("ABC", fontWeight = FontWeight.Bold, fontSize = 14.sp)
+                            Text(
+                                "ABC",
+                                fontWeight = FontWeight.Bold,
+                                fontSize = 14.sp,
+                                maxLines = 1,
+                                softWrap = false
+                            )
                         }
 
                         if (generatedText != null) {
@@ -563,9 +582,14 @@ fun AiInputLayout(
                                                 Toast.makeText(context, toastRes, Toast.LENGTH_SHORT).show()
                                             }
                                             AiMode.APPEND -> {
-                                                val endPos = editorInstance.activeContent.text.length
-                                                editorInstance.setSelection(endPos, endPos)
-                                                editorInstance.commitText("\n\n$text")
+                                                val currentText = editorInstance.activeContent.text
+                                                if (currentText.isNotEmpty()) {
+                                                    val endPos = currentText.length
+                                                    editorInstance.setSelection(endPos, endPos)
+                                                    editorInstance.commitText("\n\n$text")
+                                                } else {
+                                                    editorInstance.commitText(text)
+                                                }
                                                 Toast.makeText(context, R.string.ai__text_inserted, Toast.LENGTH_SHORT).show()
                                             }
                                         }
@@ -577,7 +601,7 @@ fun AiInputLayout(
                                     contentColor = onPrimary
                                 ),
                                 shape = RoundedCornerShape(8.dp),
-                                modifier = Modifier.fillMaxHeight(0.75f)
+                                modifier = Modifier.weight(2.5f).fillMaxHeight(0.75f)
                             ) {
                                 Icon(
                                     when (aiMode) {
@@ -593,7 +617,10 @@ fun AiInputLayout(
                                         AiMode.REWRITE -> "Replace"
                                         AiMode.APPEND -> "Insert"
                                     },
-                                    fontSize = 13.sp, fontWeight = FontWeight.Medium
+                                    fontSize = 13.sp,
+                                    fontWeight = FontWeight.Medium,
+                                    maxLines = 1,
+                                    softWrap = false
                                 )
                             }
 
@@ -605,13 +632,15 @@ fun AiInputLayout(
                                     contentColor = onSurface
                                 ),
                                 shape = RoundedCornerShape(8.dp),
-                                modifier = Modifier.fillMaxHeight(0.75f)
+                                modifier = Modifier.weight(1f).fillMaxHeight(0.75f)
                             ) {
                                 Icon(Icons.Default.Refresh, "Reset", modifier = Modifier.size(15.dp))
                             }
+                        } else {
+                            Spacer(Modifier.weight(3.5f))
                         }
 
-                        Spacer(Modifier.weight(1f))
+                        Spacer(Modifier.width(8.dp))
 
                         // Backspace
                         KeyboardLikeButton(
