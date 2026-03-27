@@ -319,11 +319,11 @@ class _BottomButton extends StatelessWidget {
       child: Container(
         padding: const EdgeInsets.symmetric(vertical: 14),
         decoration: BoxDecoration(
-          color: colorScheme.surfaceContainerHighest,
+          color: colorScheme.surface,
           borderRadius: BorderRadius.circular(16),
           border: Border.all(
-            color: colorScheme.outlineVariant,
-            width: 1.0,
+            color: Colors.red.shade600,
+            width: 1.4,
           ),
         ),
         child: Center(
@@ -331,7 +331,7 @@ class _BottomButton extends StatelessWidget {
             "Close",
             style: textTheme.bodyLarge?.copyWith(
               fontWeight: FontWeight.w500,
-              color: colorScheme.onSurfaceVariant,
+              color: Colors.red.shade600,
             ),
           ),
         ),

@@ -2,7 +2,7 @@
   "$": "ime.extension.theme",
   "meta": {
     "id": "com.noxquill.reboardstyle",
-    "version": "1.0.0",
+    "version": "1.0.17",
     "title": "ReBoard Material You Themes",
     "description": "Original Material You keyboard themes with Gboard-inspired shapes, Material 3 dynamic colors, and proper surface hierarchy",
     "maintainers": [
@@ -41,7 +41,10 @@
       "authors": [
         "NoxQuill"
       ],
-      "isNight": true
+      "isNight": true,
+      "materialYouFlags": {
+        "usePitchBlack": true
+      }
     },
     {
       "id": "reboard_material_amoled",
@@ -49,7 +52,10 @@
       "authors": [
         "NoxQuill"
       ],
-      "isNight": true
+      "isNight": true,
+      "materialYouFlags": {
+        "usePitchBlack": true
+      }
     },
     {
       "id": "reboard_material_amoled_borderless",
@@ -57,7 +63,10 @@
       "authors": [
         "NoxQuill"
       ],
-      "isNight": true
+      "isNight": true,
+      "materialYouFlags": {
+        "usePitchBlack": true
+      }
     }
   ]
 }

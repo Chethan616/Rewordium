@@ -59,20 +59,22 @@ data class MaterialYouFlags(
     val contrastLevel: Contrast = Contrast.Default,
     @Serializable(with = SpecVersionSerializer::class)
     val specVersion: ColorSpec.SpecVersion = ColorSpec.SpecVersion.Default,
+    val usePitchBlack: Boolean = false,
 )
 
 val MaterialYouFlagsSaver = Saver<MaterialYouFlags, String>(
     save = { flags ->
         // Simple ordinal-based serialization
-        "${flags.paletteStyle.ordinal},${flags.contrastLevel.ordinal},${flags.specVersion.ordinal}"
+        "${flags.paletteStyle.ordinal},${flags.contrastLevel.ordinal},${flags.specVersion.ordinal},${flags.usePitchBlack}"
     },
     restore = { str ->
         val parts = str.split(",")
-        if (parts.size == 3) {
+        if (parts.size == 3 || parts.size == 4) {
             MaterialYouFlags(
                 paletteStyle = PaletteStyle.entries.getOrElse(parts[0].toIntOrNull() ?: 0) { PaletteStyle.Neutral },
                 contrastLevel = Contrast.entries.getOrElse(parts[1].toIntOrNull() ?: 0) { Contrast.Default },
-                specVersion = ColorSpec.SpecVersion.entries.getOrElse(parts[2].toIntOrNull() ?: 0) { ColorSpec.SpecVersion.Default }
+                specVersion = ColorSpec.SpecVersion.entries.getOrElse(parts[2].toIntOrNull() ?: 0) { ColorSpec.SpecVersion.Default },
+                usePitchBlack = if (parts.size >= 4) parts[3].toBooleanStrictOrNull() ?: false else false,
             )
         } else {
             MaterialYouFlags()

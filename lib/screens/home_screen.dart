@@ -52,14 +52,14 @@ class _HomeScreenState extends State<HomeScreen> {
     final textTheme = Theme.of(context).textTheme;
     final isDarkMode = Theme.of(context).brightness == Brightness.dark;
     final themeProvider = Provider.of<ThemeProvider>(context);
+    final useDynamicColors = themeProvider.useDynamicColors;
     final r = Responsive.of(context);
-    final useOriginalThemeProfileUi = !themeProvider.useDynamicColors;
-    final heroBackgroundColor = useOriginalThemeProfileUi
-      ? (isDarkMode ? const Color(0xFF1E1E1E) : Colors.white)
-      : colorScheme.secondaryContainer;
-    final heroAccentColor = useOriginalThemeProfileUi
-      ? (isDarkMode ? const Color(0xFFAFFF99) : colorScheme.primary)
-      : colorScheme.onSecondaryContainer;
+    final heroBackgroundColor = useDynamicColors
+      ? colorScheme.secondaryContainer
+      : (isDarkMode ? const Color(0xFF1E1E1E) : Colors.white);
+    final heroAccentColor = useDynamicColors
+      ? colorScheme.onSecondaryContainer
+      : (isDarkMode ? const Color(0xFFAFFF99) : colorScheme.primary);
 
     return ExpressiveRefreshIndicator(
       onRefresh: () async {
@@ -168,7 +168,7 @@ class _HomeScreenState extends State<HomeScreen> {
             ),
             SizedBox(height: r.h(4)),
             _buildSectionTitle(context, "Your Tools"),
-            const _ToolsRow(),
+            _ToolsRow(useDynamicColors: useDynamicColors),
             SizedBox(height: r.h(4)),
             _buildSectionTitle(context, "Setup Status"),
             const KeyboardStatusCard(),
@@ -192,22 +192,35 @@ class _HomeScreenState extends State<HomeScreen> {
 }
 
 class _ToolsRow extends StatelessWidget {
-  const _ToolsRow();
+  const _ToolsRow({required this.useDynamicColors});
+
+  final bool useDynamicColors;
 
   @override
   Widget build(BuildContext context) {
     final r = Responsive.of(context);
     final colorScheme = Theme.of(context).colorScheme;
-    final toolColors = <Color>[
-      colorScheme.primary,
-      colorScheme.secondary,
-      colorScheme.tertiary,
-      colorScheme.error,
-      colorScheme.primaryContainer,
-      colorScheme.secondaryContainer,
-      colorScheme.tertiaryContainer,
-      colorScheme.inversePrimary,
-    ];
+    final toolColors = useDynamicColors
+        ? <Color>[
+            colorScheme.primary,
+            colorScheme.secondary,
+            colorScheme.tertiary,
+            colorScheme.error,
+            colorScheme.primaryContainer,
+            colorScheme.secondaryContainer,
+            colorScheme.tertiaryContainer,
+            colorScheme.inversePrimary,
+          ]
+        : <Color>[
+            Colors.green,
+            Colors.red,
+            Colors.blue,
+            Colors.purple,
+            Colors.orange,
+            Colors.teal,
+            Colors.deepPurple,
+            const Color(0xFF7C3AED),
+          ];
 
     return SizedBox(
       height: r.h(150),
@@ -320,7 +333,7 @@ class _ToolsRow extends StatelessWidget {
             title: "Import File",
             subtitle: "PDF, DOCX, TXT",
             icon: CupertinoIcons.doc_on_doc,
-            color: colorScheme.primary,
+            color: useDynamicColors ? colorScheme.primary : const Color(0xFF1E3A8A),
             r: r,
             onTap: () async {
               try {
@@ -355,7 +368,6 @@ class _ToolsRow extends StatelessWidget {
     required Color color,
     required ResponsiveData r,
   }) {
-    final colorScheme = Theme.of(context).colorScheme;
     final textTheme = Theme.of(context).textTheme;
 
     return FadeInRight(
@@ -392,7 +404,7 @@ class _ToolsRow extends StatelessWidget {
           margin: r.all(7),
           padding: r.all(10),
           decoration: BoxDecoration(
-            color: color,
+            color: color.withValues(alpha: 0.9),
             borderRadius: BorderRadius.circular(r.r(20)),
             boxShadow: [
               BoxShadow(
@@ -449,7 +461,6 @@ class _ToolsRow extends StatelessWidget {
     required ResponsiveData r,
     required VoidCallback onTap,
   }) {
-    final colorScheme = Theme.of(context).colorScheme;
     final textTheme = Theme.of(context).textTheme;
 
     return FadeInRight(
@@ -461,7 +472,7 @@ class _ToolsRow extends StatelessWidget {
           margin: r.all(7),
           padding: r.all(10),
           decoration: BoxDecoration(
-            color: color,
+            color: color.withValues(alpha: 0.9),
             borderRadius: BorderRadius.circular(r.r(20)),
             boxShadow: [
               BoxShadow(

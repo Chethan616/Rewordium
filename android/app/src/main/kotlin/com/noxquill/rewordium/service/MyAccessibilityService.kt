@@ -331,7 +331,9 @@ class MyAccessibilityService : AccessibilityService(), BubbleInteractionListener
             "com.touchtype.swiftkey",
             "com.microsoft.swiftkey",
             // Github
-            "com.github.android"
+            "com.github.android",
+            // for previews
+            "com.oneplus.note"
         )
     }
 

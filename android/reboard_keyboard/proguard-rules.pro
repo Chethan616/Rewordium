@@ -184,6 +184,11 @@
 }
 -keep class com.materialkolor.dynamiccolor.** { *; }
 
+# --- Android Native Dynamic Color APIs (Material3 Compose) ---
+# Used for system wallpaper-derived colors on Android 12+ (same as Gboard/Essentials)
+-keep class androidx.compose.material3.DynamicTonalPaletteKt { *; }
+-keep class androidx.compose.material3.ColorSchemeKt { *; }
+
 # --- Snygg Dynamic Color Values (system color adaption) ---
 -keep class org.florisboard.lib.snygg.value.SnyggDynamicColorValue { *; }
 -keep class org.florisboard.lib.snygg.value.SnyggDynamicColorDarkColorValue { *; }

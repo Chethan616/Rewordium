@@ -292,23 +292,14 @@ class _GrammarPageState extends State<GrammarPage> {
               ),
             ),
             // Main content
-            if (hasResult)
-              Expanded(
-                child: Padding(
-                  padding: r.fromLTRB(16, 8, 16, 0),
-                  child: _buildResultView(colorScheme),
-                ),
-              )
-            else ...[  
-              Padding(
+            Expanded(
+              child: Padding(
                 padding: r.fromLTRB(16, 8, 16, 0),
-                child: SizedBox(
-                  height: r.inputFieldHeight,
-                  child: _buildInputArea(colorScheme),
-                ),
+                child: hasResult
+                    ? _buildResultView(colorScheme)
+                    : _buildInputArea(colorScheme),
               ),
-              const Spacer(),
-            ],
+            ),
             // Bottom bar
             _buildBottomBar(r, colorScheme),
           ],
