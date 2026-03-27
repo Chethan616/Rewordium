@@ -25,6 +25,7 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.staticCompositionLocalOf
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.TextStyle
 import com.noxquill.rewordium.keyboard.app.FlorisPreferenceStore
@@ -48,9 +49,7 @@ fun FlorisImeTheme(content: @Composable () -> Unit) {
     val context = LocalContext.current
     val keyboardManager by context.keyboardManager()
     val themeManager by context.themeManager()
-
     val prefs by FlorisPreferenceStore
-    val accentColor by prefs.theme.accentColor.observeAsState()
 
     val activeThemeInfo by themeManager.activeThemeInfo.collectAsState()
     val activeConfig = remember(activeThemeInfo) { activeThemeInfo.config }
@@ -75,7 +74,7 @@ fun FlorisImeTheme(content: @Composable () -> Unit) {
         ) {
             ProvideSnyggTheme(
                 snyggTheme = snyggTheme,
-                dynamicAccentColor = accentColor,
+                dynamicAccentColor = Color.Unspecified,
                 fontSizeMultiplier = fontSizeMultiplier,
                 assetResolver = assetResolver,
                 rootAttributes = attributes,

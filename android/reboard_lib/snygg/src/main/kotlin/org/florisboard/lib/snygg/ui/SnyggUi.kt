@@ -37,6 +37,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.DefaultShadowColor
 import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.graphics.isSpecified
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalFontFamilyResolver
 import androidx.compose.ui.text.font.FontFamily
@@ -46,7 +47,6 @@ import androidx.compose.ui.unit.sp
 import androidx.compose.ui.unit.takeOrElse
 import com.materialkolor.dynamicColorScheme
 import kotlinx.coroutines.runBlocking
-import org.florisboard.lib.color.GboardStyleColorProcessor
 import org.florisboard.lib.color.MaterialYouFlags
 import org.florisboard.lib.color.systemAccentOrDefault
 import org.florisboard.lib.snygg.CompiledFontFamilyData
@@ -154,26 +154,70 @@ fun ProvideSnyggTheme(
     materialYouFlags: MaterialYouFlags = MaterialYouFlags(),
     content: @Composable () -> Unit,
 ) {
-    val (colorPalette, contrastLevel, specVersion) = materialYouFlags
-    val accentColor = systemAccentOrDefault(dynamicAccentColor)
-    val lightScheme = remember(accentColor, colorPalette, contrastLevel, specVersion) {
-        dynamicColorScheme(
-            primary = accentColor,
-            isDark = false,
-            style = colorPalette,
-            contrastLevel = contrastLevel.value,
-            specVersion = specVersion
-        )
+    val usePitchBlack = materialYouFlags.usePitchBlack
+    val context = LocalContext.current
+
+    // Use Android's native dynamic color schemes on API 31+ (Android 12+)
+    // This produces the exact same wallpaper-derived colors as Gboard and Essentials keyboard.
+    // Fall back to materialkolor for older Android versions.
+    val useNativeDynamicColors = android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.S
+        && dynamicAccentColor == Color.Unspecified
+
+    val lightScheme = if (useNativeDynamicColors) {
+        androidx.compose.material3.dynamicLightColorScheme(context)
+    } else {
+        val colorPalette = materialYouFlags.paletteStyle
+        val contrastLevel = materialYouFlags.contrastLevel
+        val specVersion = materialYouFlags.specVersion
+        val accentColor = systemAccentOrDefault(dynamicAccentColor)
+        remember(accentColor, colorPalette, contrastLevel, specVersion) {
+            dynamicColorScheme(
+                primary = accentColor,
+                isDark = false,
+                style = colorPalette,
+                contrastLevel = contrastLevel.value,
+                specVersion = specVersion
+            )
+        }
     }
-    val darkScheme = remember(accentColor, colorPalette, contrastLevel, specVersion) {
-        val raw = dynamicColorScheme(
-            primary = accentColor,
-            isDark = true,
-            style = colorPalette,
-            contrastLevel = contrastLevel.value,
-            specVersion = specVersion
-        )
-        GboardStyleColorProcessor.process(raw)
+    val darkScheme = if (useNativeDynamicColors) {
+        val nativeDark = androidx.compose.material3.dynamicDarkColorScheme(context)
+        if (usePitchBlack) {
+            nativeDark.copy(
+                background = Color.Black,
+                surface = Color.Black,
+                surfaceContainer = Color.Black,
+                surfaceContainerLowest = Color.Black,
+                surfaceContainerLow = Color.Black,
+            )
+        } else {
+            nativeDark
+        }
+    } else {
+        val colorPalette = materialYouFlags.paletteStyle
+        val contrastLevel = materialYouFlags.contrastLevel
+        val specVersion = materialYouFlags.specVersion
+        val accentColor = systemAccentOrDefault(dynamicAccentColor)
+        remember(accentColor, colorPalette, contrastLevel, specVersion, usePitchBlack) {
+            val dark = dynamicColorScheme(
+                primary = accentColor,
+                isDark = true,
+                style = colorPalette,
+                contrastLevel = contrastLevel.value,
+                specVersion = specVersion
+            )
+            if (usePitchBlack) {
+                dark.copy(
+                    background = Color.Black,
+                    surface = Color.Black,
+                    surfaceContainer = Color.Black,
+                    surfaceContainerLowest = Color.Black,
+                    surfaceContainerLow = Color.Black,
+                )
+            } else {
+                dark
+            }
+        }
     }
 
     val resolver = LocalFontFamilyResolver.current

@@ -275,10 +275,10 @@ fun ComputingEvaluator.computeImageVector(data: KeyData): ImageVector? {
         }
         KeyCode.SHIFT -> {
             when (evaluator.state.inputShiftState) {
-                InputShiftState.UNSHIFTED -> Icons.Default.ArrowUpward
-                InputShiftState.SHIFTED_MANUAL -> Icons.Default.ArrowUpward
-                InputShiftState.SHIFTED_AUTOMATIC -> Icons.Default.ArrowUpward
-                InputShiftState.CAPS_LOCK -> Icons.Default.KeyboardCapslock
+                InputShiftState.UNSHIFTED -> this.context()?.vectorResource(id = R.drawable.ic_keyboard_shift)
+                InputShiftState.SHIFTED_MANUAL -> this.context()?.vectorResource(id = R.drawable.ic_keyboard_shift_active)
+                InputShiftState.SHIFTED_AUTOMATIC -> this.context()?.vectorResource(id = R.drawable.ic_keyboard_shift_active)
+                InputShiftState.CAPS_LOCK -> this.context()?.vectorResource(id = R.drawable.ic_keyboard_shift_lock)
             }
         }
         KeyCode.SPACE, KeyCode.CJK_SPACE -> {
