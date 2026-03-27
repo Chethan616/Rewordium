@@ -75,7 +75,11 @@ class GlideTypingManager(context: Context) : GlideTypingGesture.Listener {
      */
     fun setLayout(keys: List<TextKey>) {
         if (keys.isNotEmpty()) {
-            glideTypingClassifier.setLayout(keys, subtypeManager.activeSubtype)
+            val subtype = subtypeManager.activeSubtype
+            glideTypingClassifier.setLayout(keys, subtype)
+            if (!glideTypingClassifier.ready) {
+                glideTypingClassifier.setWordData(subtype)
+            }
         }
     }
 
@@ -89,8 +93,11 @@ class GlideTypingManager(context: Context) : GlideTypingGesture.Listener {
      */
     private fun updateSuggestionsAsync(maxSuggestionsToShow: Int, commit: Boolean, callback: (Boolean) -> Unit) {
         if (!glideTypingClassifier.ready) {
-            callback.invoke(false)
-            return
+            glideTypingClassifier.setWordData(subtypeManager.activeSubtype)
+            if (!glideTypingClassifier.ready) {
+                callback.invoke(false)
+                return
+            }
         }
 
         scope.launch(Dispatchers.Default) {

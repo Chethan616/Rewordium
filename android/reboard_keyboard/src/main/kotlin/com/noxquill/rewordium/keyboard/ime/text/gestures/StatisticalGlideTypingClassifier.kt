@@ -133,7 +133,7 @@ class StatisticalGlideTypingClassifier(context: Context) : GlideTypingClassifier
             keys.add(it)
         }
         layoutSubtype = subtype
-        distanceThresholdSquared = (keyViews.first().visibleBounds.width / 4).toInt()
+        distanceThresholdSquared = (keyViews.first().visibleBounds.width / 8).toInt()
         distanceThresholdSquared *= distanceThresholdSquared
 
         if (

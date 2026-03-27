@@ -42,7 +42,7 @@ class GlideTypingGesture {
 
         companion object {
             private const val MAX_DETECT_TIME = 500
-            private const val VELOCITY_THRESHOLD = 0.10 // dp per ms
+            private const val VELOCITY_THRESHOLD = 0.05 // dp per ms
             private val SWIPE_GESTURE_KEYS = arrayOf(KeyCode.DELETE, KeyCode.SHIFT, KeyCode.SPACE, KeyCode.CJK_SPACE)
         }
 
@@ -88,7 +88,7 @@ class GlideTypingGesture {
                             val dist = ViewUtils.px2dp(pointerData.positions[0].dist(pos))
                             val time = (System.currentTimeMillis() - pointerData.startTime) + 1
                             flogDebug { "Distance glided: $dist dp with velocity: ${dist / time} dp/ms" }
-                            if (dist > keySize && (dist / time) > VELOCITY_THRESHOLD && (initialKey?.computedData?.code !in SWIPE_GESTURE_KEYS)) {
+                            if (dist > (keySize * 0.5f) && (dist / time) > VELOCITY_THRESHOLD && (initialKey?.computedData?.code !in SWIPE_GESTURE_KEYS)) {
                                 pointerData.isActuallyGesture = true
                                 // Let listener know all those points need to be added.
                                 pointerData.positions.take(pointerData.positions.size - 1).forEach { point ->

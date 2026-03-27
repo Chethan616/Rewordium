@@ -184,11 +184,11 @@ class AIManager(private val context: Context) {
                     val errorBody = response.body?.string() ?: ""
                     Log.e(TAG, "API request failed: $errorCode, body: $errorBody")
                     val errorMessage = when (errorCode) {
-                        401 -> "⚠️ Invalid API key"
-                        429 -> "⏳ Rate limit - wait a moment"
-                        403 -> "🚫 API access forbidden"
-                        500, 502, 503, 504 -> "🔧 AI service unavailable"
-                        else -> "❌ Error $errorCode"
+                        401 -> "Invalid API key"
+                        429 -> "Rate limit — try again later"
+                        403 -> "API access forbidden"
+                        500, 502, 503, 504 -> "AI service unavailable"
+                        else -> "Error $errorCode"
                     }
                     return@withContext Result.failure(AIException(errorMessage))
                 }
@@ -212,10 +212,10 @@ class AIManager(private val context: Context) {
                 Log.e(TAG, "Error making API request", e)
                 val errorMessage = when {
                     e.message?.contains("timeout", ignoreCase = true) == true -> 
-                        "⏱️ Request timed out"
+                        "Request timed out"
                     e.message?.contains("Unable to resolve host", ignoreCase = true) == true ->
-                        "📶 No internet connection"
-                    else -> "❌ Network error"
+                        "No internet connection"
+                    else -> "Network error"
                 }
                 Result.failure(AIException(errorMessage))
             }
@@ -266,12 +266,12 @@ class AIManager(private val context: Context) {
                 val errorBody = response.body?.string() ?: ""
                 Log.e(TAG, "Gemini API request failed: $errorCode, body: $errorBody")
                 val errorMessage = when (errorCode) {
-                    400 -> "⚠️ Invalid request: check model"
-                    401, 403 -> "⚠️ Invalid Gemini API key"
-                    429 -> "⏳ Gemini rate limit - wait"
-                    404 -> "❓ Model not found: ${config.model}"
-                    500, 502, 503, 504 -> "🔧 Gemini unavailable"
-                    else -> "❌ Gemini error $errorCode"
+                    400 -> "Invalid request: check model"
+                    401, 403 -> "Invalid Gemini API key"
+                    429 -> "Gemini rate limit — try later"
+                    404 -> "Model not found: ${config.model}"
+                    500, 502, 503, 504 -> "Gemini unavailable"
+                    else -> "Gemini error $errorCode"
                 }
                 return Result.failure(AIException(errorMessage))
             }
@@ -303,13 +303,13 @@ class AIManager(private val context: Context) {
      */
     suspend fun rewriteText(text: String, action: AIAction = AIAction.REWRITE): Result<String> {
         if (!isUserLoggedIn()) {
-            return Result.failure(AIException("⚠️ Please log in to use AI features"))
+            return Result.failure(AIException("Please log in to use AI features"))
         }
 
         val config = getConfig()
         
         if (!config.hasValidApiKey()) {
-            return Result.failure(AIException("⚠️ No API key. Go to Settings → Advanced AI"))
+            return Result.failure(AIException("No API key. Go to Settings → Advanced AI"))
         }
         
         if (text.isBlank()) {
@@ -328,13 +328,13 @@ class AIManager(private val context: Context) {
      */
     suspend fun rewriteTextWithPrompt(fullPrompt: String, action: AIAction = AIAction.REWRITE): Result<String> {
         if (!isUserLoggedIn()) {
-            return Result.failure(AIException("⚠️ Please log in to use AI features"))
+            return Result.failure(AIException("Please log in to use AI features"))
         }
 
         val config = getConfig()
         
         if (!config.hasValidApiKey()) {
-            return Result.failure(AIException("⚠️ No API key. Go to Settings → Advanced AI"))
+            return Result.failure(AIException("No API key. Go to Settings → Advanced AI"))
         }
         
         if (fullPrompt.isBlank()) {
@@ -362,13 +362,13 @@ You're helping improve English text, not translating."""
      */
     suspend fun continueText(existingText: String, persona: String = "", task: String = "", length: String = ""): Result<String> {
         if (!isUserLoggedIn()) {
-            return Result.failure(AIException("⚠️ Please log in to use AI features"))
+            return Result.failure(AIException("Please log in to use AI features"))
         }
 
         val config = getConfig()
         
         if (!config.hasValidApiKey()) {
-            return Result.failure(AIException("⚠️ No API key. Go to Settings → Advanced AI"))
+            return Result.failure(AIException("No API key. Go to Settings → Advanced AI"))
         }
         
         if (existingText.isBlank()) {
@@ -404,13 +404,13 @@ You're adding to existing text, not replacing it."""
      */
     suspend fun continueTextWithAction(existingText: String, action: AIAction = AIAction.EXPAND): Result<String> {
         if (!isUserLoggedIn()) {
-            return Result.failure(AIException("⚠️ Please log in to use AI features"))
+            return Result.failure(AIException("Please log in to use AI features"))
         }
 
         val config = getConfig()
         
         if (!config.hasValidApiKey()) {
-            return Result.failure(AIException("⚠️ No API key. Go to Settings → Advanced AI"))
+            return Result.failure(AIException("No API key. Go to Settings → Advanced AI"))
         }
         
         if (existingText.isBlank()) {
@@ -492,13 +492,13 @@ CRITICAL RULES:
      */
     suspend fun enhancePrompt(prompt: String, aiAppName: String? = null): Result<String> {
         if (!isUserLoggedIn()) {
-            return Result.failure(AIException("⚠️ Please log in to use AI features"))
+            return Result.failure(AIException("Please log in to use AI features"))
         }
 
         val config = getConfig()
         
         if (!config.hasValidApiKey()) {
-            return Result.failure(AIException("⚠️ No API key. Go to Settings → Advanced AI"))
+            return Result.failure(AIException("No API key. Go to Settings → Advanced AI"))
         }
         
         if (prompt.isBlank()) {
