@@ -150,6 +150,9 @@
     <string name="ai__prompt_enhancer_hint">Write your prompt, then tap Enhance</string>
     <string name="ai__prompt_enhancer_replaced">Enhanced prompt applied</string>
     <string name="ai__mode_enhance">Enhance</string>
+    <string name="ai__mode_context">Context</string>
+    <string name="ai__context_mode_action">Polish in Context</string>
+    <string name="ai__context_mode_hint">Keep your voice, improve grammar and clarity</string>
 
     <!-- Incognito mode strings -->
     <string name="incognito_mode__toast_after_enabled">Incognito mode is now enabled\n\n{app_name} will not learn words from your input while this mode is active</string>

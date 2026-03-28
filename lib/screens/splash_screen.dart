@@ -5,11 +5,9 @@ import 'package:m3e_collection/m3e_collection.dart';
 import 'dart:async';
 
 import '../providers/auth_provider.dart';
-import '../services/play_integrity_service.dart';
 import '../services/force_update_service.dart';
 import '../services/in_app_update_service.dart';
 import 'auth/login_screen.dart';
-import 'integrity_blocked_screen.dart';
 
 class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});
@@ -27,8 +25,6 @@ class _SplashScreenState extends State<SplashScreen>
   late Animation<double> _lottieFade;
   late Animation<double> _lottieScale;
   String _statusText = '';
-  bool _integrityPassed = true;
-  String _failReason = '';
 
   @override
   void initState() {
@@ -68,22 +64,8 @@ class _SplashScreenState extends State<SplashScreen>
   // ── Startup work ──────────────────────────────
 
   Future<void> _doStartup() async {
-    _setStatus('Verifying installation...');
-
-    // Play Integrity check — uses a 24-hour cache so it is fast on subsequent
-    // cold starts (typically < 50 ms).  Only hits the network on first open
-    // after install or app update.
-    try {
-      _integrityPassed = await PlayIntegrityService.checkIntegrityWithCache();
-      if (!_integrityPassed) {
-        final verdict = await PlayIntegrityService.getIntegrityVerdict();
-        _failReason =
-            verdict?['reason'] as String? ?? 'Installation verification failed.';
-      }
-    } catch (_) {
-      // On unexpected error, allow the app through (network issue ≠ tampered).
-      _integrityPassed = true;
-    }
+    _setStatus('Preparing app...');
+    await Future<void>.delayed(const Duration(milliseconds: 200));
 
     _setStatus('');
   }
@@ -96,19 +78,6 @@ class _SplashScreenState extends State<SplashScreen>
 
   void _navigate() {
     if (!mounted) return;
-
-    if (!_integrityPassed) {
-      Navigator.of(context).pushReplacement(
-        PageRouteBuilder(
-          pageBuilder: (_, __, ___) =>
-              IntegrityBlockedScreen(reason: _failReason),
-          transitionDuration: const Duration(milliseconds: 400),
-          transitionsBuilder: (_, anim, __, child) =>
-              FadeTransition(opacity: anim, child: child),
-        ),
-      );
-      return;
-    }
 
     // Integrity passed — route based on auth state.
     final authProvider = Provider.of<AuthProvider>(context, listen: false);

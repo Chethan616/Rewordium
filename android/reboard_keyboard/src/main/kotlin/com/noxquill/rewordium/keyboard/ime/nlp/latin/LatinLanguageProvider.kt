@@ -40,7 +40,9 @@ class LatinLanguageProvider(context: Context) : SpellingProvider, SuggestionProv
         const val ProviderId = "org.florisboard.nlp.providers.latin"
         private const val LEARNED_BIGRAMS_PREFS = "reboard_learned_bigrams"
         private const val MAX_LEARNED_SCORE = 200
-        private const val BIGRAM_BOOST_FACTOR = 1.5
+        private const val BIGRAM_BOOST_FACTOR = 2.0
+        private const val RECENCY_BOOST = 30
+        private const val MAX_RECENCY_WORDS = 20
     }
 
     override val providerId = ProviderId
@@ -62,6 +64,9 @@ class LatinLanguageProvider(context: Context) : SpellingProvider, SuggestionProv
 
     // Track the last committed word for bigram learning
     private var lastCommittedWord: String? = null
+
+    // Recently typed words for recency boost (LRU-style)
+    private val recentWords = ArrayDeque<String>(MAX_RECENCY_WORDS + 5)
 
     override suspend fun create() {
         // No-op
@@ -222,32 +227,88 @@ class LatinLanguageProvider(context: Context) : SpellingProvider, SuggestionProv
                 }
         }
 
-        // Composing word is non-blank: blend prefix matches with bigram boosts
+        // Composing word is non-blank: blend prefix matches with bigram + recency boosts
         return wordData.withLock { data ->
+            val results = mutableListOf<Pair<String, Int>>()
+
+            // 1. Exact match always first (auto-complete the current word)
+            val exactScore = data[composingWord]
+            if (exactScore != null) {
+                val bigramScore = bigramSuggestions[composingWord] ?: 0
+                results.add(composingWord to (exactScore + bigramScore + 100).coerceAtMost(600))
+            }
+
+            // 2. Prefix matches
             data.asSequence()
                 .filter { (candidate, _) -> candidate.startsWith(composingWord) && candidate != composingWord }
-                .map { (candidate, score) ->
-                    // Boost score if this word is a bigram match for the previous word
+                .forEach { (candidate, score) ->
                     val bigramScore = bigramSuggestions[candidate] ?: 0
+                    val recencyBoost = if (candidate in recentWords) RECENCY_BOOST else 0
                     val boostedScore = if (bigramScore > 0) {
-                        (score + (bigramScore * BIGRAM_BOOST_FACTOR).toInt()).coerceAtMost(510)
+                        (score + (bigramScore * BIGRAM_BOOST_FACTOR).toInt() + recencyBoost).coerceAtMost(600)
                     } else {
-                        score
+                        (score + recencyBoost).coerceAtMost(600)
                     }
-                    candidate to boostedScore
+                    results.add(candidate to boostedScore)
                 }
+
+            // 3. Fuzzy matches (edit distance 1) if we have fewer than maxCandidateCount
+            if (results.size < maxCandidateCount && composingWord.length >= 3) {
+                val existingWords = results.map { it.first }.toSet()
+                data.asSequence()
+                    .filter { (candidate, _) ->
+                        candidate !in existingWords &&
+                        candidate.length in (composingWord.length - 1)..(composingWord.length + 1) &&
+                        isEditDistance1(composingWord, candidate)
+                    }
+                    .take(maxCandidateCount - results.size)
+                    .forEach { (candidate, score) ->
+                        val bigramScore = bigramSuggestions[candidate] ?: 0
+                        // Fuzzy matches get a slight penalty
+                        val penalizedScore = ((score * 0.8).toInt() + (bigramScore * BIGRAM_BOOST_FACTOR * 0.5).toInt()).coerceAtMost(400)
+                        results.add(candidate to penalizedScore)
+                    }
+            }
+
+            results
                 .sortedByDescending { (_, score) -> score }
                 .take(maxCandidateCount)
                 .map { (candidate, score) ->
                     WordSuggestionCandidate(
                         text = candidate,
-                        confidence = (score / 510.0).coerceIn(0.0, 1.0),
+                        confidence = (score / 600.0).coerceIn(0.0, 1.0),
                         isEligibleForAutoCommit = false,
                         sourceProvider = this,
                     )
                 }
-                .toList()
         }
+    }
+
+    /**
+     * Check if two words have edit distance of exactly 1
+     * (one substitution, insertion, or deletion apart).
+     * Optimized: avoids full DP matrix, bails early.
+     */
+    private fun isEditDistance1(a: String, b: String): Boolean {
+        val lenDiff = a.length - b.length
+        if (lenDiff < -1 || lenDiff > 1) return false
+        if (a.length == b.length) {
+            // Substitution: exactly one char differs
+            var diffs = 0
+            for (i in a.indices) {
+                if (a[i] != b[i]) { diffs++; if (diffs > 1) return false }
+            }
+            return diffs == 1
+        }
+        // Insertion or deletion
+        val longer = if (a.length > b.length) a else b
+        val shorter = if (a.length > b.length) b else a
+        var i = 0; var j = 0; var diffs = 0
+        while (i < longer.length && j < shorter.length) {
+            if (longer[i] != shorter[j]) { diffs++; if (diffs > 1) return false; i++ }
+            else { i++; j++ }
+        }
+        return true
     }
 
     /**
@@ -288,8 +349,13 @@ class LatinLanguageProvider(context: Context) : SpellingProvider, SuggestionProv
         // Boost the accepted word's frequency
         wordData.withLock { data ->
             val current = data.getOrDefault(accepted, 0)
-            data[accepted] = (current + 1).coerceAtMost(255)
+            data[accepted] = (current + 2).coerceAtMost(255)
         }
+
+        // Track recency
+        recentWords.remove(accepted)
+        recentWords.addFirst(accepted)
+        if (recentWords.size > MAX_RECENCY_WORDS) recentWords.removeLast()
 
         // Learn bigram: if we have a previous word, save the pair
         lastCommittedWord?.let { prev ->

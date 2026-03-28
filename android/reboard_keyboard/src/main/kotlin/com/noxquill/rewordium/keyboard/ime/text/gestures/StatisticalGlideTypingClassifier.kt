@@ -89,13 +89,13 @@ class StatisticalGlideTypingClassifier(context: Context) : GlideTypingClassifier
          * representing the same word. It's expressed as a factor of key radius as it's applied to
          * un-normalized gestures and is therefore dependent on the size of the keys/keyboard.
          */
-        private const val LOCATION_STD = 0.5109f
+        private const val LOCATION_STD = 0.58f
 
         /**
          * This is a very small cache that caches suggestions, so that they aren't recalculated e.g when releasing
          * a pointer when the suggestions were already calculated. Avoids a lot of micro pauses.
          */
-        private const val SUGGESTION_CACHE_SIZE = 12
+        private const val SUGGESTION_CACHE_SIZE = 24
 
         /**
          * For multiple subtypes, the pruner is cached.
@@ -323,8 +323,8 @@ class StatisticalGlideTypingClassifier(context: Context) : GlideTypingClassifier
             val startY = userGesture.getFirstY()
             val endX = userGesture.getLastX()
             val endY = userGesture.getLastY()
-            val startKeys = findNClosestKeys(startX, startY, 3, keys)
-            val endKeys = findNClosestKeys(endX, endY, 3, keys)
+            val startKeys = findNClosestKeys(startX, startY, 4, keys)
+            val endKeys = findNClosestKeys(endX, endY, 4, keys)
             for (startKey in startKeys) {
                 for (endKey in endKeys) {
                     val keyPair = Pair(startKey, endKey)

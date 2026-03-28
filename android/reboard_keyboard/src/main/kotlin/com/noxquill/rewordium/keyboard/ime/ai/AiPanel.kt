@@ -38,11 +38,12 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.AutoFixHigh
+import androidx.compose.material.icons.filled.ArrowDownward
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Refresh
-import androidx.compose.material.icons.filled.VerticalAlignBottom
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
@@ -129,7 +130,9 @@ fun AiPanel(
     var generatedText   by remember { mutableStateOf<String?>(null) }
     var errorMessage    by remember { mutableStateOf<String?>(null) }
     var wasUsingAllText by remember { mutableStateOf(false) }
-    var aiMode          by remember { mutableStateOf(AiMode.REWRITE) }
+    var aiMode          by remember(isInAiApp) {
+        mutableStateOf(if (isInAiApp) AiMode.ENHANCE else AiMode.CONTEXT)
+    }
 
     // ── API-key toast ──
     LaunchedEffect(showApiKeySnackbar) {
@@ -223,14 +226,17 @@ fun AiPanel(
                         )
                     } else {
                         listOf(
+                            AiMode.CONTEXT to R.string.ai__mode_context,
                             AiMode.REWRITE to R.string.ai__mode_rewrite,
                             AiMode.APPEND to R.string.ai__mode_append
                         )
                     }
-                    // Auto-select Enhance mode when in AI app and nothing selected yet
+                    // Keep mode aligned with app context.
                     LaunchedEffect(isInAiApp) {
                         if (isInAiApp && aiMode != AiMode.ENHANCE) {
                             aiMode = AiMode.ENHANCE
+                        } else if (!isInAiApp && aiMode == AiMode.ENHANCE) {
+                            aiMode = AiMode.CONTEXT
                         }
                     }
                     Row(modifier = Modifier.padding(3.dp), horizontalArrangement = Arrangement.spacedBy(3.dp)) {
@@ -257,7 +263,11 @@ fun AiPanel(
                                 ) {
                                     Spacer(Modifier.weight(1f))
                                     Icon(
-                                        if (mode == AiMode.REWRITE) Icons.Default.Edit else Icons.Default.VerticalAlignBottom,
+                                        when (mode) {
+                                            AiMode.REWRITE, AiMode.ENHANCE -> Icons.Default.Edit
+                                            AiMode.APPEND -> Icons.Default.ArrowDownward
+                                            AiMode.CONTEXT -> Icons.Default.AutoFixHigh
+                                        },
                                         null, tint = fg, modifier = Modifier.size(14.dp)
                                     )
                                     Spacer(Modifier.width(4.dp))
@@ -366,82 +376,92 @@ fun AiPanel(
                             )
                         }
                         generatedText != null -> {
-                            Card(
-                                colors = CardDefaults.cardColors(containerColor = surfaceVariant),
-                                shape = RoundedCornerShape(10.dp),
-                                modifier = Modifier.weight(1f)
-                            ) {
-                                Text(
-                                    generatedText!!,
-                                    modifier = Modifier.padding(10.dp),
-                                    fontSize = 12.sp, maxLines = 2,
-                                    overflow = TextOverflow.Ellipsis,
-                                    color = onSurface
-                                )
-                            }
-                            Spacer(Modifier.width(6.dp))
-                            IconButton(
-                                onClick = {
-                                    generatedText?.let { text ->
-                                        when (aiMode) {
-                                            AiMode.ENHANCE, AiMode.REWRITE -> {
-                                                if (wasUsingAllText) editorInstance.performClipboardSelectAll()
-                                                editorInstance.commitText(text)
-                                                val toastRes = if (aiMode == AiMode.ENHANCE) R.string.ai__prompt_enhancer_replaced else R.string.ai__text_replaced
-                                                Toast.makeText(context, toastRes, Toast.LENGTH_SHORT).show()
-                                            }
-                                            AiMode.APPEND -> {
-                                                val currentText = editorInstance.activeContent.text
-                                                if (currentText.isNotEmpty()) {
-                                                    val endPos = currentText.length
-                                                    editorInstance.setSelection(endPos, endPos)
-                                                    editorInstance.commitText("\n\n$text")
-                                                } else {
+                            val generated = generatedText
+                            if (generated != null) {
+                                Card(
+                                    colors = CardDefaults.cardColors(containerColor = surfaceVariant),
+                                    shape = RoundedCornerShape(10.dp),
+                                    modifier = Modifier.weight(1f)
+                                ) {
+                                    Text(
+                                        generated,
+                                        modifier = Modifier.padding(10.dp),
+                                        fontSize = 12.sp, maxLines = 2,
+                                        overflow = TextOverflow.Ellipsis,
+                                        color = onSurface
+                                    )
+                                }
+                                Spacer(Modifier.width(6.dp))
+                                IconButton(
+                                    onClick = {
+                                        val text = generatedText ?: return@IconButton
+                                        try {
+                                            when (aiMode) {
+                                                AiMode.ENHANCE, AiMode.REWRITE, AiMode.CONTEXT -> {
+                                                    if (wasUsingAllText) editorInstance.performClipboardSelectAll()
                                                     editorInstance.commitText(text)
+                                                    val toastRes = if (aiMode == AiMode.ENHANCE) R.string.ai__prompt_enhancer_replaced else R.string.ai__text_replaced
+                                                    Toast.makeText(context, toastRes, Toast.LENGTH_SHORT).show()
                                                 }
-                                                Toast.makeText(context, R.string.ai__text_inserted, Toast.LENGTH_SHORT).show()
+                                                AiMode.APPEND -> {
+                                                    val currentText = editorInstance.activeContent.text.toString()
+                                                    if (currentText.isNotEmpty()) {
+                                                        val endPos = currentText.length
+                                                        editorInstance.setSelection(endPos, endPos)
+                                                        editorInstance.commitText("\n\n$text")
+                                                    } else {
+                                                        editorInstance.commitText(text)
+                                                    }
+                                                    Toast.makeText(context, R.string.ai__text_inserted, Toast.LENGTH_SHORT).show()
+                                                }
                                             }
+                                            keyboardManager.activeState.isAiPanelVisible = false
+                                        } catch (_: Exception) {
+                                            Toast.makeText(context, R.string.ai__error_api, Toast.LENGTH_SHORT).show()
                                         }
-                                        keyboardManager.activeState.isAiPanelVisible = false
-                                    }
-                                },
-                                colors = IconButtonDefaults.filledTonalIconButtonColors(
-                                    containerColor = primary.copy(alpha = 0.12f)
-                                ),
-                                modifier = Modifier.size(34.dp)
-                            ) {
-                                Icon(
-                                    when (aiMode) {
-                                        AiMode.ENHANCE, AiMode.REWRITE -> Icons.Default.Check
-                                        AiMode.APPEND -> Icons.Default.VerticalAlignBottom
                                     },
-                                    when (aiMode) {
-                                        AiMode.ENHANCE -> "Apply Enhanced Prompt"
-                                        AiMode.REWRITE -> "Replace"
-                                        AiMode.APPEND -> "Insert Below"
-                                    },
-                                    tint = primary, modifier = Modifier.size(18.dp)
-                                )
-                            }
-                            Spacer(Modifier.width(4.dp))
-                            IconButton(
-                                onClick = { generatedText = null; errorMessage = null },
-                                modifier = Modifier.size(34.dp)
-                            ) {
-                                Icon(Icons.Default.Refresh, "Reset", tint = onSurfaceVar, modifier = Modifier.size(16.dp))
+                                    colors = IconButtonDefaults.filledTonalIconButtonColors(
+                                        containerColor = primary.copy(alpha = 0.12f)
+                                    ),
+                                    modifier = Modifier.size(36.dp)
+                                ) {
+                                    Icon(
+                                        when (aiMode) {
+                                            AiMode.ENHANCE, AiMode.REWRITE, AiMode.CONTEXT -> Icons.Default.Check
+                                            AiMode.APPEND -> Icons.Default.ArrowDownward
+                                        },
+                                        when (aiMode) {
+                                            AiMode.ENHANCE -> "Apply Enhanced Prompt"
+                                            AiMode.REWRITE -> "Replace"
+                                            AiMode.CONTEXT -> "Apply Polished Text"
+                                            AiMode.APPEND -> "Insert Below"
+                                        },
+                                        tint = primary, modifier = Modifier.size(22.dp)
+                                    )
+                                }
+                                Spacer(Modifier.width(4.dp))
+                                IconButton(
+                                    onClick = { generatedText = null; errorMessage = null },
+                                    modifier = Modifier.size(36.dp)
+                                ) {
+                                    Icon(Icons.Default.Refresh, "Reset", tint = onSurfaceVar, modifier = Modifier.size(19.dp))
+                                }
                             }
                         }
                         errorMessage != null -> {
-                            Text(
-                                errorMessage!!, fontSize = 12.sp, color = errorColor,
-                                textAlign = TextAlign.Center, modifier = Modifier.weight(1f)
-                            )
-                            Spacer(Modifier.width(6.dp))
-                            IconButton(
-                                onClick = { generatedText = null; errorMessage = null },
-                                modifier = Modifier.size(34.dp)
-                            ) {
-                                Icon(Icons.Default.Refresh, "Retry", tint = onSurfaceVar, modifier = Modifier.size(16.dp))
+                            val message = errorMessage
+                            if (message != null) {
+                                Text(
+                                    message, fontSize = 12.sp, color = errorColor,
+                                    textAlign = TextAlign.Center, modifier = Modifier.weight(1f)
+                                )
+                                Spacer(Modifier.width(6.dp))
+                                IconButton(
+                                    onClick = { generatedText = null; errorMessage = null },
+                                    modifier = Modifier.size(36.dp)
+                                ) {
+                                    Icon(Icons.Default.Refresh, "Retry", tint = onSurfaceVar, modifier = Modifier.size(19.dp))
+                                }
                             }
                         }
                         else -> {
@@ -458,6 +478,7 @@ fun AiPanel(
                                             AiMode.ENHANCE -> aiManager.enhancePrompt(text, aiAppName)
                                             AiMode.APPEND -> aiManager.continueTextWithAction(text, selectedAction)
                                             AiMode.REWRITE -> aiManager.rewriteText(text, selectedAction)
+                                            AiMode.CONTEXT -> aiManager.contextPolishText(text)
                                         }
                                         isGenerating = false
                                         result.fold(
@@ -477,11 +498,22 @@ fun AiPanel(
                                 shape = RoundedCornerShape(20.dp),
                                 modifier = Modifier.height(36.dp)
                             ) {
-                                Icon(Icons.Default.Edit, null, modifier = Modifier.size(15.dp))
+                                Icon(
+                                    when (aiMode) {
+                                        AiMode.ENHANCE, AiMode.REWRITE -> Icons.Default.Edit
+                                        AiMode.APPEND -> Icons.Default.ArrowDownward
+                                        AiMode.CONTEXT -> Icons.Default.AutoFixHigh
+                                    },
+                                    null,
+                                    modifier = Modifier.size(18.dp),
+                                )
                                 Spacer(Modifier.width(6.dp))
                                 Text(
-                                    if (aiMode == AiMode.ENHANCE) stringResource(R.string.ai__prompt_enhancer_action)
-                                    else getActionLabel(selectedAction),
+                                    when (aiMode) {
+                                        AiMode.ENHANCE -> stringResource(R.string.ai__prompt_enhancer_action)
+                                        AiMode.CONTEXT -> stringResource(R.string.ai__context_mode_action)
+                                        else -> getActionLabel(selectedAction)
+                                    },
                                     fontSize = 13.sp, fontWeight = FontWeight.Medium
                                 )
                             }

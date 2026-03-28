@@ -446,6 +446,44 @@ CRITICAL RULES:
         
         return makeApiRequest(config, systemPrompt, "Continue after this text:\n\n$existingText")
     }
+
+    /**
+     * Context-aware polish mode.
+     * Fixes grammar/clarity while preserving slang, tone, and the user's original voice.
+     */
+    suspend fun contextPolishText(text: String): Result<String> {
+        if (!isUserLoggedIn()) {
+            return Result.failure(AIException("Please log in to use AI features"))
+        }
+
+        val config = getConfig()
+
+        if (!config.hasValidApiKey()) {
+            return Result.failure(AIException("No API key. Go to Settings → Advanced AI"))
+        }
+
+        if (text.isBlank()) {
+            return Result.failure(AIException("No text to improve"))
+        }
+
+        val systemPrompt = """You are a contextual writing editor.
+
+Your job is to improve grammar and readability while preserving the writer's identity.
+
+CRITICAL RULES:
+1. Return ONLY the edited text. No explanations, no quotes, no markdown.
+2. Keep the same language as the input.
+3. Preserve slang, colloquial phrases, abbreviations, and casual style unless they make the text unclear.
+4. Keep sentence order and structure as close as possible to the original.
+5. Fix grammar, punctuation, and obvious typos with minimal edits.
+6. Do NOT over-formalize. Keep the same vibe and personality.
+7. Do NOT expand or summarize. Keep roughly the same length.
+8. If a phrase is intentionally informal but understandable, keep it.
+
+You are polishing, not rewriting."""
+
+        return makeApiRequest(config, systemPrompt, text)
+    }
     
     private fun buildSystemPrompt(action: AIAction): String {
         val personaDescription = when (currentPersona) {

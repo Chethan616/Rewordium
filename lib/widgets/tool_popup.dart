@@ -13,7 +13,12 @@ import '../services/document_service.dart';
 import '../utils/doc_gate.dart';
 
 class ToolPopup extends StatelessWidget {
-  const ToolPopup({super.key});
+  final ValueChanged<int>? onSelectHomeTab;
+
+  const ToolPopup({
+    super.key,
+    this.onSelectHomeTab,
+  });
   
   // Navigate to the selected tool
   void _navigateToTool(BuildContext context, String toolName) {
@@ -31,16 +36,24 @@ class ToolPopup extends StatelessWidget {
         );
         break;
       case 'paraphraser':
-        Navigator.push(
-          context,
-          MaterialPageRoute(builder: (context) => const ParaphraserPage()),
-        );
+        if (onSelectHomeTab != null) {
+          onSelectHomeTab!(1);
+        } else {
+          Navigator.push(
+            context,
+            MaterialPageRoute(builder: (context) => const ParaphraserPage()),
+          );
+        }
         break;
       case 'grammar':
-        Navigator.push(
-          context,
-          MaterialPageRoute(builder: (context) => const GrammarPage()),
-        );
+        if (onSelectHomeTab != null) {
+          onSelectHomeTab!(2);
+        } else {
+          Navigator.push(
+            context,
+            MaterialPageRoute(builder: (context) => const GrammarPage()),
+          );
+        }
         break;
       case 'summarizer':
         Navigator.push(

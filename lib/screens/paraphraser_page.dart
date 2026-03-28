@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/services.dart';
+import 'dart:convert';
 import 'package:provider/provider.dart';
 import 'package:m3e_collection/m3e_collection.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import '../widgets/custom_app_bar.dart';
 import '../widgets/custom_button.dart';
@@ -19,6 +21,8 @@ import '../utils/responsive.dart';
 // Import your login screen here; adjust path as needed
 import 'auth/login_screen.dart';
 
+enum _ParaphraserRetryAction { mode, persona }
+
 class ParaphraserPage extends StatefulWidget {
   const ParaphraserPage({super.key});
 
@@ -26,7 +30,19 @@ class ParaphraserPage extends StatefulWidget {
   State<ParaphraserPage> createState() => _ParaphraserPageState();
 }
 
-class _ParaphraserPageState extends State<ParaphraserPage> {
+class _ParaphraserPageState extends State<ParaphraserPage>
+    with AutomaticKeepAliveClientMixin {
+  static const String _draftInputKey = 'paraphraser_draft_input';
+  static const String _draftResultKey = 'paraphraser_draft_result';
+  static const String _draftModeKey = 'paraphraser_draft_mode';
+  static const String _draftUsePersonaKey = 'paraphraser_draft_use_persona';
+  static const String _draftPersonaNameKey = 'paraphraser_draft_persona';
+  static const String _draftCustomPromptKey = 'paraphraser_draft_custom_prompt';
+  static const String _draftAlternativesKey = 'paraphraser_draft_alternatives';
+
+  static final Map<String, Map<String, dynamic>> _sessionResultCache =
+      <String, Map<String, dynamic>>{};
+
   final TextEditingController _controller = TextEditingController();
   final TextEditingController _resultController = TextEditingController();
   final TextEditingController _customPromptController = TextEditingController();
@@ -37,16 +53,127 @@ class _ParaphraserPageState extends State<ParaphraserPage> {
   bool _usePersona = false; // Whether to use persona or mode
   String? _customPrompt; // Store custom prompt for custom mode
   DocumentResult? _loadedDocument;
+  String? _lastErrorMessage;
+  _ParaphraserRetryAction? _lastRetryAction;
+  bool _isRestoringDraft = false;
+
+  @override
+  bool get wantKeepAlive => true;
+
+  String _buildCacheKeyForMode(String text) {
+    final prompt = (_customPrompt ?? '').trim();
+    return 'mode|$_selectedMode|$prompt|$text';
+  }
+
+  String _buildCacheKeyForPersona(String text) {
+    final personaName = _selectedPersona?.name ?? 'none';
+    final personaPrompt = _selectedPersona?.prompt ?? '';
+    return 'persona|$personaName|$personaPrompt|$text';
+  }
+
+  void _cacheResult(String key, Map<String, dynamic> result) {
+    if (_sessionResultCache.length >= 30) {
+      _sessionResultCache.remove(_sessionResultCache.keys.first);
+    }
+    _sessionResultCache[key] = result;
+  }
+
+  Future<void> _persistDraft() async {
+    if (_isRestoringDraft) return;
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setString(_draftInputKey, _controller.text);
+      await prefs.setString(_draftResultKey, _resultController.text);
+      await prefs.setString(_draftModeKey, _selectedMode);
+      await prefs.setBool(_draftUsePersonaKey, _usePersona);
+      await prefs.setString(_draftPersonaNameKey, _selectedPersona?.name ?? '');
+      await prefs.setString(_draftCustomPromptKey, _customPrompt ?? '');
+      await prefs.setString(_draftAlternativesKey, jsonEncode(_alternatives));
+    } catch (_) {}
+  }
+
+  Future<void> _restoreDraft() async {
+    _isRestoringDraft = true;
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final input = prefs.getString(_draftInputKey) ?? '';
+      final result = prefs.getString(_draftResultKey) ?? '';
+      final mode = prefs.getString(_draftModeKey) ?? 'Standard';
+      final usePersona = prefs.getBool(_draftUsePersonaKey) ?? false;
+      final personaName = prefs.getString(_draftPersonaNameKey) ?? '';
+      final customPrompt = prefs.getString(_draftCustomPromptKey);
+      final alternativesRaw = prefs.getString(_draftAlternativesKey);
+
+      List<String> restoredAlternatives = <String>[];
+      if (alternativesRaw != null && alternativesRaw.isNotEmpty) {
+        try {
+          final decoded = jsonDecode(alternativesRaw);
+          if (decoded is List) {
+            restoredAlternatives = decoded.map((e) => e.toString()).toList();
+          }
+        } catch (_) {}
+      }
+
+      Persona? restoredPersona;
+      if (personaName.isNotEmpty) {
+        for (final persona in PersonaManager.allPersonas) {
+          if (persona.name == personaName) {
+            restoredPersona = persona;
+            break;
+          }
+        }
+      }
+
+      if (!mounted) return;
+      setState(() {
+        _controller.text = input;
+        _resultController.text = result;
+        _selectedMode = mode;
+        _usePersona = usePersona;
+        _selectedPersona = restoredPersona;
+        _customPrompt = customPrompt;
+        _alternatives = restoredAlternatives;
+      });
+    } catch (_) {
+      // Ignore restore failures to keep startup resilient.
+    } finally {
+      _isRestoringDraft = false;
+    }
+  }
+
+  void _setErrorState(String message, _ParaphraserRetryAction retryAction) {
+    if (!mounted) return;
+    setState(() {
+      _lastErrorMessage = message;
+      _lastRetryAction = retryAction;
+    });
+  }
+
+  Future<void> _retryLastAction() async {
+    final retryAction = _lastRetryAction;
+    if (retryAction == null) return;
+
+    switch (retryAction) {
+      case _ParaphraserRetryAction.mode:
+        await _paraphraseText();
+        break;
+      case _ParaphraserRetryAction.persona:
+        await _paraphraseWithPersona();
+        break;
+    }
+  }
 
   void _onDocumentTextExtracted(String text, DocumentResult doc) {
     setState(() {
       _controller.text = text;
       _loadedDocument = doc;
     });
+    _persistDraft();
   }
 
   void _clearDocument() {
     setState(() => _loadedDocument = null);
+    _persistDraft();
   }
 
   @override
@@ -54,6 +181,7 @@ class _ParaphraserPageState extends State<ParaphraserPage> {
     super.initState();
     // Initialize Groq service
     UnifiedAIService.initialize();
+    _restoreDraft();
   }
 
   @override
@@ -291,28 +419,45 @@ class _ParaphraserPageState extends State<ParaphraserPage> {
 
     setState(() {
       _isLoading = true;
+      _lastErrorMessage = null;
+      _lastRetryAction = _ParaphraserRetryAction.persona;
     });
 
     try {
-      final result = await UnifiedAIService.paraphraseWithPersona(
-          text, _selectedPersona!.prompt);
+      final cacheKey = _buildCacheKeyForPersona(text);
+      final cachedResult = _sessionResultCache[cacheKey];
+      final result = cachedResult ??
+          await UnifiedAIService.paraphraseWithPersona(
+            text,
+            _selectedPersona!.prompt,
+          );
 
       // Handle API errors with snackbar
       if (result.containsKey('error')) {
         setState(() {
           _isLoading = false;
         });
+        _setErrorState(
+          result['error']?.toString() ?? 'Failed to paraphrase with persona',
+          _ParaphraserRetryAction.persona,
+        );
         if (mounted) {
           AIErrorHandler.showErrorSnackBar(context, result);
         }
         return;
       }
 
+      if (cachedResult == null) {
+        _cacheResult(cacheKey, result);
+      }
+
       setState(() {
         _resultController.text = result['paraphrased_text'] ?? text;
         _alternatives = List<String>.from(result['alternatives'] ?? []);
         _isLoading = false;
+        _lastErrorMessage = null;
       });
+      _persistDraft();
 
       // Show the result dialog
       _showResultDialog();
@@ -320,6 +465,7 @@ class _ParaphraserPageState extends State<ParaphraserPage> {
       setState(() {
         _isLoading = false;
       });
+      _setErrorState('Error paraphrasing text: $e', _ParaphraserRetryAction.persona);
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Error paraphrasing text: $e')),
       );
@@ -343,6 +489,8 @@ class _ParaphraserPageState extends State<ParaphraserPage> {
 
     setState(() {
       _isLoading = true;
+      _lastErrorMessage = null;
+      _lastRetryAction = _ParaphraserRetryAction.mode;
     });
 
     try {
@@ -360,7 +508,9 @@ class _ParaphraserPageState extends State<ParaphraserPage> {
         }
 
         // Use custom prompt for paraphrasing
-        final result =
+        final cacheKey = _buildCacheKeyForMode(text);
+        final cachedResult = _sessionResultCache[cacheKey];
+        final result = cachedResult ??
             await UnifiedAIService.paraphraseWithCustomPrompt(text, _customPrompt!);
 
         // Handle API errors with snackbar
@@ -368,40 +518,63 @@ class _ParaphraserPageState extends State<ParaphraserPage> {
           setState(() {
             _isLoading = false;
           });
+          _setErrorState(
+            result['error']?.toString() ?? 'Failed to paraphrase text',
+            _ParaphraserRetryAction.mode,
+          );
           if (mounted) {
             AIErrorHandler.showErrorSnackBar(context, result);
           }
           return;
         }
 
+        if (cachedResult == null) {
+          _cacheResult(cacheKey, result);
+        }
+
         setState(() {
           _resultController.text = result['paraphrased_text'] ?? text;
           _alternatives = List<String>.from(result['alternatives'] ?? []);
           _isLoading = false;
+          _lastErrorMessage = null;
         });
+        _persistDraft();
       } else {
         // Use standard mode paraphrasing
         final tone = _getToneFromMode(_selectedMode);
-        final result = DocumentChunkingService.needsChunking(text)
-            ? await DocumentChunkingService.paraphraseLarge(text, tone)
-            : await UnifiedAIService.paraphraseText(text, tone);
+        final cacheKey = _buildCacheKeyForMode(text);
+        final cachedResult = _sessionResultCache[cacheKey];
+        final result = cachedResult ??
+            (DocumentChunkingService.needsChunking(text)
+                ? await DocumentChunkingService.paraphraseLarge(text, tone)
+                : await UnifiedAIService.paraphraseText(text, tone));
 
         // Handle API errors with snackbar
         if (result.containsKey('error')) {
           setState(() {
             _isLoading = false;
           });
+          _setErrorState(
+            result['error']?.toString() ?? 'Failed to paraphrase text',
+            _ParaphraserRetryAction.mode,
+          );
           if (mounted) {
             AIErrorHandler.showErrorSnackBar(context, result);
           }
           return;
         }
 
+        if (cachedResult == null) {
+          _cacheResult(cacheKey, result);
+        }
+
         setState(() {
           _resultController.text = result['paraphrased_text'] ?? text;
           _alternatives = List<String>.from(result['alternatives'] ?? []);
           _isLoading = false;
+          _lastErrorMessage = null;
         });
+        _persistDraft();
       }
 
       // Show the result dialog
@@ -410,10 +583,43 @@ class _ParaphraserPageState extends State<ParaphraserPage> {
       setState(() {
         _isLoading = false;
       });
+      _setErrorState('Error paraphrasing text: $e', _ParaphraserRetryAction.mode);
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Error paraphrasing text: $e')),
       );
     }
+  }
+
+  Widget _buildErrorBanner(ColorScheme colorScheme) {
+    if (_lastErrorMessage == null) return const SizedBox.shrink();
+    return Container(
+      width: double.infinity,
+      margin: const EdgeInsets.fromLTRB(16, 8, 16, 0),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+      decoration: BoxDecoration(
+        color: colorScheme.errorContainer,
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Icon(Icons.error_outline, size: 18, color: colorScheme.onErrorContainer),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Text(
+              _lastErrorMessage!,
+              style: Theme.of(context).textTheme.bodySmall!.copyWith(
+                    color: colorScheme.onErrorContainer,
+                  ),
+            ),
+          ),
+          TextButton(
+            onPressed: _isLoading ? null : _retryLastAction,
+            child: const Text('Retry'),
+          ),
+        ],
+      ),
+    );
   }
 
   // Show the paraphrased result — now stored in _resultController, shown inline
@@ -423,6 +629,7 @@ class _ParaphraserPageState extends State<ParaphraserPage> {
 
   @override
   Widget build(BuildContext context) {
+    super.build(context);
     final r = Responsive.of(context);
     final authProvider = Provider.of<AuthProvider>(context);
     final bool isLoggedIn = authProvider.isLoggedIn;
@@ -464,6 +671,7 @@ class _ParaphraserPageState extends State<ParaphraserPage> {
                 size: LinearProgressM3ESize.s,
                 activeColor: colorScheme.primary,
               ),
+            _buildErrorBanner(colorScheme),
             Padding(
               padding: r.fromLTRB(16, 8, 16, 0),
               child: DocumentInputWidget(
@@ -545,7 +753,10 @@ class _ParaphraserPageState extends State<ParaphraserPage> {
           suffixIcon: _controller.text.isNotEmpty
               ? IconButton(
                   icon: Icon(Icons.clear, size: r.r(18)),
-                  onPressed: () => setState(() => _controller.clear()),
+                  onPressed: () => setState(() {
+                    _controller.clear();
+                    _persistDraft();
+                  }),
                 )
               : IconButton(
                   icon: Icon(Icons.content_paste, size: r.r(18)),
@@ -554,11 +765,15 @@ class _ParaphraserPageState extends State<ParaphraserPage> {
                     if (data?.text != null) {
                       _controller.text = data!.text!;
                       setState(() {});
+                      _persistDraft();
                     }
                   },
                 ),
         ),
-        onChanged: (_) => setState(() {}),
+        onChanged: (_) {
+          setState(() {});
+          _persistDraft();
+        },
       ),
     );
   }
@@ -614,6 +829,7 @@ class _ParaphraserPageState extends State<ParaphraserPage> {
                     _resultController.clear();
                     _alternatives.clear();
                   });
+                  _persistDraft();
                 },
                 variant: IconButtonM3EVariant.outlined,
                 size: IconButtonM3ESize.sm,
@@ -626,6 +842,7 @@ class _ParaphraserPageState extends State<ParaphraserPage> {
                     _resultController.clear();
                     _alternatives.clear();
                   });
+                  _persistDraft();
                 },
                 variant: IconButtonM3EVariant.outlined,
                 size: IconButtonM3ESize.sm,
@@ -753,8 +970,14 @@ class _ParaphraserPageState extends State<ParaphraserPage> {
             child: Row(
               mainAxisSize: MainAxisSize.min,
               children: [
-                _buildTabButton('Modes', !_usePersona, () => setState(() => _usePersona = false)),
-                _buildTabButton('Personas', _usePersona, () => setState(() => _usePersona = true)),
+                _buildTabButton('Modes', !_usePersona, () => setState(() {
+                      _usePersona = false;
+                      _persistDraft();
+                    })),
+                _buildTabButton('Personas', _usePersona, () => setState(() {
+                      _usePersona = true;
+                      _persistDraft();
+                    })),
               ],
             ),
           ),
@@ -833,6 +1056,7 @@ class _ParaphraserPageState extends State<ParaphraserPage> {
         return GestureDetector(
           onTap: () {
             setState(() => _selectedMode = mode);
+            _persistDraft();
             if (mode == 'Custom') _showCustomModeDialog();
           },
           child: AnimatedContainer(
@@ -879,7 +1103,10 @@ class _ParaphraserPageState extends State<ParaphraserPage> {
         final persona = personas[i];
         final selected = _selectedPersona?.name == persona.name;
         return GestureDetector(
-          onTap: () => setState(() => _selectedPersona = persona),
+          onTap: () => setState(() {
+            _selectedPersona = persona;
+            _persistDraft();
+          }),
           child: AnimatedContainer(
             duration: const Duration(milliseconds: 200),
             padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),

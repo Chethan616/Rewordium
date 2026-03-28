@@ -17,8 +17,13 @@
 package com.noxquill.rewordium.keyboard.ime.ai
 
 import android.widget.Toast
+import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.togetherWith
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -33,6 +38,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.rememberScrollState
@@ -40,10 +46,11 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.Backspace
+import androidx.compose.material.icons.filled.AutoFixHigh
+import androidx.compose.material.icons.filled.ArrowDownward
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Refresh
-import androidx.compose.material.icons.filled.VerticalAlignBottom
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
@@ -73,6 +80,7 @@ import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -91,7 +99,7 @@ import org.florisboard.lib.snygg.ui.rememberSnyggThemeQuery
 /**
  * AI generation mode: Rewrite (replace), Append (continue/append), or Enhance (prompt enhancer)
  */
-enum class AiMode { REWRITE, APPEND, ENHANCE }
+enum class AiMode { CONTEXT, REWRITE, APPEND, ENHANCE }
 
 /**
  * AI Input Layout — full-screen keyboard panel for writing assistance.
@@ -134,7 +142,7 @@ fun AiInputLayout(
     var generatedText   by remember { mutableStateOf<String?>(null) }
     var errorMessage    by remember { mutableStateOf<String?>(null) }
     var wasUsingAllText by remember { mutableStateOf(false) }
-    var aiMode          by remember { mutableStateOf(if (isInAiApp) AiMode.ENHANCE else AiMode.REWRITE) }
+    var aiMode          by remember { mutableStateOf(if (isInAiApp) AiMode.ENHANCE else AiMode.CONTEXT) }
     var selectedPersona by remember { mutableStateOf<String?>(null) }
     var selectedTask    by remember { mutableStateOf<String?>(null) }
     var selectedLength  by remember { mutableStateOf<String?>(null) }
@@ -143,6 +151,8 @@ fun AiInputLayout(
     LaunchedEffect(isInAiApp) {
         if (isInAiApp && aiMode != AiMode.ENHANCE) {
             aiMode = AiMode.ENHANCE
+        } else if (!isInAiApp && aiMode == AiMode.ENHANCE) {
+            aiMode = AiMode.CONTEXT
         }
     }
 
@@ -183,6 +193,10 @@ fun AiInputLayout(
                 AiMode.ENHANCE -> {
                     // Prompt Enhancer mode — enhance the prompt for AI apps
                     aiManager.enhancePrompt(text, aiAppName)
+                }
+                AiMode.CONTEXT -> {
+                    // Keeps tone/slang while cleaning grammar and clarity.
+                    aiManager.contextPolishText(text)
                 }
                 AiMode.APPEND -> {
                     aiManager.continueText(text, persona, task, length)
@@ -228,38 +242,54 @@ fun AiInputLayout(
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(horizontal = 16.dp, vertical = 10.dp),
+                        .padding(horizontal = 16.dp, vertical = 8.dp),
                     verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    horizontalArrangement = Arrangement.SpaceBetween
                 ) {
-                    Text(
-                        if (isInAiApp) stringResource(R.string.ai__prompt_enhancer_title)
-                        else stringResource(R.string.ai__panel_title),
-                        style = MaterialTheme.typography.titleSmall,
-                        fontWeight = FontWeight.SemiBold,
-                        color = onSurface,
-                        letterSpacing = 0.3.sp
-                    )
-                    // Prompt Enhancer badge when in AI app
-                    if (isInAiApp) {
-                        Surface(
-                            color = primary.copy(alpha = 0.12f),
-                            shape = RoundedCornerShape(6.dp)
-                        ) {
-                            Text(
-                                "• ${aiAppName ?: "AI"}",
-                                modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp),
-                                fontSize = 10.sp,
-                                fontWeight = FontWeight.Medium,
-                                color = primary
-                            )
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        Text(
+                            if (isInAiApp) stringResource(R.string.ai__prompt_enhancer_title)
+                            else stringResource(R.string.ai__panel_title),
+                            style = MaterialTheme.typography.titleSmall,
+                            fontWeight = FontWeight.SemiBold,
+                            color = onSurface,
+                            letterSpacing = 0.3.sp
+                        )
+                        if (isInAiApp) {
+                            Surface(
+                                color = primary.copy(alpha = 0.12f),
+                                shape = RoundedCornerShape(6.dp)
+                            ) {
+                                Text(
+                                    aiAppName ?: "AI",
+                                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp),
+                                    fontSize = 10.sp,
+                                    fontWeight = FontWeight.Medium,
+                                    color = primary
+                                )
+                            }
                         }
+                    }
+                    // Selection indicator
+                    val activeFilters = listOfNotNull(selectedPersona, selectedTask, selectedLength)
+                    if (activeFilters.isNotEmpty()) {
+                        Text(
+                            activeFilters.joinToString(" \u00B7 "),
+                            fontSize = 10.sp,
+                            color = onSurfaceVar,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                            modifier = Modifier.widthIn(max = 140.dp)
+                        )
                     }
                 }
 
                 // ════════ Mode segmented toggle ════════
                 Surface(
-                    color = surfaceVariant.copy(alpha = 0.5f),
+                    color = surfaceVariant.copy(alpha = 0.4f),
                     shape = RoundedCornerShape(50),
                     modifier = Modifier
                         .fillMaxWidth()
@@ -273,25 +303,26 @@ fun AiInputLayout(
                         )
                     } else {
                         listOf(
+                            AiMode.CONTEXT to R.string.ai__mode_context,
                             AiMode.REWRITE to R.string.ai__mode_rewrite,
                             AiMode.APPEND to R.string.ai__mode_append
                         )
                     }
-                    Row(modifier = Modifier.padding(3.dp), horizontalArrangement = Arrangement.spacedBy(3.dp)) {
+                    Row(modifier = Modifier.padding(3.dp), horizontalArrangement = Arrangement.spacedBy(2.dp)) {
                         modeList.forEach { (mode, labelRes) ->
                             val selected = aiMode == mode
                             val bg by animateColorAsState(
-                                if (selected) primary else Color.Transparent, tween(220), label = "bg"
+                                if (selected) primary else Color.Transparent, tween(200), label = "bg"
                             )
                             val fg by animateColorAsState(
-                                if (selected) onPrimary else onSurfaceVar, tween(220), label = "fg"
+                                if (selected) onPrimary else onSurfaceVar, tween(200), label = "fg"
                             )
                             Surface(
                                 color = bg,
-                                shape = RoundedCornerShape(8.dp),
+                                shape = RoundedCornerShape(50),
                                 modifier = Modifier
                                     .weight(1f)
-                                    .clip(RoundedCornerShape(8.dp))
+                                    .clip(RoundedCornerShape(50))
                                     .clickable { aiMode = mode; generatedText = null; errorMessage = null }
                             ) {
                                 Row(
@@ -301,7 +332,11 @@ fun AiInputLayout(
                                 ) {
                                     Spacer(Modifier.weight(1f))
                                     Icon(
-                                        if (mode == AiMode.REWRITE) Icons.Default.Edit else Icons.Default.VerticalAlignBottom,
+                                        when (mode) {
+                                            AiMode.CONTEXT -> Icons.Default.AutoFixHigh
+                                            AiMode.REWRITE, AiMode.ENHANCE -> Icons.Default.Edit
+                                            AiMode.APPEND -> Icons.Default.ArrowDownward
+                                        },
                                         null, tint = fg, modifier = Modifier.size(14.dp)
                                     )
                                     Spacer(Modifier.width(4.dp))
@@ -318,7 +353,7 @@ fun AiInputLayout(
 
                 Spacer(Modifier.height(6.dp))
 
-                // ════════ Content area ════════
+                // ════════ Content area with animated transitions ════════
                 Box(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -326,147 +361,192 @@ fun AiInputLayout(
                         .padding(horizontal = 12.dp),
                     contentAlignment = Alignment.Center
                 ) {
-                    when {
-                        isGenerating -> {
-                            Column(
-                                horizontalAlignment = Alignment.CenterHorizontally,
-                                verticalArrangement = Arrangement.Center
-                            ) {
-                                LinearProgressIndicator(
-                                    modifier = Modifier
-                                        .fillMaxWidth(0.5f)
-                                        .height(2.dp)
-                                        .clip(RoundedCornerShape(1.dp)),
-                                    color = primary,
-                                    trackColor = outline
-                                )
-                                Spacer(Modifier.height(12.dp))
-                                Text(
-                                    if (aiMode == AiMode.ENHANCE) "Enhancing…" else "Processing…",
-                                    color = onSurface,
-                                    fontSize = 14.sp,
-                                    fontWeight = FontWeight.Medium
-                                )
-                                Spacer(Modifier.height(2.dp))
-                                Text(
-                                    if (aiMode == AiMode.ENHANCE) "Making your prompt more effective" else "Enhancing your text",
-                                    color = onSurfaceVar,
-                                    fontSize = 12.sp
-                                )
-                            }
-                        }
-                        generatedText != null -> {
-                            Column(
-                                modifier = Modifier.fillMaxSize().padding(4.dp),
-                            ) {
-                                // Result card
-                                Card(
-                                    colors = CardDefaults.cardColors(containerColor = surfaceColor),
-                                    border = androidx.compose.foundation.BorderStroke(1.dp, outline),
-                                    shape = RoundedCornerShape(16.dp),
-                                    modifier = Modifier.weight(1f).fillMaxWidth()
+                    val contentKey = when {
+                        isGenerating -> "loading"
+                        generatedText != null -> "result"
+                        errorMessage != null -> "error"
+                        else -> "idle"
+                    }
+                    AnimatedContent(
+                        targetState = contentKey,
+                        transitionSpec = {
+                            fadeIn(tween(200)) togetherWith fadeOut(tween(150))
+                        },
+                        label = "ai_content"
+                    ) { state ->
+                        when (state) {
+                            "loading" -> {
+                                Column(
+                                    horizontalAlignment = Alignment.CenterHorizontally,
+                                    verticalArrangement = Arrangement.Center
                                 ) {
-                                    Column(
+                                    LinearProgressIndicator(
                                         modifier = Modifier
-                                            .fillMaxSize()
-                                            .verticalScroll(rememberScrollState())
-                                            .padding(12.dp)
-                                    ) {
-                                        Text(
-                                            generatedText!!,
-                                            color = onSurface,
-                                            fontSize = 14.sp,
-                                            lineHeight = 20.sp
-                                        )
-                                    }
-                                }
-                                Spacer(Modifier.height(8.dp))
-                                // Action buttons
-                                Row(
-                                    modifier = Modifier.fillMaxWidth(),
-                                    horizontalArrangement = Arrangement.spacedBy(8.dp)
-                                ) {
-                                    FilledTonalButton(
-                                        onClick = { doGenerate() },
-                                        colors = ButtonDefaults.filledTonalButtonColors(
-                                            containerColor = surfaceVariant,
-                                            contentColor = onSurface
-                                        ),
-                                        shape = RoundedCornerShape(10.dp),
-                                        modifier = Modifier.weight(1f)
-                                    ) {
-                                        Icon(Icons.Default.Refresh, null, modifier = Modifier.size(15.dp))
-                                        Spacer(Modifier.width(4.dp))
-                                        Text(
-                                            "Regenerate",
-                                            fontSize = 13.sp,
-                                            fontWeight = FontWeight.Medium,
-                                            maxLines = 1,
-                                            softWrap = false
-                                        )
-                                    }
-                                    OutlinedButton(
-                                        onClick = {
-                                            generatedText = null; errorMessage = null
-                                            selectedPersona = null; selectedTask = null; selectedLength = null
+                                            .fillMaxWidth(0.5f)
+                                            .height(2.dp)
+                                            .clip(RoundedCornerShape(1.dp)),
+                                        color = primary,
+                                        trackColor = outline
+                                    )
+                                    Spacer(Modifier.height(12.dp))
+                                    Text(
+                                        when (aiMode) {
+                                            AiMode.ENHANCE -> "Enhancing\u2026"
+                                            AiMode.CONTEXT -> "Polishing\u2026"
+                                            else -> "Processing\u2026"
                                         },
-                                        colors = ButtonDefaults.outlinedButtonColors(contentColor = onSurface),
-                                        border = ButtonDefaults.outlinedButtonBorder(enabled = true),
-                                        shape = RoundedCornerShape(10.dp),
-                                        modifier = Modifier.weight(1f)
+                                        color = onSurface,
+                                        fontSize = 14.sp,
+                                        fontWeight = FontWeight.Medium
+                                    )
+                                    Spacer(Modifier.height(2.dp))
+                                    Text(
+                                        when (aiMode) {
+                                            AiMode.ENHANCE -> "Making your prompt more effective"
+                                            AiMode.CONTEXT -> "Keeping your vibe while fixing grammar"
+                                            else -> "Enhancing your text"
+                                        },
+                                        color = onSurfaceVar,
+                                        fontSize = 12.sp
+                                    )
+                                }
+                            }
+                            "result" -> {
+                                val generated = generatedText
+                                if (generated != null) {
+                                    Column(
+                                        modifier = Modifier.fillMaxSize().padding(4.dp),
+                                    ) {
+                                        Card(
+                                            colors = CardDefaults.cardColors(containerColor = surfaceColor.copy(alpha = 0.7f)),
+                                            border = androidx.compose.foundation.BorderStroke(0.5.dp, outline),
+                                            shape = RoundedCornerShape(14.dp),
+                                            modifier = Modifier.weight(1f).fillMaxWidth()
+                                        ) {
+                                            Column(
+                                                modifier = Modifier
+                                                    .fillMaxSize()
+                                                    .verticalScroll(rememberScrollState())
+                                                    .padding(12.dp)
+                                            ) {
+                                                Text(
+                                                    generated,
+                                                    color = onSurface,
+                                                    fontSize = 14.sp,
+                                                    lineHeight = 20.sp
+                                                )
+                                            }
+                                        }
+                                        Spacer(Modifier.height(8.dp))
+                                        Row(
+                                            modifier = Modifier.fillMaxWidth(),
+                                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                                        ) {
+                                            FilledTonalButton(
+                                                onClick = { doGenerate() },
+                                                colors = ButtonDefaults.filledTonalButtonColors(
+                                                    containerColor = surfaceVariant,
+                                                    contentColor = onSurface
+                                                ),
+                                                shape = RoundedCornerShape(10.dp),
+                                                modifier = Modifier.weight(1f)
+                                            ) {
+                                                Icon(Icons.Default.Refresh, null, modifier = Modifier.size(18.dp))
+                                                Spacer(Modifier.width(4.dp))
+                                                Text("Regenerate", fontSize = 13.sp, fontWeight = FontWeight.Medium, maxLines = 1, softWrap = false)
+                                            }
+                                            OutlinedButton(
+                                                onClick = {
+                                                    generatedText = null; errorMessage = null
+                                                    selectedPersona = null; selectedTask = null; selectedLength = null
+                                                },
+                                                colors = ButtonDefaults.outlinedButtonColors(contentColor = onSurface),
+                                                border = ButtonDefaults.outlinedButtonBorder(enabled = true),
+                                                shape = RoundedCornerShape(10.dp),
+                                                modifier = Modifier.weight(1f)
+                                            ) {
+                                                Text("New Prompt", fontSize = 13.sp, fontWeight = FontWeight.Medium, maxLines = 1, softWrap = false)
+                                            }
+                                        }
+                                    }
+                                } else {
+                                    Column(
+                                        horizontalAlignment = Alignment.CenterHorizontally,
+                                        verticalArrangement = Arrangement.Center
                                     ) {
                                         Text(
-                                            "New Prompt",
+                                            "Result not available",
+                                            color = onSurfaceVar,
                                             fontSize = 13.sp,
-                                            fontWeight = FontWeight.Medium,
-                                            maxLines = 1,
-                                            softWrap = false
                                         )
                                     }
                                 }
                             }
-                        }
-                        errorMessage != null -> {
-                            Column(
-                                horizontalAlignment = Alignment.CenterHorizontally,
-                                verticalArrangement = Arrangement.Center
-                            ) {
-                                Text(
-                                    errorMessage!!,
-                                    color = errorColor,
-                                    fontSize = 13.sp,
-                                    textAlign = TextAlign.Center
-                                )
-                                Spacer(Modifier.height(12.dp))
-                                FilledTonalButton(
-                                    onClick = { errorMessage = null },
-                                    colors = ButtonDefaults.filledTonalButtonColors(
-                                        containerColor = surfaceVariant, contentColor = onSurface
-                                    ),
-                                    shape = RoundedCornerShape(10.dp)
-                                ) {
-                                    Text("Try Again", fontSize = 13.sp)
+                            "error" -> {
+                                val message = errorMessage
+                                if (message != null) {
+                                    Column(
+                                        horizontalAlignment = Alignment.CenterHorizontally,
+                                        verticalArrangement = Arrangement.Center
+                                    ) {
+                                        Text(
+                                            message,
+                                            color = errorColor,
+                                            fontSize = 13.sp,
+                                            textAlign = TextAlign.Center
+                                        )
+                                        Spacer(Modifier.height(12.dp))
+                                        FilledTonalButton(
+                                            onClick = { errorMessage = null },
+                                            colors = ButtonDefaults.filledTonalButtonColors(
+                                                containerColor = surfaceVariant, contentColor = onSurface
+                                            ),
+                                            shape = RoundedCornerShape(10.dp)
+                                        ) {
+                                            Icon(Icons.Default.Refresh, null, modifier = Modifier.size(17.dp))
+                                            Spacer(Modifier.width(6.dp))
+                                            Text("Try Again", fontSize = 13.sp)
+                                        }
+                                    }
+                                } else {
+                                    Column(
+                                        horizontalAlignment = Alignment.CenterHorizontally,
+                                        verticalArrangement = Arrangement.Center
+                                    ) {
+                                        Text(
+                                            "Something went wrong",
+                                            color = errorColor,
+                                            fontSize = 13.sp,
+                                            textAlign = TextAlign.Center
+                                        )
+                                    }
                                 }
                             }
-                        }
-                        else -> {
-                            Column(
-                                horizontalAlignment = Alignment.CenterHorizontally,
-                                verticalArrangement = Arrangement.Center
-                            ) {
-                                Text(
-                                    if (aiMode == AiMode.ENHANCE) "Write your prompt in the text field"
-                                    else "Select options below",
-                                    color = onSurfaceVar,
-                                    fontSize = 14.sp
-                                )
-                                Spacer(Modifier.height(2.dp))
-                                Text(
-                                    if (aiMode == AiMode.ENHANCE) "then tap Enhance to make it better"
-                                    else "then tap Generate to enhance your text",
-                                    color = onSurfaceVar.copy(alpha = 0.7f),
-                                    fontSize = 12.sp
-                                )
+                            else -> {
+                                Column(
+                                    horizontalAlignment = Alignment.CenterHorizontally,
+                                    verticalArrangement = Arrangement.Center
+                                ) {
+                                    Text(
+                                        when (aiMode) {
+                                            AiMode.ENHANCE -> "Write your prompt in the text field"
+                                            AiMode.CONTEXT -> stringResource(R.string.ai__context_mode_hint)
+                                            else -> "Select options below"
+                                        },
+                                        color = onSurfaceVar,
+                                        fontSize = 14.sp
+                                    )
+                                    Spacer(Modifier.height(2.dp))
+                                    Text(
+                                        when (aiMode) {
+                                            AiMode.ENHANCE -> "then tap Enhance to make it better"
+                                            AiMode.CONTEXT -> "It auto-preserves slang and tone"
+                                            else -> "then tap Generate to enhance your text"
+                                        },
+                                        color = onSurfaceVar.copy(alpha = 0.7f),
+                                        fontSize = 12.sp
+                                    )
+                                }
                             }
                         }
                     }
@@ -474,47 +554,70 @@ fun AiInputLayout(
 
                 // ════════ 3-Row chip selector (only when idle and NOT in enhance mode) ════════
                 if (!isGenerating && generatedText == null) {
+                    val showAdvancedChips = aiMode == AiMode.REWRITE || aiMode == AiMode.APPEND
                     Column(
                         modifier = Modifier
                             .fillMaxWidth()
                             .padding(horizontal = 4.dp, vertical = 4.dp),
-                        verticalArrangement = Arrangement.spacedBy(4.dp)
+                        verticalArrangement = Arrangement.spacedBy(6.dp)
                     ) {
-                        // Only show chip rows for Rewrite/Append modes
-                        if (aiMode != AiMode.ENHANCE) {
-                            // Row 1 — Persona
-                            SystemChipRow(
+                        when {
+                            showAdvancedChips -> {
+                                SmartChipSection(
+                                    title = "Style",
                                 chips = personaChips,
                                 selectedChip = selectedPersona,
                                 onChipSelected = { selectedPersona = if (selectedPersona == it) null else it },
                                 primary = primary,
                                 surfaceVariant = surfaceVariant,
                                 onSurface = onSurface,
-                                onSurfaceVar = onSurfaceVar,
                                 outline = outline
                             )
-                            // Row 2 — Task
-                            SystemChipRow(
+                                SmartChipSection(
+                                    title = "Intent",
                                 chips = taskChips,
                                 selectedChip = selectedTask,
                                 onChipSelected = { selectedTask = if (selectedTask == it) null else it },
                                 primary = primary,
                                 surfaceVariant = surfaceVariant,
                                 onSurface = onSurface,
-                                onSurfaceVar = onSurfaceVar,
                                 outline = outline
                             )
-                            // Row 3 — Length
-                            SystemChipRow(
+                                SmartChipSection(
+                                    title = "Length",
                                 chips = lengthChips,
                                 selectedChip = selectedLength,
                                 onChipSelected = { selectedLength = if (selectedLength == it) null else it },
                                 primary = primary,
                                 surfaceVariant = surfaceVariant,
                                 onSurface = onSurface,
-                                onSurfaceVar = onSurfaceVar,
                                 outline = outline
                             )
+                            }
+                            aiMode == AiMode.CONTEXT -> {
+                                Surface(
+                                    color = surfaceVariant.copy(alpha = 0.35f),
+                                    shape = RoundedCornerShape(12.dp),
+                                    border = BorderStroke(0.6.dp, outline.copy(alpha = 0.7f)),
+                                    modifier = Modifier.fillMaxWidth(),
+                                ) {
+                                    Column(modifier = Modifier.padding(horizontal = 12.dp, vertical = 10.dp)) {
+                                        Text(
+                                            "Keep Voice Mode",
+                                            color = onSurface,
+                                            fontSize = 12.sp,
+                                            fontWeight = FontWeight.SemiBold,
+                                        )
+                                        Spacer(Modifier.height(2.dp))
+                                        Text(
+                                            "Fixes grammar and clarity while preserving slang, tone, and your writing style.",
+                                            color = onSurface.copy(alpha = 0.78f),
+                                            fontSize = 11.sp,
+                                            lineHeight = 15.sp,
+                                        )
+                                    }
+                                }
+                            }
                         }
 
                         // Generate CTA
@@ -529,12 +632,24 @@ fun AiInputLayout(
                                     contentColor = onPrimary
                                 ),
                                 shape = RoundedCornerShape(20.dp),
-                                modifier = Modifier.height(38.dp)
+                                modifier = Modifier.height(40.dp)
                             ) {
-                                Icon(Icons.Default.Edit, null, modifier = Modifier.size(15.dp))
+                                Icon(
+                                    when (aiMode) {
+                                        AiMode.ENHANCE, AiMode.REWRITE -> Icons.Default.Edit
+                                        AiMode.APPEND -> Icons.Default.ArrowDownward
+                                        AiMode.CONTEXT -> Icons.Default.AutoFixHigh
+                                    },
+                                    null,
+                                    modifier = Modifier.size(18.dp),
+                                )
                                 Spacer(Modifier.width(6.dp))
                                 Text(
-                                    if (aiMode == AiMode.ENHANCE) stringResource(R.string.ai__prompt_enhancer_action) else "Generate",
+                                    when (aiMode) {
+                                        AiMode.ENHANCE -> stringResource(R.string.ai__prompt_enhancer_action)
+                                        AiMode.CONTEXT -> stringResource(R.string.ai__context_mode_action)
+                                        else -> "Generate"
+                                    },
                                     fontSize = 14.sp, fontWeight = FontWeight.Medium
                                 )
                             }
@@ -547,10 +662,12 @@ fun AiInputLayout(
                     color = surfaceVariant,
                     modifier = Modifier
                         .fillMaxWidth()
-                        .height(FlorisImeSizing.keyboardRowBaseHeight)
+                        .height(FlorisImeSizing.keyboardRowBaseHeight * 1.12f)
                 ) {
                     Row(
-                        modifier = Modifier.fillMaxSize().padding(horizontal = 8.dp),
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .padding(horizontal = 8.dp, vertical = 3.dp),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         // ABC button
@@ -558,12 +675,14 @@ fun AiInputLayout(
                             elementName = FlorisImeUi.MediaBottomRowButton.elementName,
                             inputEventDispatcher = keyboardManager.inputEventDispatcher,
                             keyData = TextKeyData.IME_UI_MODE_TEXT,
-                            modifier = Modifier.weight(1f).fillMaxHeight(),
+                            modifier = Modifier
+                                .weight(1f)
+                                .fillMaxHeight(0.92f),
                         ) {
                             Text(
                                 "ABC",
                                 fontWeight = FontWeight.Bold,
-                                fontSize = 14.sp,
+                                fontSize = 15.sp,
                                 maxLines = 1,
                                 softWrap = false
                             )
@@ -573,16 +692,21 @@ fun AiInputLayout(
                             Spacer(Modifier.width(8.dp))
                             FilledTonalButton(
                                 onClick = {
-                                    generatedText?.let { text ->
+                                    val text = generatedText ?: return@FilledTonalButton
+                                    try {
                                         when (aiMode) {
-                                            AiMode.ENHANCE, AiMode.REWRITE -> {
+                                            AiMode.ENHANCE, AiMode.REWRITE, AiMode.CONTEXT -> {
                                                 if (wasUsingAllText) editorInstance.performClipboardSelectAll()
                                                 editorInstance.commitText(text)
-                                                val toastRes = if (aiMode == AiMode.ENHANCE) R.string.ai__prompt_enhancer_replaced else R.string.ai__text_replaced
+                                                val toastRes = if (aiMode == AiMode.ENHANCE) {
+                                                    R.string.ai__prompt_enhancer_replaced
+                                                } else {
+                                                    R.string.ai__text_replaced
+                                                }
                                                 Toast.makeText(context, toastRes, Toast.LENGTH_SHORT).show()
                                             }
                                             AiMode.APPEND -> {
-                                                val currentText = editorInstance.activeContent.text
+                                                val currentText = editorInstance.activeContent.text.toString()
                                                 if (currentText.isNotEmpty()) {
                                                     val endPos = currentText.length
                                                     editorInstance.setSelection(endPos, endPos)
@@ -594,6 +718,8 @@ fun AiInputLayout(
                                             }
                                         }
                                         keyboardManager.activeState.imeUiMode = ImeUiMode.TEXT
+                                    } catch (_: Exception) {
+                                        Toast.makeText(context, R.string.ai__error_api, Toast.LENGTH_SHORT).show()
                                     }
                                 },
                                 colors = ButtonDefaults.filledTonalButtonColors(
@@ -605,15 +731,16 @@ fun AiInputLayout(
                             ) {
                                 Icon(
                                     when (aiMode) {
-                                        AiMode.ENHANCE, AiMode.REWRITE -> Icons.Default.Check
-                                        AiMode.APPEND -> Icons.Default.VerticalAlignBottom
+                                        AiMode.ENHANCE, AiMode.REWRITE, AiMode.CONTEXT -> Icons.Default.Check
+                                        AiMode.APPEND -> Icons.Default.ArrowDownward
                                     },
-                                    null, modifier = Modifier.size(15.dp)
+                                    null, modifier = Modifier.size(20.dp)
                                 )
                                 Spacer(Modifier.width(4.dp))
                                 Text(
                                     when (aiMode) {
                                         AiMode.ENHANCE -> "Apply"
+                                        AiMode.CONTEXT -> "Apply"
                                         AiMode.REWRITE -> "Replace"
                                         AiMode.APPEND -> "Insert"
                                     },
@@ -634,10 +761,10 @@ fun AiInputLayout(
                                 shape = RoundedCornerShape(8.dp),
                                 modifier = Modifier.weight(1f).fillMaxHeight(0.75f)
                             ) {
-                                Icon(Icons.Default.Refresh, "Reset", modifier = Modifier.size(15.dp))
+                                Icon(Icons.Default.Refresh, "Reset", modifier = Modifier.size(19.dp))
                             }
                         } else {
-                            Spacer(Modifier.weight(3.5f))
+                            Spacer(Modifier.weight(1f))
                         }
 
                         Spacer(Modifier.width(8.dp))
@@ -647,9 +774,11 @@ fun AiInputLayout(
                             elementName = FlorisImeUi.MediaBottomRowButton.elementName,
                             inputEventDispatcher = keyboardManager.inputEventDispatcher,
                             keyData = TextKeyData.DELETE,
-                            modifier = Modifier.weight(1f).fillMaxHeight(),
+                            modifier = Modifier
+                                .weight(1f)
+                                .fillMaxHeight(0.92f),
                         ) {
-                            Icon(Icons.AutoMirrored.Outlined.Backspace, null)
+                            Icon(Icons.AutoMirrored.Outlined.Backspace, null, modifier = Modifier.size(22.dp))
                         }
                     }
                 }
@@ -659,8 +788,64 @@ fun AiInputLayout(
 }
 
 // ──────────────────────────────────────────────
-// System-styled infinite scroll chip row
+// System-styled chip row
 // ──────────────────────────────────────────────
+
+@Composable
+private fun SmartChipSection(
+    title: String,
+    chips: List<String>,
+    selectedChip: String?,
+    onChipSelected: (String) -> Unit,
+    primary: Color,
+    surfaceVariant: Color,
+    onSurface: Color,
+    outline: Color,
+) {
+    Surface(
+        color = surfaceVariant.copy(alpha = 0.3f),
+        shape = RoundedCornerShape(12.dp),
+        border = BorderStroke(0.6.dp, outline.copy(alpha = 0.8f)),
+        modifier = Modifier.fillMaxWidth(),
+    ) {
+        Column(modifier = Modifier.padding(vertical = 6.dp)) {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 10.dp, vertical = 2.dp),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Text(
+                    title,
+                    color = onSurface.copy(alpha = 0.85f),
+                    fontSize = 11.sp,
+                    fontWeight = FontWeight.Medium,
+                )
+                if (!selectedChip.isNullOrBlank()) {
+                    Text(
+                        selectedChip,
+                        color = primary,
+                        fontSize = 10.sp,
+                        fontWeight = FontWeight.SemiBold,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                        modifier = Modifier.widthIn(max = 120.dp),
+                    )
+                }
+            }
+            SystemChipRow(
+                chips = chips,
+                selectedChip = selectedChip,
+                onChipSelected = onChipSelected,
+                primary = primary,
+                surfaceVariant = surfaceVariant,
+                onSurface = onSurface,
+                outline = outline,
+            )
+        }
+    }
+}
 
 @Composable
 private fun SystemChipRow(
@@ -670,22 +855,26 @@ private fun SystemChipRow(
     primary: Color,
     surfaceVariant: Color,
     onSurface: Color,
-    onSurfaceVar: Color,
     outline: Color
 ) {
-    val repeatCount = 100
-    val infiniteChips = remember(chips) {
-        List(chips.size * repeatCount) { chips[it % chips.size] }
+    val listState = rememberLazyListState()
+    val selectedIndex = remember(chips, selectedChip) {
+        selectedChip?.let { chips.indexOf(it) } ?: -1
     }
-    val listState = rememberLazyListState(initialFirstVisibleItemIndex = chips.size * (repeatCount / 2))
+
+    LaunchedEffect(selectedIndex, chips.size) {
+        if (selectedIndex >= 0 && selectedIndex < chips.size) {
+            listState.animateScrollToItem(selectedIndex)
+        }
+    }
 
     LazyRow(
         state = listState,
         modifier = Modifier.fillMaxWidth().padding(horizontal = 4.dp),
-        horizontalArrangement = Arrangement.spacedBy(6.dp)
+        horizontalArrangement = Arrangement.spacedBy(10.dp)
     ) {
-        items(infiniteChips.size) { index ->
-            val chip = infiniteChips[index]
+        items(chips.size) { index ->
+            val chip = chips[index]
             val isSelected = selectedChip == chip
             FilterChip(
                 selected = isSelected,
@@ -695,24 +884,37 @@ private fun SystemChipRow(
                         chip,
                         fontSize = 12.sp,
                         maxLines = 1,
-                        fontWeight = if (isSelected) FontWeight.Medium else FontWeight.Normal
+                        fontWeight = if (isSelected) FontWeight.SemiBold else FontWeight.Normal
                     )
                 },
+                leadingIcon = if (isSelected) {
+                    {
+                        Icon(
+                            Icons.Default.Check,
+                            contentDescription = null,
+                            modifier = Modifier.size(14.dp),
+                        )
+                    }
+                } else {
+                    null
+                },
                 colors = FilterChipDefaults.filterChipColors(
-                    containerColor = Color.Transparent,
-                    labelColor = onSurfaceVar,
-                    selectedContainerColor = primary.copy(alpha = 0.12f),
+                    containerColor = surfaceVariant.copy(alpha = 0.45f),
+                    labelColor = onSurface.copy(alpha = 0.85f),
+                    selectedContainerColor = primary.copy(alpha = 0.16f),
                     selectedLabelColor = primary
                 ),
                 border = FilterChipDefaults.filterChipBorder(
                     enabled = true,
                     selected = isSelected,
-                    borderWidth = 0.8.dp,
+                    borderWidth = if (isSelected) 1.1.dp else 0.7.dp,
                     borderColor = outline,
-                    selectedBorderColor = primary.copy(alpha = 0.3f)
+                    selectedBorderColor = primary.copy(alpha = 0.45f)
                 ),
-                shape = RoundedCornerShape(20.dp),
-                modifier = Modifier.height(32.dp)
+                shape = RoundedCornerShape(16.dp),
+                modifier = Modifier
+                    .height(36.dp)
+                    .widthIn(min = 80.dp)
             )
         }
     }

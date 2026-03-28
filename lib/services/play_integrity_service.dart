@@ -15,6 +15,7 @@ import '../utils/app_logger.dart';
 /// 5. Returns allow/block decision
 class PlayIntegrityService {
   static const MethodChannel _channel = MethodChannel('com.noxquill.rewordium/integrity');
+  static const bool _verificationDisabled = true;
 
   // ── Cache keys & TTLs ─────────────────────────
   static const String _kCacheResult  = 'pi_result';
@@ -30,6 +31,11 @@ class PlayIntegrityService {
   /// Returns cached result when fresh; otherwise runs a live check and caches it.
   /// Call this from the splash — it is fast (~50 ms) on every subsequent cold start.
   static Future<bool> checkIntegrityWithCache() async {
+    if (_verificationDisabled) {
+      AppLogger.warning('Play Integrity: verification disabled (temporary bypass)');
+      return true;
+    }
+
     if (defaultTargetPlatform != TargetPlatform.android) return true;
 
     try {
@@ -85,6 +91,11 @@ class PlayIntegrityService {
   /// 
   /// Returns false on ANY error (strict mode - block by default)
   static Future<bool> checkIntegrity() async {
+    if (_verificationDisabled) {
+      AppLogger.warning('Play Integrity: check skipped (temporary bypass)');
+      return true;
+    }
+
     try {
       // Only run on Android
       if (defaultTargetPlatform != TargetPlatform.android) {
@@ -118,6 +129,15 @@ class PlayIntegrityService {
   /// Get detailed integrity verdict from backend
   /// Returns full verdict data including which checks passed/failed
   static Future<Map<String, dynamic>?> getIntegrityVerdict() async {
+    if (_verificationDisabled) {
+      return {
+        'allowed': true,
+        'reason': 'Verification disabled temporarily',
+        'isFromPlayStore': true,
+        'signatureValid': true,
+      };
+    }
+
     try {
       if (defaultTargetPlatform != TargetPlatform.android) {
         return null;
@@ -143,6 +163,11 @@ class PlayIntegrityService {
   /// Initialize the Play Integrity API
   /// Should be called during app startup
   static Future<void> initialize() async {
+    if (_verificationDisabled) {
+      AppLogger.warning('Play Integrity: initialize skipped (temporary bypass)');
+      return;
+    }
+
     try {
       if (defaultTargetPlatform != TargetPlatform.android) {
         return;
@@ -157,6 +182,10 @@ class PlayIntegrityService {
 
   /// Check if device meets basic play protect requirements
   static Future<bool> isDeviceSecure() async {
+    if (_verificationDisabled) {
+      return true;
+    }
+
     try {
       if (defaultTargetPlatform != TargetPlatform.android) {
         return true;

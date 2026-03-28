@@ -4,6 +4,7 @@ import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
+import android.net.Uri
 import android.os.Build
 import android.os.Bundle
 import android.os.Handler
@@ -22,6 +23,7 @@ import io.flutter.embedding.android.FlutterActivity
 import io.flutter.embedding.engine.FlutterEngine
 import io.flutter.plugin.common.MethodChannel
 import android.accessibilityservice.AccessibilityServiceInfo
+import java.util.ArrayDeque
 
 class MainActivity : FlutterActivity() {
     companion object {
@@ -40,7 +42,8 @@ class MainActivity : FlutterActivity() {
     }
 
     private var deepLinkChannel: MethodChannel? = null
-    private var pendingDeepLink: String? = null
+    private val pendingDeepLinks: ArrayDeque<String> = ArrayDeque()
+    private var isDeepLinkChannelReady: Boolean = false
     private var userStatusMethodChannel: MethodChannel? = null
     private val creditConsumptionReceiver = object : BroadcastReceiver() {
         override fun onReceive(context: Context?, intent: Intent?) {
@@ -75,6 +78,9 @@ class MainActivity : FlutterActivity() {
 
     override fun onDestroy() {
         super.onDestroy()
+
+        isDeepLinkChannelReady = false
+        deepLinkChannel = null
         
         // Cleanup broadcast receiver
         try {
@@ -101,16 +107,56 @@ class MainActivity : FlutterActivity() {
     private fun handleDeepLink(intent: Intent?) {
         val data = intent?.data
         if (data != null && data.scheme == "rewordium") {
-            val host = data.host
-            Log.d(TAG, "Deep link received: scheme=${data.scheme}, host=$host")
-            
-            when (host) {
-                "ai_settings" -> {
-                    pendingDeepLink = "ai_settings"
-                    // If Flutter engine is ready, send immediately
-                    deepLinkChannel?.invokeMethod("navigateTo", mapOf("route" to "ai_settings"))
-                }
+            val route = resolveDeepLinkRoute(data)
+            Log.d(TAG, "Deep link received: uri=$data, route=$route")
+
+            if (route != null) {
+                enqueueDeepLink(route)
+            } else {
+                Log.w(TAG, "Unsupported deep link: $data")
             }
+        }
+    }
+
+    private fun resolveDeepLinkRoute(uri: Uri): String? {
+        val host = uri.host?.lowercase()?.trim()
+        val firstPath = uri.pathSegments.firstOrNull()?.lowercase()?.trim()
+        val routeQuery = uri.getQueryParameter("route")?.lowercase()?.trim()
+
+        val rawRoute = when {
+            !routeQuery.isNullOrBlank() -> routeQuery
+            !host.isNullOrBlank() -> host
+            !firstPath.isNullOrBlank() -> firstPath
+            else -> null
+        } ?: return null
+
+        return when (rawRoute) {
+            "ai_settings", "ai-settings", "aisettings", "ai", "jade_ai", "jade-ai", "jadeai" -> "ai_settings"
+            "home" -> "home"
+            "settings", "app_settings", "app-settings" -> "settings"
+            "paraphraser", "paraphrase", "rewrite" -> "paraphraser"
+            "grammar", "grammar_check", "grammar-check" -> "grammar"
+            "tools", "tool" -> "tools"
+            else -> null
+        }
+    }
+
+    private fun enqueueDeepLink(route: String) {
+        synchronized(pendingDeepLinks) {
+            pendingDeepLinks.addLast(route)
+        }
+        dispatchPendingDeepLinks()
+    }
+
+    private fun dispatchPendingDeepLinks() {
+        val channel = deepLinkChannel ?: return
+        if (!isDeepLinkChannelReady) return
+
+        val links = synchronized(pendingDeepLinks) {
+            pendingDeepLinks.toList().also { pendingDeepLinks.clear() }
+        }
+        links.forEach { route ->
+            channel.invokeMethod("navigateTo", mapOf("route" to route))
         }
     }
 
@@ -173,22 +219,27 @@ class MainActivity : FlutterActivity() {
 
         // --- DEEP LINK CHANNEL ---
         deepLinkChannel = MethodChannel(flutterEngine.dartExecutor.binaryMessenger, DEEP_LINK_CHANNEL)
+        isDeepLinkChannelReady = true
         deepLinkChannel?.setMethodCallHandler { call, result ->
             when (call.method) {
                 "getPendingDeepLink" -> {
-                    val link = pendingDeepLink
-                    pendingDeepLink = null // Clear after reading
+                    val link = synchronized(pendingDeepLinks) {
+                        if (pendingDeepLinks.isNotEmpty()) pendingDeepLinks.removeFirst() else null
+                    }
                     result.success(link)
+                }
+                "getPendingDeepLinks" -> {
+                    val links = synchronized(pendingDeepLinks) {
+                        pendingDeepLinks.toList().also { pendingDeepLinks.clear() }
+                    }
+                    result.success(links)
                 }
                 else -> result.notImplemented()
             }
         }
-        
-        // Send pending deep link if exists
-        pendingDeepLink?.let { link ->
-            Handler(Looper.getMainLooper()).postDelayed({
-                deepLinkChannel?.invokeMethod("navigateTo", mapOf("route" to link))
-            }, 500) // Small delay to ensure Flutter is ready
+
+        Handler(Looper.getMainLooper()).post {
+            dispatchPendingDeepLinks()
         }
         // --- PLAY INTEGRITY CHANNEL ---
         val integrityChannel = MethodChannel(flutterEngine.dartExecutor.binaryMessenger, INTEGRITY_CHANNEL)
