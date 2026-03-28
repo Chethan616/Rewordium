@@ -612,7 +612,7 @@ class FlorisImeService : LifecycleInputMethodService() {
         val state by keyboardManager.activeState.collectAsState()
         val attributes = mapOf(
             FlorisImeUi.Attr.Mode to state.keyboardMode.toString(),
-            FlorisImeUi.Attr.ShiftState to state.inputShiftState.toString(),
+            FlorisImeUi.Attr.ShiftState to state.inputShiftState.name.lowercase(),
         )
         val layoutDirection = LocalLayoutDirection.current
         LaunchedEffect(layoutDirection) {

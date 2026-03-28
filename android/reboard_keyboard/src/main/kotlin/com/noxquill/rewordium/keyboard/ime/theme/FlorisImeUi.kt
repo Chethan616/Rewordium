@@ -390,6 +390,7 @@ enum class FlorisImeUi(val elementName: String, val resId: Int?) {
     object Attr {
         const val Code = "code"
         const val Mode = "mode"
+        const val Variation = "variation"
         const val ShiftState = "shiftstate"
     }
 }

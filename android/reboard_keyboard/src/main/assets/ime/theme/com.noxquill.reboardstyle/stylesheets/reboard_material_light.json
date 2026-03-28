@@ -69,13 +69,13 @@
     "background": "var(--key-bg-pressed)"
   },
   "key[code=-5]": {
-    "background": "var(--accent)",
-    "foreground": "var(--accent-text)",
+    "background": "var(--accent-pressed)",
+    "foreground": "var(--accent-pressed-text)",
     "font-size": "20sp"
   },
   "key[code=-5]:pressed": {
-    "background": "var(--accent-pressed)",
-    "foreground": "var(--accent-pressed-text)"
+    "background": "var(--accent)",
+    "foreground": "var(--accent-text)"
   },
   "key[code=-11]": {
     "background": "var(--accent)",
@@ -87,8 +87,8 @@
     "foreground": "var(--accent-pressed-text)"
   },
   "key[code=-11][shiftstate=`shifted_manual`]": {
-    "background": "var(--accent)",
-    "foreground": "var(--accent-text)"
+    "background": "var(--accent-pressed)",
+    "foreground": "var(--accent-pressed-text)"
   },
   "key[code=-11][shiftstate=`shifted_automatic`]": {
     "background": "var(--accent-pressed)",
@@ -124,13 +124,13 @@
     "background": "var(--accent-pressed)",
     "foreground": "var(--accent-pressed-text)"
   },
-  "key[code=47]": {
-    "background": "var(--key-bg)",
-    "foreground": "var(--key-fg)"
+  "key[code=47][mode=`characters`][variation=`uri`]": {
+    "background": "var(--accent-pressed)",
+    "foreground": "var(--accent-pressed-text)"
   },
-  "key[code=47]:pressed": {
-    "background": "var(--key-bg-pressed)",
-    "foreground": "var(--key-fg)"
+  "key[code=47][mode=`characters`][variation=`uri`]:pressed": {
+    "background": "var(--accent)",
+    "foreground": "var(--accent-text)"
   },
   "key[code=-204,-205]": {
     "font-size": "12sp"

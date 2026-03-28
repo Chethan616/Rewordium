@@ -23,24 +23,24 @@ import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.togetherWith
-import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyRow
-import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
@@ -60,7 +60,6 @@ import androidx.compose.material3.FilterChipDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -88,10 +87,11 @@ import com.noxquill.rewordium.keyboard.R
 import com.noxquill.rewordium.keyboard.aiManager
 import com.noxquill.rewordium.keyboard.editorInstance
 import com.noxquill.rewordium.keyboard.ime.ImeUiMode
+import com.noxquill.rewordium.keyboard.ime.input.LocalInputFeedbackController
 import com.noxquill.rewordium.keyboard.ime.keyboard.FlorisImeSizing
 import com.noxquill.rewordium.keyboard.ime.media.KeyboardLikeButton
-import com.noxquill.rewordium.keyboard.ime.text.keyboard.TextKeyData
 import com.noxquill.rewordium.keyboard.ime.theme.FlorisImeUi
+import com.noxquill.rewordium.keyboard.ime.text.keyboard.TextKeyData
 import com.noxquill.rewordium.keyboard.keyboardManager
 import kotlinx.coroutines.launch
 import org.florisboard.lib.snygg.ui.rememberSnyggThemeQuery
@@ -115,6 +115,7 @@ fun AiInputLayout(
     val keyboardManager by context.keyboardManager()
     val editorInstance by context.editorInstance()
     val aiManager by context.aiManager()
+    val inputFeedbackController = LocalInputFeedbackController.current
     val scope = rememberCoroutineScope()
 
     // ── AI app detection for prompt enhancer ──
@@ -155,6 +156,9 @@ fun AiInputLayout(
             aiMode = AiMode.CONTEXT
         }
     }
+
+    val showIdleControls = !isGenerating && generatedText == null
+    val showAdvancedChips = showIdleControls && (aiMode == AiMode.REWRITE || aiMode == AiMode.APPEND)
 
     // ── Chip data — clean labels, no emojis, professional ──
     val personaChips = remember { listOf(
@@ -229,11 +233,46 @@ fun AiInputLayout(
         }
     }
 
+    fun applyGeneratedTextAndExit() {
+        val text = generatedText ?: return
+        try {
+            when (aiMode) {
+                AiMode.ENHANCE, AiMode.REWRITE, AiMode.CONTEXT -> {
+                    if (wasUsingAllText) editorInstance.performClipboardSelectAll()
+                    editorInstance.commitText(text)
+                    val toastRes = if (aiMode == AiMode.ENHANCE) {
+                        R.string.ai__prompt_enhancer_replaced
+                    } else {
+                        R.string.ai__text_replaced
+                    }
+                    Toast.makeText(context, toastRes, Toast.LENGTH_SHORT).show()
+                }
+                AiMode.APPEND -> {
+                    val currentText = editorInstance.activeContent.text.toString()
+                    if (currentText.isNotEmpty()) {
+                        val endPos = currentText.length
+                        editorInstance.setSelection(endPos, endPos)
+                        editorInstance.commitText("\n\n$text")
+                    } else {
+                        editorInstance.commitText(text)
+                    }
+                    Toast.makeText(context, R.string.ai__text_inserted, Toast.LENGTH_SHORT).show()
+                }
+            }
+            keyboardManager.activeState.imeUiMode = ImeUiMode.TEXT
+        } catch (_: Exception) {
+            Toast.makeText(context, R.string.ai__error_api, Toast.LENGTH_SHORT).show()
+        }
+    }
+
+    // Keep AI panel height stable and tall enough for all chip rows without scrolling.
+    val aiPanelHeight = FlorisImeSizing.keyboardRowBaseHeight * 5 + FlorisImeSizing.smartbarHeight
+
     CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Ltr) {
         Box(
             modifier = modifier
                 .fillMaxWidth()
-                .height(FlorisImeSizing.imeUiHeight())
+                .height(aiPanelHeight)
                 .background(bgColor)
         ) {
             Column(modifier = Modifier.fillMaxSize()) {
@@ -323,7 +362,12 @@ fun AiInputLayout(
                                 modifier = Modifier
                                     .weight(1f)
                                     .clip(RoundedCornerShape(50))
-                                    .clickable { aiMode = mode; generatedText = null; errorMessage = null }
+                                    .clickable {
+                                        inputFeedbackController.keyPress()
+                                        aiMode = mode
+                                        generatedText = null
+                                        errorMessage = null
+                                    }
                             ) {
                                 Row(
                                     modifier = Modifier.padding(vertical = 7.dp),
@@ -419,7 +463,6 @@ fun AiInputLayout(
                                     ) {
                                         Card(
                                             colors = CardDefaults.cardColors(containerColor = surfaceColor.copy(alpha = 0.7f)),
-                                            border = androidx.compose.foundation.BorderStroke(0.5.dp, outline),
                                             shape = RoundedCornerShape(14.dp),
                                             modifier = Modifier.weight(1f).fillMaxWidth()
                                         ) {
@@ -435,37 +478,6 @@ fun AiInputLayout(
                                                     fontSize = 14.sp,
                                                     lineHeight = 20.sp
                                                 )
-                                            }
-                                        }
-                                        Spacer(Modifier.height(8.dp))
-                                        Row(
-                                            modifier = Modifier.fillMaxWidth(),
-                                            horizontalArrangement = Arrangement.spacedBy(8.dp)
-                                        ) {
-                                            FilledTonalButton(
-                                                onClick = { doGenerate() },
-                                                colors = ButtonDefaults.filledTonalButtonColors(
-                                                    containerColor = surfaceVariant,
-                                                    contentColor = onSurface
-                                                ),
-                                                shape = RoundedCornerShape(10.dp),
-                                                modifier = Modifier.weight(1f)
-                                            ) {
-                                                Icon(Icons.Default.Refresh, null, modifier = Modifier.size(18.dp))
-                                                Spacer(Modifier.width(4.dp))
-                                                Text("Regenerate", fontSize = 13.sp, fontWeight = FontWeight.Medium, maxLines = 1, softWrap = false)
-                                            }
-                                            OutlinedButton(
-                                                onClick = {
-                                                    generatedText = null; errorMessage = null
-                                                    selectedPersona = null; selectedTask = null; selectedLength = null
-                                                },
-                                                colors = ButtonDefaults.outlinedButtonColors(contentColor = onSurface),
-                                                border = ButtonDefaults.outlinedButtonBorder(enabled = true),
-                                                shape = RoundedCornerShape(10.dp),
-                                                modifier = Modifier.weight(1f)
-                                            ) {
-                                                Text("New Prompt", fontSize = 13.sp, fontWeight = FontWeight.Medium, maxLines = 1, softWrap = false)
                                             }
                                         }
                                     }
@@ -497,7 +509,10 @@ fun AiInputLayout(
                                         )
                                         Spacer(Modifier.height(12.dp))
                                         FilledTonalButton(
-                                            onClick = { errorMessage = null },
+                                            onClick = {
+                                                inputFeedbackController.keyPress()
+                                                errorMessage = null
+                                            },
                                             colors = ButtonDefaults.filledTonalButtonColors(
                                                 containerColor = surfaceVariant, contentColor = onSurface
                                             ),
@@ -536,7 +551,7 @@ fun AiInputLayout(
                                         color = onSurfaceVar,
                                         fontSize = 14.sp
                                     )
-                                    Spacer(Modifier.height(2.dp))
+                                    Spacer(Modifier.height(0.dp))
                                     Text(
                                         when (aiMode) {
                                             AiMode.ENHANCE -> "then tap Enhance to make it better"
@@ -553,188 +568,116 @@ fun AiInputLayout(
                 }
 
                 // ════════ 3-Row chip selector (only when idle and NOT in enhance mode) ════════
-                if (!isGenerating && generatedText == null) {
-                    val showAdvancedChips = aiMode == AiMode.REWRITE || aiMode == AiMode.APPEND
-                    Column(
+                if (showIdleControls) {
+                    val chipAreaMaxHeight = if (showAdvancedChips) {
+                        FlorisImeSizing.keyboardRowBaseHeight * 1.9f
+                    } else {
+                        FlorisImeSizing.keyboardRowBaseHeight * 1.1f
+                    }
+                    Box(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .padding(horizontal = 4.dp, vertical = 4.dp),
-                        verticalArrangement = Arrangement.spacedBy(6.dp)
+                            .heightIn(max = chipAreaMaxHeight)
+                            .padding(horizontal = 4.dp, vertical = 4.dp)
                     ) {
-                        when {
-                            showAdvancedChips -> {
+                        Column(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .verticalScroll(rememberScrollState()),
+                            verticalArrangement = Arrangement.spacedBy(6.dp)
+                        ) {
+                            if (showAdvancedChips) {
                                 SmartChipSection(
                                     title = "Style",
-                                chips = personaChips,
-                                selectedChip = selectedPersona,
-                                onChipSelected = { selectedPersona = if (selectedPersona == it) null else it },
-                                primary = primary,
-                                surfaceVariant = surfaceVariant,
-                                onSurface = onSurface,
-                                outline = outline
-                            )
+                                    chips = personaChips,
+                                    selectedChip = selectedPersona,
+                                    onChipSelected = { selectedPersona = if (selectedPersona == it) null else it },
+                                    primary = primary,
+                                    surfaceVariant = surfaceVariant,
+                                    onSurface = onSurface,
+                                    outline = outline
+                                )
                                 SmartChipSection(
                                     title = "Intent",
-                                chips = taskChips,
-                                selectedChip = selectedTask,
-                                onChipSelected = { selectedTask = if (selectedTask == it) null else it },
-                                primary = primary,
-                                surfaceVariant = surfaceVariant,
-                                onSurface = onSurface,
-                                outline = outline
-                            )
+                                    chips = taskChips,
+                                    selectedChip = selectedTask,
+                                    onChipSelected = { selectedTask = if (selectedTask == it) null else it },
+                                    primary = primary,
+                                    surfaceVariant = surfaceVariant,
+                                    onSurface = onSurface,
+                                    outline = outline
+                                )
                                 SmartChipSection(
                                     title = "Length",
-                                chips = lengthChips,
-                                selectedChip = selectedLength,
-                                onChipSelected = { selectedLength = if (selectedLength == it) null else it },
-                                primary = primary,
-                                surfaceVariant = surfaceVariant,
-                                onSurface = onSurface,
-                                outline = outline
-                            )
-                            }
-                            aiMode == AiMode.CONTEXT -> {
-                                Surface(
-                                    color = surfaceVariant.copy(alpha = 0.35f),
-                                    shape = RoundedCornerShape(12.dp),
-                                    border = BorderStroke(0.6.dp, outline.copy(alpha = 0.7f)),
-                                    modifier = Modifier.fillMaxWidth(),
-                                ) {
-                                    Column(modifier = Modifier.padding(horizontal = 12.dp, vertical = 10.dp)) {
-                                        Text(
-                                            "Keep Voice Mode",
-                                            color = onSurface,
-                                            fontSize = 12.sp,
-                                            fontWeight = FontWeight.SemiBold,
-                                        )
-                                        Spacer(Modifier.height(2.dp))
-                                        Text(
-                                            "Fixes grammar and clarity while preserving slang, tone, and your writing style.",
-                                            color = onSurface.copy(alpha = 0.78f),
-                                            fontSize = 11.sp,
-                                            lineHeight = 15.sp,
-                                        )
-                                    }
-                                }
-                            }
-                        }
-
-                        // Generate CTA
-                        Row(
-                            modifier = Modifier.fillMaxWidth().padding(top = 2.dp),
-                            horizontalArrangement = Arrangement.Center
-                        ) {
-                            FilledTonalButton(
-                                onClick = { doGenerate() },
-                                colors = ButtonDefaults.filledTonalButtonColors(
-                                    containerColor = primary,
-                                    contentColor = onPrimary
-                                ),
-                                shape = RoundedCornerShape(20.dp),
-                                modifier = Modifier.height(40.dp)
-                            ) {
-                                Icon(
-                                    when (aiMode) {
-                                        AiMode.ENHANCE, AiMode.REWRITE -> Icons.Default.Edit
-                                        AiMode.APPEND -> Icons.Default.ArrowDownward
-                                        AiMode.CONTEXT -> Icons.Default.AutoFixHigh
-                                    },
-                                    null,
-                                    modifier = Modifier.size(18.dp),
-                                )
-                                Spacer(Modifier.width(6.dp))
-                                Text(
-                                    when (aiMode) {
-                                        AiMode.ENHANCE -> stringResource(R.string.ai__prompt_enhancer_action)
-                                        AiMode.CONTEXT -> stringResource(R.string.ai__context_mode_action)
-                                        else -> "Generate"
-                                    },
-                                    fontSize = 14.sp, fontWeight = FontWeight.Medium
+                                    chips = lengthChips,
+                                    selectedChip = selectedLength,
+                                    onChipSelected = { selectedLength = if (selectedLength == it) null else it },
+                                    primary = primary,
+                                    surfaceVariant = surfaceVariant,
+                                    onSurface = onSurface,
+                                    outline = outline
                                 )
                             }
                         }
                     }
                 }
 
-                // ════════ Bottom action bar ════════
-                Surface(
-                    color = surfaceVariant,
+                // ════════ Material action row (ABC | primary action | Backspace) ════════
+                Row(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .height(FlorisImeSizing.keyboardRowBaseHeight * 1.12f)
+                        .height(FlorisImeSizing.keyboardRowBaseHeight)
+                        .padding(horizontal = 8.dp, vertical = 4.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
                 ) {
-                    Row(
+                    KeyboardLikeButton(
+                        inputEventDispatcher = keyboardManager.inputEventDispatcher,
+                        keyData = TextKeyData.IME_UI_MODE_TEXT,
+                        elementName = FlorisImeUi.MediaBottomRowButton.elementName,
                         modifier = Modifier
-                            .fillMaxSize()
-                            .padding(horizontal = 8.dp, vertical = 3.dp),
-                        verticalAlignment = Alignment.CenterVertically
+                            .weight(1f)
+                            .fillMaxHeight(0.84f),
                     ) {
-                        // ABC button
-                        KeyboardLikeButton(
-                            elementName = FlorisImeUi.MediaBottomRowButton.elementName,
-                            inputEventDispatcher = keyboardManager.inputEventDispatcher,
-                            keyData = TextKeyData.IME_UI_MODE_TEXT,
-                            modifier = Modifier
-                                .weight(1f)
-                                .fillMaxHeight(0.92f),
-                        ) {
-                            Text(
-                                "ABC",
-                                fontWeight = FontWeight.Bold,
-                                fontSize = 15.sp,
-                                maxLines = 1,
-                                softWrap = false
-                            )
-                        }
+                        Text(
+                            "ABC",
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 14.sp,
+                            maxLines = 1,
+                            softWrap = false,
+                        )
+                    }
 
-                        if (generatedText != null) {
-                            Spacer(Modifier.width(8.dp))
+                    if (generatedText != null) {
+                        Row(
+                            modifier = Modifier
+                                .weight(2.8f)
+                                .fillMaxHeight(0.84f),
+                            horizontalArrangement = Arrangement.spacedBy(6.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                        ) {
                             FilledTonalButton(
                                 onClick = {
-                                    val text = generatedText ?: return@FilledTonalButton
-                                    try {
-                                        when (aiMode) {
-                                            AiMode.ENHANCE, AiMode.REWRITE, AiMode.CONTEXT -> {
-                                                if (wasUsingAllText) editorInstance.performClipboardSelectAll()
-                                                editorInstance.commitText(text)
-                                                val toastRes = if (aiMode == AiMode.ENHANCE) {
-                                                    R.string.ai__prompt_enhancer_replaced
-                                                } else {
-                                                    R.string.ai__text_replaced
-                                                }
-                                                Toast.makeText(context, toastRes, Toast.LENGTH_SHORT).show()
-                                            }
-                                            AiMode.APPEND -> {
-                                                val currentText = editorInstance.activeContent.text.toString()
-                                                if (currentText.isNotEmpty()) {
-                                                    val endPos = currentText.length
-                                                    editorInstance.setSelection(endPos, endPos)
-                                                    editorInstance.commitText("\n\n$text")
-                                                } else {
-                                                    editorInstance.commitText(text)
-                                                }
-                                                Toast.makeText(context, R.string.ai__text_inserted, Toast.LENGTH_SHORT).show()
-                                            }
-                                        }
-                                        keyboardManager.activeState.imeUiMode = ImeUiMode.TEXT
-                                    } catch (_: Exception) {
-                                        Toast.makeText(context, R.string.ai__error_api, Toast.LENGTH_SHORT).show()
-                                    }
+                                    inputFeedbackController.keyPress()
+                                    applyGeneratedTextAndExit()
                                 },
                                 colors = ButtonDefaults.filledTonalButtonColors(
                                     containerColor = primary,
-                                    contentColor = onPrimary
+                                    contentColor = onPrimary,
                                 ),
-                                shape = RoundedCornerShape(8.dp),
-                                modifier = Modifier.weight(2.5f).fillMaxHeight(0.75f)
+                                shape = RoundedCornerShape(12.dp),
+                                modifier = Modifier
+                                    .weight(1f)
+                                    .fillMaxHeight(),
+                                contentPadding = PaddingValues(horizontal = 12.dp, vertical = 0.dp),
                             ) {
                                 Icon(
                                     when (aiMode) {
                                         AiMode.ENHANCE, AiMode.REWRITE, AiMode.CONTEXT -> Icons.Default.Check
                                         AiMode.APPEND -> Icons.Default.ArrowDownward
                                     },
-                                    null, modifier = Modifier.size(20.dp)
+                                    null,
+                                    modifier = Modifier.size(19.dp),
                                 )
                                 Spacer(Modifier.width(4.dp))
                                 Text(
@@ -747,39 +690,81 @@ fun AiInputLayout(
                                     fontSize = 13.sp,
                                     fontWeight = FontWeight.Medium,
                                     maxLines = 1,
-                                    softWrap = false
+                                    softWrap = false,
                                 )
                             }
 
-                            Spacer(Modifier.width(6.dp))
                             FilledTonalButton(
-                                onClick = { generatedText = null; errorMessage = null },
+                                onClick = {
+                                    inputFeedbackController.keyPress()
+                                    generatedText = null
+                                    errorMessage = null
+                                },
                                 colors = ButtonDefaults.filledTonalButtonColors(
-                                    containerColor = surfaceColor.copy(alpha = 0.8f),
-                                    contentColor = onSurface
+                                    containerColor = surfaceColor,
+                                    contentColor = onSurface,
                                 ),
-                                shape = RoundedCornerShape(8.dp),
-                                modifier = Modifier.weight(1f).fillMaxHeight(0.75f)
+                                shape = RoundedCornerShape(12.dp),
+                                modifier = Modifier
+                                    .fillMaxHeight()
+                                    .width(44.dp),
+                                contentPadding = PaddingValues(0.dp),
                             ) {
-                                Icon(Icons.Default.Refresh, "Reset", modifier = Modifier.size(19.dp))
+                                Icon(Icons.Default.Refresh, "Reset", modifier = Modifier.size(18.dp))
                             }
-                        } else {
-                            Spacer(Modifier.weight(1f))
                         }
-
-                        Spacer(Modifier.width(8.dp))
-
-                        // Backspace
-                        KeyboardLikeButton(
-                            elementName = FlorisImeUi.MediaBottomRowButton.elementName,
-                            inputEventDispatcher = keyboardManager.inputEventDispatcher,
-                            keyData = TextKeyData.DELETE,
+                    } else {
+                        FilledTonalButton(
+                            onClick = {
+                                inputFeedbackController.keyPress()
+                                doGenerate()
+                            },
+                            enabled = !isGenerating,
+                            colors = ButtonDefaults.filledTonalButtonColors(
+                                containerColor = primary,
+                                contentColor = onPrimary,
+                                disabledContainerColor = primary.copy(alpha = 0.45f),
+                                disabledContentColor = onPrimary.copy(alpha = 0.65f),
+                            ),
+                            shape = RoundedCornerShape(22.dp),
                             modifier = Modifier
-                                .weight(1f)
-                                .fillMaxHeight(0.92f),
+                                .weight(2.8f)
+                                .fillMaxHeight(0.84f),
+                            contentPadding = PaddingValues(horizontal = 12.dp, vertical = 0.dp),
                         ) {
-                            Icon(Icons.AutoMirrored.Outlined.Backspace, null, modifier = Modifier.size(22.dp))
+                            Icon(
+                                when (aiMode) {
+                                    AiMode.ENHANCE, AiMode.REWRITE -> Icons.Default.Edit
+                                    AiMode.APPEND -> Icons.Default.ArrowDownward
+                                    AiMode.CONTEXT -> Icons.Default.AutoFixHigh
+                                },
+                                null,
+                                modifier = Modifier.size(18.dp),
+                            )
+                            Spacer(Modifier.width(6.dp))
+                            Text(
+                                when (aiMode) {
+                                    AiMode.ENHANCE -> stringResource(R.string.ai__prompt_enhancer_action)
+                                    AiMode.CONTEXT -> stringResource(R.string.ai__context_mode_action)
+                                    else -> "Generate"
+                                },
+                                fontSize = 14.sp,
+                                fontWeight = FontWeight.Medium,
+                                maxLines = 1,
+                                softWrap = false,
+                            )
                         }
+                    }
+
+                    KeyboardLikeButton(
+                        inputEventDispatcher = keyboardManager.inputEventDispatcher,
+                        keyData = TextKeyData.DELETE,
+                        elementName = FlorisImeUi.MediaBottomRowButton.elementName,
+                        modifier = Modifier
+                            .weight(1f)
+                            .fillMaxHeight(0.84f),
+                    ) {
+                        Icon(Icons.AutoMirrored.Outlined.Backspace, null, modifier = Modifier.size(24.dp))
                     }
                 }
             }
@@ -803,35 +788,44 @@ private fun SmartChipSection(
     outline: Color,
 ) {
     Surface(
-        color = surfaceVariant.copy(alpha = 0.3f),
+        color = surfaceVariant.copy(alpha = 0.4f),
         shape = RoundedCornerShape(12.dp),
-        border = BorderStroke(0.6.dp, outline.copy(alpha = 0.8f)),
         modifier = Modifier.fillMaxWidth(),
     ) {
-        Column(modifier = Modifier.padding(vertical = 6.dp)) {
+        Column(
+            modifier = Modifier.padding(horizontal = 8.dp, vertical = 6.dp),
+            verticalArrangement = Arrangement.spacedBy(6.dp),
+        ) {
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(horizontal = 10.dp, vertical = 2.dp),
+                    .padding(horizontal = 2.dp, vertical = 1.dp),
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 Text(
                     title,
-                    color = onSurface.copy(alpha = 0.85f),
-                    fontSize = 11.sp,
+                    color = onSurface.copy(alpha = 0.82f),
+                    fontSize = 10.sp,
                     fontWeight = FontWeight.Medium,
                 )
                 if (!selectedChip.isNullOrBlank()) {
-                    Text(
-                        selectedChip,
-                        color = primary,
-                        fontSize = 10.sp,
-                        fontWeight = FontWeight.SemiBold,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis,
-                        modifier = Modifier.widthIn(max = 120.dp),
-                    )
+                    Surface(
+                        color = primary.copy(alpha = 0.18f),
+                        shape = RoundedCornerShape(10.dp),
+                    ) {
+                        Text(
+                            selectedChip,
+                            color = primary,
+                            fontSize = 10.sp,
+                            fontWeight = FontWeight.Medium,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                            modifier = Modifier
+                                .widthIn(max = 120.dp)
+                                .padding(horizontal = 8.dp, vertical = 2.dp),
+                        )
+                    }
                 }
             }
             SystemChipRow(
@@ -857,64 +851,47 @@ private fun SystemChipRow(
     onSurface: Color,
     outline: Color
 ) {
-    val listState = rememberLazyListState()
-    val selectedIndex = remember(chips, selectedChip) {
-        selectedChip?.let { chips.indexOf(it) } ?: -1
-    }
-
-    LaunchedEffect(selectedIndex, chips.size) {
-        if (selectedIndex >= 0 && selectedIndex < chips.size) {
-            listState.animateScrollToItem(selectedIndex)
-        }
-    }
+    val inputFeedbackController = LocalInputFeedbackController.current
 
     LazyRow(
-        state = listState,
-        modifier = Modifier.fillMaxWidth().padding(horizontal = 4.dp),
-        horizontalArrangement = Arrangement.spacedBy(10.dp)
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+        contentPadding = PaddingValues(horizontal = 8.dp),
     ) {
         items(chips.size) { index ->
             val chip = chips[index]
             val isSelected = selectedChip == chip
             FilterChip(
                 selected = isSelected,
-                onClick = { onChipSelected(chip) },
+                onClick = {
+                    inputFeedbackController.keyPress()
+                    onChipSelected(chip)
+                },
                 label = {
                     Text(
                         chip,
-                        fontSize = 12.sp,
+                        fontSize = 11.sp,
                         maxLines = 1,
-                        fontWeight = if (isSelected) FontWeight.SemiBold else FontWeight.Normal
+                        fontWeight = if (isSelected) FontWeight.Medium else FontWeight.Normal
                     )
                 },
-                leadingIcon = if (isSelected) {
-                    {
-                        Icon(
-                            Icons.Default.Check,
-                            contentDescription = null,
-                            modifier = Modifier.size(14.dp),
-                        )
-                    }
-                } else {
-                    null
-                },
                 colors = FilterChipDefaults.filterChipColors(
-                    containerColor = surfaceVariant.copy(alpha = 0.45f),
-                    labelColor = onSurface.copy(alpha = 0.85f),
-                    selectedContainerColor = primary.copy(alpha = 0.16f),
-                    selectedLabelColor = primary
+                    containerColor = surfaceVariant,
+                    labelColor = onSurface,
+                    selectedContainerColor = primary.copy(alpha = 0.18f),
+                    selectedLabelColor = primary,
                 ),
                 border = FilterChipDefaults.filterChipBorder(
                     enabled = true,
                     selected = isSelected,
-                    borderWidth = if (isSelected) 1.1.dp else 0.7.dp,
-                    borderColor = outline,
-                    selectedBorderColor = primary.copy(alpha = 0.45f)
+                    borderWidth = 0.dp,
+                    borderColor = Color.Transparent,
+                    selectedBorderColor = Color.Transparent,
                 ),
-                shape = RoundedCornerShape(16.dp),
+                shape = RoundedCornerShape(14.dp),
                 modifier = Modifier
-                    .height(36.dp)
-                    .widthIn(min = 80.dp)
+                    .height(34.dp)
+                    .widthIn(min = 74.dp)
             )
         }
     }

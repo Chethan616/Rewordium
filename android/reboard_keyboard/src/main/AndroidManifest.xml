@@ -54,7 +54,7 @@
         <activity
             android:name="com.noxquill.rewordium.keyboard.app.FlorisAppActivity"
             android:label="ReBoard Settings"
-            android:launchMode="singleTask"
+            android:launchMode="singleTop"
             android:windowSoftInputMode="adjustResize"
             android:theme="@style/FlorisAppTheme.Splash"
             android:exported="true">

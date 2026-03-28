@@ -455,7 +455,7 @@ class PopupUiController(
     fun RenderPopups(): Unit = with(LocalDensity.current) {
         val attributes = mapOf(
             FlorisImeUi.Attr.Mode to evaluator.keyboard.mode.toString(),
-            FlorisImeUi.Attr.ShiftState to evaluator.state.inputShiftState.toString(),
+            FlorisImeUi.Attr.ShiftState to evaluator.state.inputShiftState.name.lowercase(),
         )
         baseRenderInfo?.let { renderInfo ->
             PopupBaseBox(
