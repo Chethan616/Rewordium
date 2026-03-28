@@ -31,82 +31,119 @@ class WhatsNewSheet {
   // Add a new entry for each release. Older entries are kept for reference
   // but only the *current* version's items are displayed.
   static final Map<String, List<_WhatsNewItem>> _features = {
+    '2.5.0+70': [
+      const _WhatsNewItem(
+        icon: CupertinoIcons.checkmark_seal_fill,
+        color: Color(0xFF10B981),
+        title: 'Keyboard Suggestions Added',
+        description:
+            'The keyboard now provides smarter in-flow suggestions to help you write faster with less back-and-forth.',
+      ),
+      const _WhatsNewItem(
+        icon: CupertinoIcons.keyboard_chevron_compact_down,
+        color: Color(0xFF3B82F6),
+        title: 'Better Keyboard UX',
+        description:
+            'Refined keyboard interactions, smoother panel behavior, and cleaner actions for a more reliable typing experience.',
+      ),
+      const _WhatsNewItem(
+        icon: CupertinoIcons.chat_bubble_2,
+        color: Color(0xFFF59E0B),
+        title: 'Context-Aware AI Panel',
+        description:
+            'AI panel now supports context-aware mode to preserve your intent, tone, and conversation flow while improving text.',
+      ),
+      const _WhatsNewItem(
+        icon: CupertinoIcons.pencil_outline,
+        color: Color(0xFF8B5CF6),
+        title: 'Rewrite Prompt Enhancements',
+        description:
+            'Rewrite prompts are now more structured and precise, resulting in cleaner outputs that better match requested style and intent.',
+      ),
+      const _WhatsNewItem(
+        icon: CupertinoIcons.arrow_down_circle,
+        color: Color(0xFFEF4444),
+        title: 'AI Append Enhancements',
+        description:
+            'Append mode now creates stronger continuations with improved context carry-over, tone consistency, and fewer repetitive outputs.',
+      ),
+    ],
     '2.1.6': [
-      _WhatsNewItem(
+      const _WhatsNewItem(
         icon: CupertinoIcons.moon_stars_fill,
-        color: const Color(0xFF6366F1),
+        color: Color(0xFF6366F1),
         title: 'Perfect Dark Mode',
         description:
             'Fixed icon visibility issues in dark mode for AI settings and accessibility features. Now every element looks crisp and clear.',
       ),
-      _WhatsNewItem(
+      const _WhatsNewItem(
         icon: CupertinoIcons.person_badge_minus,
-        color: const Color(0xFFEF4444),
+        color: Color(0xFFEF4444),
         title: 'Smooth Sign Out Experience',
         description:
             'Added loading indicator when signing out and improved navigation flow to ensure you\'re always taken to the right screen.',
       ),
-      _WhatsNewItem(
+      const _WhatsNewItem(
         icon: CupertinoIcons.heart_circle_fill,
-        color: const Color(0xFFF59E0B),
+        color: Color(0xFFF59E0B),
         title: 'Native App Rating',
         description:
             'Rate Us now uses Google Play\'s built-in review system for a seamless experience. We\'ll ask for your feedback after just 2 writing generations.',
       ),
-      _WhatsNewItem(
+      const _WhatsNewItem(
         icon: CupertinoIcons.lock_shield_fill,
-        color: const Color(0xFF10B981),
+        color: Color(0xFF10B981),
         title: 'Enhanced Security',
         description:
             'All AI features now require login for better security and personalization. This applies to both the main app and keyboard writing assistant.',
       ),
-      _WhatsNewItem(
+      const _WhatsNewItem(
         icon: CupertinoIcons.arrow_right_circle_fill,
-        color: const Color(0xFF06B6D4),
+        color: Color(0xFF06B6D4),
         title: 'Easy App Navigation',
         description:
             'Replaced the launch shortcut with a dedicated Go Back action in keyboard settings for smoother in-app navigation.',
       ),
-      _WhatsNewItem(
+      const _WhatsNewItem(
         icon: CupertinoIcons.keyboard_chevron_compact_down,
-        color: const Color(0xFF22C55E),
+        color: Color(0xFF22C55E),
         title: 'Better Predictive Typing Base',
         description:
             'Started production integration of FlorisBoard-based autocorrect, suggestions, and glide typing improvements for more accurate typing.',
       ),
     ],
     '2.1.5': [
-      _WhatsNewItem(
+      const _WhatsNewItem(
         icon: CupertinoIcons.paintbrush_fill,
-        color: const Color(0xFF4F46E5),
+        color: Color(0xFF4F46E5),
         title: 'Vibrant New Color Scheme',
         description:
             'New Expressive UI/UX and vibrant color palette across the app for a fresher, more engaging experience.',
       ),
-      _WhatsNewItem(
+      const _WhatsNewItem(
         icon: CupertinoIcons.person_crop_circle,
-        color: const Color(0xFFFF6B6B),
+        color: Color(0xFFFF6B6B),
         title: 'Keyboard Is Now Better Than Ever',
         description:
             'Wallpaper-based automatic color extraction for keyboard themes, plus improved key shapes and haptics for a more tactile typing experience.',
       ),
-      _WhatsNewItem(
+      const _WhatsNewItem(
         icon: CupertinoIcons.doc_plaintext,
-        color: const Color(0xFF06B6D4),
+        color: Color(0xFF06B6D4),
         title: 'Now for Documents Too',
         description:
             'Introducing Document Paraphrasing, Summarization, Grammar, Translation, and AI Detection. We are aware of the PDF and other file-type export issues — they will be fixed soon. This feature is not fully polished yet and we are not charging for it (free for all).',
       ),
-      _WhatsNewItem(
+      const _WhatsNewItem(
         icon: CupertinoIcons.doc_on_clipboard,
-        color: const Color(0xFF10B981),
+        color: Color(0xFF10B981),
         title: 'Better Prompting',
         description:
             'All AI services now have improved prompting capabilities.',
       ),
-      _WhatsNewItem(
+      const _WhatsNewItem(
         icon: CupertinoIcons.sparkles,
-        color: const Color(0xFFF59E0B),
+        color: Color(0xFFF59E0B),
         title: 'Polished Grammar & Paraphraser',
         description:
             'Refined UI/UX for grammar checking and paraphrasing, with better visual feedback.',
@@ -119,7 +156,10 @@ class WhatsNewSheet {
     try {
       final prefs = await SharedPreferences.getInstance();
       final info = await PackageInfo.fromPlatform();
-      final currentVersion = info.version;
+      final buildVersion = '${info.version}+${info.buildNumber}';
+      final currentVersion = _features.containsKey(buildVersion)
+          ? buildVersion
+          : info.version;
       final lastSeen = prefs.getString(_prefKey);
 
       if (lastSeen == currentVersion) return;
@@ -147,11 +187,13 @@ class WhatsNewSheet {
   static Future<void> show(BuildContext context) async {
     try {
       final info = await PackageInfo.fromPlatform();
-      final currentVersion = info.version;
-      // Find latest version with features
-      final version = _features.containsKey(currentVersion)
-          ? currentVersion
-          : _features.keys.last;
+      final buildVersion = '${info.version}+${info.buildNumber}';
+      // Find current build/version entry, otherwise fall back to latest declared entry.
+      final version = _features.containsKey(buildVersion)
+          ? buildVersion
+          : (_features.containsKey(info.version)
+              ? info.version
+              : _features.keys.first);
       final items = _features[version]!;
 
       if (!context.mounted) return;

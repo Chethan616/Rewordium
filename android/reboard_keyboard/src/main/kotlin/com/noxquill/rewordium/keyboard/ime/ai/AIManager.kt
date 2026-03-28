@@ -340,18 +340,40 @@ class AIManager(private val context: Context) {
         if (fullPrompt.isBlank()) {
             return Result.failure(AIException("No text to rewrite"))
         }
+
+        val actionGuidance = when (action) {
+            AIAction.REWRITE -> "Rewrite for clarity while preserving meaning."
+            AIAction.EXPAND -> "Expand with useful detail, context, or examples without changing core intent."
+            AIAction.SUMMARIZE -> "Summarize to the essential points while preserving key facts."
+            AIAction.FIX_GRAMMAR -> "Fix grammar, spelling, and punctuation with minimal voice changes."
+            AIAction.MAKE_FORMAL -> "Make the output professional and formal without sounding stiff."
+            AIAction.MAKE_CASUAL -> "Make the output natural and conversational while staying respectful."
+        }
         
-        val systemPrompt = """You are a skilled writer helping someone improve their text. Your job is to rewrite, enhance, or modify text while keeping it in ENGLISH.
+        val systemPrompt = """You are an expert mobile writing assistant.
+
+You will receive a structured request containing STYLE, INTENT, LENGTH, ACTION, and SOURCE_TEXT.
+Apply all relevant instructions to SOURCE_TEXT and return the final transformed text.
+
+ACTION PRIORITY:
+$actionGuidance
 
 CRITICAL RULES:
-1. Return ONLY the final text - no explanations, no quotes, no "Here is...", no commentary
-2. ALWAYS respond in ENGLISH regardless of input language - DO NOT TRANSLATE
-3. If the input is in another language, still respond in ENGLISH
-4. Write naturally like a human, not robotic or formulaic
-5. Preserve the original meaning and intent
-6. Follow the user's persona, task, and length instructions precisely
-
-You're helping improve English text, not translating."""
+1. Return ONLY final text. No labels, no quotes, no markdown, no commentary.
+2. Preserve names, facts, numbers, dates, links, and intent unless INTENT explicitly asks to change them.
+3. Keep the same language as SOURCE_TEXT unless INTENT explicitly requests translation.
+4. Preserve useful formatting (line breaks, bullets, hashtags, mentions, emojis) unless INTENT says otherwise.
+5. Respect LENGTH when provided:
+   - Very Short: <= 1 sentence
+   - Short: 1-2 sentences
+   - Medium: 2-4 sentences
+   - Long: 1-3 paragraphs
+   - Detailed: add meaningful context, no fluff
+   - Concise: remove redundancy
+   - Elaborate: richer detail and examples
+   - Bullet Points: output bullet points
+6. Improve readability and grammar while keeping the original voice.
+7. If instructions conflict, prioritize preserving user intent and factual accuracy."""
         
         return makeApiRequest(config, systemPrompt, fullPrompt)
     }
@@ -375,24 +397,27 @@ You're helping improve English text, not translating."""
             return Result.failure(AIException("No text to continue from"))
         }
         
-        val systemPrompt = """You are a skilled writer who continues and extends existing text naturally. Your job is to generate NEW content that flows seamlessly after the given text.
+        val systemPrompt = """You are an expert continuation writer.
+
+You will receive STYLE, INTENT, LENGTH, and EXISTING_TEXT.
+Write only the next part that should come after EXISTING_TEXT.
 
 CRITICAL RULES:
-1. Return ONLY the new continuation text - no explanations, no quotes, no "Here is...", no commentary
-2. DO NOT repeat, rephrase, or rewrite ANY of the original text
-3. Write content that naturally follows and extends what was already written
-4. Match the tone, style, and context of the existing text
-5. ALWAYS respond in ENGLISH regardless of input language
-6. The continuation should feel like a natural next paragraph or section
-7. Write like a thoughtful human, not a template
-
-You're adding to existing text, not replacing it."""
+1. Return ONLY new continuation text. No labels, no quotes, no commentary.
+2. Do NOT repeat, paraphrase, or summarize EXISTING_TEXT.
+3. Keep the same language as EXISTING_TEXT unless INTENT explicitly requests translation.
+4. Match tone, pacing, and point of view from EXISTING_TEXT.
+5. Keep continuity of entities, tense, and facts.
+6. Respect STYLE, INTENT, and LENGTH instructions when provided.
+7. Continue naturally from the final idea in EXISTING_TEXT.
+8. Avoid boilerplate openers like "Sure" or "Here is"."""
         
         val fullPrompt = buildString {
-            if (persona.isNotBlank()) append("Writing style: $persona. ")
-            if (task.isNotBlank()) append("Purpose: $task. ")
-            if (length.isNotBlank()) append("Length: $length. ")
-            append("\n\nExisting text (DO NOT repeat this, write what comes NEXT):\n\n")
+            appendLine("STYLE: ${if (persona.isNotBlank()) persona else "Match original voice"}")
+            appendLine("INTENT: ${if (task.isNotBlank()) task else "Natural continuation"}")
+            appendLine("LENGTH: ${if (length.isNotBlank()) length else "Match source pacing"}")
+            appendLine()
+            appendLine("EXISTING_TEXT:")
             append(existingText)
         }
         
@@ -441,10 +466,18 @@ CRITICAL RULES:
 1. Return ONLY the new continuation text - no explanations, no quotes, no commentary
 2. DO NOT repeat or rephrase ANY of the original text
 3. Write content that naturally follows what was already written
-4. ALWAYS respond in ENGLISH
-5. Write like a thoughtful human"""
+4. Keep the same language as the original text unless the task explicitly asks translation
+5. Maintain continuity in tone, tense, entities, and facts
+6. Write like a thoughtful human"""
         
-        return makeApiRequest(config, systemPrompt, "Continue after this text:\n\n$existingText")
+        val userPrompt = buildString {
+            appendLine("TASK: $taskInstruction")
+            appendLine()
+            appendLine("EXISTING_TEXT:")
+            append(existingText)
+        }
+
+        return makeApiRequest(config, systemPrompt, userPrompt)
     }
 
     /**
