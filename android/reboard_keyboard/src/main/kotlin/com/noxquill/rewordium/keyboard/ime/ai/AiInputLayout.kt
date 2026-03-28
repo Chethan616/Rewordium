@@ -159,6 +159,7 @@ fun AiInputLayout(
 
     val showIdleControls = !isGenerating && generatedText == null
     val showAdvancedChips = showIdleControls && (aiMode == AiMode.REWRITE || aiMode == AiMode.APPEND)
+    val collapseIdleContentArea = showAdvancedChips && errorMessage == null
 
     // ── Chip data — clean labels, no emojis, professional ──
     val personaChips = remember { listOf(
@@ -401,7 +402,13 @@ fun AiInputLayout(
                 Box(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .weight(1f)
+                        .then(
+                            if (collapseIdleContentArea) {
+                                Modifier.height(0.dp)
+                            } else {
+                                Modifier.weight(1f)
+                            }
+                        )
                         .padding(horizontal = 12.dp),
                     contentAlignment = Alignment.Center
                 ) {
@@ -583,10 +590,15 @@ fun AiInputLayout(
                     } else {
                         FlorisImeSizing.keyboardRowBaseHeight * 1.1f
                     }
+                    val chipAreaModifier = if (showAdvancedChips) {
+                        Modifier.weight(1f)
+                    } else {
+                        Modifier.heightIn(max = chipAreaMaxHeight)
+                    }
                     Box(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .heightIn(max = chipAreaMaxHeight)
+                            .then(chipAreaModifier)
                             .padding(horizontal = 4.dp, vertical = 4.dp)
                     ) {
                         Column(
