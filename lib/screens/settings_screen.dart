@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
-import 'package:android_intent_plus/android_intent.dart';
 import 'package:flutter/foundation.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:package_info_plus/package_info_plus.dart';
@@ -44,6 +43,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
   // Admin access state
   int _adminTapCount = 0;
   DateTime? _lastTapTime;
+  bool _isOpeningReboardSettings = false;
 
 
 
@@ -297,11 +297,23 @@ class _SettingsScreenState extends State<SettingsScreen> {
   /// Opens the native ReBoard keyboard settings activity
   Future<void> _openReboardSettings() async {
     if (defaultTargetPlatform != TargetPlatform.android) return;
-    final intent = AndroidIntent(
-      action: 'android.intent.action.VIEW',
-      data: 'ui://ReBoard/settings/home',
-    );
-    await intent.launch();
+    if (_isOpeningReboardSettings) return;
+
+    _isOpeningReboardSettings = true;
+    try {
+      final opened = await RewordiumKeyboardService.openReboardSettings();
+      if (!opened && mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Unable to open ReBoard settings right now.'),
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+      }
+    } finally {
+      await Future<void>.delayed(const Duration(milliseconds: 450));
+      _isOpeningReboardSettings = false;
+    }
   }
 
   void _showIOSStyleKeyboardActivationDialog(BuildContext context) {

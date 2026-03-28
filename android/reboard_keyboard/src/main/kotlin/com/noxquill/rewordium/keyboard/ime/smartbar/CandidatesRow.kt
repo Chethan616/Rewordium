@@ -40,6 +40,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.dp
 import com.noxquill.rewordium.keyboard.app.FlorisPreferenceStore
+import com.noxquill.rewordium.keyboard.ime.input.LocalInputFeedbackController
 import com.noxquill.rewordium.keyboard.ime.nlp.ClipboardSuggestionCandidate
 import com.noxquill.rewordium.keyboard.ime.nlp.SuggestionCandidate
 import com.noxquill.rewordium.keyboard.ime.theme.FlorisImeUi
@@ -63,6 +64,7 @@ val CandidatesRowScrollbarHeight = 2.dp
 fun CandidatesRow(modifier: Modifier = Modifier) {
     val prefs by FlorisPreferenceStore
     val context = LocalContext.current
+    val inputFeedbackController = LocalInputFeedbackController.current
     val keyboardManager by context.keyboardManager()
     val nlpManager by context.nlpManager()
     val subtypeManager by context.subtypeManager()
@@ -117,6 +119,7 @@ fun CandidatesRow(modifier: Modifier = Modifier) {
                     candidate = candidate,
                     displayMode = displayMode,
                     onClick = {
+                        inputFeedbackController.keyPress()
                         // Can't use candidate directly
                         keyboardManager.commitCandidate(candidates[n])
                     },

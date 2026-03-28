@@ -33,6 +33,18 @@ class RewordiumKeyboardService {
     }
   }
 
+  /// Open native ReBoard settings activity
+  static Future<bool> openReboardSettings() async {
+    if (!_isAndroid) return false;
+    try {
+      final result = await _channel.invokeMethod<bool>('openReboardSettings');
+      return result ?? false;
+    } on PlatformException catch (e) {
+      print('Error opening ReBoard settings: ${e.message}');
+      return false;
+    }
+  }
+
   /// Open system keyboard settings
   static Future<void> openKeyboardSettingsOld() async {
     if (!_isAndroid) return;

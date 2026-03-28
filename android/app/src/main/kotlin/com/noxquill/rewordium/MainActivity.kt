@@ -45,6 +45,7 @@ class MainActivity : FlutterActivity() {
     private val pendingDeepLinks: ArrayDeque<String> = ArrayDeque()
     private var isDeepLinkChannelReady: Boolean = false
     private var userStatusMethodChannel: MethodChannel? = null
+    private var lastReboardSettingsLaunchAt: Long = 0L
     private val creditConsumptionReceiver = object : BroadcastReceiver() {
         override fun onReceive(context: Context?, intent: Intent?) {
             if (intent?.action == "com.noxquill.rewordium.CONSUME_CREDIT_REQUEST") {
@@ -286,6 +287,9 @@ class MainActivity : FlutterActivity() {
                 "openKeyboardSettings" -> {
                     openKeyboardSettings()
                     result.success(null)
+                }
+                "openReboardSettings" -> {
+                    result.success(openReboardSettings())
                 }
                 "setDarkMode" -> {
                     val enabled = call.argument<Boolean>("enabled") ?: false
@@ -796,6 +800,35 @@ class MainActivity : FlutterActivity() {
         val intent = Intent(Settings.ACTION_INPUT_METHOD_SETTINGS)
         intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
         startActivity(intent)
+    }
+
+    private fun openReboardSettings(): Boolean {
+        return try {
+            val now = System.currentTimeMillis()
+            if (now - lastReboardSettingsLaunchAt < 800L) {
+                Log.d(TAG, "Ignoring duplicate ReBoard settings launch request")
+                return true
+            }
+
+            val intent = Intent(Intent.ACTION_VIEW, Uri.parse("ui://ReBoard/settings/home")).apply {
+                addCategory(Intent.CATEGORY_DEFAULT)
+                addCategory(Intent.CATEGORY_BROWSABLE)
+                setClassName(packageName, "com.noxquill.rewordium.keyboard.app.FlorisAppActivity")
+                `package` = packageName
+                addFlags(Intent.FLAG_ACTIVITY_SINGLE_TOP)
+            }
+            if (intent.resolveActivity(packageManager) != null) {
+                lastReboardSettingsLaunchAt = now
+                startActivity(intent)
+                true
+            } else {
+                Log.w(TAG, "ReBoard settings activity is not available")
+                false
+            }
+        } catch (e: Exception) {
+            Log.e(TAG, "Failed to open ReBoard settings", e)
+            false
+        }
     }
 
     private fun updateSetting(key: String, value: Any) {

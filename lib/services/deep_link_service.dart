@@ -10,7 +10,10 @@ class DeepLinkService {
   static const _channel = MethodChannel('com.noxquill.rewordium/deep_link');
   static bool _isInitialized = false;
   static bool _isNavigationReady = false;
+  static bool _flushRetryScheduled = false;
   static final List<String> _queuedRoutes = <String>[];
+  static String? _lastHandledRoute;
+  static DateTime? _lastHandledAt;
 
   static bool get _isAndroid => defaultTargetPlatform == TargetPlatform.android;
 
@@ -78,6 +81,9 @@ class DeepLinkService {
   }
 
   static void _enqueueRoute(String route) {
+    if (_queuedRoutes.isNotEmpty && _queuedRoutes.last == route) {
+      return;
+    }
     _queuedRoutes.add(route);
     _flushQueuedRoutes();
   }
@@ -85,6 +91,15 @@ class DeepLinkService {
   static void _flushQueuedRoutes() {
     if (!_isNavigationReady) return;
     if (navigatorKey.currentContext == null || navigatorKey.currentState == null) {
+      _scheduleFlushRetry();
+      return;
+    }
+
+    final context = navigatorKey.currentContext;
+    final currentRouteName = context != null ? ModalRoute.of(context)?.settings.name : null;
+    final canNavigateNow = currentRouteName == '/home' || currentRouteName == '/settings' || currentRouteName == '/admin';
+    if (!canNavigateNow) {
+      _scheduleFlushRetry();
       return;
     }
 
@@ -92,6 +107,15 @@ class DeepLinkService {
       final route = _queuedRoutes.removeAt(0);
       _handleNavigation(route);
     }
+  }
+
+  static void _scheduleFlushRetry() {
+    if (_flushRetryScheduled) return;
+    _flushRetryScheduled = true;
+    Future<void>.delayed(const Duration(milliseconds: 180), () {
+      _flushRetryScheduled = false;
+      _flushQueuedRoutes();
+    });
   }
 
   static String? _normalizeRoute(String? route) {
@@ -149,6 +173,16 @@ class DeepLinkService {
   /// Handle navigation to the appropriate screen
   static void _handleNavigation(String? route) {
     if (route == null) return;
+
+    final now = DateTime.now();
+    if (_lastHandledRoute == route &&
+        _lastHandledAt != null &&
+        now.difference(_lastHandledAt!).inMilliseconds < 1200) {
+      AppLogger.warning('DeepLink: Ignoring duplicate route: $route');
+      return;
+    }
+    _lastHandledRoute = route;
+    _lastHandledAt = now;
 
     final context = navigatorKey.currentContext;
     if (context == null) {

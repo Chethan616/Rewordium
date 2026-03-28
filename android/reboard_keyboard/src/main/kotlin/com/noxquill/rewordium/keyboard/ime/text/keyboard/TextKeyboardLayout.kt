@@ -319,7 +319,8 @@ private fun TextKeyButton(
     val attributes = mapOf(
         FlorisImeUi.Attr.Code to key.computedData.code,
         FlorisImeUi.Attr.Mode to evaluator.keyboard.mode.toString(),
-        FlorisImeUi.Attr.ShiftState to evaluator.state.inputShiftState.toString(),
+        FlorisImeUi.Attr.Variation to evaluator.state.keyVariation.name.lowercase(),
+        FlorisImeUi.Attr.ShiftState to evaluator.state.inputShiftState.name.lowercase(),
     )
     val selector = when {
         !key.isEnabled -> SnyggSelector.DISABLED
