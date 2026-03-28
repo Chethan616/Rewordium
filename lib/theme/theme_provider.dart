@@ -70,7 +70,7 @@ class ThemeProvider extends ChangeNotifier {
       }
 
       AppTheme.setDarkMode(_isDarkMode);
-      _useDynamicColors = prefs.getBool(_dynamicColorsEnabledKey) ?? true;
+      _useDynamicColors = prefs.getBool(_dynamicColorsEnabledKey) ?? false;
       notifyListeners();
     } catch (e) {
       debugPrint('Error loading theme preference: $e');
@@ -167,7 +167,8 @@ class ThemeProvider extends ChangeNotifier {
   }
 
   void syncKeyboardAccent(Color color) {
-    final hex = '#${color.value.toRadixString(16).padLeft(8, '0').substring(2).toUpperCase()}';
+    final hex =
+        '#${color.toARGB32().toRadixString(16).padLeft(8, '0').substring(2).toUpperCase()}';
     if (_lastKeyboardAccentHex == hex) {
       return;
     }

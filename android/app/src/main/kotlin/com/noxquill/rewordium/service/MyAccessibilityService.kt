@@ -839,11 +839,11 @@ class MyAccessibilityService : AccessibilityService(), BubbleInteractionListener
 
     private fun getPersonaPrompt(): String {
         return when (selectedPersona) {
-            "Casual" -> "You are a grammar and clarity assistant. Your job is to fix ONLY grammar errors, spelling mistakes, and punctuation issues. Identify the existing tone of the text and preserve it exactly. Make the absolute minimum changes needed — do NOT rewrite, rephrase, or add new words unless correcting an error. Keep the author's original voice, word choices, and sentence structure intact. If the text has no errors, return it unchanged."
-            "Academic" -> "You MUST adopt the persona of a university professor or researcher. Your goal is to make the text sound formal, scholarly, and objective. Use complex sentences, precise vocabulary, and avoid colloquialisms or emotional language. The tone should be authoritative and well-structured."
-            "Poetry" -> "You MUST adopt the persona of a poet. Your goal is to transform the text into a short, lyrical piece. Use literary devices like metaphors, similes, imagery, and rhythm to convey the core message in an artistic and evocative way."
-            "Custom" -> if (customPersonaPrompt.isNotBlank()) "You MUST adopt the following specific persona: '$customPersonaPrompt'" else ""
-            else -> ""
+            "Casual" -> "You are a context-aware copy editor. Fix grammar and clarity with minimal edits while preserving the writer's voice, slang, and intent."
+            "Academic" -> "You are an academic writing expert. Produce clear, formal, evidence-oriented phrasing while preserving the original meaning."
+            "Poetry" -> "You are a poetic rewriter. Preserve meaning while expressing it through vivid imagery, rhythm, and emotional depth."
+            "Custom" -> if (customPersonaPrompt.isNotBlank()) "Adopt this exact persona and writing style: '$customPersonaPrompt'." else "You are a helpful writing assistant."
+            else -> "You are a helpful writing assistant."
         }
     }
     
@@ -960,89 +960,118 @@ class MyAccessibilityService : AccessibilityService(), BubbleInteractionListener
         }
         isStoppedByUser = false
 
-        // --- RESTORED ORIGINAL PROMPT LOGIC ---
-        val emailKeywords = listOf("email", "mail", "write", "compose", "send", "letter", "message to", "inform", "notify")
-        val isGenerationTask = emailKeywords.any { keyword ->
-            textToRewrite.trim().lowercase().contains(keyword)
-        } || textToRewrite.trim().startsWith("/generate", ignoreCase = true)
+        // --- PROMPT ENHANCEMENT LOGIC ---
+        val normalizedInput = textToRewrite.trim()
+        val lowerInput = normalizedInput.lowercase()
+
+        val generationTriggers = listOf(
+            "/generate",
+            "screen content detected:",
+            "help me respond",
+            "generate a suitable reply",
+            "write an email",
+            "compose an email",
+            "draft an email",
+            "reply to",
+            "respond to",
+            "message to",
+            "email to"
+        )
+        val isGenerationTask = generationTriggers.any { trigger ->
+            lowerInput.contains(trigger)
+        }
 
         val personaInstruction = getPersonaPrompt()
 
         val finalPrompt = if (isGenerationTask) {
-            val userCommand = if (textToRewrite.trim().startsWith("/generate", ignoreCase = true)) {
-                textToRewrite.substring("/generate".length).trim()
+            val userCommand = if (lowerInput.startsWith("/generate")) {
+                normalizedInput.substring("/generate".length).trim()
             } else {
-                textToRewrite.trim()
+                normalizedInput
             }
             """
-            You are an expert text generator. 
+            You are an expert message and email drafter.
             $personaInstruction
 
-            Your task is to generate a complete, ready-to-send email or message based on the user's request.
-            If it's an email, it MUST include a clear Subject line, a proper Greeting, a well-structured Body, and an appropriate Closing.
-            Your entire response MUST BE only the generated content itself. Do not include any explanations, titles, or surrounding conversational text.
+            TASK:
+            Draft the best possible response to the user's request.
 
-            USER'S REQUEST: "$userCommand"
+            RULES:
+            1. Return ONLY the final draft. No analysis, no labels, no markdown.
+            2. Keep the same language as the user's request unless translation is explicitly requested.
+            3. Preserve names, dates, numbers, links, and concrete facts.
+            4. If the request is clearly an email, include:
+               - Subject line
+               - Greeting
+               - Body
+               - Closing
+            5. If it is not an email request, return only the direct message text.
+            6. Keep tone aligned with the selected persona and context.
+            7. Do not invent facts.
+
+            USER REQUEST:
+            "$userCommand"
             """.trimIndent()
         } else {
             when (selectedPersona) {
                 "Casual" ->
                     """
                     $personaInstruction
-                    Fix only grammar, spelling, and punctuation errors in the user's text below.
-                    Do NOT change the tone, style, meaning, or word choices. Make minimal edits only where errors exist.
-                    Return the corrected text on the first line.
-                    Then on a NEW line, write "Changes:" followed by a brief summary of what was fixed (e.g., "Fixed 2 grammar errors, 1 spelling mistake").
-                    If no errors are found, return the original text unchanged and write "Changes: No errors found."
-                    ABSOLUTELY NO labels, titles, numbers, or extra formatting.
+                    Task: Context-aware grammar polish with minimal edits.
 
-                    ---
-                    USER'S TEXT: "$textToRewrite"
-                    YOUR RESPONSE:
+                    RULES:
+                    1. Fix grammar, spelling, punctuation, and obvious clarity issues only.
+                    2. Preserve meaning, tone, slang, abbreviations, emojis, and style.
+                    3. Keep sentence order and structure as close as possible to the source.
+                    4. Do not add new ideas or remove important details.
+                    5. Output format:
+                       - First line(s): corrected text only
+                       - Final line: "Changes: ..." with a concise summary
+                    6. If no fixes are needed, return original text and "Changes: No errors found."
+                    7. No extra labels or commentary.
+
+                    USER TEXT:
+                    "$normalizedInput"
                     """.trimIndent()
                 "Academic" ->
                     """
                     $personaInstruction
-                    Rewrite the user's text into three distinct academic styles, each on a new line:
-                    1. Formal Statement: A clear, declarative thesis-style sentence.
-                    2. Detailed Explanation: A more elaborate version with structured reasoning.
-                    3. Concise Summary: A brief, objective summary suitable for an abstract.
+                    Rewrite the user's text into exactly 3 academic variants.
+                    Return exactly 3 non-empty lines and nothing else.
+                    Line 1: Formal thesis-style statement.
+                    Line 2: Detailed analytical version.
+                    Line 3: Concise abstract-style summary.
+                    Preserve core meaning across all lines.
 
-                    Your output MUST BE ONLY the three rewritten sentences, each on a new line.
-                    ABSOLUTELY NO labels, titles, or any other extra text.
-
-                    ---
-                    USER'S TEXT: "$textToRewrite"
-                    YOUR RESPONSE:
+                    USER TEXT:
+                    "$normalizedInput"
                     """.trimIndent()
                 "Poetry" ->
                     """
                     $personaInstruction
-                    Transform the user's text into a beautiful, flowing piece of poetry. 
-                    Create a single, well-crafted poetic response that captures the essence of the original text.
-                    The response should be at least 4-6 lines long, with rich imagery and emotional depth.
-                    Use literary devices like metaphor, alliteration, and rhythm to create a compelling piece.
-                    
-                    ABSOLUTELY NO labels, titles, or any other extra text - just the poem itself.
+                    Transform the user's text into one polished poem.
+                    Requirements:
+                    - 4 to 8 lines
+                    - vivid imagery and natural rhythm
+                    - preserve the core message
+                    - no title, no labels, no commentary
 
-                    ---
-                    USER'S TEXT: "$textToRewrite"
-                    YOUR RESPONSE:
+                    USER TEXT:
+                    "$normalizedInput"
                     """.trimIndent()
                 else -> // For Custom Persona
                     """
                     $personaInstruction
-                    Your task is to rewrite the user's text into three distinct stylistic variations, all firmly in character. Each should be on a new line.
-                    Your output MUST BE ONLY the three rewritten sentences.
-                    ABSOLUTELY NO labels, titles, or any other extra text.
-                    
-                    ---
-                    USER'S TEXT: "$textToRewrite"
-                    YOUR RESPONSE:
+                    Produce exactly 3 distinct rewrites in the requested persona.
+                    Return exactly 3 non-empty lines and nothing else.
+                    Keep the same core meaning in every line.
+
+                    USER TEXT:
+                    "$normalizedInput"
                     """.trimIndent()
             }
         }
-        // --- END OF RESTORED LOGIC ---
+        // --- END OF PROMPT ENHANCEMENT LOGIC ---
 
         val btnRewrite = bottomSheetView!!.findViewById<Button>(R.id.button_rewrite)
         val thinkingLayout = bottomSheetView!!.findViewById<LinearLayout>(R.id.thinking_layout)
@@ -1158,7 +1187,10 @@ class MyAccessibilityService : AccessibilityService(), BubbleInteractionListener
                             listOf(content.trim())
                         }
                     } else {
-                        content.lines().filter { it.isNotBlank() }.take(3)
+                        content.lines()
+                            .map { it.trim().replace(Regex("^\\d+[\\).:-]\\s*"), "") }
+                            .filter { it.isNotBlank() }
+                            .take(3)
                     }
 
                     withContext(Dispatchers.Main) {

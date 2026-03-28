@@ -207,20 +207,22 @@ fun AiInputLayout(
                     aiManager.continueText(text, persona, task, length)
                 }
                 AiMode.REWRITE -> {
-                    val fullPrompt = buildString {
-                        if (persona.isNotBlank()) append("Persona: $persona. ")
-                        if (task.isNotBlank()) append("Task: $task. ")
-                        if (length.isNotBlank()) append("Length: $length. ")
-                        append("Rewrite this: $text")
-                    }
                     val action = when {
-                        task.contains("Rewrite") -> AIAction.REWRITE
-                        task.contains("Summarize") -> AIAction.SUMMARIZE
-                        task.contains("Expand") -> AIAction.EXPAND
-                        task.contains("Grammar") -> AIAction.FIX_GRAMMAR
-                        task.contains("Polite") || task.contains("Academic") -> AIAction.MAKE_FORMAL
-                        task.contains("Humor") -> AIAction.MAKE_CASUAL
+                        task.contains("Summarize", ignoreCase = true) -> AIAction.SUMMARIZE
+                        task.contains("Expand", ignoreCase = true) -> AIAction.EXPAND
+                        task.contains("Grammar", ignoreCase = true) -> AIAction.FIX_GRAMMAR
+                        task.contains("Polite", ignoreCase = true) || task.contains("Academic", ignoreCase = true) -> AIAction.MAKE_FORMAL
+                        task.contains("Humor", ignoreCase = true) || task.contains("Casual", ignoreCase = true) -> AIAction.MAKE_CASUAL
                         else -> AIAction.REWRITE
+                    }
+                    val fullPrompt = buildString {
+                        appendLine("STYLE: ${if (persona.isNotBlank()) persona else "Keep original voice"}")
+                        appendLine("INTENT: ${if (task.isNotBlank()) task else "Rewrite for clarity"}")
+                        appendLine("LENGTH: ${if (length.isNotBlank()) length else "Match source length"}")
+                        appendLine("ACTION: ${action.name}")
+                        appendLine()
+                        appendLine("SOURCE_TEXT:")
+                        append(text)
                     }
                     aiManager.rewriteTextWithPrompt(fullPrompt, action)
                 }
