@@ -273,11 +273,19 @@ class EditorInstance(context: Context) : AbstractEditorInstance(context) {
         if (text.isEmpty() || activeInfo.isRawInputEditor) return false
         val content = activeContent
         return if (content.composing.isValid) {
-            phantomSpace.setActive(showComposingRegion = false, candidate = candidate)
+            phantomSpace.setActive(
+                showComposingRegion = false,
+                candidate = candidate,
+                source = PhantomSpaceState.Source.COMPLETION,
+            )
             super.finalizeComposingText(text)
         } else {
             val isPhantomSpaceActive = phantomSpace.determine(text)
-            phantomSpace.setActive(showComposingRegion = false, candidate = candidate)
+            phantomSpace.setActive(
+                showComposingRegion = false,
+                candidate = candidate,
+                source = PhantomSpaceState.Source.COMPLETION,
+            )
             return if (isPhantomSpaceActive) {
                 super.commitText("$SPACE$text")
             } else {
@@ -302,7 +310,10 @@ class EditorInstance(context: Context) : AbstractEditorInstance(context) {
     fun commitGesture(text: String): Boolean {
         if (text.isEmpty() || activeInfo.isRawInputEditor) return false
         val isPhantomSpaceActive = phantomSpace.determine(text, forceActive = true)
-        phantomSpace.setActive(showComposingRegion = true)
+        phantomSpace.setActive(
+            showComposingRegion = true,
+            source = PhantomSpaceState.Source.GESTURE,
+        )
         return if (isPhantomSpaceActive) {
             super.commitText("$SPACE$text")
         } else {
@@ -362,7 +373,12 @@ class EditorInstance(context: Context) : AbstractEditorInstance(context) {
     fun deleteBackwards(unit: OperationUnit): Boolean {
         val content = activeContent
         if (unit == OperationUnit.CHARACTERS) {
-            if (phantomSpace.isActive && content.currentWord.isValid && prefs.glide.immediateBackspaceDeletesWord.get()) {
+            if (
+                prefs.glide.enabled.get() &&
+                prefs.glide.immediateBackspaceDeletesWord.get() &&
+                phantomSpace.isGestureTriggered &&
+                content.currentWord.isValid
+            ) {
                 return deleteBackwards(OperationUnit.WORDS)
             }
         }
@@ -610,6 +626,12 @@ class EditorInstance(context: Context) : AbstractEditorInstance(context) {
     }
 
     class PhantomSpaceState {
+        enum class Source {
+            NONE,
+            GESTURE,
+            COMPLETION,
+        }
+
         companion object {
             private const val F_IS_ACTIVE = 0x1
             private const val F_SHOW_COMPOSING_REGION = 0x2
@@ -617,6 +639,7 @@ class EditorInstance(context: Context) : AbstractEditorInstance(context) {
         }
 
         private val state = AtomicInteger(0)
+        private var source: Source = Source.NONE
         var candidateForRevert: SuggestionCandidate? = null
             private set
 
@@ -629,10 +652,14 @@ class EditorInstance(context: Context) : AbstractEditorInstance(context) {
         val showComposingRegion: Boolean
             get() = state.get() and F_SHOW_COMPOSING_REGION != 0
 
+        val isGestureTriggered: Boolean
+            get() = isActive && source == Source.GESTURE
+
         fun setActive(
             showComposingRegion: Boolean,
             stayActiveNextUpdate: Boolean = true,
             candidate: SuggestionCandidate? = null,
+            source: Source = Source.NONE,
         ) {
             state.set(
                 F_IS_ACTIVE
@@ -640,11 +667,13 @@ class EditorInstance(context: Context) : AbstractEditorInstance(context) {
                     or (if (stayActiveNextUpdate) F_STAY_ACTIVE_NEXT_UPDATE else 0)
             )
             candidateForRevert = candidate
+            this.source = source
         }
 
         fun setInactive() {
             state.set(0)
             candidateForRevert = null
+            source = Source.NONE
         }
 
         fun setInactiveFromUpdate() {
@@ -653,6 +682,7 @@ class EditorInstance(context: Context) : AbstractEditorInstance(context) {
             }
             if ((prevStateValue and F_STAY_ACTIVE_NEXT_UPDATE) == 0) {
                 candidateForRevert = null
+                source = Source.NONE
             }
         }
     }

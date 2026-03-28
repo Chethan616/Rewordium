@@ -1,8 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/services.dart';
+import 'dart:async';
+import 'dart:convert';
 import 'package:provider/provider.dart';
 import 'package:m3e_collection/m3e_collection.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import '../widgets/custom_app_bar.dart';
 import '../widgets/custom_button.dart';
@@ -22,7 +25,15 @@ class GrammarPage extends StatefulWidget {
   State<GrammarPage> createState() => _GrammarPageState();
 }
 
-class _GrammarPageState extends State<GrammarPage> {
+class _GrammarPageState extends State<GrammarPage>
+    with AutomaticKeepAliveClientMixin {
+  static const String _draftInputKey = 'grammar_draft_input';
+  static const String _draftCorrectedKey = 'grammar_draft_corrected';
+  static const String _draftErrorCountKey = 'grammar_draft_error_count';
+  static const String _draftErrorsKey = 'grammar_draft_errors';
+  static final Map<String, Map<String, dynamic>> _sessionGrammarCache =
+      <String, Map<String, dynamic>>{};
+
   final TextEditingController _textController = TextEditingController();
   final FocusNode _textFocusNode = FocusNode();
   int _wordCount = 0;
@@ -31,17 +42,152 @@ class _GrammarPageState extends State<GrammarPage> {
   String _correctedText = '';
   List<Map<String, dynamic>> _errors = [];
   DocumentResult? _loadedDocument;
+  String? _lastErrorMessage;
+  bool _isRestoringDraft = false;
+  bool _isInputEmpty = true;
+  Timer? _wordCountDebounce;
+
+  @override
+  bool get wantKeepAlive => true;
+
+  String _grammarCacheKey(String text) => 'grammar|$text';
+
+  void _cacheGrammarResult(String key, Map<String, dynamic> value) {
+    if (_sessionGrammarCache.length >= 30) {
+      _sessionGrammarCache.remove(_sessionGrammarCache.keys.first);
+    }
+    _sessionGrammarCache[key] = value;
+  }
+
+  Future<void> _persistDraft() async {
+    if (_isRestoringDraft) return;
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setString(_draftInputKey, _textController.text);
+      await prefs.setString(_draftCorrectedKey, _correctedText);
+      await prefs.setInt(_draftErrorCountKey, _errorCount);
+      await prefs.setString(_draftErrorsKey, jsonEncode(_errors));
+    } catch (_) {}
+  }
+
+  Future<void> _restoreDraft() async {
+    _isRestoringDraft = true;
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final text = prefs.getString(_draftInputKey) ?? '';
+      final corrected = prefs.getString(_draftCorrectedKey) ?? '';
+      final errorCount = prefs.getInt(_draftErrorCountKey) ?? 0;
+      final errorsRaw = prefs.getString(_draftErrorsKey);
+
+      List<Map<String, dynamic>> restoredErrors = <Map<String, dynamic>>[];
+      if (errorsRaw != null && errorsRaw.isNotEmpty) {
+        try {
+          final decoded = jsonDecode(errorsRaw);
+          if (decoded is List) {
+            restoredErrors = decoded
+                .whereType<Map>()
+                .map((e) => Map<String, dynamic>.from(e))
+                .toList();
+          }
+        } catch (_) {}
+      }
+
+      if (!mounted) return;
+      setState(() {
+        _textController.text = text;
+        _correctedText = corrected;
+        _errorCount = errorCount;
+        _errors = restoredErrors;
+        _wordCount = text.trim().isEmpty
+            ? 0
+            : text.trim().split(RegExp(r'\s+')).length;
+        _isInputEmpty = text.trim().isEmpty;
+      });
+    } catch (_) {
+      // Ignore restore failures to keep screen startup stable.
+    } finally {
+      _isRestoringDraft = false;
+    }
+  }
+
+  void _scheduleWordCountUpdate(String text) {
+    _wordCountDebounce?.cancel();
+    _wordCountDebounce = Timer(const Duration(milliseconds: 250), () {
+      if (!mounted) return;
+      setState(() {
+        _wordCount = text.trim().isEmpty
+            ? 0
+            : text.trim().split(RegExp(r'\s+')).length;
+      });
+    });
+  }
+
+  Map<String, dynamic> _sanitizeGrammarResult(
+    Map<String, dynamic> result,
+    String originalText,
+  ) {
+    if (result.containsKey('error') || result.containsKey('errorType')) {
+      return result;
+    }
+
+    final correctedText = result['corrected_text']?.toString() ?? originalText;
+    final rawErrors = result['errors'];
+    final normalizedErrors = <Map<String, dynamic>>[];
+
+    if (rawErrors is List) {
+      for (final item in rawErrors) {
+        if (item is! Map) continue;
+        final map = Map<String, dynamic>.from(item);
+        final original = map['original']?.toString().trim() ?? '';
+        final correction = map['correction']?.toString().trim() ?? '';
+        final explanation = map['explanation']?.toString().trim() ??
+            'Suggested grammar correction';
+        if (original.isEmpty || correction.isEmpty) continue;
+
+        normalizedErrors.add({
+          'original': original,
+          'correction': correction,
+          'explanation': explanation,
+        });
+      }
+    }
+
+    var errorCount = 0;
+    final rawErrorCount = result['error_count'];
+    if (rawErrorCount is int) {
+      errorCount = rawErrorCount;
+    } else if (rawErrorCount is num) {
+      errorCount = rawErrorCount.toInt();
+    }
+
+    if (errorCount == 0 && normalizedErrors.isNotEmpty) {
+      errorCount = normalizedErrors.length;
+    }
+
+    return {
+      'corrected_text': correctedText,
+      'error_count': errorCount,
+      'errors': normalizedErrors,
+    };
+  }
+
+  Future<void> _retryGrammarCheck() async {
+    await _checkGrammar();
+  }
 
   void _onDocumentTextExtracted(String text, DocumentResult doc) {
     setState(() {
       _textController.text = text;
       _updateWordCount(text);
       _loadedDocument = doc;
+      _isInputEmpty = text.trim().isEmpty;
     });
+    _persistDraft();
   }
 
   void _clearDocument() {
     setState(() => _loadedDocument = null);
+    _persistDraft();
   }
 
   @override
@@ -49,10 +195,12 @@ class _GrammarPageState extends State<GrammarPage> {
     super.initState();
     // Initialize Unified AI service
     UnifiedAIService.initialize();
+    _restoreDraft();
   }
 
   @override
   void dispose() {
+    _wordCountDebounce?.cancel();
     _textController.dispose();
     _textFocusNode.dispose();
     super.dispose();
@@ -76,17 +224,23 @@ class _GrammarPageState extends State<GrammarPage> {
 
     setState(() {
       _isChecking = true;
+      _lastErrorMessage = null;
     });
 
     try {
-      final result = DocumentChunkingService.needsChunking(text)
-          ? await DocumentChunkingService.checkGrammarLarge(text)
-          : await UnifiedAIService.checkGrammar(text);
+      final cacheKey = _grammarCacheKey(text);
+      final cachedResult = _sessionGrammarCache[cacheKey];
+      final result = cachedResult ??
+          (DocumentChunkingService.needsChunking(text)
+              ? await DocumentChunkingService.checkGrammarLarge(text)
+              : await UnifiedAIService.checkGrammar(text));
+
+      final normalizedResult = _sanitizeGrammarResult(result, text);
       
       // Check for API errors first
-      if (result.containsKey('error') || result.containsKey('errorType')) {
+      if (normalizedResult.containsKey('error') || normalizedResult.containsKey('errorType')) {
         setState(() => _isChecking = false);
-        final errorType = result['errorType'] as String? ?? 'UNKNOWN';
+        final errorType = normalizedResult['errorType'] as String? ?? 'UNKNOWN';
         String errorMessage;
         switch (errorType) {
           case 'MISSING_API_KEY':
@@ -99,20 +253,27 @@ class _GrammarPageState extends State<GrammarPage> {
             errorMessage = 'Invalid API key. Please check your settings.';
             break;
           default:
-            errorMessage = result['error']?.toString() ?? 'An error occurred';
+            errorMessage = normalizedResult['error']?.toString() ?? 'An error occurred';
         }
+        _lastErrorMessage = errorMessage;
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text(errorMessage)),
         );
         return;
       }
+
+      if (cachedResult == null) {
+        _cacheGrammarResult(cacheKey, normalizedResult);
+      }
       
       setState(() {
-        _correctedText = result['corrected_text'] ?? text;
-        _errorCount = result['error_count'] ?? 0;
-        _errors = List<Map<String, dynamic>>.from(result['errors'] ?? []);
+        _correctedText = normalizedResult['corrected_text'] ?? text;
+        _errorCount = normalizedResult['error_count'] ?? 0;
+        _errors = List<Map<String, dynamic>>.from(normalizedResult['errors'] ?? []);
         _isChecking = false;
+        _lastErrorMessage = null;
       });
+      _persistDraft();
 
       if (_errorCount > 0) {
         _showErrorsDialog();
@@ -124,11 +285,44 @@ class _GrammarPageState extends State<GrammarPage> {
     } catch (e) {
       setState(() {
         _isChecking = false;
+        _lastErrorMessage = 'Error checking grammar: $e';
       });
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Error checking grammar: $e')),
       );
     }
+  }
+
+  Widget _buildErrorBanner(ColorScheme colorScheme) {
+    if (_lastErrorMessage == null) return const SizedBox.shrink();
+    return Container(
+      width: double.infinity,
+      margin: const EdgeInsets.fromLTRB(16, 8, 16, 0),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+      decoration: BoxDecoration(
+        color: colorScheme.errorContainer,
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Icon(Icons.warning_amber_rounded, size: 18, color: colorScheme.onErrorContainer),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Text(
+              _lastErrorMessage!,
+              style: Theme.of(context).textTheme.bodySmall!.copyWith(
+                    color: colorScheme.onErrorContainer,
+                  ),
+            ),
+          ),
+          TextButton(
+            onPressed: _isChecking ? null : _retryGrammarCheck,
+            child: const Text('Retry'),
+          ),
+        ],
+      ),
+    );
   }
 
   void _showErrorsDialog() {
@@ -233,6 +427,7 @@ class _GrammarPageState extends State<GrammarPage> {
 
   @override
   Widget build(BuildContext context) {
+    super.build(context);
     final r = Responsive.of(context);
     final authProvider = Provider.of<AuthProvider>(context);
     final bool isLoggedIn = authProvider.isLoggedIn;
@@ -266,6 +461,7 @@ class _GrammarPageState extends State<GrammarPage> {
                 size: LinearProgressM3ESize.s,
                 activeColor: colorScheme.error,
               ),
+            _buildErrorBanner(colorScheme),
             Padding(
               padding: r.fromLTRB(16, 8, 16, 0),
               child: DocumentInputWidget(
@@ -331,12 +527,14 @@ class _GrammarPageState extends State<GrammarPage> {
           ),
           filled: true,
           fillColor: Colors.transparent,
-          suffixIcon: _textController.text.isNotEmpty
+          suffixIcon: !_isInputEmpty
               ? IconButton(
                   icon: Icon(Icons.clear, size: r.r(18)),
                   onPressed: () => setState(() {
                     _textController.clear();
                     _updateWordCount('');
+                    _isInputEmpty = true;
+                    _persistDraft();
                   }),
                 )
               : IconButton(
@@ -346,14 +544,23 @@ class _GrammarPageState extends State<GrammarPage> {
                     if (data?.text != null) {
                       _textController.text = data!.text!;
                       _updateWordCount(data.text!);
-                      setState(() {});
+                      setState(() {
+                        _isInputEmpty = data.text!.trim().isEmpty;
+                      });
+                      _persistDraft();
                     }
                   },
                 ),
         ),
         onChanged: (text) {
-          _updateWordCount(text);
-          setState(() {});
+          _scheduleWordCountUpdate(text);
+          final isNowEmpty = text.trim().isEmpty;
+          if (isNowEmpty != _isInputEmpty) {
+            setState(() {
+              _isInputEmpty = isNowEmpty;
+            });
+          }
+          _persistDraft();
         },
       ),
     );
@@ -416,7 +623,9 @@ class _GrammarPageState extends State<GrammarPage> {
                     _correctedText = '';
                     _errors.clear();
                     _errorCount = 0;
+                    _isInputEmpty = _textController.text.trim().isEmpty;
                   });
+                  _persistDraft();
                 },
                 variant: IconButtonM3EVariant.filled,
                 size: IconButtonM3ESize.sm,
@@ -424,11 +633,14 @@ class _GrammarPageState extends State<GrammarPage> {
               const SizedBox(width: 8),
               IconButtonM3E(
                 icon: const Icon(Icons.close_rounded, size: 18),
-                onPressed: () => setState(() {
-                  _correctedText = '';
-                  _errors.clear();
-                  _errorCount = 0;
-                }),
+                onPressed: () {
+                  setState(() {
+                    _correctedText = '';
+                    _errors.clear();
+                    _errorCount = 0;
+                  });
+                  _persistDraft();
+                },
                 variant: IconButtonM3EVariant.outlined,
                 size: IconButtonM3ESize.sm,
               ),

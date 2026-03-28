@@ -25,20 +25,19 @@ import 'utils/app_logger.dart';
 import 'utils/responsive.dart';
 import 'services/firebase_service.dart';
 import 'services/firebase_messaging_service.dart';
-import 'services/groq_service.dart';
 import 'services/unified_ai_service.dart';
 import 'services/cache_manager.dart';
 import 'services/admin_service.dart';
 import 'services/ai_settings_bridge.dart';
 import 'services/billing_service.dart';
 import 'services/deep_link_service.dart';
-import 'services/play_integrity_service.dart';
 import 'services/usage_analytics_service.dart';
 import 'widgets/tool_popup.dart';
 import 'widgets/whats_new_sheet.dart';
 
 // Global navigator key for app-wide navigation
 final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
+final ValueNotifier<int?> homeTabNavigationRequest = ValueNotifier<int?>(null);
 
 // Global service initialization status flags
 bool isFirebaseInitialized = false;
@@ -329,6 +328,7 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
     super.initState();
     _tabController = TabController(length: 4, vsync: this);
     _tabController.addListener(_handleTabChange);
+    homeTabNavigationRequest.addListener(_handleTabNavigationRequest);
 
     // Request permissions on app start
     _requestPermissions();
@@ -349,6 +349,16 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
     await _permissionHandler.requestPhotosPermission();
   }
 
+  void _handleTabNavigationRequest() {
+    final requestedTab = homeTabNavigationRequest.value;
+    if (requestedTab == null) return;
+
+    if (requestedTab >= 0 && requestedTab < _pages.length) {
+      _onItemTapped(requestedTab);
+    }
+    homeTabNavigationRequest.value = null;
+  }
+
   void _handleTabChange() {
     if (!_tabController.indexIsChanging) {
       setState(() {
@@ -359,6 +369,7 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
 
   @override
   void dispose() {
+    homeTabNavigationRequest.removeListener(_handleTabNavigationRequest);
     _tabController.removeListener(_handleTabChange);
     _tabController.dispose();
     super.dispose();
@@ -376,7 +387,7 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
       context: context,
       backgroundColor: Colors.transparent,
       isScrollControlled: true,
-      builder: (context) => const ToolPopup(),
+      builder: (context) => ToolPopup(onSelectHomeTab: _onItemTapped),
     );
   }
 
