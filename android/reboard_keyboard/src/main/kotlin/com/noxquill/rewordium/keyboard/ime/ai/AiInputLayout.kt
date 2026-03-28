@@ -538,29 +538,38 @@ fun AiInputLayout(
                                 }
                             }
                             else -> {
-                                Column(
-                                    horizontalAlignment = Alignment.CenterHorizontally,
-                                    verticalArrangement = Arrangement.Center
-                                ) {
-                                    Text(
-                                        when (aiMode) {
-                                            AiMode.ENHANCE -> "Write your prompt in the text field"
-                                            AiMode.CONTEXT -> stringResource(R.string.ai__context_mode_hint)
-                                            else -> "Select options below"
-                                        },
-                                        color = onSurfaceVar,
-                                        fontSize = 14.sp
-                                    )
-                                    Spacer(Modifier.height(0.dp))
-                                    Text(
-                                        when (aiMode) {
-                                            AiMode.ENHANCE -> "then tap Enhance to make it better"
-                                            AiMode.CONTEXT -> "It auto-preserves slang and tone"
-                                            else -> "then tap Generate to enhance your text"
-                                        },
-                                        color = onSurfaceVar.copy(alpha = 0.7f),
-                                        fontSize = 12.sp
-                                    )
+                                when (aiMode) {
+                                    AiMode.ENHANCE,
+                                    AiMode.CONTEXT -> {
+                                        Column(
+                                            horizontalAlignment = Alignment.CenterHorizontally,
+                                            verticalArrangement = Arrangement.Center,
+                                        ) {
+                                            Text(
+                                                when (aiMode) {
+                                                    AiMode.ENHANCE -> "Write your prompt in the text field"
+                                                    AiMode.CONTEXT -> stringResource(R.string.ai__context_mode_hint)
+                                                    else -> ""
+                                                },
+                                                color = onSurfaceVar,
+                                                fontSize = 14.sp,
+                                            )
+                                            Spacer(Modifier.height(0.dp))
+                                            Text(
+                                                when (aiMode) {
+                                                    AiMode.ENHANCE -> "then tap Enhance to make it better"
+                                                    AiMode.CONTEXT -> "It auto-preserves slang and tone"
+                                                    else -> ""
+                                                },
+                                                color = onSurfaceVar.copy(alpha = 0.7f),
+                                                fontSize = 12.sp,
+                                            )
+                                        }
+                                    }
+                                    AiMode.REWRITE,
+                                    AiMode.APPEND -> {
+                                        Spacer(Modifier.height(0.dp))
+                                    }
                                 }
                             }
                         }
@@ -570,7 +579,7 @@ fun AiInputLayout(
                 // ════════ 3-Row chip selector (only when idle and NOT in enhance mode) ════════
                 if (showIdleControls) {
                     val chipAreaMaxHeight = if (showAdvancedChips) {
-                        FlorisImeSizing.keyboardRowBaseHeight * 1.9f
+                        FlorisImeSizing.keyboardRowBaseHeight * 2.2f
                     } else {
                         FlorisImeSizing.keyboardRowBaseHeight * 1.1f
                     }

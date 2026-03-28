@@ -77,6 +77,15 @@
     "background": "var(--accent)",
     "foreground": "var(--accent-text)"
   },
+  "key[code=-7]": {
+    "background": "var(--accent)",
+    "foreground": "var(--accent-text)",
+    "font-size": "20sp"
+  },
+  "key[code=-7]:pressed": {
+    "background": "var(--accent-pressed)",
+    "foreground": "var(--accent-pressed-text)"
+  },
   "key[code=-11]": {
     "background": "var(--accent)",
     "foreground": "var(--accent-text)",
