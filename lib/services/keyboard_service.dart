@@ -8,6 +8,9 @@ enum KeyboardLayout { onePlus, samsung, apple }
 class KeyboardService {
   static const MethodChannel _channel =
       MethodChannel('com.noxquill.rewordium/rewordium_keyboard');
+  static const String _methodIsKeyboardEnabled = 'isKeyboardEnabled';
+  static const String _methodIsReboardKeyboardEnabled =
+      'isReboardKeyboardEnabled';
 
   static bool get _isAndroid => defaultTargetPlatform == TargetPlatform.android;
 
@@ -24,10 +27,47 @@ class KeyboardService {
   Future<bool> isKeyboardEnabled() async {
     if (!_isAndroid) return false;
     try {
-      final bool result = await _channel.invokeMethod('isKeyboardEnabled');
+      final bool result =
+          await _channel.invokeMethod(_methodIsKeyboardEnabled);
       return result;
+    } on MissingPluginException {
+      try {
+        // Fallback for native builds that only expose the reboard-specific name.
+        final bool result =
+            await _channel.invokeMethod(_methodIsReboardKeyboardEnabled);
+        return result;
+      } on MissingPluginException {
+        return false;
+      } on PlatformException catch (e) {
+        print('Error checking keyboard status: ${e.message}');
+        return false;
+      }
     } on PlatformException catch (e) {
       print('Error checking keyboard status: ${e.message}');
+      try {
+        // Fallback for native builds that only expose the reboard-specific name.
+        final bool result =
+            await _channel.invokeMethod(_methodIsReboardKeyboardEnabled);
+        return result;
+      } on MissingPluginException {
+        return false;
+      } on PlatformException {
+        return false;
+      }
+    }
+  }
+
+  /// Check if Rewordium is selected as the current default keyboard.
+  Future<bool> isKeyboardSelectedAsDefault() async {
+    if (!_isAndroid) return false;
+    try {
+      final bool result =
+          await _channel.invokeMethod('isKeyboardSelectedAsDefault');
+      return result;
+    } on MissingPluginException {
+      return false;
+    } on PlatformException catch (e) {
+      print('Error checking keyboard default selection: ${e.message}');
       return false;
     }
   }
@@ -37,8 +77,24 @@ class KeyboardService {
     if (!_isAndroid) return;
     try {
       await _channel.invokeMethod('openKeyboardSettings');
+    } on MissingPluginException {
+      return;
     } on PlatformException catch (e) {
       print('Error opening keyboard settings: ${e.message}');
+    }
+  }
+
+  /// Show Android's input method picker so users can select Rewordium.
+  Future<bool> showInputMethodPicker() async {
+    if (!_isAndroid) return false;
+    try {
+      final bool? result = await _channel.invokeMethod('showInputMethodPicker');
+      return result ?? false;
+    } on MissingPluginException {
+      return false;
+    } on PlatformException catch (e) {
+      print('Error showing input method picker: ${e.message}');
+      return false;
     }
   }
 
@@ -99,6 +155,8 @@ class KeyboardService {
         'enabled': enabled,
       });
       return result;
+    } on MissingPluginException {
+      return false;
     } on PlatformException catch (e) {
       print('Error setting AI suggestions: ${e.message}');
       return false;

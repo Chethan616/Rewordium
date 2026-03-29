@@ -385,6 +385,16 @@ class KeyboardProvider extends ChangeNotifier {
   // Ensure keyboard is enabled and settings are applied
   Future<void> ensureKeyboardEnabled(BuildContext context) async {
     try {
+      final sharedPrefs = await SharedPreferences.getInstance();
+      final onboardingCompleted =
+          sharedPrefs.getBool('onboarding_completed') ?? false;
+      if (!onboardingCompleted) {
+        if (kDebugMode) {
+          print('Skipping keyboard enable prompt while onboarding is active');
+        }
+        return;
+      }
+
       // Check if keyboard is enabled
       final isEnabled = await _keyboardService.isKeyboardEnabled();
       if (kDebugMode) print('Keyboard enabled status on app start: $isEnabled');

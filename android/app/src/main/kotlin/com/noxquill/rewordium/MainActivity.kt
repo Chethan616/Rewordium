@@ -1,6 +1,7 @@
 package com.noxquill.rewordium
 
 import android.content.BroadcastReceiver
+import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
@@ -34,6 +35,9 @@ class MainActivity : FlutterActivity() {
         private const val AI_SETTINGS_CHANNEL = "com.noxquill.rewordium/ai_settings"
         private const val DEEP_LINK_CHANNEL = "com.noxquill.rewordium/deep_link"
         private const val INTEGRITY_CHANNEL = "com.noxquill.rewordium/integrity"
+        private const val ONBOARDING_RUNTIME_PREFS = "rewordium_onboarding_runtime"
+        private const val KEY_RETURN_TO_APP_AFTER_ACCESSIBILITY_ENABLED =
+            "return_to_app_after_accessibility_enabled"
         
         // <-- ADDED: A new channel specifically for syncing user status and credits.
         private const val USER_STATUS_CHANNEL = "com.noxquill.rewordium/user_status"
@@ -196,6 +200,12 @@ class MainActivity : FlutterActivity() {
             editor.putBoolean(KeyboardConstants.KEY_AUTOCORRECT, true)
             settingsChanged = true
         }
+
+        if (!prefs.contains(KeyboardConstants.KEY_AI_SUGGESTIONS)) {
+            Log.d(TAG, "Setting default AI suggestions to true")
+            editor.putBoolean(KeyboardConstants.KEY_AI_SUGGESTIONS, true)
+            settingsChanged = true
+        }
         
         // Clear personas on first run to ensure clean slate
         if (isFirstRun) {
@@ -260,9 +270,15 @@ class MainActivity : FlutterActivity() {
                         result.success(isEnabled)
                     }
                     "requestAccessibilitySettings" -> {
+                        val autoReturnToApp = call.argument<Boolean>("autoReturnToApp") ?: false
+                        getSharedPreferences(ONBOARDING_RUNTIME_PREFS, Context.MODE_PRIVATE)
+                            .edit()
+                            .putBoolean(KEY_RETURN_TO_APP_AFTER_ACCESSIBILITY_ENABLED, autoReturnToApp)
+                            .apply()
+
                         Log.d(TAG, "[Accessibility] Opening accessibility settings")
                         openAccessibilitySettings()
-                        result.success(null)
+                        result.success(true)
                     }
                     else -> {
                         Log.w(TAG, "[Accessibility] Unknown method called: ${call.method}")
@@ -281,12 +297,21 @@ class MainActivity : FlutterActivity() {
                 "isKeyboardEnabled" -> {
                     result.success(isKeyboardEnabled())
                 }
+                "isKeyboardSelectedAsDefault" -> {
+                    result.success(isKeyboardSelectedAsDefault())
+                }
                 "isReboardKeyboardEnabled" -> {
+                    result.success(isReboardEnabled())
+                }
+                "isRewordiumAIKeyboardEnabled" -> {
                     result.success(isReboardEnabled())
                 }
                 "openKeyboardSettings" -> {
                     openKeyboardSettings()
-                    result.success(null)
+                    result.success(true)
+                }
+                "showInputMethodPicker" -> {
+                    result.success(showInputMethodPicker())
                 }
                 "openReboardSettings" -> {
                     result.success(openReboardSettings())
@@ -304,6 +329,16 @@ class MainActivity : FlutterActivity() {
                 "setHapticFeedback" -> {
                     val enabled = call.argument<Boolean>("enabled") ?: true
                     updateSetting(KeyboardConstants.KEY_HAPTIC_FEEDBACK, enabled)
+                    result.success(true)
+                }
+                "setAiSuggestions" -> {
+                    val enabled = call.argument<Boolean>("enabled") ?: true
+                    updateSetting(KeyboardConstants.KEY_AI_SUGGESTIONS, enabled)
+
+                    // Keep keyboard AI quick actions in sync with Flutter-side toggle.
+                    val flutterPrefs = getSharedPreferences("FlutterSharedPreferences", Context.MODE_PRIVATE)
+                    flutterPrefs.edit().putBoolean("flutter.paraphraser_enabled", enabled).apply()
+
                     result.success(true)
                 }
                 "setAutoCapitalize" -> {
@@ -357,6 +392,7 @@ class MainActivity : FlutterActivity() {
                         "themeColor" to (prefs.getString(KeyboardConstants.KEY_THEME_COLOR, "#007AFF") ?: "#007AFF"),
                         "darkMode" to prefs.getBoolean(KeyboardConstants.KEY_DARK_MODE, false),
                         "hapticFeedback" to prefs.getBoolean(KeyboardConstants.KEY_HAPTIC_FEEDBACK, true),
+                        "aiSuggestions" to prefs.getBoolean(KeyboardConstants.KEY_AI_SUGGESTIONS, true),
                         "autoCapitalize" to prefs.getBoolean(KeyboardConstants.KEY_AUTO_CAPITALIZE, true),
                         "doubleSpacePeriod" to prefs.getBoolean(KeyboardConstants.KEY_DOUBLE_SPACE_PERIOD, true)
                     )
@@ -787,6 +823,22 @@ class MainActivity : FlutterActivity() {
         return enabledMethods.any { it.packageName == packageName }
     }
 
+    private fun isKeyboardSelectedAsDefault(): Boolean {
+        return try {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
+                val inputMethodManager = getSystemService(Context.INPUT_METHOD_SERVICE) as InputMethodManager
+                inputMethodManager.currentInputMethodInfo?.packageName == packageName
+            } else {
+                val selectedIme = Settings.Secure.getString(contentResolver, Settings.Secure.DEFAULT_INPUT_METHOD)
+                val component = ComponentName.unflattenFromString(selectedIme)
+                component?.packageName == packageName
+            }
+        } catch (e: Exception) {
+            Log.w(TAG, "Unable to check selected keyboard", e)
+            false
+        }
+    }
+
     private fun isReboardEnabled(): Boolean {
         val inputMethodManager = getSystemService(Context.INPUT_METHOD_SERVICE) as InputMethodManager
         val enabledMethods = inputMethodManager.enabledInputMethodList
@@ -802,20 +854,31 @@ class MainActivity : FlutterActivity() {
         startActivity(intent)
     }
 
+    private fun showInputMethodPicker(): Boolean {
+        return try {
+            val inputMethodManager = getSystemService(Context.INPUT_METHOD_SERVICE) as InputMethodManager
+            inputMethodManager.showInputMethodPicker()
+            true
+        } catch (e: Exception) {
+            Log.e(TAG, "Failed to open input method picker", e)
+            false
+        }
+    }
+
     private fun openReboardSettings(): Boolean {
         return try {
             val now = System.currentTimeMillis()
-            if (now - lastReboardSettingsLaunchAt < 800L) {
+            if (now - lastReboardSettingsLaunchAt < 1500L) {
                 Log.d(TAG, "Ignoring duplicate ReBoard settings launch request")
                 return true
             }
 
-            val intent = Intent(Intent.ACTION_VIEW, Uri.parse("ui://ReBoard/settings/home")).apply {
-                addCategory(Intent.CATEGORY_DEFAULT)
-                addCategory(Intent.CATEGORY_BROWSABLE)
+            val intent = Intent().apply {
                 setClassName(packageName, "com.noxquill.rewordium.keyboard.app.FlorisAppActivity")
                 `package` = packageName
                 addFlags(Intent.FLAG_ACTIVITY_SINGLE_TOP)
+                addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP)
+                addFlags(Intent.FLAG_ACTIVITY_REORDER_TO_FRONT)
             }
             if (intent.resolveActivity(packageManager) != null) {
                 lastReboardSettingsLaunchAt = now

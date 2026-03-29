@@ -160,6 +160,9 @@ class MyAccessibilityService : AccessibilityService(), BubbleInteractionListener
         private const val TAG = "MyAccessibilityService"
         private const val PERIODIC_CHECK_INTERVAL = 5000L // 5 seconds
         private const val WINDOW_STATE_DELAY = 100L // Delay for window state stability
+        private const val ONBOARDING_RUNTIME_PREFS = "rewordium_onboarding_runtime"
+        private const val KEY_RETURN_TO_APP_AFTER_ACCESSIBILITY_ENABLED =
+            "return_to_app_after_accessibility_enabled"
         
         // 60 FPS Optimized Animation Constants
         private const val BUTTERY_SMOOTH_DURATION = 250L // Optimized for 60 FPS (15 frames)
@@ -389,10 +392,38 @@ class MyAccessibilityService : AccessibilityService(), BubbleInteractionListener
         // Check current screen state
         val powerManager = getSystemService(Context.POWER_SERVICE) as PowerManager
         isScreenOn = powerManager.isInteractive
+
+        maybeReturnToAppAfterAccessibilitySetup()
         
         if (isScreenOn) {
             checkAndShowBubble()
             startPeriodicCheck()
+        }
+    }
+
+    private fun maybeReturnToAppAfterAccessibilitySetup() {
+        val prefs = getSharedPreferences(ONBOARDING_RUNTIME_PREFS, Context.MODE_PRIVATE)
+        if (!prefs.getBoolean(KEY_RETURN_TO_APP_AFTER_ACCESSIBILITY_ENABLED, false)) {
+            return
+        }
+
+        prefs.edit().putBoolean(KEY_RETURN_TO_APP_AFTER_ACCESSIBILITY_ENABLED, false).apply()
+
+        serviceScope.launch {
+            delay(250L)
+            val launchIntent = packageManager.getLaunchIntentForPackage(packageName)?.apply {
+                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP)
+                addFlags(Intent.FLAG_ACTIVITY_SINGLE_TOP)
+            }
+            if (launchIntent != null) {
+                startActivity(launchIntent)
+                if (BuildConfig.DEBUG) {
+                    Log.d(TAG, "Returned user to app after accessibility setup")
+                }
+            } else {
+                Log.w(TAG, "Could not resolve app launch intent after accessibility setup")
+            }
         }
     }
 

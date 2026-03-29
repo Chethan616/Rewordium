@@ -84,6 +84,7 @@ import com.noxquill.rewordium.keyboard.ime.core.isSubtypeSelectionShowing
 import com.noxquill.rewordium.keyboard.ime.editor.EditorRange
 import com.noxquill.rewordium.keyboard.ime.editor.FlorisEditorInfo
 import com.noxquill.rewordium.keyboard.ime.input.InputFeedbackController
+import com.noxquill.rewordium.keyboard.ime.input.InputFeedbackActivationMode
 import com.noxquill.rewordium.keyboard.ime.input.LocalInputFeedbackController
 import com.noxquill.rewordium.keyboard.ime.keyboard.FlorisImeSizing
 import com.noxquill.rewordium.keyboard.ime.keyboard.ProvideKeyboardRowBaseHeight
@@ -128,6 +129,7 @@ import org.florisboard.lib.snygg.ui.SnyggRow
 import org.florisboard.lib.snygg.ui.SnyggSurfaceView
 import org.florisboard.lib.snygg.ui.SnyggText
 import org.florisboard.lib.snygg.ui.rememberSnyggThemeQuery
+import kotlinx.coroutines.launch
 
 /**
  * Global weak reference for the [FlorisImeService] class. This is needed as certain actions (request hide, switch to
@@ -137,6 +139,16 @@ import org.florisboard.lib.snygg.ui.rememberSnyggThemeQuery
  * input method service instance.
  */
 private var FlorisImeServiceReference = WeakReference<FlorisImeService?>(null)
+private const val FLUTTER_PREFS_NAME = "FlutterSharedPreferences"
+private const val KEY_ONBOARDING_NUMBER_ROW = "flutter.onboarding_keyboard_number_row"
+private const val KEY_ONBOARDING_CLIPBOARD_SUGGESTIONS =
+    "flutter.onboarding_keyboard_clipboard_suggestions"
+private const val KEY_ONBOARDING_AI_DEFAULT_ENABLED =
+    "flutter.onboarding_keyboard_ai_default_enabled"
+private const val KEY_ONBOARDING_HAPTICS_ENABLED =
+    "flutter.onboarding_keyboard_haptics_enabled"
+private const val KEY_ONBOARDING_HAPTICS_MODE = "flutter.onboarding_keyboard_haptics_mode"
+private const val KEY_PARAPHRASER_ENABLED = "flutter.paraphraser_enabled"
 
 /**
  * Core class responsible for linking together all managers and UI compose-ables to provide an IME service. Sets
@@ -357,6 +369,7 @@ class FlorisImeService : LifecycleInputMethodService() {
     override fun onStartInputView(info: EditorInfo?, restarting: Boolean) {
         flogInfo { "restarting=$restarting info=${info?.debugSummarize()}" }
         super.onStartInputView(info, restarting)
+        syncOnboardingKeyboardPreferences()
         if (info == null) return
         val editorInfo = FlorisEditorInfo.wrap(info)
         activeState.batchEdit {
@@ -365,6 +378,68 @@ class FlorisImeService : LifecycleInputMethodService() {
             }
             activeState.isSelectionMode = editorInfo.initialSelection.isSelectionMode
             editorInstance.handleStartInputView(editorInfo, isRestart = restarting)
+        }
+    }
+
+    private fun syncOnboardingKeyboardPreferences() {
+        val flutterPrefs = getSharedPreferences(FLUTTER_PREFS_NAME, Context.MODE_PRIVATE)
+        val hasOnboardingKeyboardPrefs = flutterPrefs.contains(KEY_ONBOARDING_NUMBER_ROW) ||
+            flutterPrefs.contains(KEY_ONBOARDING_CLIPBOARD_SUGGESTIONS) ||
+            flutterPrefs.contains(KEY_ONBOARDING_HAPTICS_ENABLED) ||
+            flutterPrefs.contains(KEY_ONBOARDING_HAPTICS_MODE) ||
+            flutterPrefs.contains(KEY_ONBOARDING_AI_DEFAULT_ENABLED)
+
+        if (!hasOnboardingKeyboardPrefs) {
+            return
+        }
+
+        lifecycleScope.launch {
+            try {
+                val numberRow = flutterPrefs.getBoolean(
+                    KEY_ONBOARDING_NUMBER_ROW,
+                    prefs.keyboard.numberRow.get(),
+                )
+                prefs.keyboard.numberRow.set(numberRow)
+
+                val clipboardSuggestions = flutterPrefs.getBoolean(
+                    KEY_ONBOARDING_CLIPBOARD_SUGGESTIONS,
+                    prefs.clipboard.suggestionEnabled.get(),
+                )
+                prefs.clipboard.suggestionEnabled.set(clipboardSuggestions)
+
+                val hapticsEnabled = flutterPrefs.getBoolean(
+                    KEY_ONBOARDING_HAPTICS_ENABLED,
+                    prefs.inputFeedback.hapticEnabled.get(),
+                )
+                prefs.inputFeedback.hapticEnabled.set(hapticsEnabled)
+
+                val hapticsMode = flutterPrefs.getString(KEY_ONBOARDING_HAPTICS_MODE, null)
+                val activationMode = if (hapticsMode == "alwaysVibrate") {
+                    InputFeedbackActivationMode.IGNORE_SYSTEM_SETTINGS
+                } else {
+                    InputFeedbackActivationMode.RESPECT_SYSTEM_SETTINGS
+                }
+                prefs.inputFeedback.hapticActivationMode.set(activationMode)
+
+                val aiEnabled = flutterPrefs.getBoolean(
+                    KEY_ONBOARDING_AI_DEFAULT_ENABLED,
+                    flutterPrefs.getBoolean(KEY_PARAPHRASER_ENABLED, false),
+                )
+                if (flutterPrefs.getBoolean(KEY_PARAPHRASER_ENABLED, false) != aiEnabled) {
+                    flutterPrefs.edit().putBoolean(KEY_PARAPHRASER_ENABLED, aiEnabled).apply()
+                }
+
+                // Clear onboarding values after first sync so native settings are not overwritten again
+                flutterPrefs.edit()
+                    .remove(KEY_ONBOARDING_NUMBER_ROW)
+                    .remove(KEY_ONBOARDING_CLIPBOARD_SUGGESTIONS)
+                    .remove(KEY_ONBOARDING_HAPTICS_ENABLED)
+                    .remove(KEY_ONBOARDING_HAPTICS_MODE)
+                    .remove(KEY_ONBOARDING_AI_DEFAULT_ENABLED)
+                    .apply()
+            } catch (e: Exception) {
+                flogWarning { "Unable to sync onboarding keyboard preferences: ${e.message}" }
+            }
         }
     }
 

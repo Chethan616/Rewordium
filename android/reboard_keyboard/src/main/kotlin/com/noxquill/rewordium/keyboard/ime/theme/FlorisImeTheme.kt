@@ -67,6 +67,11 @@ fun FlorisImeTheme(content: @Composable () -> Unit) {
         FlorisImeUi.Attr.ShiftState to state.inputShiftState.name.lowercase(),
     )
 
+
+    // Determine the accent color: prefer custom if set, else fallback to system/default
+    val accentColorPref by prefs.theme.accentColor.observeAsState()
+    val accentColor = accentColorPref ?: Color.Unspecified
+
     MaterialTheme {
         CompositionLocalProvider(
             LocalConfig provides activeConfig,
@@ -74,7 +79,7 @@ fun FlorisImeTheme(content: @Composable () -> Unit) {
         ) {
             ProvideSnyggTheme(
                 snyggTheme = snyggTheme,
-                dynamicAccentColor = Color.Unspecified,
+                dynamicAccentColor = accentColor,
                 fontSizeMultiplier = fontSizeMultiplier,
                 assetResolver = assetResolver,
                 rootAttributes = attributes,
