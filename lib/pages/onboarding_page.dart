@@ -34,7 +34,10 @@ enum _LlmMode { managedDefault, bringYourOwn }
 
 enum _KeyboardHapticsMode { followSystem, alwaysVibrate }
 
-class _OnboardingPageState extends State<OnboardingPage> {
+enum _SystemSetupStage { idle, keyboardEnable, keyboardSelect, accessibility }
+
+class _OnboardingPageState extends State<OnboardingPage>
+  with WidgetsBindingObserver {
   static const _accessibilityChannel =
       MethodChannel('com.noxquill.rewordium/accessibility');
 
@@ -73,13 +76,36 @@ class _OnboardingPageState extends State<OnboardingPage> {
   bool _keyboardAiDefaultEnabled = true;
   bool _keyboardHapticsEnabled = true;
   _KeyboardHapticsMode _keyboardHapticsMode = _KeyboardHapticsMode.followSystem;
-  bool _openReboardSettingsAfterFinish = true;
+  bool _openReboardSettingsAfterFinish = false;
+
+  bool _awaitingSystemSetup = false;
+  _SystemSetupStage _systemSetupStage = _SystemSetupStage.idle;
 
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     _modelController.text =
         AdvancedAISettings(provider: _selectedProvider).getDefaultModelName();
+    _seedExistingToggleState();
+  }
+
+  Future<void> _seedExistingToggleState() async {
+    final prefs = await SharedPreferences.getInstance();
+    if (!mounted) return;
+    setState(() {
+      _openAccessibilitySettingsAfterFinish =
+          prefs.getBool('onboarding_open_accessibility_after_finish') ??
+          _openAccessibilitySettingsAfterFinish;
+      _openKeyboardSettingsAfterFinish =
+          prefs.getBool('onboarding_open_keyboard_after_finish') ??
+          _openKeyboardSettingsAfterFinish;
+      _openReboardSettingsAfterFinish =
+          prefs.getBool('onboarding_open_reboard_after_finish') ??
+          _openReboardSettingsAfterFinish;
+      _keyboardAiDefaultEnabled =
+          prefs.getBool('paraphraser_enabled') ?? _keyboardAiDefaultEnabled;
+    });
   }
 
   @override
@@ -92,10 +118,23 @@ class _OnboardingPageState extends State<OnboardingPage> {
 
   @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
     _apiKeyController.dispose();
     _modelController.dispose();
     _endpointController.dispose();
     super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state != AppLifecycleState.resumed || !_awaitingSystemSetup) {
+      return;
+    }
+
+    Future<void>.delayed(const Duration(milliseconds: 350), () async {
+      if (!mounted || !_awaitingSystemSetup) return;
+      await _advanceSystemSetupFlow(openSystemScreens: true, fromResume: true);
+    });
   }
 
   bool get _isFinalStep => _step == _stepTitles.length - 1;
@@ -210,16 +249,13 @@ class _OnboardingPageState extends State<OnboardingPage> {
       await _persistNewsChoice();
       await _persistKeyboardChoices();
 
-      await OnboardingPage.markCompleted();
-
-      if (!mounted) return;
-      Navigator.of(context).pushReplacement(
-        MaterialPageRoute(builder: (_) => const HomePage()),
-      );
+      _awaitingSystemSetup = true;
+      await _advanceSystemSetupFlow(openSystemScreens: true, fromResume: false);
     } catch (e) {
+      _awaitingSystemSetup = false;
       _showMessage('Could not finish onboarding: $e');
     } finally {
-      if (mounted) {
+      if (mounted && !_awaitingSystemSetup) {
         setState(() => _isSaving = false);
       }
     }
@@ -240,19 +276,132 @@ class _OnboardingPageState extends State<OnboardingPage> {
       'onboarding_open_keyboard_after_finish',
       _openKeyboardSettingsAfterFinish,
     );
+    await prefs.setBool(
+      'onboarding_open_reboard_after_finish',
+      _openReboardSettingsAfterFinish,
+    );
+  }
 
-    if (_usesAccessibility && _openAccessibilitySettingsAfterFinish) {
-      try {
-        await _accessibilityChannel
-            .invokeMethod('requestAccessibilitySettings');
-      } catch (_) {
-        // Non-blocking: user can still open accessibility settings later.
+  Future<bool> _isAccessibilityEnabled() async {
+    try {
+      final bool enabled =
+          await _accessibilityChannel.invokeMethod('isAccessibilityServiceEnabled');
+      return enabled;
+    } catch (_) {
+      return false;
+    }
+  }
+
+  Future<void> _openAccessibilitySettings() async {
+    try {
+      await _accessibilityChannel.invokeMethod('requestAccessibilitySettings', {
+        'autoReturnToApp': _awaitingSystemSetup,
+      });
+    } catch (_) {
+      _showMessage('Could not open accessibility settings automatically.');
+    }
+  }
+
+  Future<void> _advanceSystemSetupFlow({
+    required bool openSystemScreens,
+    required bool fromResume,
+  }) async {
+    if (!mounted) return;
+
+    if (_usesKeyboard) {
+      final keyboardEnabled = await _keyboardService.isKeyboardEnabled();
+      if (!keyboardEnabled) {
+        final transitioningToKeyboardEnable =
+            _systemSetupStage != _SystemSetupStage.keyboardEnable;
+        final shouldAutoOpenKeyboardSettings =
+            openSystemScreens &&
+            _openKeyboardSettingsAfterFinish &&
+            (!fromResume || transitioningToKeyboardEnable);
+        _systemSetupStage = _SystemSetupStage.keyboardEnable;
+        if (mounted) {
+          setState(() => _isSaving = false);
+        }
+        _showMessage(
+          _openKeyboardSettingsAfterFinish
+              ? 'Enable Rewordium keyboard in system settings. We will continue automatically when you return.'
+              : 'Enable Rewordium keyboard in system settings, then return to continue.',
+        );
+        if (shouldAutoOpenKeyboardSettings) {
+          await RewordiumKeyboardService.openKeyboardSettings();
+        }
+        return;
+      }
+
+      final keyboardSelected =
+          await _keyboardService.isKeyboardSelectedAsDefault();
+      if (!keyboardSelected) {
+        final transitioningToKeyboardSelect =
+            _systemSetupStage != _SystemSetupStage.keyboardSelect;
+        final shouldAutoOpenInputPicker =
+            openSystemScreens &&
+            _openKeyboardSettingsAfterFinish &&
+            (!fromResume || transitioningToKeyboardSelect);
+        _systemSetupStage = _SystemSetupStage.keyboardSelect;
+        if (mounted) {
+          setState(() => _isSaving = false);
+        }
+        _showMessage(
+          _openKeyboardSettingsAfterFinish
+              ? 'Select Rewordium as your default keyboard to continue setup.'
+              : 'Select Rewordium as your default keyboard in Android settings, then return to continue.',
+        );
+        if (shouldAutoOpenInputPicker) {
+          await _keyboardService.showInputMethodPicker();
+        }
+        return;
       }
     }
 
-    if (_usesKeyboard && _openKeyboardSettingsAfterFinish) {
-      await RewordiumKeyboardService.openKeyboardSettings();
+    if (_usesAccessibility) {
+      final accessibilityEnabled = await _isAccessibilityEnabled();
+      if (!accessibilityEnabled) {
+        final transitioningToAccessibility =
+            _systemSetupStage != _SystemSetupStage.accessibility;
+        final shouldAutoOpenAccessibility =
+            openSystemScreens &&
+            _openAccessibilitySettingsAfterFinish &&
+            (!fromResume || transitioningToAccessibility);
+        _systemSetupStage = _SystemSetupStage.accessibility;
+        if (mounted) {
+          setState(() => _isSaving = false);
+        }
+        _showMessage(
+          _openAccessibilitySettingsAfterFinish
+              ? (transitioningToAccessibility
+                    ? 'Keyboard setup is complete. Enable accessibility to finish setup.'
+                    : 'Enable accessibility in system settings, then return to finish setup.')
+              : 'Enable accessibility in Android settings, then return to finish setup.',
+        );
+        if (shouldAutoOpenAccessibility) {
+          await _openAccessibilitySettings();
+        }
+        return;
+      }
     }
+
+    await _finalizeOnboardingCompletion();
+  }
+
+  Future<void> _finalizeOnboardingCompletion() async {
+    _awaitingSystemSetup = false;
+    _systemSetupStage = _SystemSetupStage.idle;
+
+    if (_openReboardSettingsAfterFinish && _usesKeyboard) {
+      await RewordiumKeyboardService.openReboardSettings();
+    }
+
+    await OnboardingPage.markCompleted();
+
+    if (!mounted) return;
+    setState(() => _isSaving = false);
+    Navigator.of(context).pushReplacement(
+      MaterialPageRoute(builder: (_) => const HomePage()),
+    );
   }
 
   Future<void> _persistLlmChoices() async {
@@ -290,7 +439,13 @@ class _OnboardingPageState extends State<OnboardingPage> {
   Future<void> _persistNewsChoice() async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setBool('onboarding_news_subscription', _subscribeToNews);
-    await NewsSubscriptionService.toggleNewsSubscription(_subscribeToNews);
+    final synced =
+        await NewsSubscriptionService.toggleNewsSubscription(_subscribeToNews);
+    if (_subscribeToNews && !synced) {
+      _showMessage(
+        'News preference saved. We will sync your subscription when your account is ready.',
+      );
+    }
   }
 
   Future<void> _persistKeyboardChoices() async {
@@ -316,17 +471,22 @@ class _OnboardingPageState extends State<OnboardingPage> {
     await RewordiumKeyboardService.setHapticFeedback(_keyboardHapticsEnabled);
     final aiApplied =
         await _keyboardService.setAiSuggestions(_keyboardAiDefaultEnabled);
+    await prefs.setBool('paraphraser_enabled', _keyboardAiDefaultEnabled);
     await prefs.setBool('onboarding_keyboard_ai_applied', aiApplied);
-
-    if (_openReboardSettingsAfterFinish) {
-      await RewordiumKeyboardService.openReboardSettings();
-    }
   }
 
   void _showMessage(String message) {
     if (!mounted) return;
     ScaffoldMessenger.of(context)
         .showSnackBar(SnackBar(content: Text(message)));
+  }
+
+  Future<void> _applyThemeSelection(bool dynamicEnabled) async {
+    if (dynamicEnabled == _dynamicColorsEnabled) return;
+    if (mounted) {
+      setState(() => _dynamicColorsEnabled = dynamicEnabled);
+    }
+    await context.read<ThemeProvider>().setDynamicColorsEnabled(dynamicEnabled);
   }
 
   @override
@@ -849,7 +1009,7 @@ class _OnboardingPageState extends State<OnboardingPage> {
               'Stable app colors with predictable contrast. This is the default for first launch.',
           selected: !_dynamicColorsEnabled,
           swatchColor: Colors.blueGrey,
-          onTap: () => setState(() => _dynamicColorsEnabled = false),
+          onTap: () => _applyThemeSelection(false),
         ),
         _themeChoiceCard(
           context,
@@ -858,7 +1018,7 @@ class _OnboardingPageState extends State<OnboardingPage> {
               'Use device-derived colors for a personalized Material 3 style.',
           selected: _dynamicColorsEnabled,
           swatchColor: Colors.teal,
-          onTap: () => setState(() => _dynamicColorsEnabled = true),
+          onTap: () => _applyThemeSelection(true),
         ),
         const SizedBox(height: 8),
         Text(
@@ -1127,9 +1287,10 @@ class _OnboardingPageState extends State<OnboardingPage> {
               ),
               SwitchListTile.adaptive(
                 contentPadding: EdgeInsets.zero,
-                title: const Text('AI suggestions on by default'),
-                subtitle:
-                    const Text('Start with AI candidate suggestions enabled.'),
+                title: const Text('Enable AI on homescreen'),
+                subtitle: const Text(
+                  'Maps to the app home AI toggle and keyboard AI quick actions.',
+                ),
                 value: _keyboardAiDefaultEnabled,
                 onChanged: (value) {
                   setState(() => _keyboardAiDefaultEnabled = value);

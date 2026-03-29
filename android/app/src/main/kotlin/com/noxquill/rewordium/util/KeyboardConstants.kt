@@ -17,6 +17,8 @@ object KeyboardConstants {
     const val KEY_AUTOCORRECT = "autocorrect"
     const val KEY_GLIDE_TYPING_ENABLED = "glide_typing_enabled"
     const val KEY_SPACEBAR_NAVIGATION_ENABLED = "spacebar_navigation_enabled"
+    const val KEY_AI_SUGGESTIONS = "ai_suggestions"
+    const val KEY_KEYBOARD_SELECTED_AS_DEFAULT = "keyboard_selected_as_default"
     const val KEY_PERSONAS = "personas"
     
     // Broadcast actions

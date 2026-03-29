@@ -37,6 +37,27 @@ import java.util.concurrent.TimeUnit
  * and writing styles.
  */
 class AIManager(private val context: Context) {
+        /**
+         * Post-process AI response to block identity/trivial answers.
+         * Returns null if the response should be suppressed.
+         */
+        private fun filterUnwantedResponses(response: String): String? {
+            val lower = response.trim().lowercase()
+            val identityPatterns = listOf(
+                "i am an ai", "as an ai", "i am a language model", "i am artificial intelligence",
+                "i am an artificial intelligence", "i am a machine", "i am not human", "as a language model"
+            )
+            val trivialPatterns = listOf(
+                "2+2=4", "the answer is 4", "the answer is four", "as an ai, i cannot", "i do not have feelings"
+            )
+            if (identityPatterns.any { lower.contains(it) }) return null
+            if (trivialPatterns.any { lower.contains(it) }) return null
+            // Block generic meta openers
+            if (lower.startsWith("as an ai")) return null
+            // Block empty or nonsense
+            if (lower.isBlank() || lower == "null" || lower == "n/a") return null
+            return response.trim()
+        }
     
     companion object {
         private const val TAG = "AIManager"
@@ -146,7 +167,6 @@ class AIManager(private val context: Context) {
                 if (config.isGemini()) {
                     return@withContext makeGeminiRequest(config, systemPrompt, userPrompt)
                 }
-                
                 val request = GroqRequest(
                     model = config.model,
                     messages = listOf(
@@ -156,15 +176,12 @@ class AIManager(private val context: Context) {
                     temperature = 0.7,
                     maxTokens = config.maxTokens
                 )
-                
                 val jsonBody = gson.toJson(request)
                 val requestBody = jsonBody.toRequestBody("application/json".toMediaType())
-                
                 val httpRequestBuilder = Request.Builder()
                     .url(config.getBaseUrl())
                     .addHeader("Content-Type", "application/json")
                     .post(requestBody)
-                
                 // Add appropriate auth header based on provider
                 if (config.isClaude()) {
                     httpRequestBuilder.addHeader("x-api-key", config.apiKey)
@@ -172,13 +189,9 @@ class AIManager(private val context: Context) {
                 } else {
                     httpRequestBuilder.addHeader("Authorization", config.getAuthHeader())
                 }
-                
                 val httpRequest = httpRequestBuilder.build()
-                
                 Log.d(TAG, "Making API request to ${config.provider} at ${config.getBaseUrl()}")
-                
                 val response = client.newCall(httpRequest).execute()
-                
                 if (!response.isSuccessful) {
                     val errorCode = response.code
                     val errorBody = response.body?.string() ?: ""
@@ -192,22 +205,18 @@ class AIManager(private val context: Context) {
                     }
                     return@withContext Result.failure(AIException(errorMessage))
                 }
-                
                 val responseBody = response.body?.string()
                 if (responseBody.isNullOrBlank()) {
                     return@withContext Result.failure(AIException("Empty response from API"))
                 }
-                
                 Log.d(TAG, "Response body: ${responseBody.take(500)}")
-                
                 val groqResponse = gson.fromJson(responseBody, GroqResponse::class.java)
                 val rewrittenText = groqResponse.choices?.firstOrNull()?.message?.content
-                
-                if (rewrittenText.isNullOrBlank()) {
-                    return@withContext Result.failure(AIException("No content in response"))
+                val filtered = rewrittenText?.let { filterUnwantedResponses(it) }
+                if (filtered.isNullOrBlank()) {
+                    return@withContext Result.failure(AIException("No usable content in response"))
                 }
-                
-                Result.success(rewrittenText.trim())
+                Result.success(filtered)
             } catch (e: Exception) {
                 Log.e(TAG, "Error making API request", e)
                 val errorMessage = when {
@@ -244,23 +253,17 @@ class AIManager(private val context: Context) {
                     "topK" to 40
                 )
             )
-            
             val jsonBody = gson.toJson(geminiRequest)
             val requestBody = jsonBody.toRequestBody("application/json".toMediaType())
-            
             // Gemini uses API key as query parameter
             val url = "${config.getBaseUrl()}?key=${config.apiKey}"
-            
             val httpRequest = Request.Builder()
                 .url(url)
                 .addHeader("Content-Type", "application/json")
                 .post(requestBody)
                 .build()
-            
             Log.d(TAG, "Making Gemini API request to: ${config.getBaseUrl()}")
-            
             val response = client.newCall(httpRequest).execute()
-            
             if (!response.isSuccessful) {
                 val errorCode = response.code
                 val errorBody = response.body?.string() ?: ""
@@ -275,23 +278,19 @@ class AIManager(private val context: Context) {
                 }
                 return Result.failure(AIException(errorMessage))
             }
-            
             val responseBody = response.body?.string()
             if (responseBody.isNullOrBlank()) {
                 return Result.failure(AIException("Empty response from Gemini"))
             }
-            
             Log.d(TAG, "Gemini response: ${responseBody.take(500)}")
-            
             // Parse Gemini response format
             val geminiResponse = gson.fromJson(responseBody, GeminiResponse::class.java)
             val content = geminiResponse.candidates?.firstOrNull()?.content?.parts?.firstOrNull()?.text
-            
-            if (content.isNullOrBlank()) {
-                return Result.failure(AIException("No content in Gemini response"))
+            val filtered = content?.let { filterUnwantedResponses(it) }
+            if (filtered.isNullOrBlank()) {
+                return Result.failure(AIException("No usable content in Gemini response"))
             }
-            
-            return Result.success(content.trim())
+            return Result.success(filtered)
         } catch (e: Exception) {
             Log.e(TAG, "Error making Gemini API request", e)
             return Result.failure(AIException("Gemini request failed: ${e.message}"))
@@ -527,7 +526,6 @@ You are polishing, not rewriting."""
             AIPersona.FRIENDLY -> "You're that genuinely kind person everyone loves talking to. Be warm, encouraging, and make the reader feel heard and valued. Use positive language and add personal touches that create connection."
             AIPersona.CUSTOM -> customPersonaPrompt.ifBlank { "Write naturally and helpfully, matching the tone of the original message." }
         }
-        
         val actionInstruction = when (action) {
             AIAction.REWRITE -> "Transform this into fresh words while preserving the exact meaning. Make it sound like a thoughtful human wrote it, not a template."
             AIAction.EXPAND -> "Develop this with meaningful depth - add context, examples, or details that enrich the message. Don't pad with filler; add genuine value."
@@ -536,13 +534,14 @@ You are polishing, not rewriting."""
             AIAction.MAKE_FORMAL -> "Elevate this to professional standards while keeping the core message crystal clear. Remove casual elements but don't make it stiff."
             AIAction.MAKE_CASUAL -> "Loosen this up like you're chatting with a friend. Remove formality but keep the message clear and respectful."
         }
-        
         return """$personaDescription
 
 $actionInstruction
 
 CRITICAL RULES:
 - Return ONLY the final text. No quotes, no "Here is...", no explanations, no commentary.
+- NEVER reveal you are an AI, language model, or machine. NEVER answer questions about your identity, existence, or capabilities.
+- NEVER answer trivial math or fact queries (e.g., "2+2", "who are you").
 - ALWAYS respond in ENGLISH - DO NOT translate to other languages.
 - Sound authentically human - avoid robotic patterns or corporate-speak.
 - Preserve the original intent and any specific details mentioned."""

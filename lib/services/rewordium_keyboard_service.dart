@@ -5,6 +5,10 @@ import 'package:flutter/services.dart';
 class RewordiumKeyboardService {
   static const MethodChannel _channel =
       MethodChannel('com.noxquill.rewordium/rewordium_keyboard');
+  static const String _methodIsReboardKeyboardEnabled =
+      'isReboardKeyboardEnabled';
+  static const String _methodIsLegacyRewordiumKeyboardEnabled =
+      'isRewordiumAIKeyboardEnabled';
 
   static bool get _isAndroid => defaultTargetPlatform == TargetPlatform.android;
 
@@ -13,10 +17,46 @@ class RewordiumKeyboardService {
     if (!_isAndroid) return false;
     try {
       final bool result =
-          await _channel.invokeMethod('isRewordiumAIKeyboardEnabled');
+          await _channel.invokeMethod(_methodIsReboardKeyboardEnabled);
       return result;
+    } on MissingPluginException {
+      try {
+        // Backward-compatible fallback for older native builds.
+        final bool result = await _channel
+            .invokeMethod(_methodIsLegacyRewordiumKeyboardEnabled);
+        return result;
+      } on MissingPluginException {
+        return false;
+      } on PlatformException catch (e) {
+        print('Error checking keyboard status: ${e.message}');
+        return false;
+      }
     } on PlatformException catch (e) {
       print('Error checking keyboard status: ${e.message}');
+      try {
+        // Backward-compatible fallback for older native builds.
+        final bool result = await _channel
+            .invokeMethod(_methodIsLegacyRewordiumKeyboardEnabled);
+        return result;
+      } on MissingPluginException {
+        return false;
+      } on PlatformException {
+        return false;
+      }
+    }
+  }
+
+  /// Check if Rewordium is selected as the active default input method.
+  static Future<bool> isKeyboardSelectedAsDefault() async {
+    if (!_isAndroid) return false;
+    try {
+      final bool result =
+          await _channel.invokeMethod('isKeyboardSelectedAsDefault');
+      return result;
+    } on MissingPluginException {
+      return false;
+    } on PlatformException catch (e) {
+      print('Error checking selected keyboard: ${e.message}');
       return false;
     }
   }
@@ -26,9 +66,25 @@ class RewordiumKeyboardService {
     if (!_isAndroid) return false;
     try {
       final result = await _channel.invokeMethod<bool>('openKeyboardSettings');
-      return result ?? false;
+      return result ?? true;
+    } on MissingPluginException {
+      return false;
     } on PlatformException catch (e) {
       print('Error opening keyboard settings: ${e.message}');
+      return false;
+    }
+  }
+
+  /// Show Android's input method picker for quick keyboard selection.
+  static Future<bool> showInputMethodPicker() async {
+    if (!_isAndroid) return false;
+    try {
+      final result = await _channel.invokeMethod<bool>('showInputMethodPicker');
+      return result ?? false;
+    } on MissingPluginException {
+      return false;
+    } on PlatformException catch (e) {
+      print('Error opening input method picker: ${e.message}');
       return false;
     }
   }
@@ -119,7 +175,16 @@ class RewordiumKeyboardService {
 
   /// Get current keyboard settings
   static Future<Map<String, dynamic>> getKeyboardSettings() async {
-    if (!_isAndroid) return {'themeColor': '#007AFF', 'darkMode': false, 'hapticFeedback': true, 'autoCapitalize': true, 'doubleSpacePeriod': true};
+    if (!_isAndroid) {
+      return {
+        'themeColor': '#007AFF',
+        'darkMode': false,
+        'hapticFeedback': true,
+        'aiSuggestions': true,
+        'autoCapitalize': true,
+        'doubleSpacePeriod': true,
+      };
+    }
     try {
       final Map<dynamic, dynamic> result =
           await _channel.invokeMethod('getKeyboardSettings');
@@ -128,6 +193,7 @@ class RewordiumKeyboardService {
         'themeColor': result['themeColor'] ?? '#007AFF',
         'darkMode': result['darkMode'] ?? false,
         'hapticFeedback': result['hapticFeedback'] ?? true,
+        'aiSuggestions': result['aiSuggestions'] ?? true,
         'autoCapitalize': result['autoCapitalize'] ?? true,
         'doubleSpacePeriod': result['doubleSpacePeriod'] ?? true,
       };
@@ -138,6 +204,7 @@ class RewordiumKeyboardService {
         'themeColor': '#007AFF',
         'darkMode': false,
         'hapticFeedback': true,
+        'aiSuggestions': true,
         'autoCapitalize': true,
         'doubleSpacePeriod': true,
       };

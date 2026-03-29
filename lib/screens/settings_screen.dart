@@ -44,6 +44,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
   int _adminTapCount = 0;
   DateTime? _lastTapTime;
   bool _isOpeningReboardSettings = false;
+  DateTime? _lastReboardLaunchAt;
 
 
 
@@ -298,6 +299,13 @@ class _SettingsScreenState extends State<SettingsScreen> {
   Future<void> _openReboardSettings() async {
     if (defaultTargetPlatform != TargetPlatform.android) return;
     if (_isOpeningReboardSettings) return;
+
+    final now = DateTime.now();
+    if (_lastReboardLaunchAt != null &&
+        now.difference(_lastReboardLaunchAt!) < const Duration(milliseconds: 1200)) {
+      return;
+    }
+    _lastReboardLaunchAt = now;
 
     _isOpeningReboardSettings = true;
     try {
