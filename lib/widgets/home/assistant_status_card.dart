@@ -3,9 +3,9 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'package:m3e_collection/m3e_collection.dart';
 import '../../utils/lottie_assets.dart';
+import '../../screens/accessibility_disclosure_screen.dart';
 import '../animated_card.dart';
 import '../custom_button.dart'; // Import the CustomButton widget
-import '../accessibility_disclosure_dialog.dart';
 
 class AssistantStatusCard extends StatefulWidget {
   const AssistantStatusCard({super.key});
@@ -101,28 +101,43 @@ class _AssistantStatusCardState extends State<AssistantStatusCard>
 
   Future<void> _requestSettings() async {
     if (!_isAndroid) return;
-    // Show prominent disclosure dialog first
-    final bool? accepted = await AccessibilityDisclosureDialog.show(context);
+    bool accessibilityEnabled = false;
+    try {
+      accessibilityEnabled =
+          await _channel.invokeMethod('isAccessibilityServiceEnabled');
+    } on PlatformException catch (_) {
+      accessibilityEnabled = false;
+    }
 
-    if (accepted == true) {
-      // User explicitly consented, proceed to settings
+    if (!mounted) return;
+
+    bool accepted = accessibilityEnabled;
+    if (!accessibilityEnabled) {
+      accepted = await AccessibilityDisclosureScreen.show(context);
+      if (!mounted) return;
+    }
+
+    if (accepted) {
       try {
-        await _channel.invokeMethod('requestAccessibilitySettings');
+        await _channel.invokeMethod('requestAccessibilitySettings', {
+          'autoReturnToApp': true,
+        });
       } on PlatformException catch (e) {
         debugPrint("Failed to open accessibility settings: '${e.message}'.");
       }
-    } else {
-      // User declined or dismissed dialog
-      debugPrint("User declined accessibility permission");
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text(
-                'Accessibility permission is required for AI features to work'),
-            duration: Duration(seconds: 3),
+      return;
+    }
+
+    debugPrint("User declined accessibility permission");
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text(
+            'Accessibility stays off for now. You can enable it later in Android settings.',
           ),
-        );
-      }
+          duration: Duration(seconds: 3),
+        ),
+      );
     }
   }
 
@@ -170,7 +185,10 @@ class _AssistantStatusCardState extends State<AssistantStatusCard>
             const SizedBox(width: 8),
             Text(
               "Assistant Status",
-              style: Theme.of(context).textTheme.bodyLarge?.copyWith(fontWeight: FontWeight.w600),
+              style: Theme.of(context)
+                  .textTheme
+                  .bodyLarge
+                  ?.copyWith(fontWeight: FontWeight.w600),
             ),
             const SizedBox(width: 8),
             SizedBox(
@@ -252,7 +270,10 @@ class _AssistantStatusCardState extends State<AssistantStatusCard>
             const SizedBox(width: 8),
             Text(
               "Assistant Status",
-              style: Theme.of(context).textTheme.bodyLarge?.copyWith(fontWeight: FontWeight.w600),
+              style: Theme.of(context)
+                  .textTheme
+                  .bodyLarge
+                  ?.copyWith(fontWeight: FontWeight.w600),
             ),
             const Spacer(),
             const Text(

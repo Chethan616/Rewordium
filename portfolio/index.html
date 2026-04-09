@@ -1,0 +1,189 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta
+    name="description"
+    content="Interactive portfolio for Rewordium mobile app with immersive animations and 3D showcases."
+  />
+  <title>Rewordium Portfolio</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link
+    href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=Sora:wght@300;400;600;700;800&display=swap"
+    rel="stylesheet"
+  />
+  <link rel="stylesheet" href="./styles.css" />
+</head>
+<body>
+  <canvas id="particle-canvas" aria-hidden="true"></canvas>
+  <div class="ambient-grid" aria-hidden="true"></div>
+
+  <header class="topbar">
+    <a class="brand" href="#hero">Rewordium</a>
+    <nav class="navbar" aria-label="Section navigation">
+      <a class="nav-link active" href="#hero" data-nav-link="hero">Overview</a>
+      <a class="nav-link" href="#showcase" data-nav-link="showcase">Showcase</a>
+      <a class="nav-link" href="#features" data-nav-link="features">Features</a>
+      <a class="nav-link" href="#docs" data-nav-link="docs">Docs</a>
+    </nav>
+  </header>
+
+  <main>
+    <section id="hero" class="section hero-section">
+      <div class="hero-copy">
+        <p class="eyebrow">Mobile Product Portfolio</p>
+        <h1>Rewordium Mobile</h1>
+        <p class="tagline">
+          AI-powered writing acceleration for people who need clarity and speed on mobile.
+        </p>
+        <p class="description">
+          This portfolio template blends immersive visuals and documentation clarity so you can present
+          product strategy, UX quality, and engineering depth in one polished narrative.
+        </p>
+        <div class="hero-actions">
+          <a class="btn primary" href="#showcase">View 3D Showcase</a>
+          <a class="btn ghost" href="#docs">Read Product Docs</a>
+        </div>
+      </div>
+      <div class="hero-orb-wrap reveal">
+        <div class="hero-orb" aria-hidden="true">
+          <span class="ring ring-a"></span>
+          <span class="ring ring-b"></span>
+          <span class="ring ring-c"></span>
+          <span class="orb-core"></span>
+        </div>
+        <p class="orb-caption">Tilt-responsive visual anchor with subtle depth interaction.</p>
+      </div>
+    </section>
+
+    <section id="showcase" class="section reveal">
+      <div class="section-intro">
+        <p class="eyebrow">3D Slider</p>
+        <h2>Interactive App Journey</h2>
+        <p>
+          Explore a circular 3D carousel of app screens. Drag horizontally or scroll to rotate the stack.
+          The centered screen is emphasized to guide attention through your primary product flow.
+        </p>
+      </div>
+      <div class="canvas-shell">
+        <canvas id="showcase-canvas" aria-label="3D mobile app showcase"></canvas>
+      </div>
+      <p class="interaction-note">Drag left or right. Mouse wheel also rotates the showcase.</p>
+    </section>
+
+    <section id="features" class="section">
+      <div class="section-intro reveal">
+        <p class="eyebrow">Exploding Feature Map</p>
+        <h2>Tap To Reveal Core Capabilities</h2>
+        <p>
+          A central 3D object breaks into animated fragments. Each burst maps directly to a key feature card,
+          creating a playful but structured way to present what the app delivers.
+        </p>
+      </div>
+      <div class="feature-stage">
+        <div class="explode-canvas-shell reveal">
+          <canvas id="exploder-canvas" aria-label="Exploding feature object"></canvas>
+          <button id="explode-button" class="explode-button" type="button">Explode Features</button>
+        </div>
+        <div class="feature-cards" id="feature-cards">
+          <article class="feature-card" data-feature-card>
+            <h3>Smart Rewrite</h3>
+            <p>Instantly refines user text for tone, clarity, and confidence with context-aware AI prompts.</p>
+          </article>
+          <article class="feature-card" data-feature-card>
+            <h3>Predictive Flow</h3>
+            <p>Suggests likely next phrases to reduce typing friction in high-frequency messaging workflows.</p>
+          </article>
+          <article class="feature-card" data-feature-card>
+            <h3>Multi-Tone Presets</h3>
+            <p>Switch between professional, casual, concise, or persuasive communication modes in one tap.</p>
+          </article>
+          <article class="feature-card" data-feature-card>
+            <h3>Secure Input Layer</h3>
+            <p>Local-first processing patterns and permission-aware architecture to protect user trust.</p>
+          </article>
+          <article class="feature-card" data-feature-card>
+            <h3>Cross-App Utility</h3>
+            <p>Works across chat, notes, and productivity apps without breaking the user’s existing habits.</p>
+          </article>
+          <article class="feature-card" data-feature-card>
+            <h3>Analytics Feedback Loop</h3>
+            <p>Measures helpful suggestions, acceptance rates, and writing outcomes to improve the model loop.</p>
+          </article>
+        </div>
+      </div>
+    </section>
+
+    <section id="docs" class="section docs-section">
+      <div class="section-intro reveal">
+        <p class="eyebrow">Documentation View</p>
+        <h2>Product + Engineering Notes</h2>
+        <p>
+          This section is intentionally styled like lightweight developer docs, so investors and technical
+          reviewers can scan value, scope, and implementation direction quickly.
+        </p>
+      </div>
+
+      <div class="docs-grid">
+        <article class="doc-block reveal">
+          <h3>What The App Does</h3>
+          <p>
+            Rewordium helps users write faster and better on mobile by combining predictive text,
+            rewrite assistance, and style adaptation into a single keyboard-first flow.
+          </p>
+        </article>
+
+        <article class="doc-block reveal">
+          <h3>Key Experience Goals</h3>
+          <ul class="stack-list">
+            <li>Reduce typing effort in high-volume conversations.</li>
+            <li>Improve confidence for non-native or time-constrained writers.</li>
+            <li>Keep interactions minimal, responsive, and privacy-conscious.</li>
+          </ul>
+        </article>
+
+        <article class="doc-block reveal">
+          <h3>Current Stack</h3>
+          <div class="stack-chips">
+            <span class="stack-chip">Flutter</span>
+            <span class="stack-chip">Firebase</span>
+            <span class="stack-chip">Cloud Functions</span>
+            <span class="stack-chip">Three.js</span>
+            <span class="stack-chip">GSAP + ScrollTrigger</span>
+            <span class="stack-chip">Vanilla JS Modules</span>
+          </div>
+        </article>
+
+        <article class="doc-block reveal">
+          <h3>Delivery Priorities</h3>
+          <ul class="stack-list">
+            <li>Improve screen-to-screen onboarding narrative.</li>
+            <li>Expand multilingual rewrite quality.</li>
+            <li>Tune suggestion ranking with real usage metrics.</li>
+          </ul>
+        </article>
+
+        <article class="doc-block full-width reveal">
+          <h3>Implementation Snapshot</h3>
+          <pre class="code-block"><code>portfolio/
+  index.html      # semantic layout and sections
+  styles.css      # visual theme, responsive rules, hover states
+  script.js       # GSAP scroll orchestration and lazy scene init
+  threeScene.js   # Three.js carousel + exploding feature object</code></pre>
+        </article>
+      </div>
+    </section>
+  </main>
+
+  <footer class="footer">
+    <p>Portfolio template for Rewordium. Replace placeholder text and screenshots as needed.</p>
+    <p><span id="year"></span> • Crafted for immersive product storytelling.</p>
+  </footer>
+
+  <script src="https://cdn.jsdelivr.net/npm/gsap@3.12.5/dist/gsap.min.js" defer></script>
+  <script src="https://cdn.jsdelivr.net/npm/gsap@3.12.5/dist/ScrollTrigger.min.js" defer></script>
+  <script type="module" src="./script.js"></script>
+</body>
+</html>

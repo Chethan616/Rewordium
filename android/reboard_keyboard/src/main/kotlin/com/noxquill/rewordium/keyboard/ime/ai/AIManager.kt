@@ -160,12 +160,12 @@ class AIManager(private val context: Context) {
     /**
      * Make an API request with the given config and prompt
      */
-    private suspend fun makeApiRequest(config: AIConfigProvider.AIConfig, systemPrompt: String, userPrompt: String): Result<String> {
+    private suspend fun makeApiRequest(config: AIConfigProvider.AIConfig, systemPrompt: String, userPrompt: String, overrideMaxTokens: Int? = null): Result<String> {
         return withContext(Dispatchers.IO) {
             try {
                 // Handle Gemini separately as it uses a different API format
                 if (config.isGemini()) {
-                    return@withContext makeGeminiRequest(config, systemPrompt, userPrompt)
+                    return@withContext makeGeminiRequest(config, systemPrompt, userPrompt, overrideMaxTokens)
                 }
                 val request = GroqRequest(
                     model = config.model,
@@ -174,7 +174,7 @@ class AIManager(private val context: Context) {
                         Message(role = "user", content = userPrompt)
                     ),
                     temperature = 0.7,
-                    maxTokens = config.maxTokens
+                    maxTokens = overrideMaxTokens ?: config.maxTokens
                 )
                 val jsonBody = gson.toJson(request)
                 val requestBody = jsonBody.toRequestBody("application/json".toMediaType())
@@ -235,7 +235,7 @@ class AIManager(private val context: Context) {
      * Make a request to Google Gemini API
      * Gemini uses a different request/response format
      */
-    private fun makeGeminiRequest(config: AIConfigProvider.AIConfig, systemPrompt: String, userPrompt: String): Result<String> {
+    private fun makeGeminiRequest(config: AIConfigProvider.AIConfig, systemPrompt: String, userPrompt: String, overrideMaxTokens: Int? = null): Result<String> {
         try {
             // Gemini request format
             val geminiRequest = mapOf(
@@ -248,7 +248,7 @@ class AIManager(private val context: Context) {
                 ),
                 "generationConfig" to mapOf(
                     "temperature" to 0.7,
-                    "maxOutputTokens" to config.maxTokens,
+                    "maxOutputTokens" to (overrideMaxTokens ?: config.maxTokens),
                     "topP" to 0.95,
                     "topK" to 40
                 )
@@ -318,7 +318,7 @@ class AIManager(private val context: Context) {
         val systemPrompt = buildSystemPrompt(action)
         val userPrompt = buildUserPrompt(text, action)
         
-        return makeApiRequest(config, systemPrompt, userPrompt)
+        return makeApiRequest(config, systemPrompt, userPrompt, overrideMaxTokens = 512)
     }
     
     /**
@@ -349,32 +349,25 @@ class AIManager(private val context: Context) {
             AIAction.MAKE_CASUAL -> "Make the output natural and conversational while staying respectful."
         }
         
-        val systemPrompt = """You are an expert mobile writing assistant.
-
+        val systemPrompt = """<system_instructions>
+You are an expert mobile writing assistant.
 You will receive a structured request containing STYLE, INTENT, LENGTH, ACTION, and SOURCE_TEXT.
 Apply all relevant instructions to SOURCE_TEXT and return the final transformed text.
+</system_instructions>
 
-ACTION PRIORITY:
+<action_priority>
 $actionGuidance
+</action_priority>
 
-CRITICAL RULES:
-1. Return ONLY final text. No labels, no quotes, no markdown, no commentary.
-2. Preserve names, facts, numbers, dates, links, and intent unless INTENT explicitly asks to change them.
-3. Keep the same language as SOURCE_TEXT unless INTENT explicitly requests translation.
-4. Preserve useful formatting (line breaks, bullets, hashtags, mentions, emojis) unless INTENT says otherwise.
-5. Respect LENGTH when provided:
-   - Very Short: <= 1 sentence
-   - Short: 1-2 sentences
-   - Medium: 2-4 sentences
-   - Long: 1-3 paragraphs
-   - Detailed: add meaningful context, no fluff
-   - Concise: remove redundancy
-   - Elaborate: richer detail and examples
-   - Bullet Points: output bullet points
-6. Improve readability and grammar while keeping the original voice.
-7. If instructions conflict, prioritize preserving user intent and factual accuracy."""
+<constraints>
+1. Return ONLY the final transformed text. No labels, no quotes, no markdown wrappers, no commentary.
+2. Preserve names, facts, numbers, dates, links, and logical intent unless instructions explicitly ask to change them.
+3. Keep the same language as SOURCE_TEXT.
+4. Keep the original formatting blocks if useful.
+5. If instructions conflict, prioritize preserving user intent and factual accuracy.
+</constraints>"""
         
-        return makeApiRequest(config, systemPrompt, fullPrompt)
+        return makeApiRequest(config, systemPrompt, fullPrompt, overrideMaxTokens = 700)
     }
 
     /**
@@ -459,24 +452,30 @@ CRITICAL RULES:
             AIAction.MAKE_CASUAL -> "Continue in a relaxed, conversational way."
         }
         
-        val systemPrompt = """You are a skilled $personaDescription writer. $taskInstruction
+        val systemPrompt = """<system_instructions>
+You are a skilled $personaDescription writer. $taskInstruction
+</system_instructions>
 
-CRITICAL RULES:
-1. Return ONLY the new continuation text - no explanations, no quotes, no commentary
-2. DO NOT repeat or rephrase ANY of the original text
-3. Write content that naturally follows what was already written
-4. Keep the same language as the original text unless the task explicitly asks translation
-5. Maintain continuity in tone, tense, entities, and facts
-6. Write like a thoughtful human"""
+<constraints>
+1. Return ONLY the new continuation text - no explanations, no quotes, no commentary.
+2. DO NOT repeat or rephrase ANY of the original text.
+3. Write content that naturally follows what was already written.
+4. Keep the same language as the original text unless the task explicitly asks translation.
+5. Maintain continuity in tone, tense, entities, and facts.
+6. Write like a thoughtful human.
+</constraints>"""
         
         val userPrompt = buildString {
-            appendLine("TASK: $taskInstruction")
+            appendLine("<task>")
+            appendLine(taskInstruction)
+            appendLine("</task>")
             appendLine()
-            appendLine("EXISTING_TEXT:")
+            appendLine("<existing_text>")
             append(existingText)
+            appendLine("</existing_text>")
         }
 
-        return makeApiRequest(config, systemPrompt, userPrompt)
+        return makeApiRequest(config, systemPrompt, userPrompt, overrideMaxTokens = 512)
     }
 
     /**
@@ -498,23 +497,24 @@ CRITICAL RULES:
             return Result.failure(AIException("No text to improve"))
         }
 
-        val systemPrompt = """You are a contextual writing editor.
+        val systemPrompt = """<system_instructions>
+You are a contextual writing editor. Your job is to improve grammar and readability while strictly preserving the writer's identity.
+</system_instructions>
 
-Your job is to improve grammar and readability while preserving the writer's identity.
-
-CRITICAL RULES:
+<constraints>
 1. Return ONLY the edited text. No explanations, no quotes, no markdown.
 2. Keep the same language as the input.
 3. Preserve slang, colloquial phrases, abbreviations, and casual style unless they make the text unclear.
 4. Keep sentence order and structure as close as possible to the original.
 5. Fix grammar, punctuation, and obvious typos with minimal edits.
-6. Do NOT over-formalize. Keep the same vibe and personality.
+6. Do NOT over-formalize. Keep the exact vibe and personality.
 7. Do NOT expand or summarize. Keep roughly the same length.
 8. If a phrase is intentionally informal but understandable, keep it.
+</constraints>"""
 
-You are polishing, not rewriting."""
+        val userPrompt = "<input_text>\n$text\n</input_text>"
 
-        return makeApiRequest(config, systemPrompt, text)
+        return makeApiRequest(config, systemPrompt, userPrompt, overrideMaxTokens = 256)
     }
     
     private fun buildSystemPrompt(action: AIAction): String {
@@ -534,21 +534,26 @@ You are polishing, not rewriting."""
             AIAction.MAKE_FORMAL -> "Elevate this to professional standards while keeping the core message crystal clear. Remove casual elements but don't make it stiff."
             AIAction.MAKE_CASUAL -> "Loosen this up like you're chatting with a friend. Remove formality but keep the message clear and respectful."
         }
-        return """$personaDescription
+        return """<system_instructions>
+$personaDescription
+</system_instructions>
 
+<directive>
 $actionInstruction
+</directive>
 
-CRITICAL RULES:
-- Return ONLY the final text. No quotes, no "Here is...", no explanations, no commentary.
-- NEVER reveal you are an AI, language model, or machine. NEVER answer questions about your identity, existence, or capabilities.
-- NEVER answer trivial math or fact queries (e.g., "2+2", "who are you").
-- ALWAYS respond in ENGLISH - DO NOT translate to other languages.
-- Sound authentically human - avoid robotic patterns or corporate-speak.
-- Preserve the original intent and any specific details mentioned."""
+<constraints>
+1. Return ONLY the final text. No quotes, no "Here is...", no explanations, no commentary.
+2. NEVER reveal you are an AI, language model, or machine. NEVER answer questions about your identity.
+3. NEVER answer trivial math or fact queries (e.g., "2+2", "who are you").
+4. ALWAYS respond in ENGLISH - DO NOT translate to other languages.
+5. Sound authentically human - avoid robotic patterns or corporate-speak.
+6. Preserve the original intent and any specific details mentioned.
+</constraints>"""
     }
     
     private fun buildUserPrompt(text: String, action: AIAction): String {
-        return text
+        return "<input_text>\n$text\n</input_text>"
     }
     
     /**
