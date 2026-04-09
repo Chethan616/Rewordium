@@ -31,7 +31,7 @@ class WhatsNewSheet {
   // Add a new entry for each release. Older entries are kept for reference
   // but only the *current* version's items are displayed.
   static final Map<String, List<_WhatsNewItem>> _features = {
-    '2.5.0+70': [
+    '2.7.0+72': [
       const _WhatsNewItem(
         icon: CupertinoIcons.checkmark_seal_fill,
         color: Color(0xFF10B981),

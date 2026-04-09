@@ -9,6 +9,7 @@ import '../services/ai_settings_bridge.dart';
 import '../services/keyboard_service.dart';
 import '../services/news_subscription_service.dart';
 import '../services/rewordium_keyboard_service.dart';
+import '../screens/accessibility_disclosure_screen.dart';
 import '../theme/theme_provider.dart';
 
 class OnboardingPage extends StatefulWidget {
@@ -37,7 +38,7 @@ enum _KeyboardHapticsMode { followSystem, alwaysVibrate }
 enum _SystemSetupStage { idle, keyboardEnable, keyboardSelect, accessibility }
 
 class _OnboardingPageState extends State<OnboardingPage>
-  with WidgetsBindingObserver {
+    with WidgetsBindingObserver {
   static const _accessibilityChannel =
       MethodChannel('com.noxquill.rewordium/accessibility');
 
@@ -78,6 +79,7 @@ class _OnboardingPageState extends State<OnboardingPage>
   _KeyboardHapticsMode _keyboardHapticsMode = _KeyboardHapticsMode.followSystem;
   bool _openReboardSettingsAfterFinish = false;
 
+  bool _awaitingAssistantModeAccessibility = false;
   bool _awaitingSystemSetup = false;
   _SystemSetupStage _systemSetupStage = _SystemSetupStage.idle;
 
@@ -96,13 +98,13 @@ class _OnboardingPageState extends State<OnboardingPage>
     setState(() {
       _openAccessibilitySettingsAfterFinish =
           prefs.getBool('onboarding_open_accessibility_after_finish') ??
-          _openAccessibilitySettingsAfterFinish;
+              _openAccessibilitySettingsAfterFinish;
       _openKeyboardSettingsAfterFinish =
           prefs.getBool('onboarding_open_keyboard_after_finish') ??
-          _openKeyboardSettingsAfterFinish;
+              _openKeyboardSettingsAfterFinish;
       _openReboardSettingsAfterFinish =
           prefs.getBool('onboarding_open_reboard_after_finish') ??
-          _openReboardSettingsAfterFinish;
+              _openReboardSettingsAfterFinish;
       _keyboardAiDefaultEnabled =
           prefs.getBool('paraphraser_enabled') ?? _keyboardAiDefaultEnabled;
     });
@@ -127,7 +129,19 @@ class _OnboardingPageState extends State<OnboardingPage>
 
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
-    if (state != AppLifecycleState.resumed || !_awaitingSystemSetup) {
+    if (state != AppLifecycleState.resumed) {
+      return;
+    }
+
+    if (_awaitingAssistantModeAccessibility) {
+      Future<void>.delayed(const Duration(milliseconds: 350), () async {
+        if (!mounted || !_awaitingAssistantModeAccessibility) return;
+        await _resumeAssistantModeAccessibilityFlow();
+      });
+      return;
+    }
+
+    if (!_awaitingSystemSetup) {
       return;
     }
 
@@ -145,10 +159,6 @@ class _OnboardingPageState extends State<OnboardingPage>
       _assistantMode != _AssistantMode.accessibilityOverlay;
 
   String? _currentStepError() {
-    if (_step == 1 && _usesAccessibility && !_accessibilityDisclosureAccepted) {
-      return 'Accept the accessibility disclosure to continue with overlay mode.';
-    }
-
     if (_step == 3 && _llmMode == _LlmMode.bringYourOwn) {
       final apiKey = _apiKeyController.text.trim();
       if (apiKey.isEmpty) {
@@ -172,6 +182,11 @@ class _OnboardingPageState extends State<OnboardingPage>
   }
 
   Future<void> _onContinuePressed() async {
+    if (_step == 1) {
+      await _handleAssistantModeContinue();
+      return;
+    }
+
     final error = _currentStepError();
     if (error != null) {
       _showMessage(error);
@@ -215,6 +230,7 @@ class _OnboardingPageState extends State<OnboardingPage>
     setState(() {
       _assistantMode = _AssistantMode.keyboardOnly;
       _accessibilityDisclosureAccepted = false;
+      _awaitingAssistantModeAccessibility = false;
       _dynamicColorsEnabled = false;
       _llmMode = _LlmMode.managedDefault;
       _subscribeToNews = false;
@@ -249,9 +265,11 @@ class _OnboardingPageState extends State<OnboardingPage>
       await _persistNewsChoice();
       await _persistKeyboardChoices();
 
+      _awaitingAssistantModeAccessibility = false;
       _awaitingSystemSetup = true;
       await _advanceSystemSetupFlow(openSystemScreens: true, fromResume: false);
     } catch (e) {
+      _awaitingAssistantModeAccessibility = false;
       _awaitingSystemSetup = false;
       _showMessage('Could not finish onboarding: $e');
     } finally {
@@ -259,6 +277,90 @@ class _OnboardingPageState extends State<OnboardingPage>
         setState(() => _isSaving = false);
       }
     }
+  }
+
+  Future<void> _handleAssistantModeContinue() async {
+    if (!_usesAccessibility) {
+      setState(() {
+        _accessibilityDisclosureAccepted = false;
+        _awaitingAssistantModeAccessibility = false;
+        _step += 1;
+      });
+      return;
+    }
+
+    final accessibilityEnabled = await _isAccessibilityEnabled();
+    if (!mounted) return;
+
+    if (accessibilityEnabled) {
+      setState(() {
+        _accessibilityDisclosureAccepted = true;
+        _awaitingAssistantModeAccessibility = false;
+        _step += 1;
+      });
+      return;
+    }
+
+    if (!_accessibilityDisclosureAccepted) {
+      final bool accepted = await AccessibilityDisclosureScreen.show(context);
+      if (!mounted) return;
+
+      if (!accepted) {
+        setState(() {
+          _assistantMode = _AssistantMode.keyboardOnly;
+          _accessibilityDisclosureAccepted = false;
+          _awaitingAssistantModeAccessibility = false;
+          _step += 1;
+        });
+        _showMessage(
+          'Overlay mode skipped. Keyboard-first mode is enabled and you can turn on accessibility later.',
+        );
+        return;
+      }
+
+      setState(() {
+        _accessibilityDisclosureAccepted = true;
+      });
+    }
+
+    if (!accessibilityEnabled && _openAccessibilitySettingsAfterFinish) {
+      setState(() {
+        _awaitingAssistantModeAccessibility = true;
+      });
+      _showMessage(
+        'Enable accessibility in Android settings, then return to continue onboarding.',
+      );
+      await _openAccessibilitySettings(autoReturnToApp: true);
+      return;
+    }
+
+    setState(() {
+      _awaitingAssistantModeAccessibility = false;
+      _step += 1;
+    });
+  }
+
+  Future<void> _resumeAssistantModeAccessibilityFlow() async {
+    final accessibilityEnabled = await _isAccessibilityEnabled();
+    if (!mounted || !_awaitingAssistantModeAccessibility) return;
+
+    if (accessibilityEnabled) {
+      setState(() {
+        _awaitingAssistantModeAccessibility = false;
+        if (_step == 1) {
+          _step += 1;
+        }
+      });
+      _showMessage('Accessibility enabled. Continuing setup.');
+      return;
+    }
+
+    setState(() {
+      _awaitingAssistantModeAccessibility = false;
+    });
+    _showMessage(
+      'Accessibility is still off. You can enable it now or continue and enable it later.',
+    );
   }
 
   Future<void> _persistAssistantChoices() async {
@@ -284,18 +386,19 @@ class _OnboardingPageState extends State<OnboardingPage>
 
   Future<bool> _isAccessibilityEnabled() async {
     try {
-      final bool enabled =
-          await _accessibilityChannel.invokeMethod('isAccessibilityServiceEnabled');
+      final bool enabled = await _accessibilityChannel
+          .invokeMethod('isAccessibilityServiceEnabled');
       return enabled;
     } catch (_) {
       return false;
     }
   }
 
-  Future<void> _openAccessibilitySettings() async {
+  Future<void> _openAccessibilitySettings(
+      {bool autoReturnToApp = false}) async {
     try {
       await _accessibilityChannel.invokeMethod('requestAccessibilitySettings', {
-        'autoReturnToApp': _awaitingSystemSetup,
+        'autoReturnToApp': autoReturnToApp,
       });
     } catch (_) {
       _showMessage('Could not open accessibility settings automatically.');
@@ -313,8 +416,7 @@ class _OnboardingPageState extends State<OnboardingPage>
       if (!keyboardEnabled) {
         final transitioningToKeyboardEnable =
             _systemSetupStage != _SystemSetupStage.keyboardEnable;
-        final shouldAutoOpenKeyboardSettings =
-            openSystemScreens &&
+        final shouldAutoOpenKeyboardSettings = openSystemScreens &&
             _openKeyboardSettingsAfterFinish &&
             (!fromResume || transitioningToKeyboardEnable);
         _systemSetupStage = _SystemSetupStage.keyboardEnable;
@@ -337,8 +439,7 @@ class _OnboardingPageState extends State<OnboardingPage>
       if (!keyboardSelected) {
         final transitioningToKeyboardSelect =
             _systemSetupStage != _SystemSetupStage.keyboardSelect;
-        final shouldAutoOpenInputPicker =
-            openSystemScreens &&
+        final shouldAutoOpenInputPicker = openSystemScreens &&
             _openKeyboardSettingsAfterFinish &&
             (!fromResume || transitioningToKeyboardSelect);
         _systemSetupStage = _SystemSetupStage.keyboardSelect;
@@ -362,8 +463,7 @@ class _OnboardingPageState extends State<OnboardingPage>
       if (!accessibilityEnabled) {
         final transitioningToAccessibility =
             _systemSetupStage != _SystemSetupStage.accessibility;
-        final shouldAutoOpenAccessibility =
-            openSystemScreens &&
+        final shouldAutoOpenAccessibility = openSystemScreens &&
             _openAccessibilitySettingsAfterFinish &&
             (!fromResume || transitioningToAccessibility);
         _systemSetupStage = _SystemSetupStage.accessibility;
@@ -373,12 +473,14 @@ class _OnboardingPageState extends State<OnboardingPage>
         _showMessage(
           _openAccessibilitySettingsAfterFinish
               ? (transitioningToAccessibility
-                    ? 'Keyboard setup is complete. Enable accessibility to finish setup.'
-                    : 'Enable accessibility in system settings, then return to finish setup.')
+                  ? 'Keyboard setup is complete. Enable accessibility to finish setup.'
+                  : 'Enable accessibility in system settings, then return to finish setup.')
               : 'Enable accessibility in Android settings, then return to finish setup.',
         );
         if (shouldAutoOpenAccessibility) {
-          await _openAccessibilitySettings();
+          await _openAccessibilitySettings(
+            autoReturnToApp: _awaitingSystemSetup,
+          );
         }
         return;
       }
@@ -388,6 +490,7 @@ class _OnboardingPageState extends State<OnboardingPage>
   }
 
   Future<void> _finalizeOnboardingCompletion() async {
+    _awaitingAssistantModeAccessibility = false;
     _awaitingSystemSetup = false;
     _systemSetupStage = _SystemSetupStage.idle;
 
@@ -684,18 +787,8 @@ class _OnboardingPageState extends State<OnboardingPage>
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Container(
-                width: 52,
-                height: 52,
-                decoration: BoxDecoration(
-                  color: cs.onPrimaryContainer.withValues(alpha: 0.12),
-                  borderRadius: BorderRadius.circular(14),
-                ),
-                child: Icon(Icons.auto_awesome, color: cs.onPrimaryContainer),
-              ),
-              const SizedBox(height: 16),
               Text(
-                'Build your Rewordium setup in under a minute.',
+                'Set up Rewordium your way in under a minute.',
                 style: theme.textTheme.headlineSmall?.copyWith(
                   color: cs.onPrimaryContainer,
                   fontWeight: FontWeight.w800,
@@ -703,7 +796,7 @@ class _OnboardingPageState extends State<OnboardingPage>
               ),
               const SizedBox(height: 10),
               Text(
-                'Choose your assistant path, privacy-safe permissions, AI provider, theme style, and keyboard defaults.',
+                'Choose your assistant mode, review clear permission prompts, and start with keyboard defaults tuned for everyday writing.',
                 style: theme.textTheme.bodyLarge?.copyWith(
                   color: cs.onPrimaryContainer.withValues(alpha: 0.88),
                   height: 1.45,
@@ -845,7 +938,7 @@ class _OnboardingPageState extends State<OnboardingPage>
                     Icon(Icons.policy_outlined, color: cs.primary),
                     const SizedBox(width: 8),
                     Text(
-                      'Prominent Disclosure',
+                      'Accessibility Prompt',
                       style: Theme.of(context).textTheme.titleMedium?.copyWith(
                             fontWeight: FontWeight.w700,
                           ),
@@ -854,27 +947,51 @@ class _OnboardingPageState extends State<OnboardingPage>
                 ),
                 const SizedBox(height: 10),
                 Text(
-                  'Rewordium Accessibility reads on-screen text only to provide rewrite, translation, and drafting actions. It is not used for ads and can be disabled anytime from system settings.',
+                  'When you continue, you will see a required consent prompt before Android Accessibility settings open.',
                   style: Theme.of(context).textTheme.bodyMedium,
                 ),
                 const SizedBox(height: 8),
                 _disclosureLine(context,
-                    'Data used: visible text context for assistant actions.'),
+                    'Uses visible text context to provide rewrite and drafting actions.'),
                 _disclosureLine(context,
-                    'Data handling: processed only when you trigger AI actions.'),
+                    'Processes content only when you trigger assistant actions.'),
                 _disclosureLine(context,
-                    'Control: revoke permission instantly in Android settings.'),
+                    'You can revoke permission anytime in Android settings.'),
                 const SizedBox(height: 8),
-                CheckboxListTile(
-                  contentPadding: EdgeInsets.zero,
-                  value: _accessibilityDisclosureAccepted,
-                  onChanged: (value) {
-                    setState(() {
-                      _accessibilityDisclosureAccepted = value ?? false;
-                    });
-                  },
-                  title: const Text(
-                    'I understand and agree to this accessibility usage.',
+                Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(12),
+                    color: _accessibilityDisclosureAccepted
+                        ? cs.tertiaryContainer
+                        : cs.surfaceContainerHighest,
+                  ),
+                  child: Row(
+                    children: [
+                      Icon(
+                        _accessibilityDisclosureAccepted
+                            ? Icons.check_circle
+                            : Icons.info_outline,
+                        color: _accessibilityDisclosureAccepted
+                            ? cs.onTertiaryContainer
+                            : cs.onSurfaceVariant,
+                      ),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: Text(
+                          _accessibilityDisclosureAccepted
+                              ? 'Disclosure accepted. Continue to open accessibility settings now.'
+                              : 'Consent will be requested when you tap Continue.',
+                          style:
+                              Theme.of(context).textTheme.bodySmall?.copyWith(
+                                    color: _accessibilityDisclosureAccepted
+                                        ? cs.onTertiaryContainer
+                                        : cs.onSurfaceVariant,
+                                  ),
+                        ),
+                      ),
+                    ],
                   ),
                 ),
               ],
@@ -884,7 +1001,7 @@ class _OnboardingPageState extends State<OnboardingPage>
         if (_usesAccessibility)
           SwitchListTile.adaptive(
             contentPadding: EdgeInsets.zero,
-            title: const Text('Open accessibility settings after setup'),
+            title: const Text('Open accessibility settings when continuing'),
             value: _openAccessibilitySettingsAfterFinish,
             onChanged: (value) {
               setState(() => _openAccessibilitySettingsAfterFinish = value);

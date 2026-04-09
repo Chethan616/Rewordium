@@ -35,10 +35,26 @@ import java.util.*
  */
 class GradientOverlayView(context: Context) : View(context) {
     private val paint = android.graphics.Paint(android.graphics.Paint.ANTI_ALIAS_FLAG)
+    private val glowPaint = android.graphics.Paint(android.graphics.Paint.ANTI_ALIAS_FLAG)
     private var overlayHeight = 0f
     private var gradientOffset = 0f
     private var overlayAlpha = 0f
     private val screenWidth = resources.displayMetrics.widthPixels.toFloat()
+
+    // Cache variables to prevent GC churn on 60FPS animation frames
+    private var lastWidth = 0f
+    private var lastHeight = 0f
+    private var lastGradientOffset = -1f
+    private var lastOverlayAlpha = -1f
+    private var lastOverlayHeight = -1f
+
+    private val colors = IntArray(16)
+    private val positions = floatArrayOf(
+        0f, 0.06f, 0.12f, 0.18f, 0.24f, 0.30f, 0.36f, 0.42f,
+        0.48f, 0.54f, 0.60f, 0.66f, 0.72f, 0.78f, 0.88f, 1f
+    )
+    private val glowColors = IntArray(5)
+    private val glowPositions = floatArrayOf(0f, 0.25f, 0.5f, 0.75f, 1f)
     
     companion object {
         private const val TAG = "GradientOverlayView"
@@ -53,87 +69,87 @@ class GradientOverlayView(context: Context) : View(context) {
         if (overlayHeight != height || gradientOffset != offset || overlayAlpha != alpha) {
             overlayHeight = height
             gradientOffset = offset
+            // Ensure alpha is fully resolved here
             overlayAlpha = alpha.coerceIn(0f, 1f)
             invalidate()
         }
     }
     
-    override fun onDraw(canvas: android.graphics.Canvas) {
-        super.onDraw(canvas)
-        
-        val width = width.toFloat()
-        val height = height.toFloat()
-        
-        if (width <= 0 || height <= 0 || overlayAlpha <= 0 || overlayHeight <= 0) {
+    private fun updateShaders(width: Float, height: Float) {
+        if (width == lastWidth && height == lastHeight && gradientOffset == lastGradientOffset && 
+            overlayAlpha == lastOverlayAlpha && overlayHeight == lastOverlayHeight) {
             return
         }
-        
-        // Buttery smooth gradient with soft edges and perfect color transitions
-        val gradientHeight = overlayHeight + 200f // Extra soft blending area
+
+        lastWidth = width
+        lastHeight = height
+        lastGradientOffset = gradientOffset
+        lastOverlayAlpha = overlayAlpha
+        lastOverlayHeight = overlayHeight
+
+        val alpha = overlayAlpha
         val startY = height - overlayHeight
-        
-        // Ultra-smooth 16-color RGB spectrum for seamless transitions
-        val colors = intArrayOf(
-            android.graphics.Color.argb((overlayAlpha * 200).toInt(), 255, 20, 60),    // Vibrant Crimson
-            android.graphics.Color.argb((overlayAlpha * 190).toInt(), 255, 65, 54),    // Red Orange
-            android.graphics.Color.argb((overlayAlpha * 180).toInt(), 255, 87, 34),    // Deep Orange  
-            android.graphics.Color.argb((overlayAlpha * 170).toInt(), 255, 111, 0),    // Orange
-            android.graphics.Color.argb((overlayAlpha * 160).toInt(), 255, 152, 0),    // Amber
-            android.graphics.Color.argb((overlayAlpha * 150).toInt(), 255, 193, 7),    // Yellow
-            android.graphics.Color.argb((overlayAlpha * 140).toInt(), 139, 195, 74),   // Light Green
-            android.graphics.Color.argb((overlayAlpha * 130).toInt(), 76, 175, 80),    // Green
-            android.graphics.Color.argb((overlayAlpha * 120).toInt(), 0, 188, 212),    // Cyan
-            android.graphics.Color.argb((overlayAlpha * 110).toInt(), 3, 169, 244),    // Light Blue
-            android.graphics.Color.argb((overlayAlpha * 100).toInt(), 33, 150, 243),   // Blue
-            android.graphics.Color.argb((overlayAlpha * 90).toInt(), 63, 81, 181),     // Indigo
-            android.graphics.Color.argb((overlayAlpha * 80).toInt(), 103, 58, 183),    // Deep Purple
-            android.graphics.Color.argb((overlayAlpha * 70).toInt(), 156, 39, 176),    // Purple
-            android.graphics.Color.argb((overlayAlpha * 40).toInt(), 233, 30, 99),     // Pink fade
-            android.graphics.Color.argb(0, 255, 255, 255)                             // Transparent top
-        )
-        
-        val positions = floatArrayOf(
-            0f, 0.06f, 0.12f, 0.18f, 0.24f, 0.30f, 0.36f, 0.42f, 
-            0.48f, 0.54f, 0.60f, 0.66f, 0.72f, 0.78f, 0.88f, 1f
-        )
-        
-        // Smooth flowing gradient with perfect blending
-        val animatedGradient = android.graphics.LinearGradient(
+        val gradientHeight = overlayHeight + 200f
+
+        // Fill array for main gradient
+        colors[0] = android.graphics.Color.argb((alpha * 200).toInt(), 255, 20, 60)
+        colors[1] = android.graphics.Color.argb((alpha * 190).toInt(), 255, 65, 54)
+        colors[2] = android.graphics.Color.argb((alpha * 180).toInt(), 255, 87, 34)
+        colors[3] = android.graphics.Color.argb((alpha * 170).toInt(), 255, 111, 0)
+        colors[4] = android.graphics.Color.argb((alpha * 160).toInt(), 255, 152, 0)
+        colors[5] = android.graphics.Color.argb((alpha * 150).toInt(), 255, 193, 7)
+        colors[6] = android.graphics.Color.argb((alpha * 140).toInt(), 139, 195, 74)
+        colors[7] = android.graphics.Color.argb((alpha * 130).toInt(), 76, 175, 80)
+        colors[8] = android.graphics.Color.argb((alpha * 120).toInt(), 0, 188, 212)
+        colors[9] = android.graphics.Color.argb((alpha * 110).toInt(), 3, 169, 244)
+        colors[10] = android.graphics.Color.argb((alpha * 100).toInt(), 33, 150, 243)
+        colors[11] = android.graphics.Color.argb((alpha * 90).toInt(), 63, 81, 181)
+        colors[12] = android.graphics.Color.argb((alpha * 80).toInt(), 103, 58, 183)
+        colors[13] = android.graphics.Color.argb((alpha * 70).toInt(), 156, 39, 176)
+        colors[14] = android.graphics.Color.argb((alpha * 40).toInt(), 233, 30, 99)
+        colors[15] = android.graphics.Color.argb(0, 255, 255, 255)
+
+        paint.shader = android.graphics.LinearGradient(
             gradientOffset - screenWidth * 0.2f, startY,
             width + gradientOffset + screenWidth * 0.2f, startY + gradientHeight,
             colors,
             positions,
             android.graphics.Shader.TileMode.CLAMP
         )
-        
-        paint.shader = animatedGradient
-        
-        // Draw the buttery smooth gradient overlay
-        canvas.drawRect(
-            0f,
-            startY,
-            width,
-            height,
-            paint
-        )
-        
-        // Ultra-soft glow effect for premium feel
-        val glowPaint = android.graphics.Paint(android.graphics.Paint.ANTI_ALIAS_FLAG)
-        val softGlow = android.graphics.LinearGradient(
+
+        // Fill array for glow gradient
+        glowColors[0] = android.graphics.Color.argb(0, 255, 255, 255)
+        glowColors[1] = android.graphics.Color.argb((alpha * 60).toInt(), 255, 255, 255)
+        glowColors[2] = android.graphics.Color.argb((alpha * 80).toInt(), 255, 255, 255)
+        glowColors[3] = android.graphics.Color.argb((alpha * 40).toInt(), 255, 255, 255)
+        glowColors[4] = android.graphics.Color.argb(0, 255, 255, 255)
+
+        glowPaint.shader = android.graphics.LinearGradient(
             0f, startY - 120f,
             0f, startY + 120f,
-            intArrayOf(
-                android.graphics.Color.argb(0, 255, 255, 255),
-                android.graphics.Color.argb((overlayAlpha * 60).toInt(), 255, 255, 255),
-                android.graphics.Color.argb((overlayAlpha * 80).toInt(), 255, 255, 255),
-                android.graphics.Color.argb((overlayAlpha * 40).toInt(), 255, 255, 255),
-                android.graphics.Color.argb(0, 255, 255, 255)
-            ),
-            floatArrayOf(0f, 0.25f, 0.5f, 0.75f, 1f),
+            glowColors,
+            glowPositions,
             android.graphics.Shader.TileMode.CLAMP
         )
-        glowPaint.shader = softGlow
-        canvas.drawRect(0f, startY - 120f, width, startY + 120f, glowPaint)
+    }
+    
+    override fun onDraw(canvas: android.graphics.Canvas) {
+        super.onDraw(canvas)
+        
+        val w = width.toFloat()
+        val h = height.toFloat()
+        
+        if (w <= 0 || h <= 0 || overlayAlpha <= 0 || overlayHeight <= 0) {
+            return
+        }
+
+        updateShaders(w, h)
+        val startY = h - overlayHeight
+
+        // Draw the buttery smooth gradient overlay
+        canvas.drawRect(0f, startY, w, h, paint)
+        // Ultra-soft glow effect for premium feel
+        canvas.drawRect(0f, startY - 120f, w, startY + 120f, glowPaint)
     }
 }
 
@@ -1021,84 +1037,120 @@ class MyAccessibilityService : AccessibilityService(), BubbleInteractionListener
                 normalizedInput
             }
             """
+            <system_instructions>
             You are an expert message and email drafter.
             $personaInstruction
+            </system_instructions>
 
-            TASK:
+            <directive>
             Draft the best possible response to the user's request.
+            </directive>
 
-            RULES:
+            <constraints>
             1. Return ONLY the final draft. No analysis, no labels, no markdown.
-            2. Keep the same language as the user's request unless translation is explicitly requested.
+            2. Keep the same language as the user's request.
             3. Preserve names, dates, numbers, links, and concrete facts.
-            4. If the request is clearly an email, include:
-               - Subject line
-               - Greeting
-               - Body
-               - Closing
+            4. If the request is clearly an email, include: Subject line, Greeting, Body, Closing.
             5. If it is not an email request, return only the direct message text.
             6. Keep tone aligned with the selected persona and context.
             7. Do not invent facts.
+            </constraints>
 
-            USER REQUEST:
-            "$userCommand"
+            <input_text>
+            $userCommand
+            </input_text>
             """.trimIndent()
         } else {
             when (selectedPersona) {
                 "Casual" ->
                     """
+                    <system_instructions>
                     $personaInstruction
-                    Task: Context-aware grammar polish with minimal edits.
+                    </system_instructions>
+                    
+                    <directive>
+                    Context-aware grammar polish with minimal edits.
+                    </directive>
 
-                    RULES:
+                    <constraints>
                     1. Fix grammar, spelling, punctuation, and obvious clarity issues only.
                     2. Preserve meaning, tone, slang, abbreviations, emojis, and style.
                     3. Keep sentence order and structure as close as possible to the source.
                     4. Do not add new ideas or remove important details.
-                    5. Output format:
-                       - First line(s): corrected text only
-                       - Final line: "Changes: ..." with a concise summary
+                    5. Output format: First line(s): corrected text only. Final line: "Changes: ..." with a concise summary.
                     6. If no fixes are needed, return original text and "Changes: No errors found."
                     7. No extra labels or commentary.
+                    </constraints>
 
-                    USER TEXT:
-                    "$normalizedInput"
+                    <input_text>
+                    $normalizedInput
+                    </input_text>
                     """.trimIndent()
                 "Academic" ->
                     """
+                    <system_instructions>
                     $personaInstruction
+                    </system_instructions>
+                    
+                    <directive>
                     Rewrite the user's text into exactly 3 academic variants.
-                    Return exactly 3 non-empty lines and nothing else.
-                    Line 1: Formal thesis-style statement.
-                    Line 2: Detailed analytical version.
-                    Line 3: Concise abstract-style summary.
-                    Preserve core meaning across all lines.
+                    </directive>
 
-                    USER TEXT:
-                    "$normalizedInput"
+                    <constraints>
+                    1. Return exactly 3 non-empty lines and nothing else.
+                    2. Line 1: Formal thesis-style statement.
+                    3. Line 2: Detailed analytical version.
+                    4. Line 3: Concise abstract-style summary.
+                    5. Preserve core meaning perfectly across all lines.
+                    6. Do NOT prefix the lines with labels like "Line 1:" or numbers. Just return the raw text.
+                    </constraints>
+
+                    <input_text>
+                    $normalizedInput
+                    </input_text>
                     """.trimIndent()
                 "Poetry" ->
                     """
+                    <system_instructions>
                     $personaInstruction
+                    </system_instructions>
+                    
+                    <directive>
                     Transform the user's text into one polished poem.
-                    Requirements:
-                    - 4 to 8 lines
-                    - vivid imagery and natural rhythm
-                    - preserve the core message
-                    - no title, no labels, no commentary
+                    </directive>
 
-                    USER TEXT:
-                    "$normalizedInput"
+                    <constraints>
+                    1. Exactly 4 to 8 lines.
+                    2. Vivid imagery and natural rhythm.
+                    3. Preserve the core message of the user text.
+                    4. No title, no labels, no commentary. Just the verse.
+                    5. Output only the final verse.
+                    </constraints>
+
+                    <input_text>
+                    $normalizedInput
+                    </input_text>
                     """.trimIndent()
                 else -> // For Custom Persona
                     """
+                    <system_instructions>
                     $personaInstruction
+                    </system_instructions>
+                    
+                    <directive>
                     Produce exactly 3 distinct rewrites in the requested persona.
-                    Return exactly 3 non-empty lines and nothing else.
-                    Keep the same core meaning in every line.
+                    </directive>
+                    
+                    <constraints>
+                    1. Return exactly 3 non-empty lines and nothing else.
+                    2. Keep the same core meaning in every line.
+                    3. Vary the syntax slightly to provide stylistic options.
+                    4. No extra labeling (no "Option 1:").
+                    </constraints>
 
-                    USER TEXT:
-                    "$normalizedInput"
+                    <input_text>
+                    $normalizedInput
+                    </input_text>
                     """.trimIndent()
             }
         }
