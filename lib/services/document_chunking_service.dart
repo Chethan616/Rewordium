@@ -21,7 +21,9 @@ class DocumentChunkingService {
     final results = List<T?>.filled(chunks.length, null);
     var completed = 0;
 
-    for (int start = 0; start < chunks.length; start += _parallelChunkBatchSize) {
+    for (int start = 0;
+        start < chunks.length;
+        start += _parallelChunkBatchSize) {
       final end = min(start + _parallelChunkBatchSize, chunks.length);
       final batchFutures = <Future<void>>[];
 

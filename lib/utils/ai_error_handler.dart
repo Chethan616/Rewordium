@@ -4,15 +4,16 @@ import '../screens/advanced_ai_settings_screen.dart';
 /// Helper class to handle AI service errors and display appropriate snackbars
 class AIErrorHandler {
   /// Shows appropriate snackbar based on error type from UnifiedAIService
-  static void showErrorSnackBar(BuildContext context, Map<String, dynamic> result) {
+  static void showErrorSnackBar(
+      BuildContext context, Map<String, dynamic> result) {
     if (!result.containsKey('error')) return;
-    
+
     final errorType = result['errorType'] as String? ?? 'UNKNOWN';
-    
+
     Color backgroundColor;
     IconData icon;
     String title;
-    
+
     switch (errorType) {
       case 'MISSING_API_KEY':
         backgroundColor = Colors.orange;
@@ -39,7 +40,7 @@ class AIErrorHandler {
         icon = Icons.error_outline;
         title = 'AI Service Error';
     }
-    
+
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Row(
@@ -74,7 +75,7 @@ class AIErrorHandler {
       ),
     );
   }
-  
+
   static String _getShortMessage(String errorType) {
     switch (errorType) {
       case 'MISSING_API_KEY':
@@ -89,7 +90,7 @@ class AIErrorHandler {
         return 'Please try again';
     }
   }
-  
+
   /// Checks if result has error and shows snackbar if needed
   /// Returns true if there was an error
   static bool handleResult(BuildContext context, Map<String, dynamic> result) {

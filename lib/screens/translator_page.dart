@@ -102,7 +102,8 @@ class _TranslatorPageState extends State<TranslatorPage> {
 
     try {
       final result = DocumentChunkingService.needsChunking(text)
-          ? await DocumentChunkingService.translateLarge(text, _selectedLanguage)
+          ? await DocumentChunkingService.translateLarge(
+              text, _selectedLanguage)
           : await UnifiedAIService.translateText(text, _selectedLanguage);
 
       // Handle API errors with snackbar
@@ -137,7 +138,7 @@ class _TranslatorPageState extends State<TranslatorPage> {
   // Show custom language selection dialog
   Future<void> _showCustomLanguageDialog() async {
     final TextEditingController customLangController = TextEditingController();
-    
+
     return showDialog(
       context: context,
       builder: (context) => AlertDialog(
@@ -209,7 +210,8 @@ class _TranslatorPageState extends State<TranslatorPage> {
                   ),
                 ),
                 Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                   child: Text(
                     'Select Language',
                     style: Theme.of(ctx).textTheme.titleMedium,
@@ -228,8 +230,9 @@ class _TranslatorPageState extends State<TranslatorPage> {
                           lang,
                           style: TextStyle(
                             color: isSelected ? cs.primary : cs.onSurface,
-                            fontWeight:
-                                isSelected ? FontWeight.w600 : FontWeight.normal,
+                            fontWeight: isSelected
+                                ? FontWeight.w600
+                                : FontWeight.normal,
                           ),
                         ),
                         trailing: isSelected
@@ -258,7 +261,8 @@ class _TranslatorPageState extends State<TranslatorPage> {
   void _showResultDialog() {
     if (_translationResult == null) return;
 
-    final String sourceLanguage = _translationResult!['detected_source_language'] ?? 'Unknown';
+    final String sourceLanguage =
+        _translationResult!['detected_source_language'] ?? 'Unknown';
     final String notes = _translationResult!['notes'] ?? '';
 
     showDialog(
@@ -282,22 +286,32 @@ class _TranslatorPageState extends State<TranslatorPage> {
                 Container(
                   padding: const EdgeInsets.all(12),
                   decoration: BoxDecoration(
-                    color: Theme.of(context).colorScheme.primaryContainer.withOpacity(0.3),
+                    color: Theme.of(context)
+                        .colorScheme
+                        .primaryContainer
+                        .withOpacity(0.3),
                     borderRadius: BorderRadius.circular(8),
-                    border: Border.all(color: Theme.of(context).colorScheme.primary.withOpacity(0.3)),
+                    border: Border.all(
+                        color: Theme.of(context)
+                            .colorScheme
+                            .primary
+                            .withOpacity(0.3)),
                   ),
                   child: Text(_resultController.text),
                 ),
                 if (notes.isNotEmpty) ...[
                   SizedBox(height: 16),
-                  Text('Notes:',
-                      style: TextStyle(fontWeight: FontWeight.bold)),
+                  Text('Notes:', style: TextStyle(fontWeight: FontWeight.bold)),
                   Container(
                     padding: const EdgeInsets.all(12),
                     decoration: BoxDecoration(
-                      color: Theme.of(context).colorScheme.surfaceContainerHighest.withOpacity(0.5),
+                      color: Theme.of(context)
+                          .colorScheme
+                          .surfaceContainerHighest
+                          .withOpacity(0.5),
                       borderRadius: BorderRadius.circular(8),
-                      border: Border.all(color: Theme.of(context).colorScheme.outlineVariant),
+                      border: Border.all(
+                          color: Theme.of(context).colorScheme.outlineVariant),
                     ),
                     child: Text(notes),
                   ),
@@ -315,7 +329,8 @@ class _TranslatorPageState extends State<TranslatorPage> {
             onPressed: () {
               Clipboard.setData(ClipboardData(text: _resultController.text));
               ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('Translation copied to clipboard')),
+                const SnackBar(
+                    content: Text('Translation copied to clipboard')),
               );
             },
             child: Text('Copy Translation'),
@@ -423,19 +438,30 @@ class _TranslatorPageState extends State<TranslatorPage> {
               padding: const EdgeInsets.symmetric(horizontal: 16),
               child: Row(
                 children: [
-                  Text("Translate to:", style: Theme.of(context).textTheme.bodySmall!.copyWith(fontWeight: FontWeight.w600)),
+                  Text("Translate to:",
+                      style: Theme.of(context)
+                          .textTheme
+                          .bodySmall!
+                          .copyWith(fontWeight: FontWeight.w600)),
                   SizedBox(width: 8),
                   Expanded(
                     child: InkWell(
                       borderRadius: BorderRadius.circular(10),
                       onTap: () => _showLanguageBottomSheet(),
                       child: Container(
-                        padding: EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+                        padding:
+                            EdgeInsets.symmetric(horizontal: 12, vertical: 12),
                         decoration: BoxDecoration(
-                          color: Theme.of(context).colorScheme.primaryContainer.withOpacity(0.3),
+                          color: Theme.of(context)
+                              .colorScheme
+                              .primaryContainer
+                              .withOpacity(0.3),
                           borderRadius: BorderRadius.circular(10),
                           border: Border.all(
-                            color: Theme.of(context).colorScheme.primary.withOpacity(0.2),
+                            color: Theme.of(context)
+                                .colorScheme
+                                .primary
+                                .withOpacity(0.2),
                           ),
                         ),
                         child: Row(
@@ -443,10 +469,14 @@ class _TranslatorPageState extends State<TranslatorPage> {
                             Expanded(
                               child: Text(
                                 _selectedLanguage,
-                                style: Theme.of(context).textTheme.bodyMedium!.copyWith(
-                                  color: Theme.of(context).colorScheme.primary,
-                                  fontWeight: FontWeight.w500,
-                                ),
+                                style: Theme.of(context)
+                                    .textTheme
+                                    .bodyMedium!
+                                    .copyWith(
+                                      color:
+                                          Theme.of(context).colorScheme.primary,
+                                      fontWeight: FontWeight.w500,
+                                    ),
                               ),
                             ),
                             Icon(
@@ -487,9 +517,12 @@ class _TranslatorPageState extends State<TranslatorPage> {
                         child: Text(
                           "Enter or paste text and select a language",
                           textAlign: TextAlign.center,
-                          style: Theme.of(context).textTheme.bodyMedium!.copyWith(
-                            color: Theme.of(context).colorScheme.onSurfaceVariant,
-                          ),
+                          style:
+                              Theme.of(context).textTheme.bodyMedium!.copyWith(
+                                    color: Theme.of(context)
+                                        .colorScheme
+                                        .onSurfaceVariant,
+                                  ),
                         ),
                       ),
                       const SizedBox(height: 16),
@@ -511,8 +544,7 @@ class _TranslatorPageState extends State<TranslatorPage> {
                                   }
                                 } catch (e) {
                                   ScaffoldMessenger.of(context).showSnackBar(
-                                    SnackBar(
-                                        content: Text('Paste failed: $e')),
+                                    SnackBar(content: Text('Paste failed: $e')),
                                   );
                                 }
                               },

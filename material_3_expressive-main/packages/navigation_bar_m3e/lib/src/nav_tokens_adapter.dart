@@ -20,7 +20,8 @@ class _NavMetrics {
 
 _NavMetrics _metricsFor(BuildContext context, NavBarM3EDensity density) {
   final theme = Theme.of(context);
-  final m3e = theme.extension<M3ETheme>() ?? M3ETheme.defaults(theme.colorScheme);
+  final m3e =
+      theme.extension<M3ETheme>() ?? M3ETheme.defaults(theme.colorScheme);
   final sp = m3e.spacing;
 
   double hSmall = 64; // compact/phone-tight
@@ -29,7 +30,9 @@ _NavMetrics _metricsFor(BuildContext context, NavBarM3EDensity density) {
   double underline = 3;
 
   if (density == NavBarM3EDensity.compact) {
-    hSmall -= 4; hMedium -= 4; underline -= 1;
+    hSmall -= 4;
+    hMedium -= 4;
+    underline -= 1;
   }
 
   return _NavMetrics(
@@ -50,7 +53,8 @@ class NavTokensAdapter {
     return t.extension<M3ETheme>() ?? M3ETheme.defaults(t.colorScheme);
   }
 
-  _NavMetrics metrics(NavBarM3EDensity density) => _metricsFor(context, density);
+  _NavMetrics metrics(NavBarM3EDensity density) =>
+      _metricsFor(context, density);
 
   // Container/background
   Color containerColor() => _m3e.colors.surfaceContainerHigh;
@@ -67,7 +71,9 @@ class NavTokensAdapter {
 
   // Shapes
   ShapeBorder containerShape(NavBarM3EShapeFamily family) {
-    final set = family == NavBarM3EShapeFamily.round ? _m3e.shapes.round : _m3e.shapes.square;
+    final set = family == NavBarM3EShapeFamily.round
+        ? _m3e.shapes.round
+        : _m3e.shapes.square;
     return RoundedRectangleBorder(borderRadius: set.lg);
   }
 

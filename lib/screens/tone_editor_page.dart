@@ -101,10 +101,10 @@ class _ToneEditorPageState extends State<ToneEditorPage> {
     });
 
     try {
-      final targetTone = _selectedTone == 'Custom' 
-          ? _customToneController.text 
+      final targetTone = _selectedTone == 'Custom'
+          ? _customToneController.text
           : _selectedTone.toLowerCase();
-          
+
       final result = DocumentChunkingService.needsChunking(text)
           ? await DocumentChunkingService.editToneLarge(text, targetTone)
           : await UnifiedAIService.editTone(text, targetTone);
@@ -169,7 +169,8 @@ class _ToneEditorPageState extends State<ToneEditorPage> {
                 Navigator.pop(context);
               } else {
                 ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('Please enter a tone description')),
+                  const SnackBar(
+                      content: Text('Please enter a tone description')),
                 );
               }
             },
@@ -199,8 +200,10 @@ class _ToneEditorPageState extends State<ToneEditorPage> {
               children: [
                 Text('Original Tone: $originalTone',
                     style: TextStyle(fontWeight: FontWeight.bold)),
-                Text('New Tone: ${_selectedTone == "Custom" ? _customToneController.text : _selectedTone}',
-                    style: TextStyle(fontWeight: FontWeight.bold, color: Colors.teal)),
+                Text(
+                    'New Tone: ${_selectedTone == "Custom" ? _customToneController.text : _selectedTone}',
+                    style: TextStyle(
+                        fontWeight: FontWeight.bold, color: Colors.teal)),
                 SizedBox(height: 16),
                 Text('Edited Text:',
                     style: TextStyle(fontWeight: FontWeight.bold)),
@@ -224,10 +227,9 @@ class _ToneEditorPageState extends State<ToneEditorPage> {
                       child: Row(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Text('• ', 
-                              style: TextStyle(color: Colors.teal)),
+                          Text('• ', style: TextStyle(color: Colors.teal)),
                           Expanded(
-                            child: Text(_changesMade[index], 
+                            child: Text(_changesMade[index],
                                 style: TextStyle(color: Colors.teal.shade700)),
                           ),
                         ],
@@ -248,7 +250,8 @@ class _ToneEditorPageState extends State<ToneEditorPage> {
             onPressed: () {
               Clipboard.setData(ClipboardData(text: _resultController.text));
               ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('Edited text copied to clipboard')),
+                const SnackBar(
+                    content: Text('Edited text copied to clipboard')),
               );
             },
             child: Text('Copy Text'),
@@ -356,11 +359,16 @@ class _ToneEditorPageState extends State<ToneEditorPage> {
               padding: const EdgeInsets.symmetric(horizontal: 16),
               child: Row(
                 children: [
-                  Text("Target Tone:", style: Theme.of(context).textTheme.bodySmall!.copyWith(fontWeight: FontWeight.w600)),
+                  Text("Target Tone:",
+                      style: Theme.of(context)
+                          .textTheme
+                          .bodySmall!
+                          .copyWith(fontWeight: FontWeight.w600)),
                   SizedBox(width: 8),
                   Expanded(
                     child: Container(
-                      padding: EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                      padding:
+                          EdgeInsets.symmetric(horizontal: 12, vertical: 4),
                       decoration: BoxDecoration(
                         color: Colors.teal.withOpacity(0.05),
                         borderRadius: BorderRadius.circular(10),
@@ -384,10 +392,11 @@ class _ToneEditorPageState extends State<ToneEditorPage> {
                           ),
                           borderRadius: BorderRadius.circular(10),
                           dropdownColor: Theme.of(context).colorScheme.surface,
-                          style: Theme.of(context).textTheme.bodyMedium!.copyWith(
-                            color: Colors.teal.shade700,
-                            fontWeight: FontWeight.w500,
-                          ),
+                          style:
+                              Theme.of(context).textTheme.bodyMedium!.copyWith(
+                                    color: Colors.teal.shade700,
+                                    fontWeight: FontWeight.w500,
+                                  ),
                           items: _tones.map((String tone) {
                             return DropdownMenuItem<String>(
                               value: tone,
@@ -427,7 +436,7 @@ class _ToneEditorPageState extends State<ToneEditorPage> {
                     children: [
                       const SizedBox(height: 12),
                       Container(
-                        height: r.h(225),  // Even larger container
+                        height: r.h(225), // Even larger container
                         padding: r.all(16),
                         child: Shimmer.fromColors(
                           baseColor: Colors.teal.shade300,
@@ -436,8 +445,8 @@ class _ToneEditorPageState extends State<ToneEditorPage> {
                           child: Center(
                             child: Lottie.asset(
                               'assets/lottie/toneEditor.json',
-                              height: r.h(200),  // Larger animation
-                              width: r.w(200),   // Make it square
+                              height: r.h(200), // Larger animation
+                              width: r.w(200), // Make it square
                               fit: BoxFit.contain,
                               repeat: true,
                               animate: true,
@@ -451,9 +460,12 @@ class _ToneEditorPageState extends State<ToneEditorPage> {
                         child: Text(
                           "Enter or paste text and select a tone to apply",
                           textAlign: TextAlign.center,
-                          style: Theme.of(context).textTheme.bodyMedium!.copyWith(
-                            color: Theme.of(context).colorScheme.onSurfaceVariant,
-                          ),
+                          style:
+                              Theme.of(context).textTheme.bodyMedium!.copyWith(
+                                    color: Theme.of(context)
+                                        .colorScheme
+                                        .onSurfaceVariant,
+                                  ),
                         ),
                       ),
                       const SizedBox(height: 16),
@@ -475,8 +487,7 @@ class _ToneEditorPageState extends State<ToneEditorPage> {
                                   }
                                 } catch (e) {
                                   ScaffoldMessenger.of(context).showSnackBar(
-                                    SnackBar(
-                                        content: Text('Paste failed: $e')),
+                                    SnackBar(content: Text('Paste failed: $e')),
                                   );
                                 }
                               },

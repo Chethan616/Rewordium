@@ -8,6 +8,7 @@ import '../providers/auth_provider.dart';
 import '../services/force_update_service.dart';
 import '../services/in_app_update_service.dart';
 import 'auth/login_screen.dart';
+import '../pages/onboarding_page.dart';
 
 class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});
@@ -39,16 +40,25 @@ class _SplashScreenState extends State<SplashScreen>
       duration: const Duration(milliseconds: 1200),
     );
     _titleFade = Tween<double>(begin: 0, end: 1).animate(
-      CurvedAnimation(parent: _entranceController, curve: const Interval(0.0, 0.5, curve: Curves.easeOut)),
+      CurvedAnimation(
+          parent: _entranceController,
+          curve: const Interval(0.0, 0.5, curve: Curves.easeOut)),
     );
-    _titleSlide = Tween<Offset>(begin: const Offset(0, -0.3), end: Offset.zero).animate(
-      CurvedAnimation(parent: _entranceController, curve: const Interval(0.0, 0.5, curve: Curves.easeOutCubic)),
+    _titleSlide =
+        Tween<Offset>(begin: const Offset(0, -0.3), end: Offset.zero).animate(
+      CurvedAnimation(
+          parent: _entranceController,
+          curve: const Interval(0.0, 0.5, curve: Curves.easeOutCubic)),
     );
     _lottieFade = Tween<double>(begin: 0, end: 1).animate(
-      CurvedAnimation(parent: _entranceController, curve: const Interval(0.3, 0.8, curve: Curves.easeOut)),
+      CurvedAnimation(
+          parent: _entranceController,
+          curve: const Interval(0.3, 0.8, curve: Curves.easeOut)),
     );
     _lottieScale = Tween<double>(begin: 0.7, end: 1.0).animate(
-      CurvedAnimation(parent: _entranceController, curve: const Interval(0.3, 0.8, curve: Curves.easeOutBack)),
+      CurvedAnimation(
+          parent: _entranceController,
+          curve: const Interval(0.3, 0.8, curve: Curves.easeOutBack)),
     );
     _entranceController.forward();
 
@@ -76,13 +86,26 @@ class _SplashScreenState extends State<SplashScreen>
 
   // ── Navigation ────────────────────────────────
 
-  void _navigate() {
+  Future<void> _navigate() async {
     if (!mounted) return;
 
     // Integrity passed — route based on auth state.
     final authProvider = Provider.of<AuthProvider>(context, listen: false);
     if (authProvider.isLoggedIn) {
-      Navigator.of(context).pushReplacementNamed('/home');
+      final seenOnboarding = await OnboardingPage.hasCompleted();
+      if (!mounted) return;
+      if (seenOnboarding) {
+        Navigator.of(context).pushReplacementNamed('/home');
+      } else {
+        Navigator.of(context).pushReplacement(
+          PageRouteBuilder(
+            pageBuilder: (_, __, ___) => const OnboardingPage(),
+            transitionDuration: const Duration(milliseconds: 500),
+            transitionsBuilder: (_, anim, __, child) =>
+                FadeTransition(opacity: anim, child: child),
+          ),
+        );
+      }
     } else {
       Navigator.of(context).pushReplacement(
         PageRouteBuilder(
@@ -167,7 +190,8 @@ class _SplashScreenState extends State<SplashScreen>
                               ],
                             ),
                             onLoaded: (composition) {
-                              _animationController.duration = composition.duration;
+                              _animationController.duration =
+                                  composition.duration;
                               _animationController.repeat();
                             },
                           ),

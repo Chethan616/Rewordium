@@ -222,8 +222,7 @@ class AppTheme {
         color: scheme.surface,
         elevation: 0,
         shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(
-              m3e.shapes.round.md.bottomLeft.x),
+          borderRadius: BorderRadius.circular(m3e.shapes.round.md.bottomLeft.x),
         ),
       ),
       iconTheme: IconThemeData(color: scheme.onSurfaceVariant),
@@ -236,21 +235,20 @@ class AppTheme {
           padding: WidgetStateProperty.all(
               const EdgeInsets.symmetric(horizontal: 24, vertical: 14)),
           shape: WidgetStateProperty.all(RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(
-                m3e.shapes.round.md.bottomLeft.x),
+            borderRadius:
+                BorderRadius.circular(m3e.shapes.round.md.bottomLeft.x),
           )),
         ),
       ),
       outlinedButtonTheme: OutlinedButtonThemeData(
         style: ButtonStyle(
           foregroundColor: WidgetStateProperty.all(scheme.primary),
-          side: WidgetStateProperty.all(
-              BorderSide(color: scheme.outline)),
+          side: WidgetStateProperty.all(BorderSide(color: scheme.outline)),
           padding: WidgetStateProperty.all(
               const EdgeInsets.symmetric(horizontal: 24, vertical: 14)),
           shape: WidgetStateProperty.all(RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(
-                m3e.shapes.round.md.bottomLeft.x),
+            borderRadius:
+                BorderRadius.circular(m3e.shapes.round.md.bottomLeft.x),
           )),
         ),
       ),
@@ -259,8 +257,7 @@ class AppTheme {
         foregroundColor: scheme.onPrimaryContainer,
         elevation: 2,
         shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(
-              m3e.shapes.round.lg.bottomLeft.x),
+          borderRadius: BorderRadius.circular(m3e.shapes.round.lg.bottomLeft.x),
         ),
       ),
       switchTheme: SwitchThemeData(
@@ -287,13 +284,11 @@ class AppTheme {
         filled: true,
         fillColor: scheme.surfaceContainer,
         border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(
-              m3e.shapes.round.sm.bottomLeft.x),
+          borderRadius: BorderRadius.circular(m3e.shapes.round.sm.bottomLeft.x),
           borderSide: BorderSide.none,
         ),
         focusedBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(
-              m3e.shapes.round.sm.bottomLeft.x),
+          borderRadius: BorderRadius.circular(m3e.shapes.round.sm.bottomLeft.x),
           borderSide: BorderSide(color: scheme.primary, width: 2),
         ),
         contentPadding:
@@ -310,16 +305,14 @@ class AppTheme {
       dialogTheme: DialogThemeData(
         backgroundColor: scheme.surfaceContainerHigh,
         shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(
-              m3e.shapes.round.lg.bottomLeft.x),
+          borderRadius: BorderRadius.circular(m3e.shapes.round.lg.bottomLeft.x),
         ),
       ),
       snackBarTheme: SnackBarThemeData(
         backgroundColor: scheme.inverseSurface,
         contentTextStyle: TextStyle(color: scheme.onInverseSurface),
         shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(
-              m3e.shapes.round.sm.bottomLeft.x),
+          borderRadius: BorderRadius.circular(m3e.shapes.round.sm.bottomLeft.x),
         ),
         behavior: SnackBarBehavior.floating,
       ),
@@ -328,8 +321,7 @@ class AppTheme {
         selectedColor: scheme.secondaryContainer,
         labelStyle: TextStyle(color: scheme.onSurface),
         shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(
-              m3e.shapes.round.xs.bottomLeft.x),
+          borderRadius: BorderRadius.circular(m3e.shapes.round.xs.bottomLeft.x),
         ),
       ),
     );
@@ -348,9 +340,7 @@ class AppTheme {
             letterSpacing: -0.5,
             color: scheme.onSurface),
         displaySmall: TextStyle(
-            fontSize: 36,
-            fontWeight: FontWeight.w700,
-            color: scheme.onSurface),
+            fontSize: 36, fontWeight: FontWeight.w700, color: scheme.onSurface),
         headlineLarge: TextStyle(
             fontSize: 32,
             fontWeight: FontWeight.w700,
@@ -362,13 +352,9 @@ class AppTheme {
             letterSpacing: -0.25,
             color: scheme.onSurface),
         headlineSmall: TextStyle(
-            fontSize: 24,
-            fontWeight: FontWeight.w700,
-            color: scheme.onSurface),
+            fontSize: 24, fontWeight: FontWeight.w700, color: scheme.onSurface),
         titleLarge: TextStyle(
-            fontSize: 22,
-            fontWeight: FontWeight.w700,
-            color: scheme.onSurface),
+            fontSize: 22, fontWeight: FontWeight.w700, color: scheme.onSurface),
         titleMedium: TextStyle(
             fontSize: 16,
             fontWeight: FontWeight.w600,
@@ -380,13 +366,9 @@ class AppTheme {
             letterSpacing: 0.1,
             color: scheme.onSurface),
         bodyLarge: TextStyle(
-            fontSize: 16,
-            fontWeight: FontWeight.w400,
-            color: scheme.onSurface),
+            fontSize: 16, fontWeight: FontWeight.w400, color: scheme.onSurface),
         bodyMedium: TextStyle(
-            fontSize: 14,
-            fontWeight: FontWeight.w400,
-            color: scheme.onSurface),
+            fontSize: 14, fontWeight: FontWeight.w400, color: scheme.onSurface),
         bodySmall: TextStyle(
             fontSize: 12,
             fontWeight: FontWeight.w400,

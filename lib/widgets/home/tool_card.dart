@@ -48,18 +48,18 @@ class ToolCard extends StatelessWidget {
               Text(
                 title,
                 style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                  color: Colors.white,
-                  fontSize: isSmallScreen ? 14 : 16,
-                ),
+                      color: Colors.white,
+                      fontSize: isSmallScreen ? 14 : 16,
+                    ),
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
               ),
               Text(
                 subtitle,
                 style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                  color: Colors.white.withValues(alpha: 0.8),
-                  fontSize: isSmallScreen ? 9 : 10,
-                ),
+                      color: Colors.white.withValues(alpha: 0.8),
+                      fontSize: isSmallScreen ? 9 : 10,
+                    ),
                 maxLines: 2,
                 overflow: TextOverflow.ellipsis,
               ),

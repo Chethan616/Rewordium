@@ -91,11 +91,10 @@ class DocumentService {
     }
 
     try {
-      final List<String> imagePaths =
-          await CunningDocumentScanner.getPictures(
-                isGalleryImportAllowed: true,
-              ) ??
-              [];
+      final List<String> imagePaths = await CunningDocumentScanner.getPictures(
+            isGalleryImportAllowed: true,
+          ) ??
+          [];
 
       if (imagePaths.isEmpty) return null;
 
@@ -105,8 +104,7 @@ class DocumentService {
       try {
         for (final path in imagePaths) {
           final inputImage = InputImage.fromFilePath(path);
-          final recognizedText =
-              await textRecognizer.processImage(inputImage);
+          final recognizedText = await textRecognizer.processImage(inputImage);
           if (recognizedText.text.isNotEmpty) {
             extractedTexts.add(recognizedText.text);
           }
@@ -222,10 +220,10 @@ class DocumentService {
     try {
       final file = File(filePath);
       final bytes = await file.readAsBytes();
-      
+
       // Decode the ZIP archive
       final archive = ZipDecoder().decodeBytes(bytes);
-      
+
       // Find word/document.xml
       final docFile = archive.files.firstWhere(
         (f) => f.name == 'word/document.xml',
@@ -234,29 +232,25 @@ class DocumentService {
           orElse: () => throw Exception('No document.xml found in DOCX'),
         ),
       );
-      
+
       final xmlContent = String.fromCharCodes(docFile.content as List<int>);
       final document = xml.XmlDocument.parse(xmlContent);
-      
+
       // Extract text from w:t elements (Word text runs)
       final textBuffer = StringBuffer();
       final body = document.findAllElements('w:body').firstOrNull;
       if (body != null) {
         for (final paragraph in body.findAllElements('w:p')) {
-          final paragraphText = paragraph
-              .findAllElements('w:t')
-              .map((t) => t.innerText)
-              .join();
+          final paragraphText =
+              paragraph.findAllElements('w:t').map((t) => t.innerText).join();
           if (paragraphText.isNotEmpty) {
             textBuffer.writeln(paragraphText);
           }
         }
       } else {
         // Fallback: extract all w:t elements
-        final allText = document
-            .findAllElements('w:t')
-            .map((t) => t.innerText)
-            .join(' ');
+        final allText =
+            document.findAllElements('w:t').map((t) => t.innerText).join(' ');
         textBuffer.write(allText);
       }
 
@@ -306,8 +300,7 @@ class DocumentService {
 
   static Future<DocumentResult?> _importPdfFromUrl(Uri uri) async {
     try {
-      final response =
-          await http.get(uri).timeout(const Duration(seconds: 30));
+      final response = await http.get(uri).timeout(const Duration(seconds: 30));
       if (response.statusCode != 200) return null;
 
       final tempDir = await getTemporaryDirectory();
@@ -353,8 +346,15 @@ class DocumentService {
 
       // Remove non-content elements
       for (final tag in [
-        'script', 'style', 'nav', 'footer', 'header',
-        'aside', 'noscript', 'iframe', 'form',
+        'script',
+        'style',
+        'nav',
+        'footer',
+        'header',
+        'aside',
+        'noscript',
+        'iframe',
+        'form',
       ]) {
         soup.findAll(tag).forEach((el) => el.extract());
       }
@@ -362,8 +362,14 @@ class DocumentService {
       // Try common article containers
       String articleText = '';
       final articleSelectors = [
-        'article', 'main', '[role="main"]', '.post-content',
-        '.article-content', '.entry-content', '#content', '.content',
+        'article',
+        'main',
+        '[role="main"]',
+        '.post-content',
+        '.article-content',
+        '.entry-content',
+        '#content',
+        '.content',
       ];
 
       for (final selector in articleSelectors) {

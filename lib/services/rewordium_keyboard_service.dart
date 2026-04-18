@@ -62,10 +62,12 @@ class RewordiumKeyboardService {
   }
 
   /// Open the system keyboard settings
-  static Future<bool> openKeyboardSettings() async {
+  static Future<bool> openKeyboardSettings({bool autoReturnToApp = false}) async {
     if (!_isAndroid) return false;
     try {
-      final result = await _channel.invokeMethod<bool>('openKeyboardSettings');
+      final result = await _channel.invokeMethod<bool>('openKeyboardSettings', {
+        'autoReturnToApp': autoReturnToApp,
+      });
       return result ?? true;
     } on MissingPluginException {
       return false;
@@ -128,14 +130,22 @@ class RewordiumKeyboardService {
   }
 
   /// Toggle dark mode with immediate application
-  static Future<void> setDarkMode(bool enabled) async {
+  static Future<void> setDarkMode(
+    bool enabled, {
+    bool aggressiveRefresh = true,
+  }) async {
     if (!_isAndroid) return;
     try {
       print('🌙 Setting dark mode: $enabled');
       await _channel.invokeMethod('setDarkMode', {'enabled': enabled});
 
-      // ULTRA-AGGRESSIVE IMMEDIATE REFRESH
-      await forceKeyboardRecreation();
+      if (aggressiveRefresh) {
+        // Keyboard settings screens may opt in to forceful refresh behavior.
+        await forceKeyboardRecreation();
+      } else {
+        // App-wide theme sync should not pop the keyboard unexpectedly.
+        await refreshKeyboard();
+      }
 
       print('✅ Dark mode setting applied successfully');
     } on PlatformException catch (e) {
@@ -144,14 +154,22 @@ class RewordiumKeyboardService {
   }
 
   /// Update the keyboard theme color with immediate application
-  static Future<void> updateThemeColor(String colorHex) async {
+  static Future<void> updateThemeColor(
+    String colorHex, {
+    bool aggressiveRefresh = true,
+  }) async {
     if (!_isAndroid) return;
     try {
       print('🎨 Setting theme color: $colorHex');
       await _channel.invokeMethod('updateThemeColor', {'colorHex': colorHex});
 
-      // ULTRA-AGGRESSIVE IMMEDIATE REFRESH
-      await forceKeyboardRecreation();
+      if (aggressiveRefresh) {
+        // Keyboard settings screens may opt in to forceful refresh behavior.
+        await forceKeyboardRecreation();
+      } else {
+        // App-wide accent sync should not pop the keyboard unexpectedly.
+        await refreshKeyboard();
+      }
 
       print('✅ Theme color setting applied successfully');
     } on PlatformException catch (e) {

@@ -19,7 +19,7 @@ class ToolPopup extends StatelessWidget {
     super.key,
     this.onSelectHomeTab,
   });
-  
+
   // Navigate to the selected tool
   void _navigateToTool(BuildContext context, String toolName) {
     switch (toolName.toLowerCase()) {
@@ -122,8 +122,9 @@ class ToolPopup extends StatelessWidget {
     final popupHeight = size.height * 0.6;
     final colorScheme = Theme.of(context).colorScheme;
     final textTheme = Theme.of(context).textTheme;
+    final isDarkMode = Theme.of(context).brightness == Brightness.dark;
 
-    final tools = _toolList(colorScheme);
+    final tools = _toolList(colorScheme, isDarkMode: isDarkMode);
 
     return SlideInUp(
       duration: const Duration(milliseconds: 400),
@@ -240,7 +241,10 @@ class _Handle extends StatelessWidget {
           height: 5,
           margin: const EdgeInsets.only(top: 12, bottom: 12),
           decoration: BoxDecoration(
-            color: Theme.of(context).colorScheme.onSurfaceVariant.withValues(alpha: 0.35),
+            color: Theme.of(context)
+                .colorScheme
+                .onSurfaceVariant
+                .withValues(alpha: 0.35),
             borderRadius: BorderRadius.circular(2.5),
           ),
         ),
@@ -266,6 +270,11 @@ class _ToolCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
     final textTheme = Theme.of(context).textTheme;
+    final isDarkMode = Theme.of(context).brightness == Brightness.dark;
+    final backgroundAlpha = isDarkMode ? 0.16 : 0.14;
+    final borderAlpha = isDarkMode ? 0.34 : 0.28;
+    final iconBackgroundAlpha = isDarkMode ? 0.25 : 0.22;
+    final shadowAlpha = isDarkMode ? 0.14 : 0.10;
     return Material(
       color: Colors.transparent,
       borderRadius: BorderRadius.circular(20),
@@ -276,15 +285,15 @@ class _ToolCard extends StatelessWidget {
           duration: const Duration(milliseconds: 160),
           padding: const EdgeInsets.all(18),
           decoration: BoxDecoration(
-            color: color.withOpacity(0.05),
+            color: color.withValues(alpha: backgroundAlpha),
             borderRadius: BorderRadius.circular(20),
             border: Border.all(
-              color: color.withOpacity(0.18),
+              color: color.withValues(alpha: borderAlpha),
               width: 1.0,
             ),
             boxShadow: [
               BoxShadow(
-                color: color.withOpacity(0.06),
+                color: color.withValues(alpha: shadowAlpha),
                 blurRadius: 12,
                 offset: const Offset(0, 5),
               ),
@@ -295,7 +304,7 @@ class _ToolCard extends StatelessWidget {
             children: [
               Container(
                 decoration: BoxDecoration(
-                  color: color.withOpacity(0.12),
+                  color: color.withValues(alpha: iconBackgroundAlpha),
                   shape: BoxShape.circle,
                 ),
                 padding: const EdgeInsets.all(14),
@@ -362,37 +371,45 @@ class ToolItem {
       {required this.title, required this.icon, required this.color});
 }
 
-List<ToolItem> _toolList(ColorScheme colorScheme) => [
-    ToolItem(
-      title: "AI Detector",
-      icon: CupertinoIcons.sparkles,
-      color: colorScheme.primary),
-    ToolItem(
-      title: "Translator",
-      icon: CupertinoIcons.globe,
-      color: colorScheme.secondary),
-    ToolItem(
-      title: "Paraphraser",
-      icon: CupertinoIcons.text_badge_checkmark,
-      color: colorScheme.tertiary),
-    ToolItem(
-      title: "Grammar",
-      icon: CupertinoIcons.checkmark_seal_fill,
-      color: colorScheme.error),
-    ToolItem(
-      title: "Summarizer",
-      icon: CupertinoIcons.doc_text_search,
-      color: colorScheme.primaryContainer),
-    ToolItem(
-      title: "Tone Editor",
-      icon: CupertinoIcons.waveform_path,
-      color: colorScheme.secondaryContainer),
-    ToolItem(
-      title: "Scan Document",
-      icon: CupertinoIcons.camera_viewfinder,
-      color: colorScheme.tertiaryContainer),
-    ToolItem(
-      title: "Import File",
-      icon: CupertinoIcons.doc_on_doc,
-      color: colorScheme.inversePrimary),
-  ];
+List<ToolItem> _toolList(ColorScheme colorScheme, {required bool isDarkMode}) => [
+      ToolItem(
+          title: "AI Detector",
+          icon: CupertinoIcons.sparkles,
+          color: colorScheme.primary),
+      ToolItem(
+          title: "Translator",
+          icon: CupertinoIcons.globe,
+          color: colorScheme.secondary),
+      ToolItem(
+          title: "Paraphraser",
+          icon: CupertinoIcons.text_badge_checkmark,
+          color: colorScheme.tertiary),
+      ToolItem(
+          title: "Grammar",
+          icon: CupertinoIcons.checkmark_seal_fill,
+          color: colorScheme.error),
+      ToolItem(
+          title: "Summarizer",
+          icon: CupertinoIcons.doc_text_search,
+          color: isDarkMode
+            ? colorScheme.primaryContainer
+            : const Color(0xFFB45309)),
+      ToolItem(
+          title: "Tone Editor",
+          icon: CupertinoIcons.waveform_path,
+          color: isDarkMode
+            ? colorScheme.secondaryContainer
+            : const Color(0xFF0F766E)),
+      ToolItem(
+          title: "Scan Document",
+          icon: CupertinoIcons.camera_viewfinder,
+          color: isDarkMode
+            ? colorScheme.tertiaryContainer
+            : const Color(0xFF4C1D95)),
+      ToolItem(
+          title: "Import File",
+          icon: CupertinoIcons.doc_on_doc,
+          color: isDarkMode
+            ? colorScheme.inversePrimary
+            : const Color(0xFF1E3A8A)),
+    ];

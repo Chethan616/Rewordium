@@ -35,7 +35,8 @@ class DeepLinkService {
         }
 
         final normalizedRoute = _normalizeRoute(route);
-        AppLogger.init('DeepLink: Received navigation request to $normalizedRoute');
+        AppLogger.init(
+            'DeepLink: Received navigation request to $normalizedRoute');
         if (normalizedRoute != null) {
           _enqueueRoute(normalizedRoute);
         }
@@ -55,19 +56,22 @@ class DeepLinkService {
   /// Check if there's a pending deep link from app launch
   static Future<void> _checkPendingDeepLink() async {
     try {
-      final pendingLinks = await _channel.invokeListMethod<dynamic>('getPendingDeepLinks');
+      final pendingLinks =
+          await _channel.invokeListMethod<dynamic>('getPendingDeepLinks');
       if (pendingLinks != null && pendingLinks.isNotEmpty) {
         for (final pending in pendingLinks) {
           final normalizedRoute = _normalizeRoute(pending?.toString());
           if (normalizedRoute != null) {
-            AppLogger.init('DeepLink: Found queued deep link: $normalizedRoute');
+            AppLogger.init(
+                'DeepLink: Found queued deep link: $normalizedRoute');
             _enqueueRoute(normalizedRoute);
           }
         }
         return;
       }
 
-      final pendingLink = await _channel.invokeMethod<String>('getPendingDeepLink');
+      final pendingLink =
+          await _channel.invokeMethod<String>('getPendingDeepLink');
       if (pendingLink != null) {
         final normalizedRoute = _normalizeRoute(pendingLink);
         if (normalizedRoute != null) {
@@ -90,14 +94,18 @@ class DeepLinkService {
 
   static void _flushQueuedRoutes() {
     if (!_isNavigationReady) return;
-    if (navigatorKey.currentContext == null || navigatorKey.currentState == null) {
+    if (navigatorKey.currentContext == null ||
+        navigatorKey.currentState == null) {
       _scheduleFlushRetry();
       return;
     }
 
     final context = navigatorKey.currentContext;
-    final currentRouteName = context != null ? ModalRoute.of(context)?.settings.name : null;
-    final canNavigateNow = currentRouteName == '/home' || currentRouteName == '/settings' || currentRouteName == '/admin';
+    final currentRouteName =
+        context != null ? ModalRoute.of(context)?.settings.name : null;
+    final canNavigateNow = currentRouteName == '/home' ||
+        currentRouteName == '/settings' ||
+        currentRouteName == '/admin';
     if (!canNavigateNow) {
       _scheduleFlushRetry();
       return;
@@ -161,10 +169,12 @@ class DeepLinkService {
       return;
     }
 
-    navigator.popUntil((route) => route.settings.name == '/home' || route.isFirst);
+    navigator
+        .popUntil((route) => route.settings.name == '/home' || route.isFirst);
 
     final context = navigatorKey.currentContext;
-    final currentRouteName = context != null ? ModalRoute.of(context)?.settings.name : null;
+    final currentRouteName =
+        context != null ? ModalRoute.of(context)?.settings.name : null;
     if (currentRouteName != '/home') {
       navigator.pushNamedAndRemoveUntil('/home', (route) => false);
     }
@@ -186,7 +196,8 @@ class DeepLinkService {
 
     final context = navigatorKey.currentContext;
     if (context == null) {
-      AppLogger.warning('DeepLink: Navigator context is null, queueing route: $route');
+      AppLogger.warning(
+          'DeepLink: Navigator context is null, queueing route: $route');
       _enqueueRoute(route);
       return;
     }

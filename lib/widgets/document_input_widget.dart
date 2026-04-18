@@ -169,92 +169,96 @@ class _DocumentInputWidgetState extends State<DocumentInputWidget> {
     // If a document is loaded, show the info chip
     if (doc != null) {
       return Container(
-          margin: const EdgeInsets.only(bottom: 12),
-          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-          decoration: BoxDecoration(
-            color: widget.accentColor.withOpacity(0.06),
-            borderRadius: BorderRadius.circular(12),
-            border: Border.all(
-              color: widget.accentColor.withOpacity(0.2),
-            ),
+        margin: const EdgeInsets.only(bottom: 12),
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+        decoration: BoxDecoration(
+          color: widget.accentColor.withOpacity(0.06),
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(
+            color: widget.accentColor.withOpacity(0.2),
           ),
-          child: Row(
-            children: [
-              // Document type icon
-              Container(
-                width: 36,
-                height: 36,
-                decoration: BoxDecoration(
-                  color: widget.accentColor.withOpacity(0.12),
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: Icon(
-                  _getDocTypeIcon(doc.type),
-                  color: widget.accentColor,
-                  size: 18,
-                ),
+        ),
+        child: Row(
+          children: [
+            // Document type icon
+            Container(
+              width: 36,
+              height: 36,
+              decoration: BoxDecoration(
+                color: widget.accentColor.withOpacity(0.12),
+                borderRadius: BorderRadius.circular(8),
               ),
-              const SizedBox(width: 10),
-              // Document info
-              Expanded(
-                child: GestureDetector(
-                  onTap: doc.type == DocumentType.pdf &&
-                          widget.onViewDocument != null
-                      ? () => widget.onViewDocument!(doc)
-                      : null,
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        doc.title ?? doc.typeLabel,
-                        style: Theme.of(context).textTheme.bodyMedium!.copyWith(
-                          fontWeight: FontWeight.w600,
-                          fontSize: 13,
-                        ),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                      const SizedBox(height: 2),
-                      Text(
-                        doc.summary,
-                        style: Theme.of(context).textTheme.bodySmall!.copyWith(
-                          color: Theme.of(context).colorScheme.onSurfaceVariant,
-                          fontSize: 11,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
+              child: Icon(
+                _getDocTypeIcon(doc.type),
+                color: widget.accentColor,
+                size: 18,
               ),
-              // View button (for PDFs)
-              if (doc.type == DocumentType.pdf &&
-                  widget.onViewDocument != null) ...[
-                GestureDetector(
-                  onTap: () => widget.onViewDocument!(doc),
-                  child: Container(
-                    padding: const EdgeInsets.all(6),
-                    child: Icon(
-                      CupertinoIcons.eye,
-                      size: 18,
-                      color: widget.accentColor,
+            ),
+            const SizedBox(width: 10),
+            // Document info
+            Expanded(
+              child: GestureDetector(
+                onTap: doc.type == DocumentType.pdf &&
+                        widget.onViewDocument != null
+                    ? () => widget.onViewDocument!(doc)
+                    : null,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      doc.title ?? doc.typeLabel,
+                      style: Theme.of(context).textTheme.bodyMedium!.copyWith(
+                            fontWeight: FontWeight.w600,
+                            fontSize: 13,
+                          ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
                     ),
-                  ),
+                    const SizedBox(height: 2),
+                    Text(
+                      doc.summary,
+                      style: Theme.of(context).textTheme.bodySmall!.copyWith(
+                            color:
+                                Theme.of(context).colorScheme.onSurfaceVariant,
+                            fontSize: 11,
+                          ),
+                    ),
+                  ],
                 ),
-              ],
-              // Clear button
+              ),
+            ),
+            // View button (for PDFs)
+            if (doc.type == DocumentType.pdf &&
+                widget.onViewDocument != null) ...[
               GestureDetector(
-                onTap: widget.onClear,
+                onTap: () => widget.onViewDocument!(doc),
                 child: Container(
                   padding: const EdgeInsets.all(6),
                   child: Icon(
-                    CupertinoIcons.xmark_circle_fill,
+                    CupertinoIcons.eye,
                     size: 18,
-                    color: Theme.of(context).colorScheme.onSurfaceVariant.withValues(alpha: 0.5),
+                    color: widget.accentColor,
                   ),
                 ),
               ),
             ],
-          ),
+            // Clear button
+            GestureDetector(
+              onTap: widget.onClear,
+              child: Container(
+                padding: const EdgeInsets.all(6),
+                child: Icon(
+                  CupertinoIcons.xmark_circle_fill,
+                  size: 18,
+                  color: Theme.of(context)
+                      .colorScheme
+                      .onSurfaceVariant
+                      .withValues(alpha: 0.5),
+                ),
+              ),
+            ),
+          ],
+        ),
       );
     }
 
@@ -284,8 +288,8 @@ class _DocumentInputWidgetState extends State<DocumentInputWidget> {
             Text(
               _loadingLabel ?? 'Processing...',
               style: Theme.of(context).textTheme.bodySmall!.copyWith(
-                color: Theme.of(context).colorScheme.onSurfaceVariant,
-              ),
+                    color: Theme.of(context).colorScheme.onSurfaceVariant,
+                  ),
             ),
           ],
         ),

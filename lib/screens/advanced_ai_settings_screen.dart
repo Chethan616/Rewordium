@@ -238,7 +238,10 @@ class _AdvancedAISettingsScreenState extends State<AdvancedAISettingsScreen> {
         },
         title: Text(
           'Use Custom AI Provider',
-          style: Theme.of(context).textTheme.bodyLarge!.copyWith(fontWeight: FontWeight.w600),
+          style: Theme.of(context)
+              .textTheme
+              .bodyLarge!
+              .copyWith(fontWeight: FontWeight.w600),
         ),
         subtitle: Text(
           _settings.enabled
@@ -273,7 +276,10 @@ class _AdvancedAISettingsScreenState extends State<AdvancedAISettingsScreen> {
                 decoration: BoxDecoration(
                   color: isSelected
                       ? provider.brandColor.withValues(alpha: 0.15)
-                      : Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.08),
+                      : Theme.of(context)
+                          .colorScheme
+                          .onSurface
+                          .withValues(alpha: 0.08),
                   borderRadius: BorderRadius.circular(10),
                 ),
                 child: Center(
@@ -283,15 +289,18 @@ class _AdvancedAISettingsScreenState extends State<AdvancedAISettingsScreen> {
                     height: 24,
                     colorFilter: isSelected
                         ? null // Use original colors when selected
-                        : ColorFilter.mode(Theme.of(context).colorScheme.onSurfaceVariant, BlendMode.srcIn),
+                        : ColorFilter.mode(
+                            Theme.of(context).colorScheme.onSurfaceVariant,
+                            BlendMode.srcIn),
                   ),
                 ),
               ),
               title: Text(
                 provider.displayName,
                 style: Theme.of(context).textTheme.bodyMedium!.copyWith(
-                  fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
-                ),
+                      fontWeight:
+                          isSelected ? FontWeight.w600 : FontWeight.normal,
+                    ),
               ),
               subtitle: Text(
                 provider.description,
@@ -373,7 +382,9 @@ class _AdvancedAISettingsScreenState extends State<AdvancedAISettingsScreen> {
                 focusedBorder: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(12),
                   borderSide: BorderSide(
-                    color: isValid ? Theme.of(context).colorScheme.primary : Colors.red,
+                    color: isValid
+                        ? Theme.of(context).colorScheme.primary
+                        : Colors.red,
                     width: 2,
                   ),
                 ),
@@ -384,7 +395,10 @@ class _AdvancedAISettingsScreenState extends State<AdvancedAISettingsScreen> {
                 padding: const EdgeInsets.only(top: 8),
                 child: Text(
                   'Invalid API key format for ${_settings.provider.displayName}',
-                  style: Theme.of(context).textTheme.bodySmall!.copyWith(color: Colors.red),
+                  style: Theme.of(context)
+                      .textTheme
+                      .bodySmall!
+                      .copyWith(color: Colors.red),
                 ),
               ),
           ],
@@ -481,8 +495,8 @@ class _AdvancedAISettingsScreenState extends State<AdvancedAISettingsScreen> {
                   Text(
                     'Secure Storage',
                     style: Theme.of(context).textTheme.bodyMedium!.copyWith(
-                      fontWeight: FontWeight.w600,
-                    ),
+                          fontWeight: FontWeight.w600,
+                        ),
                   ),
                   const SizedBox(height: 4),
                   Text(
@@ -557,7 +571,8 @@ class _AdvancedAISettingsScreenState extends State<AdvancedAISettingsScreen> {
         children: [
           Expanded(
             flex: 2,
-            child: Text(provider, style: Theme.of(context).textTheme.bodyMedium!),
+            child:
+                Text(provider, style: Theme.of(context).textTheme.bodyMedium!),
           ),
           Expanded(
             child: Text(speed, style: Theme.of(context).textTheme.bodySmall!),
@@ -566,7 +581,8 @@ class _AdvancedAISettingsScreenState extends State<AdvancedAISettingsScreen> {
             child: Text(cost, style: Theme.of(context).textTheme.bodySmall!),
           ),
           Expanded(
-            child: Text(contextInfo, style: Theme.of(context).textTheme.bodySmall!),
+            child: Text(contextInfo,
+                style: Theme.of(context).textTheme.bodySmall!),
           ),
         ],
       ),
@@ -582,7 +598,8 @@ class _AdvancedAISettingsScreenState extends State<AdvancedAISettingsScreen> {
         style: ElevatedButton.styleFrom(
           backgroundColor: Theme.of(context).colorScheme.primary,
           foregroundColor: Theme.of(context).colorScheme.onPrimary,
-          disabledBackgroundColor: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.12),
+          disabledBackgroundColor:
+              Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.12),
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(12),
           ),

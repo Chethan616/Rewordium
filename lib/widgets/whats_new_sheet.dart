@@ -31,7 +31,7 @@ class WhatsNewSheet {
   // Add a new entry for each release. Older entries are kept for reference
   // but only the *current* version's items are displayed.
   static final Map<String, List<_WhatsNewItem>> _features = {
-    '2.7.0+72': [
+    '2.8.0+73': [
       const _WhatsNewItem(
         icon: CupertinoIcons.checkmark_seal_fill,
         color: Color(0xFF10B981),
@@ -157,9 +157,8 @@ class WhatsNewSheet {
       final prefs = await SharedPreferences.getInstance();
       final info = await PackageInfo.fromPlatform();
       final buildVersion = '${info.version}+${info.buildNumber}';
-      final currentVersion = _features.containsKey(buildVersion)
-          ? buildVersion
-          : info.version;
+      final currentVersion =
+          _features.containsKey(buildVersion) ? buildVersion : info.version;
       final lastSeen = prefs.getString(_prefKey);
 
       if (lastSeen == currentVersion) return;
@@ -258,24 +257,24 @@ class _WhatsNewBottomSheet extends StatelessWidget {
             child: Text(
               'v$version',
               style: Theme.of(context).textTheme.labelMedium!.copyWith(
-                color: cs.primary,
-                fontWeight: FontWeight.w700,
-              ),
+                    color: cs.primary,
+                    fontWeight: FontWeight.w700,
+                  ),
             ),
           ),
           const SizedBox(height: 12),
           Text(
             "What's New",
             style: Theme.of(context).textTheme.titleLarge!.copyWith(
-              fontWeight: FontWeight.bold,
-            ),
+                  fontWeight: FontWeight.bold,
+                ),
           ),
           const SizedBox(height: 4),
           Text(
             'Here\'s what we\'ve been working on',
             style: Theme.of(context).textTheme.bodySmall!.copyWith(
-              color: cs.onSurfaceVariant,
-            ),
+                  color: cs.onSurfaceVariant,
+                ),
           ),
           const SizedBox(height: 20),
           // Feature list
@@ -347,15 +346,15 @@ class _WhatsNewBottomSheet extends StatelessWidget {
                 Text(
                   item.title,
                   style: Theme.of(context).textTheme.bodyMedium!.copyWith(
-                    fontWeight: FontWeight.w600,
-                  ),
+                        fontWeight: FontWeight.w600,
+                      ),
                 ),
                 const SizedBox(height: 4),
                 Text(
                   item.description,
                   style: Theme.of(context).textTheme.bodySmall!.copyWith(
-                    color: cs.onSurfaceVariant,
-                  ),
+                        color: cs.onSurfaceVariant,
+                      ),
                 ),
               ],
             ),

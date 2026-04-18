@@ -62,7 +62,8 @@ class _KeyboardStatusCardState extends State<KeyboardStatusCard>
   @override
   Widget build(BuildContext context) {
     // Hide the entire card on non-Android platforms
-    if (defaultTargetPlatform != TargetPlatform.android) return const SizedBox.shrink();
+    if (defaultTargetPlatform != TargetPlatform.android)
+      return const SizedBox.shrink();
 
     final Size screenSize = MediaQuery.of(context).size;
     final bool isSmallScreen = screenSize.width < 360;
@@ -89,7 +90,10 @@ class _KeyboardStatusCardState extends State<KeyboardStatusCard>
               const SizedBox(width: 8),
               Text(
                 "Keyboard Status",
-                style: Theme.of(context).textTheme.bodyLarge?.copyWith(fontWeight: FontWeight.w600),
+                style: Theme.of(context)
+                    .textTheme
+                    .bodyLarge
+                    ?.copyWith(fontWeight: FontWeight.w600),
               ),
               const Spacer(),
               // Status indicator with refresh button
@@ -232,7 +236,8 @@ class KeyboardSettingsSheet extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 24),
-          Text("Keyboard Settings", style: Theme.of(context).textTheme.headlineSmall!),
+          Text("Keyboard Settings",
+              style: Theme.of(context).textTheme.headlineSmall!),
           const SizedBox(height: 16),
           _buildSettingItem(
             context: context,
@@ -310,8 +315,8 @@ class KeyboardSettingsSheet extends StatelessWidget {
                 Text(
                   subtitle,
                   style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                    color: Theme.of(context).colorScheme.onSurfaceVariant,
-                  ),
+                        color: Theme.of(context).colorScheme.onSurfaceVariant,
+                      ),
                 ),
               ],
             ),

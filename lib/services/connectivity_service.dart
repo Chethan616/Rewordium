@@ -112,7 +112,8 @@ class ConnectivityInfo {
     required this.hasInternet,
   });
 
-  bool get isConnected => !connectivityResults.contains(ConnectivityResult.none);
+  bool get isConnected =>
+      !connectivityResults.contains(ConnectivityResult.none);
 
   String get description {
     if (!isConnected) {

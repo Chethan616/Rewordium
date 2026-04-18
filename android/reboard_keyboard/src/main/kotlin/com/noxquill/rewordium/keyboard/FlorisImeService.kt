@@ -85,6 +85,7 @@ import com.noxquill.rewordium.keyboard.ime.editor.EditorRange
 import com.noxquill.rewordium.keyboard.ime.editor.FlorisEditorInfo
 import com.noxquill.rewordium.keyboard.ime.input.InputFeedbackController
 import com.noxquill.rewordium.keyboard.ime.input.InputFeedbackActivationMode
+import com.noxquill.rewordium.keyboard.ime.input.HapticVibrationMode
 import com.noxquill.rewordium.keyboard.ime.input.LocalInputFeedbackController
 import com.noxquill.rewordium.keyboard.ime.keyboard.FlorisImeSizing
 import com.noxquill.rewordium.keyboard.ime.keyboard.ProvideKeyboardRowBaseHeight
@@ -419,7 +420,13 @@ class FlorisImeService : LifecycleInputMethodService() {
                 } else {
                     InputFeedbackActivationMode.RESPECT_SYSTEM_SETTINGS
                 }
+                val vibrationMode = if (hapticsMode == "alwaysVibrate") {
+                    HapticVibrationMode.USE_VIBRATOR_DIRECTLY
+                } else {
+                    HapticVibrationMode.USE_HAPTIC_FEEDBACK_INTERFACE
+                }
                 prefs.inputFeedback.hapticActivationMode.set(activationMode)
+                prefs.inputFeedback.hapticVibrationMode.set(vibrationMode)
 
                 val aiEnabled = flutterPrefs.getBoolean(
                     KEY_ONBOARDING_AI_DEFAULT_ENABLED,

@@ -30,8 +30,6 @@ import '../providers/auth_provider.dart';
 import '../widgets/upgrade_dialog.dart';
 import 'admin_panel.dart';
 
-
-
 class SettingsScreen extends StatefulWidget {
   const SettingsScreen({super.key});
 
@@ -45,8 +43,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
   DateTime? _lastTapTime;
   bool _isOpeningReboardSettings = false;
   DateTime? _lastReboardLaunchAt;
-
-
 
   // News subscription state
   bool _isNewsSubscribed = false;
@@ -66,7 +62,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
     final prefs = await SharedPreferences.getInstance();
     if (mounted) {
       setState(() {
-        _removeRewordiumHeader = prefs.getBool('remove_rewordium_header') ?? false;
+        _removeRewordiumHeader =
+            prefs.getBool('remove_rewordium_header') ?? false;
       });
     }
   }
@@ -208,7 +205,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
               constraints: BoxConstraints(maxWidth: 24, maxHeight: 24),
             ),
             const SizedBox(width: 20),
-            Text('Restoring purchases...', style: Theme.of(context).textTheme.bodyMedium!),
+            Text('Restoring purchases...',
+                style: Theme.of(context).textTheme.bodyMedium!),
           ],
         ),
       ),
@@ -302,7 +300,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
     final now = DateTime.now();
     if (_lastReboardLaunchAt != null &&
-        now.difference(_lastReboardLaunchAt!) < const Duration(milliseconds: 1200)) {
+        now.difference(_lastReboardLaunchAt!) <
+            const Duration(milliseconds: 1200)) {
       return;
     }
     _lastReboardLaunchAt = now;
@@ -406,315 +405,342 @@ class _SettingsScreenState extends State<SettingsScreen> {
       color: Theme.of(context).colorScheme.primary,
       backgroundColor: Theme.of(context).colorScheme.surface,
       child: SingleChildScrollView(
-      physics: const AlwaysScrollableScrollPhysics(
-        parent: BouncingScrollPhysics(),
-      ),
-      child: SafeArea(
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Padding(
-              padding: const EdgeInsets.fromLTRB(20, 16, 20, 8),
-              child: Row(
-                children: [
-                  Expanded(
-                    child: Text(
-                      "Settings",
-                      style: Theme.of(context).textTheme.headlineMedium!.copyWith(
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                  ),
-                  IconButton(
-                    icon: const Icon(CupertinoIcons.bolt),
-                    onPressed: _onThunderTap,
-                    color: Theme.of(context).colorScheme.primary,
-                  ),
-                ],
-              ),
-            ),
-
-            // ============================================
-            // ACCOUNT SECTION
-            // ============================================
-            _buildSectionHeader(
-              icon: CupertinoIcons.person_circle,
-              title: "Account",
-              color: Theme.of(context).colorScheme.primary,
-            ),
-            AnimatedCard(
-              child: isLoggedIn
-                  ? _buildUserProfile(context, userName, isPro, authProvider)
-                  : _buildLoginPrompt(context),
-            ),
-
-            // ============================================
-            // GENERAL SETTINGS SECTION
-            // ============================================
-            _buildSectionHeader(
-              icon: CupertinoIcons.slider_horizontal_3,
-              title: "General",
-              color: Colors.blue,
-            ),
-            AnimatedCard(
-              padding: EdgeInsets.zero,
-              child: Column(
-                children: [
-                  // Theme Mode Selector
-                  Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Row(
-                          children: [
-                            Container(
-                              width: 40,
-                              height: 40,
-                              decoration: BoxDecoration(
-                                color: (themeProvider.themeMode == ThemeMode.system
-                                    ? Theme.of(context).colorScheme.primary
-                                    : isDarkMode ? Colors.indigo : Colors.orange).withOpacity(0.12),
-                                borderRadius: BorderRadius.circular(10),
-                              ),
-                              child: Icon(
-                                themeProvider.themeMode == ThemeMode.system
-                                    ? Icons.brightness_auto
-                                    : isDarkMode
-                                        ? CupertinoIcons.moon_fill
-                                        : CupertinoIcons.sun_max_fill,
-                                color: themeProvider.themeMode == ThemeMode.system
-                                    ? Theme.of(context).colorScheme.primary
-                                    : isDarkMode ? Colors.indigo : Colors.orange,
-                                size: 20,
-                              ),
-                            ),
-                            const SizedBox(width: 16),
-                            Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  "Appearance",
-                                  style: Theme.of(context).textTheme.bodyMedium!.copyWith(
-                                    fontWeight: FontWeight.w600,
-                                  ),
-                                ),
-                                const SizedBox(height: 2),
-                                Text(
-                                  themeProvider.themeMode == ThemeMode.system
-                                      ? "Following system theme"
-                                      : isDarkMode
-                                          ? "Dark theme enabled"
-                                          : "Light theme enabled",
-                                  style: Theme.of(context).textTheme.bodySmall!.copyWith(
-                                    color: Theme.of(context).colorScheme.onSurfaceVariant,
-                                    fontSize: 12,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: 12),
-                        SizedBox(
-                          width: double.infinity,
-                          child: SegmentedButton<ThemeMode>(
-                            segments: const [
-                              ButtonSegment(
-                                value: ThemeMode.system,
-                                label: Text('Auto'),
-                                icon: Icon(Icons.brightness_auto, size: 18),
-                              ),
-                              ButtonSegment(
-                                value: ThemeMode.light,
-                                label: Text('Light'),
-                                icon: Icon(CupertinoIcons.sun_max_fill, size: 18),
-                              ),
-                              ButtonSegment(
-                                value: ThemeMode.dark,
-                                label: Text('Dark'),
-                                icon: Icon(CupertinoIcons.moon_fill, size: 18),
-                              ),
-                            ],
-                            selected: {themeProvider.themeMode},
-                            onSelectionChanged: (Set<ThemeMode> selected) {
-                              themeProvider.setThemeMode(selected.first);
-                            },
-                            showSelectedIcon: false,
-                            style: ButtonStyle(
-                              visualDensity: VisualDensity.compact,
-                              tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                            ),
-                          ),
-                        ),
-                        const SizedBox(height: 10),
-                        _buildSettingItem(
-                          icon: Icons.palette_outlined,
-                          iconColor: Theme.of(context).colorScheme.primary,
-                          title: "Dynamic system colors",
-                          subtitle: "Use wallpaper-based colors on supported devices",
-                          trailing: Switch(
-                            value: themeProvider.useDynamicColors,
-                            onChanged: themeProvider.setDynamicColorsEnabled,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  if (isLoggedIn) ...[
-                    const Divider(height: 1, indent: 72),
-                    // News & Updates Toggle
-                    _buildSettingItem(
-                      icon: CupertinoIcons.bell_fill,
-                      iconColor: Colors.pink,
-                      title: "News & Updates",
-                      subtitle: "Product news and feature announcements",
-                      trailing: _isLoadingNewsSubscription
-                          ? const SizedBox(
-                              width: 24,
-                              height: 24,
-                              child: LoadingIndicatorM3E(
-                                constraints: BoxConstraints(maxWidth: 24, maxHeight: 24),
-                              ),
-                            )
-                          : Switch(
-                              value: _isNewsSubscribed,
-                              onChanged: _toggleNewsSubscription,
-                            ),
-                    ),
-                  ],
-                  if (isPro) ...[
-                    const Divider(height: 1, indent: 72),
-                    // Remove Rewordium Header Toggle (pro only)
-                    _buildSettingItem(
-                      icon: CupertinoIcons.doc_text,
-                      iconColor: Colors.teal,
-                      title: "Remove Rewordium Header",
-                      subtitle: "Hide branding in exported PDFs",
-                      trailing: Switch(
-                        value: _removeRewordiumHeader,
-                        onChanged: _toggleHeaderPref,
-                      ),
-                    ),
-                  ],
-                ],
-              ),
-            ),
-
-            // ============================================
-            // KEYBOARD & AI SECTION
-            // ============================================
-            _buildSectionHeader(
-              icon: CupertinoIcons.sparkles,
-              title: "Keyboard & AI",
-              color: Colors.purple,
-            ),
-            AnimatedCard(
-              padding: EdgeInsets.zero,
-              child: Column(
-                children: [
-                  // Keyboard Settings
-                  _buildSettingItem(
-                    icon: CupertinoIcons.keyboard,
-                    iconColor: Theme.of(context).colorScheme.primary,
-                    title: "Rewordium AI Keyboard",
-                    subtitle: "Customize appearance and behavior",
-                    trailing: const Icon(CupertinoIcons.chevron_right,
-                        color: Colors.grey, size: 18),
-                    onTap: () => _openReboardSettings(),
-                  ),
-                  const Divider(height: 1, indent: 72),
-                  // Advanced AI Settings
-                  _buildSettingItem(
-                    icon: Icons.psychology_rounded,
-                    iconColor: Colors.deepPurple,
-                    iconGradient: true,
-                    title: "Advanced AI Settings",
-                    subtitle: "Use your own LLM API key",
-                    trailing: const Icon(CupertinoIcons.chevron_right,
-                        color: Colors.grey, size: 18),
-                    onTap: () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (context) =>
-                              const AdvancedAISettingsScreen(),
-                        ),
-                      );
-                    },
-                  ),
-                ],
-              ),
-            ),
-
-            // Personalize Keyboard prompt for non-logged-in users
-            if (!isLoggedIn)
-              AnimatedCard(
-                child: Column(
+        physics: const AlwaysScrollableScrollPhysics(
+          parent: BouncingScrollPhysics(),
+        ),
+        child: SafeArea(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Padding(
+                padding: const EdgeInsets.fromLTRB(20, 16, 20, 8),
+                child: Row(
                   children: [
-                    SizedBox(
-                      height: 80,
-                      child: LottieAssets.getKeyboardAnimation(),
-                    ),
-                    const SizedBox(height: 12),
-                    Text(
-                      "Create an account to personalize your keyboard",
-                      textAlign: TextAlign.center,
-                      style: Theme.of(context).textTheme.bodyMedium!.copyWith(
-                        color: Theme.of(context).colorScheme.onSurfaceVariant,
+                    Expanded(
+                      child: Text(
+                        "Settings",
+                        style: Theme.of(context)
+                            .textTheme
+                            .headlineMedium!
+                            .copyWith(
+                              fontWeight: FontWeight.bold,
+                            ),
                       ),
                     ),
-                    const SizedBox(height: 12),
-                    CustomButton(
-                      text: "Create Account",
-                      onPressed: _navigateToLogin,
-                      type: ButtonType.primary,
-                      width: 180,
-                      height: 44,
+                    IconButton(
+                      icon: const Icon(CupertinoIcons.bolt),
+                      onPressed: _onThunderTap,
+                      color: Theme.of(context).colorScheme.primary,
                     ),
                   ],
                 ),
               ),
 
-            // ============================================
-            // ABOUT SECTION
-            // ============================================
-            _buildSectionHeader(
-              icon: CupertinoIcons.info_circle,
-              title: "About",
-              color: Colors.teal,
-            ),
-            _buildAppInfoCard(context),
-
-            // ============================================
-            // DANGER ZONE (only logged in)
-            // ============================================
-            if (isLoggedIn) ...[
+              // ============================================
+              // ACCOUNT SECTION
+              // ============================================
               _buildSectionHeader(
-                icon: CupertinoIcons.exclamationmark_triangle,
-                title: "Danger Zone",
-                color: Colors.red,
+                icon: CupertinoIcons.person_circle,
+                title: "Account",
+                color: Theme.of(context).colorScheme.primary,
+              ),
+              AnimatedCard(
+                child: isLoggedIn
+                    ? _buildUserProfile(context, userName, isPro, authProvider)
+                    : _buildLoginPrompt(context),
+              ),
+
+              // ============================================
+              // GENERAL SETTINGS SECTION
+              // ============================================
+              _buildSectionHeader(
+                icon: CupertinoIcons.slider_horizontal_3,
+                title: "General",
+                color: Colors.blue,
               ),
               AnimatedCard(
                 padding: EdgeInsets.zero,
-                child: _buildSettingItem(
-                  icon: CupertinoIcons.trash,
-                  iconColor: Colors.red,
-                  title: "Delete Account",
-                  subtitle: "Permanently delete your account and data",
-                  trailing: const Icon(CupertinoIcons.chevron_right,
-                      color: Colors.red, size: 18),
-                  onTap: () => _confirmDeleteAccount(context),
-                  isDanger: true,
+                child: Column(
+                  children: [
+                    // Theme Mode Selector
+                    Padding(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 16, vertical: 14),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            children: [
+                              Container(
+                                width: 40,
+                                height: 40,
+                                decoration: BoxDecoration(
+                                  color: (themeProvider.themeMode ==
+                                              ThemeMode.system
+                                          ? Theme.of(context)
+                                              .colorScheme
+                                              .primary
+                                          : isDarkMode
+                                              ? Colors.indigo
+                                              : Colors.orange)
+                                      .withOpacity(0.12),
+                                  borderRadius: BorderRadius.circular(10),
+                                ),
+                                child: Icon(
+                                  themeProvider.themeMode == ThemeMode.system
+                                      ? Icons.brightness_auto
+                                      : isDarkMode
+                                          ? CupertinoIcons.moon_fill
+                                          : CupertinoIcons.sun_max_fill,
+                                  color: themeProvider.themeMode ==
+                                          ThemeMode.system
+                                      ? Theme.of(context).colorScheme.primary
+                                      : isDarkMode
+                                          ? Colors.indigo
+                                          : Colors.orange,
+                                  size: 20,
+                                ),
+                              ),
+                              const SizedBox(width: 16),
+                              Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    "Appearance",
+                                    style: Theme.of(context)
+                                        .textTheme
+                                        .bodyMedium!
+                                        .copyWith(
+                                          fontWeight: FontWeight.w600,
+                                        ),
+                                  ),
+                                  const SizedBox(height: 2),
+                                  Text(
+                                    themeProvider.themeMode == ThemeMode.system
+                                        ? "Following system theme"
+                                        : isDarkMode
+                                            ? "Dark theme enabled"
+                                            : "Light theme enabled",
+                                    style: Theme.of(context)
+                                        .textTheme
+                                        .bodySmall!
+                                        .copyWith(
+                                          color: Theme.of(context)
+                                              .colorScheme
+                                              .onSurfaceVariant,
+                                          fontSize: 12,
+                                        ),
+                                  ),
+                                ],
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 12),
+                          SizedBox(
+                            width: double.infinity,
+                            child: SegmentedButton<ThemeMode>(
+                              segments: const [
+                                ButtonSegment(
+                                  value: ThemeMode.system,
+                                  label: Text('Auto'),
+                                  icon: Icon(Icons.brightness_auto, size: 18),
+                                ),
+                                ButtonSegment(
+                                  value: ThemeMode.light,
+                                  label: Text('Light'),
+                                  icon: Icon(CupertinoIcons.sun_max_fill,
+                                      size: 18),
+                                ),
+                                ButtonSegment(
+                                  value: ThemeMode.dark,
+                                  label: Text('Dark'),
+                                  icon:
+                                      Icon(CupertinoIcons.moon_fill, size: 18),
+                                ),
+                              ],
+                              selected: {themeProvider.themeMode},
+                              onSelectionChanged: (Set<ThemeMode> selected) {
+                                themeProvider.setThemeMode(selected.first);
+                              },
+                              showSelectedIcon: false,
+                              style: ButtonStyle(
+                                visualDensity: VisualDensity.compact,
+                                tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                              ),
+                            ),
+                          ),
+                          const SizedBox(height: 10),
+                          _buildSettingItem(
+                            icon: Icons.palette_outlined,
+                            iconColor: Theme.of(context).colorScheme.primary,
+                            title: "Dynamic system colors",
+                            subtitle:
+                                "Use wallpaper-based colors on supported devices",
+                            trailing: Switch(
+                              value: themeProvider.useDynamicColors,
+                              onChanged: themeProvider.setDynamicColorsEnabled,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    if (isLoggedIn) ...[
+                      const Divider(height: 1, indent: 72),
+                      // News & Updates Toggle
+                      _buildSettingItem(
+                        icon: CupertinoIcons.bell_fill,
+                        iconColor: Colors.pink,
+                        title: "News & Updates",
+                        subtitle: "Product news and feature announcements",
+                        trailing: _isLoadingNewsSubscription
+                            ? const SizedBox(
+                                width: 24,
+                                height: 24,
+                                child: LoadingIndicatorM3E(
+                                  constraints: BoxConstraints(
+                                      maxWidth: 24, maxHeight: 24),
+                                ),
+                              )
+                            : Switch(
+                                value: _isNewsSubscribed,
+                                onChanged: _toggleNewsSubscription,
+                              ),
+                      ),
+                    ],
+                    if (isPro) ...[
+                      const Divider(height: 1, indent: 72),
+                      // Remove Rewordium Header Toggle (pro only)
+                      _buildSettingItem(
+                        icon: CupertinoIcons.doc_text,
+                        iconColor: Colors.teal,
+                        title: "Remove Rewordium Header",
+                        subtitle: "Hide branding in exported PDFs",
+                        trailing: Switch(
+                          value: _removeRewordiumHeader,
+                          onChanged: _toggleHeaderPref,
+                        ),
+                      ),
+                    ],
+                  ],
                 ),
               ),
-            ],
 
-            const SizedBox(height: 40),
-          ],
+              // ============================================
+              // KEYBOARD & AI SECTION
+              // ============================================
+              _buildSectionHeader(
+                icon: CupertinoIcons.sparkles,
+                title: "Keyboard & AI",
+                color: Colors.purple,
+              ),
+              AnimatedCard(
+                padding: EdgeInsets.zero,
+                child: Column(
+                  children: [
+                    // Keyboard Settings
+                    _buildSettingItem(
+                      icon: CupertinoIcons.keyboard,
+                      iconColor: Theme.of(context).colorScheme.primary,
+                      title: "Rewordium AI Keyboard",
+                      subtitle: "Customize appearance and behavior",
+                      trailing: const Icon(CupertinoIcons.chevron_right,
+                          color: Colors.grey, size: 18),
+                      onTap: () => _openReboardSettings(),
+                    ),
+                    const Divider(height: 1, indent: 72),
+                    // Advanced AI Settings
+                    _buildSettingItem(
+                      icon: Icons.psychology_rounded,
+                      iconColor: Colors.deepPurple,
+                      iconGradient: true,
+                      title: "Advanced AI Settings",
+                      subtitle: "Use your own LLM API key",
+                      trailing: const Icon(CupertinoIcons.chevron_right,
+                          color: Colors.grey, size: 18),
+                      onTap: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) =>
+                                const AdvancedAISettingsScreen(),
+                          ),
+                        );
+                      },
+                    ),
+                  ],
+                ),
+              ),
+
+              // Personalize Keyboard prompt for non-logged-in users
+              if (!isLoggedIn)
+                AnimatedCard(
+                  child: Column(
+                    children: [
+                      SizedBox(
+                        height: 80,
+                        child: LottieAssets.getKeyboardAnimation(),
+                      ),
+                      const SizedBox(height: 12),
+                      Text(
+                        "Create an account to personalize your keyboard",
+                        textAlign: TextAlign.center,
+                        style: Theme.of(context).textTheme.bodyMedium!.copyWith(
+                              color: Theme.of(context)
+                                  .colorScheme
+                                  .onSurfaceVariant,
+                            ),
+                      ),
+                      const SizedBox(height: 12),
+                      CustomButton(
+                        text: "Create Account",
+                        onPressed: _navigateToLogin,
+                        type: ButtonType.primary,
+                        width: 180,
+                        height: 44,
+                      ),
+                    ],
+                  ),
+                ),
+
+              // ============================================
+              // ABOUT SECTION
+              // ============================================
+              _buildSectionHeader(
+                icon: CupertinoIcons.info_circle,
+                title: "About",
+                color: Colors.teal,
+              ),
+              _buildAppInfoCard(context),
+
+              // ============================================
+              // DANGER ZONE (only logged in)
+              // ============================================
+              if (isLoggedIn) ...[
+                _buildSectionHeader(
+                  icon: CupertinoIcons.exclamationmark_triangle,
+                  title: "Danger Zone",
+                  color: Colors.red,
+                ),
+                AnimatedCard(
+                  padding: EdgeInsets.zero,
+                  child: _buildSettingItem(
+                    icon: CupertinoIcons.trash,
+                    iconColor: Colors.red,
+                    title: "Delete Account",
+                    subtitle: "Permanently delete your account and data",
+                    trailing: const Icon(CupertinoIcons.chevron_right,
+                        color: Colors.red, size: 18),
+                    onTap: () => _confirmDeleteAccount(context),
+                    isDanger: true,
+                  ),
+                ),
+              ],
+
+              const SizedBox(height: 40),
+            ],
+          ),
         ),
       ),
-    ),
     );
   }
 
@@ -741,9 +767,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
           Text(
             title,
             style: Theme.of(context).textTheme.bodyLarge!.copyWith(
-              fontWeight: FontWeight.w700,
-              letterSpacing: 0.3,
-            ),
+                  fontWeight: FontWeight.w700,
+                  letterSpacing: 0.3,
+                ),
           ),
         ],
       ),
@@ -786,19 +812,19 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 Text(
                   title,
                   style: Theme.of(context).textTheme.bodyMedium!.copyWith(
-                    fontWeight: FontWeight.w600,
-                    color: isDanger ? Colors.red : null,
-                  ),
+                        fontWeight: FontWeight.w600,
+                        color: isDanger ? Colors.red : null,
+                      ),
                 ),
                 const SizedBox(height: 2),
                 Text(
                   subtitle,
                   style: Theme.of(context).textTheme.bodySmall!.copyWith(
-                    color: isDanger
-                        ? Colors.red.withOpacity(0.7)
-                        : Theme.of(context).colorScheme.onSurfaceVariant,
-                    fontSize: 12,
-                  ),
+                        color: isDanger
+                            ? Colors.red.withOpacity(0.7)
+                            : Theme.of(context).colorScheme.onSurfaceVariant,
+                        fontSize: 12,
+                      ),
                 ),
               ],
             ),
@@ -906,7 +932,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 padding:
                     const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
                 decoration: BoxDecoration(
-                  color: Theme.of(context).colorScheme.onSurfaceVariant.withValues(alpha: 0.08),
+                  color: Theme.of(context)
+                      .colorScheme
+                      .onSurfaceVariant
+                      .withValues(alpha: 0.08),
                   borderRadius: BorderRadius.circular(8),
                 ),
                 child: Row(
@@ -918,9 +947,11 @@ class _SettingsScreenState extends State<SettingsScreen> {
                       child: Text(
                         "Based on FlorisBoard • Apache License 2.0",
                         style: Theme.of(context).textTheme.bodySmall!.copyWith(
-                          fontSize: 11,
-                          color: Theme.of(context).colorScheme.onSurfaceVariant,
-                        ),
+                              fontSize: 11,
+                              color: Theme.of(context)
+                                  .colorScheme
+                                  .onSurfaceVariant,
+                            ),
                       ),
                     ),
                   ],
@@ -949,7 +980,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
               backgroundColor: Theme.of(context).colorScheme.primaryContainer,
               backgroundImage: photoUrl != null ? NetworkImage(photoUrl) : null,
               child: photoUrl == null
-                  ? Icon(CupertinoIcons.person_fill, color: Theme.of(context).colorScheme.onPrimaryContainer)
+                  ? Icon(CupertinoIcons.person_fill,
+                      color: Theme.of(context).colorScheme.onPrimaryContainer)
                   : null,
             ),
             const SizedBox(width: 16),
@@ -960,16 +992,17 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   Text(
                     name,
                     style: Theme.of(context).textTheme.bodyLarge!.copyWith(
-                      fontWeight: FontWeight.w600,
-                    ),
+                          fontWeight: FontWeight.w600,
+                        ),
                   ),
                   if (email != null) ...[
                     const SizedBox(height: 2),
                     Text(
                       email,
                       style: Theme.of(context).textTheme.bodySmall!.copyWith(
-                        color: Theme.of(context).colorScheme.onSurfaceVariant,
-                      ),
+                            color:
+                                Theme.of(context).colorScheme.onSurfaceVariant,
+                          ),
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                     ),
@@ -991,7 +1024,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
                                 ? "Lifetime Pro User"
                                 : "Pro User")
                             : "Standard User",
-                        style: Theme.of(context).textTheme.bodySmall!
+                        style: Theme.of(context)
+                            .textTheme
+                            .bodySmall!
                             .copyWith(color: isPro ? Colors.amber : null),
                       ),
                     ],
@@ -1009,10 +1044,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
               onPressed: () {
                 // Open platform-specific subscription management
                 launchUrl(
-                  Uri.parse(
-                      defaultTargetPlatform == TargetPlatform.iOS
-                          ? 'https://apps.apple.com/account/subscriptions'
-                          : 'https://play.google.com/store/account/subscriptions'),
+                  Uri.parse(defaultTargetPlatform == TargetPlatform.iOS
+                      ? 'https://apps.apple.com/account/subscriptions'
+                      : 'https://play.google.com/store/account/subscriptions'),
                   mode: LaunchMode.externalApplication,
                 );
               },
@@ -1034,7 +1068,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
             padding: const EdgeInsets.all(12),
             margin: const EdgeInsets.only(bottom: 12),
             decoration: BoxDecoration(
-              color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.1),
+              color:
+                  Theme.of(context).colorScheme.primary.withValues(alpha: 0.1),
               borderRadius: BorderRadius.circular(8),
             ),
             child: Row(
@@ -1048,9 +1083,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 Text(
                   'Credits: ${authProvider.credits ?? 0}',
                   style: Theme.of(context).textTheme.bodyMedium!.copyWith(
-                    fontWeight: FontWeight.w600,
-                    color: Theme.of(context).colorScheme.primary,
-                  ),
+                        fontWeight: FontWeight.w600,
+                        color: Theme.of(context).colorScheme.primary,
+                      ),
                 ),
               ],
             ),
@@ -1109,8 +1144,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
               Text(
                 "Create an account",
                 style: Theme.of(context).textTheme.bodyLarge!.copyWith(
-                  fontWeight: FontWeight.w600,
-                ),
+                      fontWeight: FontWeight.w600,
+                    ),
               ),
               const SizedBox(height: 4),
               Text(
@@ -1168,8 +1203,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
         onSuccess: () {
           if (context.mounted) {
             Navigator.of(context).pushAndRemoveUntil(
-              MaterialPageRoute(
-                  builder: (context) => const SignupScreen()),
+              MaterialPageRoute(builder: (context) => const SignupScreen()),
               (route) => false,
             );
           }
@@ -1178,8 +1212,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
           if (context.mounted) {
             final authProvider =
                 Provider.of<AuthProvider>(context, listen: false);
-            final error =
-                authProvider.error ?? 'Failed to delete account.';
+            final error = authProvider.error ?? 'Failed to delete account.';
             ScaffoldMessenger.of(context).showSnackBar(
               SnackBar(content: Text(error)),
             );
@@ -1263,15 +1296,15 @@ class _DeleteAccountSheetState extends State<_DeleteAccountSheet> {
           Text(
             'Delete Account',
             style: Theme.of(context).textTheme.titleLarge!.copyWith(
-              fontWeight: FontWeight.bold,
-            ),
+                  fontWeight: FontWeight.bold,
+                ),
           ),
           const SizedBox(height: 8),
           Text(
             'Are you sure you want to delete your account? This action cannot be undone.',
             style: Theme.of(context).textTheme.bodyMedium!.copyWith(
-              color: cs.onSurfaceVariant,
-            ),
+                  color: cs.onSurfaceVariant,
+                ),
             textAlign: TextAlign.center,
           ),
           const SizedBox(height: 24),
@@ -1295,7 +1328,8 @@ class _DeleteAccountSheetState extends State<_DeleteAccountSheet> {
                       height: 24,
                       child: LoadingIndicatorM3E(
                         color: Colors.white,
-                        constraints: BoxConstraints(maxWidth: 24, maxHeight: 24),
+                        constraints:
+                            BoxConstraints(maxWidth: 24, maxHeight: 24),
                       ),
                     )
                   : const Text('Delete Account',
@@ -1359,7 +1393,10 @@ class _SignOutSheetState extends State<_SignOutSheet> {
             width: 36,
             height: 5,
             decoration: BoxDecoration(
-              color: Theme.of(context).colorScheme.onSurfaceVariant.withValues(alpha: 0.3),
+              color: Theme.of(context)
+                  .colorScheme
+                  .onSurfaceVariant
+                  .withValues(alpha: 0.3),
               borderRadius: BorderRadius.circular(3),
             ),
           ),
@@ -1381,15 +1418,15 @@ class _SignOutSheetState extends State<_SignOutSheet> {
           Text(
             'Sign Out',
             style: Theme.of(context).textTheme.titleLarge!.copyWith(
-              fontWeight: FontWeight.bold,
-            ),
+                  fontWeight: FontWeight.bold,
+                ),
           ),
           const SizedBox(height: 8),
           Text(
             'Are you sure you want to sign out?',
             style: Theme.of(context).textTheme.bodyMedium!.copyWith(
-              color: Theme.of(context).colorScheme.onSurfaceVariant,
-            ),
+                  color: Theme.of(context).colorScheme.onSurfaceVariant,
+                ),
             textAlign: TextAlign.center,
           ),
           const SizedBox(height: 24),
@@ -1406,7 +1443,8 @@ class _SignOutSheetState extends State<_SignOutSheet> {
                       await authProvider.signOut();
                       if (widget.parentContext.mounted) {
                         Navigator.of(widget.parentContext).pushAndRemoveUntil(
-                          MaterialPageRoute(builder: (context) => const LoginScreen()),
+                          MaterialPageRoute(
+                              builder: (context) => const LoginScreen()),
                           (route) => false,
                         );
                       }
@@ -1418,7 +1456,8 @@ class _SignOutSheetState extends State<_SignOutSheet> {
                         borderRadius: BorderRadius.circular(16),
                       ),
                     ),
-                    child: const Text('Sign Out', style: TextStyle(fontWeight: FontWeight.w600)),
+                    child: const Text('Sign Out',
+                        style: TextStyle(fontWeight: FontWeight.w600)),
                   ),
           ),
           const SizedBox(height: 12),
@@ -1426,10 +1465,14 @@ class _SignOutSheetState extends State<_SignOutSheet> {
             width: double.infinity,
             height: 48,
             child: OutlinedButton(
-              onPressed: _isLoggingOut ? null : () => Navigator.of(context).pop(),
+              onPressed:
+                  _isLoggingOut ? null : () => Navigator.of(context).pop(),
               style: OutlinedButton.styleFrom(
                 side: BorderSide(
-                  color: Theme.of(context).colorScheme.onSurfaceVariant.withValues(alpha: 0.3),
+                  color: Theme.of(context)
+                      .colorScheme
+                      .onSurfaceVariant
+                      .withValues(alpha: 0.3),
                 ),
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(16),

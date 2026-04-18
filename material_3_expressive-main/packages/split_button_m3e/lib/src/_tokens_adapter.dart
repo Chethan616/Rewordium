@@ -117,12 +117,12 @@ class SplitButtonM3ETokens {
 
   static const Map<SplitButtonM3ESize, double> labelRightPaddingBeforeDivider =
       {
-    SplitButtonM3ESize.xs: 10,
-    SplitButtonM3ESize.sm: 12,
-    SplitButtonM3ESize.md: 24,
-    SplitButtonM3ESize.lg: 48,
-    SplitButtonM3ESize.xl: 64,
-  };
+        SplitButtonM3ESize.xs: 10,
+        SplitButtonM3ESize.sm: 12,
+        SplitButtonM3ESize.md: 24,
+        SplitButtonM3ESize.lg: 48,
+        SplitButtonM3ESize.xl: 64,
+      };
 
   static const Map<SplitButtonM3ESize, double> trailingLeftInnerPadding = {
     SplitButtonM3ESize.xs: 12,

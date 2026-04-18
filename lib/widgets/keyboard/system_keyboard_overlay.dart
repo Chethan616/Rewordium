@@ -7,7 +7,7 @@ import '../../services/unified_ai_service.dart';
 
 class SystemKeyboardOverlay extends StatefulWidget {
   final Function(bool) onVisibilityChanged;
-  
+
   const SystemKeyboardOverlay({
     Key? key,
     required this.onVisibilityChanged,
@@ -19,30 +19,30 @@ class SystemKeyboardOverlay extends StatefulWidget {
 
 class _SystemKeyboardOverlayState extends State<SystemKeyboardOverlay> {
   bool _isExpanded = false;
-  
+
   // Text controller and focus node for the keyboard
   final TextEditingController _textController = TextEditingController();
   final FocusNode _focusNode = FocusNode();
-  
+
   @override
   void initState() {
     super.initState();
     widget.onVisibilityChanged(true);
   }
-  
+
   @override
   void dispose() {
     widget.onVisibilityChanged(false);
     super.dispose();
   }
-  
+
   // Toggle keyboard visibility
   void _toggleKeyboard() {
     setState(() {
       _isExpanded = !_isExpanded;
     });
   }
-  
+
   // Paraphrase the text in the text controller
   Future<void> _paraphraseText() async {
     final text = _textController.text;
@@ -52,24 +52,24 @@ class _SystemKeyboardOverlayState extends State<SystemKeyboardOverlay> {
       );
       return;
     }
-    
+
     setState(() {
       // Show loading indicator
     });
-    
+
     try {
       // Use Unified AI service for paraphrasing (it has its own timeout handling)
       final result = await UnifiedAIService.paraphraseText(text, 'natural');
-      
+
       // Check if there was an error in the response
       if (result.containsKey('error')) {
         throw Exception(result['error']);
       }
-      
+
       // Apply the paraphrased text
       final paraphrasedText = result['paraphrased_text'] ?? text;
       _textController.text = paraphrasedText;
-      
+
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('Text paraphrased successfully')),
@@ -84,7 +84,7 @@ class _SystemKeyboardOverlayState extends State<SystemKeyboardOverlay> {
       }
     }
   }
-  
+
   // Open the full paraphraser page
   void _openParaphraserPage() {
     Navigator.push(
@@ -94,7 +94,7 @@ class _SystemKeyboardOverlayState extends State<SystemKeyboardOverlay> {
       ),
     );
   }
-  
+
   @override
   Widget build(BuildContext context) {
     final keyboardProvider = Provider.of<KeyboardProvider>(context);
@@ -106,7 +106,7 @@ class _SystemKeyboardOverlayState extends State<SystemKeyboardOverlay> {
       });
       return const SizedBox.shrink();
     }
-    
+
     return Positioned(
       top: 0,
       left: 0,
@@ -118,7 +118,7 @@ class _SystemKeyboardOverlayState extends State<SystemKeyboardOverlay> {
             Container(
               margin: const EdgeInsets.all(8),
               decoration: BoxDecoration(
-              color: Theme.of(context).colorScheme.primary,
+                color: Theme.of(context).colorScheme.primary,
                 borderRadius: BorderRadius.circular(20),
                 boxShadow: [
                   BoxShadow(
@@ -134,7 +134,8 @@ class _SystemKeyboardOverlayState extends State<SystemKeyboardOverlay> {
                   onTap: _toggleKeyboard,
                   borderRadius: BorderRadius.circular(20),
                   child: Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                     child: Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
@@ -146,10 +147,11 @@ class _SystemKeyboardOverlayState extends State<SystemKeyboardOverlay> {
                         const SizedBox(width: 4),
                         Text(
                           'Keyboard',
-                          style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                            color: Colors.white,
-                            fontWeight: FontWeight.w600,
-                          ),
+                          style:
+                              Theme.of(context).textTheme.bodySmall?.copyWith(
+                                    color: Colors.white,
+                                    fontWeight: FontWeight.w600,
+                                  ),
                         ),
                       ],
                     ),
@@ -157,7 +159,7 @@ class _SystemKeyboardOverlayState extends State<SystemKeyboardOverlay> {
                 ),
               ),
             ),
-            
+
             // Expanded keyboard view
             if (_isExpanded)
               Container(
@@ -183,9 +185,10 @@ class _SystemKeyboardOverlayState extends State<SystemKeyboardOverlay> {
                         children: [
                           Text(
                             'System Keyboard',
-                            style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                              fontWeight: FontWeight.w600,
-                            ),
+                            style:
+                                Theme.of(context).textTheme.bodyLarge?.copyWith(
+                                      fontWeight: FontWeight.w600,
+                                    ),
                           ),
                           const Spacer(),
                           IconButton(
@@ -223,9 +226,9 @@ class _SystemKeyboardOverlayState extends State<SystemKeyboardOverlay> {
                   ],
                 ),
               ),
-            
+
             // Paraphraser button at the bottom
-            if (_isExpanded) 
+            if (_isExpanded)
               Padding(
                 padding: const EdgeInsets.all(8.0),
                 child: Row(

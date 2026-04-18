@@ -1,9 +1,17 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isSelf(userId) {
+      return isSignedIn() && request.auth.uid == userId;
+    }
+
     // Admin function - check if user is admin
     function isAdmin() {
-      return request.auth != null && 
+      return isSignedIn() && 
              (request.auth.token.email == 'chethankrishna2022@gmail.com' ||
               request.auth.token.email == 'rupakbabu1994@gmail.com');
     }
@@ -20,23 +28,19 @@ service cloud.firestore {
       allow read, write: if isAdmin();
       
       // Users can read/write their own data when authenticated
-      allow read, write: if request.auth != null && request.auth.uid == userId;
-      
-      // Allow payment portal to update subscription fields
-      allow write: if request.writeFields.hasOnly(['isPro', 'planType', 'subscription', 'lastUpdated']) &&
-                      request.resource.data.isPro is bool;
+      allow read, write: if isSelf(userId);
     }
     
     // Notifications collection - admin can read/write, users can read
     match /notifications/{notificationId} {
       allow read, write: if isAdmin();
-      allow read: if request.auth != null;
+      allow read: if isSignedIn();
     }
     
-    // Payments collection - allow payment portal to create records
+    // Payments collection - authenticated users can create/read their own records
     match /payments/{paymentId} {
-      allow create: if true;
-      allow read: if request.auth != null;
+      allow create: if isSignedIn() && request.resource.data.userId == request.auth.uid;
+      allow read: if isAdmin() || (isSignedIn() && resource.data.userId == request.auth.uid);
       allow write: if isAdmin();
     }
     
@@ -47,7 +51,7 @@ service cloud.firestore {
     
     // Test collection for debugging
     match /_test/{document} {
-      allow read, write: if true;
+      allow read, write: if isAdmin();
     }
   }
 }

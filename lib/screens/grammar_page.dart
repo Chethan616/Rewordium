@@ -98,9 +98,8 @@ class _GrammarPageState extends State<GrammarPage>
         _correctedText = corrected;
         _errorCount = errorCount;
         _errors = restoredErrors;
-        _wordCount = text.trim().isEmpty
-            ? 0
-            : text.trim().split(RegExp(r'\s+')).length;
+        _wordCount =
+            text.trim().isEmpty ? 0 : text.trim().split(RegExp(r'\s+')).length;
         _isInputEmpty = text.trim().isEmpty;
       });
     } catch (_) {
@@ -115,9 +114,8 @@ class _GrammarPageState extends State<GrammarPage>
     _wordCountDebounce = Timer(const Duration(milliseconds: 250), () {
       if (!mounted) return;
       setState(() {
-        _wordCount = text.trim().isEmpty
-            ? 0
-            : text.trim().split(RegExp(r'\s+')).length;
+        _wordCount =
+            text.trim().isEmpty ? 0 : text.trim().split(RegExp(r'\s+')).length;
       });
     });
   }
@@ -236,15 +234,17 @@ class _GrammarPageState extends State<GrammarPage>
               : await UnifiedAIService.checkGrammar(text));
 
       final normalizedResult = _sanitizeGrammarResult(result, text);
-      
+
       // Check for API errors first
-      if (normalizedResult.containsKey('error') || normalizedResult.containsKey('errorType')) {
+      if (normalizedResult.containsKey('error') ||
+          normalizedResult.containsKey('errorType')) {
         setState(() => _isChecking = false);
         final errorType = normalizedResult['errorType'] as String? ?? 'UNKNOWN';
         String errorMessage;
         switch (errorType) {
           case 'MISSING_API_KEY':
-            errorMessage = 'API key not configured. Please set up in Advanced AI Settings.';
+            errorMessage =
+                'API key not configured. Please set up in Advanced AI Settings.';
             break;
           case 'RATE_LIMIT':
             errorMessage = 'Rate limit exceeded. Please wait and try again.';
@@ -253,7 +253,8 @@ class _GrammarPageState extends State<GrammarPage>
             errorMessage = 'Invalid API key. Please check your settings.';
             break;
           default:
-            errorMessage = normalizedResult['error']?.toString() ?? 'An error occurred';
+            errorMessage =
+                normalizedResult['error']?.toString() ?? 'An error occurred';
         }
         _lastErrorMessage = errorMessage;
         ScaffoldMessenger.of(context).showSnackBar(
@@ -265,11 +266,12 @@ class _GrammarPageState extends State<GrammarPage>
       if (cachedResult == null) {
         _cacheGrammarResult(cacheKey, normalizedResult);
       }
-      
+
       setState(() {
         _correctedText = normalizedResult['corrected_text'] ?? text;
         _errorCount = normalizedResult['error_count'] ?? 0;
-        _errors = List<Map<String, dynamic>>.from(normalizedResult['errors'] ?? []);
+        _errors =
+            List<Map<String, dynamic>>.from(normalizedResult['errors'] ?? []);
         _isChecking = false;
         _lastErrorMessage = null;
       });
@@ -306,7 +308,8 @@ class _GrammarPageState extends State<GrammarPage>
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Icon(Icons.warning_amber_rounded, size: 18, color: colorScheme.onErrorContainer),
+          Icon(Icons.warning_amber_rounded,
+              size: 18, color: colorScheme.onErrorContainer),
           const SizedBox(width: 8),
           Expanded(
             child: Text(
@@ -355,16 +358,17 @@ class _GrammarPageState extends State<GrammarPage>
                   color: colorScheme.error.withValues(alpha: 0.12),
                   borderRadius: BorderRadius.circular(6),
                 ),
-                child: Icon(Icons.close_rounded, size: 14, color: colorScheme.error),
+                child: Icon(Icons.close_rounded,
+                    size: 14, color: colorScheme.error),
               ),
               const SizedBox(width: 8),
               Expanded(
                 child: Text(
                   '${error['original']}',
                   style: Theme.of(context).textTheme.bodyMedium!.copyWith(
-                    decoration: TextDecoration.lineThrough,
-                    color: colorScheme.error,
-                  ),
+                        decoration: TextDecoration.lineThrough,
+                        color: colorScheme.error,
+                      ),
                 ),
               ),
             ],
@@ -381,16 +385,17 @@ class _GrammarPageState extends State<GrammarPage>
                   color: const Color(0xFF10B981).withValues(alpha: 0.12),
                   borderRadius: BorderRadius.circular(6),
                 ),
-                child: const Icon(Icons.check_rounded, size: 14, color: Color(0xFF10B981)),
+                child: const Icon(Icons.check_rounded,
+                    size: 14, color: Color(0xFF10B981)),
               ),
               const SizedBox(width: 8),
               Expanded(
                 child: Text(
                   '${error['correction']}',
                   style: Theme.of(context).textTheme.bodyMedium!.copyWith(
-                    fontWeight: FontWeight.w600,
-                    color: const Color(0xFF10B981),
-                  ),
+                        fontWeight: FontWeight.w600,
+                        color: const Color(0xFF10B981),
+                      ),
                 ),
               ),
             ],
@@ -406,14 +411,15 @@ class _GrammarPageState extends State<GrammarPage>
               child: Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Icon(CupertinoIcons.lightbulb, size: 14, color: colorScheme.primary),
+                  Icon(CupertinoIcons.lightbulb,
+                      size: 14, color: colorScheme.primary),
                   const SizedBox(width: 6),
                   Expanded(
                     child: Text(
                       '${error['explanation']}',
                       style: Theme.of(context).textTheme.bodySmall!.copyWith(
-                        color: colorScheme.onSurfaceVariant,
-                      ),
+                            color: colorScheme.onSurfaceVariant,
+                          ),
                     ),
                   ),
                 ],
@@ -441,13 +447,17 @@ class _GrammarPageState extends State<GrammarPage>
           children: [
             CustomAppBar(
               title: "Grammar Check",
-              leadingIcon: Icon(CupertinoIcons.checkmark_seal, color: colorScheme.error),
+              leadingIcon:
+                  Icon(CupertinoIcons.checkmark_seal, color: colorScheme.error),
               actions: [
                 if (!isLoggedIn)
                   CustomButton(
                     text: "Log in",
                     onPressed: () {
-                      Navigator.push(context, MaterialPageRoute(builder: (_) => const LoginScreen()));
+                      Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                              builder: (_) => const LoginScreen()));
                     },
                     height: r.h(36),
                     type: ButtonType.primary,
@@ -585,11 +595,15 @@ class _GrammarPageState extends State<GrammarPage>
                 width: 40,
                 height: 40,
                 decoration: BoxDecoration(
-                  color: _errorCount > 0 ? colorScheme.error : const Color(0xFF10B981),
+                  color: _errorCount > 0
+                      ? colorScheme.error
+                      : const Color(0xFF10B981),
                   borderRadius: BorderRadius.circular(12),
                 ),
                 child: Icon(
-                  _errorCount > 0 ? Icons.warning_amber_rounded : Icons.check_circle_rounded,
+                  _errorCount > 0
+                      ? Icons.warning_amber_rounded
+                      : Icons.check_circle_rounded,
                   size: 22,
                   color: Colors.white,
                 ),
@@ -600,16 +614,20 @@ class _GrammarPageState extends State<GrammarPage>
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      _errorCount > 0 ? '$_errorCount errors found' : 'Perfect!',
+                      _errorCount > 0
+                          ? '$_errorCount errors found'
+                          : 'Perfect!',
                       style: Theme.of(context).textTheme.titleSmall!.copyWith(
-                        fontWeight: FontWeight.bold,
-                      ),
+                            fontWeight: FontWeight.bold,
+                          ),
                     ),
                     Text(
-                      _errorCount > 0 ? 'Tap ✓ to apply all corrections' : 'No grammar errors detected',
+                      _errorCount > 0
+                          ? 'Tap ✓ to apply all corrections'
+                          : 'No grammar errors detected',
                       style: Theme.of(context).textTheme.bodySmall!.copyWith(
-                        color: colorScheme.onSurfaceVariant,
-                      ),
+                            color: colorScheme.onSurfaceVariant,
+                          ),
                     ),
                   ],
                 ),
@@ -661,8 +679,8 @@ class _GrammarPageState extends State<GrammarPage>
                   Text(
                     'Corrected Text',
                     style: Theme.of(context).textTheme.labelMedium!.copyWith(
-                      fontWeight: FontWeight.bold,
-                    ),
+                          fontWeight: FontWeight.bold,
+                        ),
                   ),
                   const SizedBox(height: 8),
                 ],
@@ -672,7 +690,8 @@ class _GrammarPageState extends State<GrammarPage>
                   decoration: BoxDecoration(
                     color: colorScheme.primaryContainer.withValues(alpha: 0.3),
                     borderRadius: BorderRadius.circular(16),
-                    border: Border.all(color: colorScheme.primary.withValues(alpha: 0.2)),
+                    border: Border.all(
+                        color: colorScheme.primary.withValues(alpha: 0.2)),
                   ),
                   child: SelectableText(
                     _correctedText,
@@ -718,7 +737,8 @@ class _GrammarPageState extends State<GrammarPage>
               ),
               if (_correctedText.isNotEmpty) ...[
                 SizedBox(width: r.w(8)),
-                _buildStatChip("Copy", Icons.copy_rounded, r, colorScheme.primary),
+                _buildStatChip(
+                    "Copy", Icons.copy_rounded, r, colorScheme.primary),
               ],
             ],
           ),
@@ -736,23 +756,28 @@ class _GrammarPageState extends State<GrammarPage>
     );
   }
 
-  Widget _buildStatChip(String label, IconData icon, ResponsiveData r, [Color? accentColor]) {
+  Widget _buildStatChip(String label, IconData icon, ResponsiveData r,
+      [Color? accentColor]) {
     final cs = Theme.of(context).colorScheme;
     final chipColor = accentColor ?? cs.onSurfaceVariant;
     final isActionChip = label == 'Copy';
     return GestureDetector(
-      onTap: isActionChip ? () {
-        Clipboard.setData(ClipboardData(text: _correctedText));
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Copied to clipboard')),
-        );
-      } : null,
+      onTap: isActionChip
+          ? () {
+              Clipboard.setData(ClipboardData(text: _correctedText));
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(content: Text('Copied to clipboard')),
+              );
+            }
+          : null,
       child: Container(
         padding: r.symmetric(horizontal: 12, vertical: 8),
         decoration: BoxDecoration(
           color: chipColor.withValues(alpha: 0.08),
           borderRadius: BorderRadius.circular(r.r(20)),
-          border: isActionChip ? Border.all(color: chipColor.withValues(alpha: 0.2)) : null,
+          border: isActionChip
+              ? Border.all(color: chipColor.withValues(alpha: 0.2))
+              : null,
         ),
         child: Row(
           mainAxisSize: MainAxisSize.min,
@@ -762,15 +787,14 @@ class _GrammarPageState extends State<GrammarPage>
             Text(
               label,
               style: Theme.of(context).textTheme.bodySmall!.copyWith(
-                fontSize: r.sp(11),
-                fontWeight: FontWeight.w600,
-                color: chipColor,
-              ),
+                    fontSize: r.sp(11),
+                    fontWeight: FontWeight.w600,
+                    color: chipColor,
+                  ),
             ),
           ],
         ),
       ),
     );
   }
-
 }

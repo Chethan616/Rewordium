@@ -66,7 +66,8 @@ class DefaultFirebaseOptions {
     messagingSenderId: '1046215732414',
     projectId: 'rewordium',
     storageBucket: 'rewordium.firebasestorage.app',
-    iosClientId: '1046215732414-dcm9ivr4tum4unhsc37truln5ud8lpb4.apps.googleusercontent.com',
+    iosClientId:
+        '1046215732414-dcm9ivr4tum4unhsc37truln5ud8lpb4.apps.googleusercontent.com',
     iosBundleId: 'com.example.ycStartup',
   );
 
@@ -76,8 +77,10 @@ class DefaultFirebaseOptions {
     messagingSenderId: '764897323980',
     projectId: 'yc-startup-yc',
     storageBucket: 'yc-startup-yc.firebasestorage.app',
-    androidClientId: '764897323980-anii47i8t0tl42ghjbe5noq94knno3pc.apps.googleusercontent.com',
-    iosClientId: '764897323980-6asarl1va57k8omfcoghefb7r2lfnrh2.apps.googleusercontent.com',
+    androidClientId:
+        '764897323980-anii47i8t0tl42ghjbe5noq94knno3pc.apps.googleusercontent.com',
+    iosClientId:
+        '764897323980-6asarl1va57k8omfcoghefb7r2lfnrh2.apps.googleusercontent.com',
     iosBundleId: 'com.example.ycStartup',
   );
 
@@ -90,5 +93,4 @@ class DefaultFirebaseOptions {
     storageBucket: 'yc-startup-yc.firebasestorage.app',
     measurementId: 'G-EGWKTMGRZP',
   );
-
 }

@@ -4,12 +4,11 @@ import 'package:rewordium/services/play_integrity_service.dart';
 import 'package:rewordium/utils/app_logger.dart';
 
 /// Example: How to use Play Integrity Service in your app
-/// 
+///
 /// This file demonstrates common use cases for the Play Integrity API.
 /// Copy these examples to where you need integrity checks in your app.
 
 class PlayIntegrityExamples {
-  
   /// Example 1: Check integrity on app startup (already done in main.dart)
   /// This is a passive check that runs in the background
   static Future<void> checkOnStartup() async {
@@ -25,13 +24,13 @@ class PlayIntegrityExamples {
   /// Use this before purchases, sensitive API calls, etc.
   static Future<bool> verifyBeforeCriticalOperation() async {
     final isValid = await PlayIntegrityService.checkIntegrity();
-    
+
     if (!isValid) {
       AppLogger.warning('Integrity check failed before critical operation');
       // Handle integrity failure (show warning, log event, etc.)
       return false;
     }
-    
+
     AppLogger.info('Integrity verified for critical operation');
     return true;
   }
@@ -39,13 +38,13 @@ class PlayIntegrityExamples {
   /// Example 3: Check integrity before in-app purchase
   static Future<bool> verifyBeforePurchase() async {
     final isSecure = await PlayIntegrityService.isDeviceSecure();
-    
+
     if (!isSecure) {
       // Show warning to user
       AppLogger.warning('Device security check failed before purchase');
       return false;
     }
-    
+
     // Proceed with purchase
     return true;
   }
@@ -54,14 +53,14 @@ class PlayIntegrityExamples {
   /// Use this for debugging or logging purposes
   static Future<void> getDetailedVerdict() async {
     final verdict = await PlayIntegrityService.getIntegrityVerdict();
-    
+
     if (verdict != null) {
       AppLogger.info('Integrity verdict: $verdict');
-      
+
       // You can log specific fields
       final hasToken = verdict['hasToken'] ?? false;
       final timestamp = verdict['timestamp'] ?? 0;
-      
+
       print('Has token: $hasToken');
       print('Timestamp: $timestamp');
     } else {
@@ -73,9 +72,9 @@ class PlayIntegrityExamples {
   static Future<void> showIntegrityDialog(BuildContext context) async {
     final isValid = await PlayIntegrityService.checkIntegrity();
     final isSecure = await PlayIntegrityService.isDeviceSecure();
-    
+
     if (!context.mounted) return;
-    
+
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
@@ -102,11 +101,11 @@ class PlayIntegrityExamples {
   /// Example 6: Periodic integrity check (e.g., every 24 hours)
   static Future<void> scheduledIntegrityCheck() async {
     final lastCheck = DateTime.now().subtract(const Duration(hours: 24));
-    
+
     // Check if 24 hours have passed since last check
     if (DateTime.now().difference(lastCheck).inHours >= 24) {
       final isValid = await PlayIntegrityService.checkIntegrity();
-      
+
       if (!isValid) {
         AppLogger.warning('Scheduled integrity check failed');
         // Handle failure (send analytics, show warning, etc.)
@@ -128,9 +127,9 @@ class PlayIntegrityExamples {
     );
 
     final isValid = await PlayIntegrityService.checkIntegrity();
-    
+
     if (!context.mounted) return false;
-    
+
     // Close loading indicator
     Navigator.pop(context);
 
@@ -138,7 +137,8 @@ class PlayIntegrityExamples {
       // Show error message
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text('Security verification failed. Some features may be limited.'),
+          content: Text(
+              'Security verification failed. Some features may be limited.'),
           backgroundColor: Colors.red,
         ),
       );

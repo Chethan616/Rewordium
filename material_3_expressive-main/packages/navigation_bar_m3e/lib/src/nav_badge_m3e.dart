@@ -42,7 +42,8 @@ class NavBadgeM3E extends StatelessWidget {
           right: offset.dx,
           top: offset.dy,
           child: Semantics(
-            label: semanticLabel ?? (count != null ? 'Notifications: ${count!}' : 'Notifications'),
+            label: semanticLabel ??
+                (count != null ? 'Notifications: ${count!}' : 'Notifications'),
             child: badge,
           ),
         ),
@@ -54,7 +55,8 @@ class NavBadgeM3E extends StatelessWidget {
 
   Widget _dot(Color bg) {
     return Container(
-      width: 8, height: 8,
+      width: 8,
+      height: 8,
       decoration: BoxDecoration(color: bg, shape: BoxShape.circle),
     );
   }
@@ -69,7 +71,8 @@ class NavBadgeM3E extends StatelessWidget {
       constraints: const BoxConstraints(minWidth: 18, minHeight: 18),
       child: DefaultTextStyle(
         style: const TextStyle(fontSize: 10, fontWeight: FontWeight.w600),
-        child: Text(text, textAlign: TextAlign.center, style: TextStyle(color: fg)),
+        child: Text(text,
+            textAlign: TextAlign.center, style: TextStyle(color: fg)),
       ),
     );
   }

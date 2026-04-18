@@ -169,49 +169,65 @@ class AuthProvider extends ChangeNotifier {
   }
 
   /// Activate Pro subscription from Google Play purchase
-  /// Called by BillingService when purchase is verified
+  /// Called by BillingService when purchase is verified.
+  ///
+  /// This project currently runs without deployed Cloud Functions, so we
+  /// persist subscription state directly in Firestore for the signed-in user.
   Future<void> activateProSubscription({
     required String planType,
     required String purchaseToken,
-    DateTime? expiryDate,
+    required String productId,
   }) async {
     if (_user == null) return;
 
+    if (purchaseToken.trim().isEmpty) {
+      debugPrint('❌ Missing purchase token, skipping subscription verification');
+      return;
+    }
+
     try {
+      final normalizedPlanType =
+          planType.toLowerCase().contains('year') ? 'yearly' : 'monthly';
+
       final now = DateTime.now();
-      final expiry = expiryDate ?? 
-          (planType == 'yearly' 
-              ? now.add(const Duration(days: 365))
-              : now.add(const Duration(days: 30)));
+      final expiryDate = normalizedPlanType == 'yearly'
+          ? DateTime(now.year + 1, now.month, now.day, now.hour, now.minute,
+              now.second)
+          : now.add(const Duration(days: 30));
 
-      await _firestore.collection('users').doc(_user!.uid).update({
+      await _firestore.collection('users').doc(_user!.uid).set({
         'isPro': true,
-        'planType': planType,
-        'subscription': {
-          'planType': planType,
-          'status': 'active',
-          'purchaseToken': purchaseToken,
-          'platform': 'google_play',
-          'startDate': Timestamp.fromDate(now),
-          'expiryDate': Timestamp.fromDate(expiry),
-        },
+        'planType': normalizedPlanType,
         'upgradedAt': FieldValue.serverTimestamp(),
-      });
+        'lastUpdated': FieldValue.serverTimestamp(),
+        'subscription': {
+          'planType': normalizedPlanType,
+          'status': 'active',
+          'platform': 'google_play',
+          'productId': productId,
+          'purchaseToken': purchaseToken,
+          'startDate': FieldValue.serverTimestamp(),
+          'lastVerifiedAt': FieldValue.serverTimestamp(),
+          'verificationSource': 'client_firestore_only',
+          'expiryDate': Timestamp.fromDate(expiryDate),
+        },
+      }, SetOptions(merge: true));
 
-      _isPro = true;
-      _planType = planType;
-      _credits = null; // Pro users have unlimited
-      await _updateNativeServiceStatus();
-      notifyListeners();
-      
-      debugPrint('✅ Pro subscription activated: $planType');
+      debugPrint(
+        '✅ Pro subscription activated via Firestore '
+        '(plan: $normalizedPlanType, expiry: $expiryDate)',
+      );
+
+      await _loadUserData();
     } catch (e) {
       debugPrint('❌ Error activating Pro subscription: $e');
+      await _loadUserData();
     }
   }
 
   Future<bool> signUpWithEmailAndPassword(
-      String email, String password, String name, {bool subscribedToNews = false}) async {
+      String email, String password, String name,
+      {bool subscribedToNews = false}) async {
     _isLoading = true;
     _error = null;
     notifyListeners();
@@ -234,7 +250,8 @@ class AuthProvider extends ChangeNotifier {
       }
 
       _user = await FirebaseService.signUpWithEmailAndPassword(
-          email.trim(), password, name.trim(), subscribedToNews: subscribedToNews);
+          email.trim(), password, name.trim(),
+          subscribedToNews: subscribedToNews);
 
       if (_user != null) {
         await _loadUserData();

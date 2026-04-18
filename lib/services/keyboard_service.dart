@@ -27,8 +27,7 @@ class KeyboardService {
   Future<bool> isKeyboardEnabled() async {
     if (!_isAndroid) return false;
     try {
-      final bool result =
-          await _channel.invokeMethod(_methodIsKeyboardEnabled);
+      final bool result = await _channel.invokeMethod(_methodIsKeyboardEnabled);
       return result;
     } on MissingPluginException {
       try {
@@ -73,10 +72,12 @@ class KeyboardService {
   }
 
   /// Open the system keyboard settings to enable the Rewordium Keyboard
-  Future<void> openKeyboardSettings() async {
+  Future<void> openKeyboardSettings({bool autoReturnToApp = false}) async {
     if (!_isAndroid) return;
     try {
-      await _channel.invokeMethod('openKeyboardSettings');
+      await _channel.invokeMethod('openKeyboardSettings', {
+        'autoReturnToApp': autoReturnToApp,
+      });
     } on MissingPluginException {
       return;
     } on PlatformException catch (e) {

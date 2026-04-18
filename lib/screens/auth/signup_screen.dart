@@ -117,7 +117,8 @@ class _SignupScreenState extends State<SignupScreen> {
       appBar: AppBar(
         backgroundColor: Colors.transparent,
         elevation: 0,
-        iconTheme: IconThemeData(color: Theme.of(context).colorScheme.onSurface),
+        iconTheme:
+            IconThemeData(color: Theme.of(context).colorScheme.onSurface),
         title: Text(
           'Create Account',
           style: Theme.of(context).textTheme.titleLarge!,
@@ -140,9 +141,12 @@ class _SignupScreenState extends State<SignupScreen> {
                   style: Theme.of(context).textTheme.bodyMedium!,
                   decoration: InputDecoration(
                     labelText: 'Full Name',
-                    labelStyle: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                      color: Theme.of(context).colorScheme.onSurfaceVariant,
-                    ),
+                    labelStyle: Theme.of(context)
+                        .textTheme
+                        .bodyMedium
+                        ?.copyWith(
+                          color: Theme.of(context).colorScheme.onSurfaceVariant,
+                        ),
                     prefixIcon: Icon(
                       CupertinoIcons.person,
                       color: Theme.of(context).colorScheme.primary,
@@ -153,7 +157,10 @@ class _SignupScreenState extends State<SignupScreen> {
                     enabledBorder: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(16),
                       borderSide: BorderSide(
-                        color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.3),
+                        color: Theme.of(context)
+                            .colorScheme
+                            .primary
+                            .withValues(alpha: 0.3),
                       ),
                     ),
                     focusedBorder: OutlineInputBorder(
@@ -175,9 +182,12 @@ class _SignupScreenState extends State<SignupScreen> {
                   style: Theme.of(context).textTheme.bodyMedium!,
                   decoration: InputDecoration(
                     labelText: 'Email',
-                    labelStyle: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                      color: Theme.of(context).colorScheme.onSurfaceVariant,
-                    ),
+                    labelStyle: Theme.of(context)
+                        .textTheme
+                        .bodyMedium
+                        ?.copyWith(
+                          color: Theme.of(context).colorScheme.onSurfaceVariant,
+                        ),
                     prefixIcon: Icon(
                       CupertinoIcons.mail,
                       color: Theme.of(context).colorScheme.primary,
@@ -188,7 +198,10 @@ class _SignupScreenState extends State<SignupScreen> {
                     enabledBorder: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(16),
                       borderSide: BorderSide(
-                        color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.3),
+                        color: Theme.of(context)
+                            .colorScheme
+                            .primary
+                            .withValues(alpha: 0.3),
                       ),
                     ),
                     focusedBorder: OutlineInputBorder(
@@ -210,9 +223,12 @@ class _SignupScreenState extends State<SignupScreen> {
                   style: Theme.of(context).textTheme.bodyMedium!,
                   decoration: InputDecoration(
                     labelText: 'Password',
-                    labelStyle: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                      color: Theme.of(context).colorScheme.onSurfaceVariant,
-                    ),
+                    labelStyle: Theme.of(context)
+                        .textTheme
+                        .bodyMedium
+                        ?.copyWith(
+                          color: Theme.of(context).colorScheme.onSurfaceVariant,
+                        ),
                     prefixIcon: Icon(
                       CupertinoIcons.lock,
                       color: Theme.of(context).colorScheme.primary,
@@ -236,7 +252,10 @@ class _SignupScreenState extends State<SignupScreen> {
                     enabledBorder: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(16),
                       borderSide: BorderSide(
-                        color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.3),
+                        color: Theme.of(context)
+                            .colorScheme
+                            .primary
+                            .withValues(alpha: 0.3),
                       ),
                     ),
                     focusedBorder: OutlineInputBorder(
@@ -258,9 +277,12 @@ class _SignupScreenState extends State<SignupScreen> {
                   style: Theme.of(context).textTheme.bodyMedium!,
                   decoration: InputDecoration(
                     labelText: 'Confirm Password',
-                    labelStyle: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                      color: Theme.of(context).colorScheme.onSurfaceVariant,
-                    ),
+                    labelStyle: Theme.of(context)
+                        .textTheme
+                        .bodyMedium
+                        ?.copyWith(
+                          color: Theme.of(context).colorScheme.onSurfaceVariant,
+                        ),
                     prefixIcon: Icon(
                       CupertinoIcons.lock,
                       color: Theme.of(context).colorScheme.primary,
@@ -284,7 +306,10 @@ class _SignupScreenState extends State<SignupScreen> {
                     enabledBorder: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(16),
                       borderSide: BorderSide(
-                        color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.3),
+                        color: Theme.of(context)
+                            .colorScheme
+                            .primary
+                            .withValues(alpha: 0.3),
                       ),
                     ),
                     focusedBorder: OutlineInputBorder(
@@ -301,10 +326,16 @@ class _SignupScreenState extends State<SignupScreen> {
                 // Newsletter subscription checkbox
                 Container(
                   decoration: BoxDecoration(
-                    color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.05),
+                    color: Theme.of(context)
+                        .colorScheme
+                        .primary
+                        .withValues(alpha: 0.05),
                     borderRadius: BorderRadius.circular(12),
                     border: Border.all(
-                      color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.2),
+                      color: Theme.of(context)
+                          .colorScheme
+                          .primary
+                          .withValues(alpha: 0.2),
                     ),
                   ),
                   child: CheckboxListTile(
@@ -317,20 +348,22 @@ class _SignupScreenState extends State<SignupScreen> {
                     title: Text(
                       'Subscribe to news & updates',
                       style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                        fontWeight: FontWeight.w500,
-                      ),
+                            fontWeight: FontWeight.w500,
+                          ),
                     ),
                     subtitle: Text(
                       'Get notified about new features, tips, and special offers',
                       style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                        color: Theme.of(context).colorScheme.onSurfaceVariant,
-                      ),
+                            color:
+                                Theme.of(context).colorScheme.onSurfaceVariant,
+                          ),
                     ),
                     activeColor: Theme.of(context).colorScheme.primary,
                     checkboxShape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(4),
                     ),
-                    contentPadding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                    contentPadding:
+                        const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                     controlAffinity: ListTileControlAffinity.leading,
                   ),
                 ),
@@ -353,8 +386,10 @@ class _SignupScreenState extends State<SignupScreen> {
                       Text(
                         'By creating an account, you agree to our',
                         style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                          color: Theme.of(context).colorScheme.onSurfaceVariant,
-                        ),
+                              color: Theme.of(context)
+                                  .colorScheme
+                                  .onSurfaceVariant,
+                            ),
                         textAlign: TextAlign.center,
                       ),
                       const SizedBox(height: 8),
@@ -379,18 +414,24 @@ class _SignupScreenState extends State<SignupScreen> {
                               decoration: BoxDecoration(
                                 border: Border(
                                   bottom: BorderSide(
-                                    color:
-                                        Theme.of(context).colorScheme.primary.withValues(alpha: 0.5),
+                                    color: Theme.of(context)
+                                        .colorScheme
+                                        .primary
+                                        .withValues(alpha: 0.5),
                                     width: 1,
                                   ),
                                 ),
                               ),
                               child: Text(
                                 'Terms & Conditions',
-                                style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                                  color: Theme.of(context).colorScheme.primary,
-                                  fontWeight: FontWeight.w600,
-                                ),
+                                style: Theme.of(context)
+                                    .textTheme
+                                    .bodySmall
+                                    ?.copyWith(
+                                      color:
+                                          Theme.of(context).colorScheme.primary,
+                                      fontWeight: FontWeight.w600,
+                                    ),
                               ),
                             ),
                           ),
@@ -398,9 +439,14 @@ class _SignupScreenState extends State<SignupScreen> {
                             padding: const EdgeInsets.symmetric(horizontal: 8),
                             child: Text(
                               'and',
-                              style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                                color: Theme.of(context).colorScheme.onSurfaceVariant,
-                              ),
+                              style: Theme.of(context)
+                                  .textTheme
+                                  .bodySmall
+                                  ?.copyWith(
+                                    color: Theme.of(context)
+                                        .colorScheme
+                                        .onSurfaceVariant,
+                                  ),
                             ),
                           ),
                           GestureDetector(
@@ -421,18 +467,24 @@ class _SignupScreenState extends State<SignupScreen> {
                               decoration: BoxDecoration(
                                 border: Border(
                                   bottom: BorderSide(
-                                    color:
-                                        Theme.of(context).colorScheme.primary.withValues(alpha: 0.5),
+                                    color: Theme.of(context)
+                                        .colorScheme
+                                        .primary
+                                        .withValues(alpha: 0.5),
                                     width: 1,
                                   ),
                                 ),
                               ),
                               child: Text(
                                 'Privacy Policy',
-                                style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                                  color: Theme.of(context).colorScheme.primary,
-                                  fontWeight: FontWeight.w600,
-                                ),
+                                style: Theme.of(context)
+                                    .textTheme
+                                    .bodySmall
+                                    ?.copyWith(
+                                      color:
+                                          Theme.of(context).colorScheme.primary,
+                                      fontWeight: FontWeight.w600,
+                                    ),
                               ),
                             ),
                           ),
@@ -442,10 +494,16 @@ class _SignupScreenState extends State<SignupScreen> {
                       Container(
                         padding: const EdgeInsets.all(12),
                         decoration: BoxDecoration(
-                          color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.05),
+                          color: Theme.of(context)
+                              .colorScheme
+                              .primary
+                              .withValues(alpha: 0.05),
                           borderRadius: BorderRadius.circular(8),
                           border: Border.all(
-                            color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.1),
+                            color: Theme.of(context)
+                                .colorScheme
+                                .primary
+                                .withValues(alpha: 0.1),
                           ),
                         ),
                         child: Row(
@@ -459,10 +517,14 @@ class _SignupScreenState extends State<SignupScreen> {
                             Expanded(
                               child: Text(
                                 'Your privacy matters. We protect your data with industry-standard security.',
-                                style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                                  color: Theme.of(context).colorScheme.primary,
-                                  fontWeight: FontWeight.w500,
-                                ),
+                                style: Theme.of(context)
+                                    .textTheme
+                                    .bodySmall
+                                    ?.copyWith(
+                                      color:
+                                          Theme.of(context).colorScheme.primary,
+                                      fontWeight: FontWeight.w500,
+                                    ),
                               ),
                             ),
                           ],
@@ -488,9 +550,9 @@ class _SignupScreenState extends State<SignupScreen> {
                       child: Text(
                         'Login',
                         style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                          color: Theme.of(context).colorScheme.primary,
-                          fontWeight: FontWeight.bold,
-                        ),
+                              color: Theme.of(context).colorScheme.primary,
+                              fontWeight: FontWeight.bold,
+                            ),
                       ),
                     ),
                   ],

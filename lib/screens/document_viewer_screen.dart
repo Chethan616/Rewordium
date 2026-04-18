@@ -126,15 +126,17 @@ class _DocumentViewerScreenState extends State<DocumentViewerScreen> {
             break;
           }
           _resultText = result['paraphrased_text'] as String? ?? text;
-          _diffSegments =
-              TextDiffService.computeWordDiff(text, _resultText!);
+          _diffSegments = TextDiffService.computeWordDiff(text, _resultText!);
           _annotationMode = AnnotationMode.paraphraseDiff;
           break;
 
         case 'translate':
           final targetLang = await _showLanguagePicker();
           if (targetLang == null || !mounted) {
-            setState(() { _isProcessing = false; _selectedTool = null; });
+            setState(() {
+              _isProcessing = false;
+              _selectedTool = null;
+            });
             return;
           }
           final result = useChunking
@@ -165,7 +167,8 @@ class _DocumentViewerScreenState extends State<DocumentViewerScreen> {
 
         case 'tone':
           final result = useChunking
-              ? await DocumentChunkingService.editToneLarge(text, 'professional')
+              ? await DocumentChunkingService.editToneLarge(
+                  text, 'professional')
               : await UnifiedAIService.editTone(text, 'professional');
           if (!mounted) return;
           if (result.containsKey('error')) {
@@ -173,8 +176,7 @@ class _DocumentViewerScreenState extends State<DocumentViewerScreen> {
             break;
           }
           _resultText = result['edited_text'] as String? ?? text;
-          _diffSegments =
-              TextDiffService.computeWordDiff(text, _resultText!);
+          _diffSegments = TextDiffService.computeWordDiff(text, _resultText!);
           _annotationMode = AnnotationMode.paraphraseDiff;
           break;
 
@@ -183,7 +185,8 @@ class _DocumentViewerScreenState extends State<DocumentViewerScreen> {
               ? await DocumentChunkingService.detectAILarge(text)
               : await UnifiedAIService.detectAIText(text);
           if (!mounted) return;
-          if (result.containsKey('error') && !result.containsKey('confidence')) {
+          if (result.containsKey('error') &&
+              !result.containsKey('confidence')) {
             _showError(result['error'].toString());
             break;
           }
@@ -205,7 +208,8 @@ class _DocumentViewerScreenState extends State<DocumentViewerScreen> {
   void _showError(String msg) {
     setState(() => _isProcessing = false);
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text('Error: $msg'), duration: const Duration(seconds: 3)),
+      SnackBar(
+          content: Text('Error: $msg'), duration: const Duration(seconds: 3)),
     );
   }
 
@@ -243,18 +247,21 @@ class _DocumentViewerScreenState extends State<DocumentViewerScreen> {
     // Try sentence-level data first
     final sentences = result['sentences'] as List?;
     if (sentences != null && sentences.isNotEmpty) {
-      return sentences.map((s) {
-        final sentText = s['text'] as String? ?? '';
-        final score = (s['ai_score'] as num?)?.toDouble() ?? 0.5;
-        final offsets = TextDiffService.findFragmentOffsets(text, sentText);
-        if (offsets.isEmpty) return null;
-        return AIDetectionAnnotation(
-          start: offsets.first.$1,
-          end: offsets.first.$2,
-          aiScore: score,
-          text: sentText,
-        );
-      }).whereType<AIDetectionAnnotation>().toList();
+      return sentences
+          .map((s) {
+            final sentText = s['text'] as String? ?? '';
+            final score = (s['ai_score'] as num?)?.toDouble() ?? 0.5;
+            final offsets = TextDiffService.findFragmentOffsets(text, sentText);
+            if (offsets.isEmpty) return null;
+            return AIDetectionAnnotation(
+              start: offsets.first.$1,
+              end: offsets.first.$2,
+              aiScore: score,
+              text: sentText,
+            );
+          })
+          .whereType<AIDetectionAnnotation>()
+          .toList();
     }
 
     // Fallback: highlight entire text with document-level score
@@ -312,10 +319,26 @@ class _DocumentViewerScreenState extends State<DocumentViewerScreen> {
 
   Future<String?> _showLanguagePicker() async {
     const languages = [
-      'Spanish', 'French', 'German', 'Italian', 'Portuguese',
-      'Russian', 'Japanese', 'Chinese', 'Korean', 'Arabic',
-      'Hindi', 'Dutch', 'Swedish', 'Greek', 'Turkish',
-      'Polish', 'Vietnamese', 'Thai', 'Indonesian', 'Hebrew',
+      'Spanish',
+      'French',
+      'German',
+      'Italian',
+      'Portuguese',
+      'Russian',
+      'Japanese',
+      'Chinese',
+      'Korean',
+      'Arabic',
+      'Hindi',
+      'Dutch',
+      'Swedish',
+      'Greek',
+      'Turkish',
+      'Polish',
+      'Vietnamese',
+      'Thai',
+      'Indonesian',
+      'Hebrew',
     ];
     return showModalBottomSheet<String>(
       context: context,
@@ -331,7 +354,8 @@ class _DocumentViewerScreenState extends State<DocumentViewerScreen> {
             children: [
               const SizedBox(height: 12),
               Container(
-                width: 36, height: 5,
+                width: 36,
+                height: 5,
                 decoration: BoxDecoration(
                   color: colorScheme.onSurfaceVariant.withValues(alpha: 0.3),
                   borderRadius: BorderRadius.circular(3),
@@ -439,7 +463,8 @@ class _DocumentViewerScreenState extends State<DocumentViewerScreen> {
               color: colorScheme.primaryContainer,
               borderRadius: BorderRadius.circular(8),
             ),
-            child: Icon(typeIcon, size: 16, color: colorScheme.onPrimaryContainer),
+            child:
+                Icon(typeIcon, size: 16, color: colorScheme.onPrimaryContainer),
           ),
           const SizedBox(width: 10),
           Expanded(
@@ -449,18 +474,18 @@ class _DocumentViewerScreenState extends State<DocumentViewerScreen> {
                 Text(
                   widget.document.title ?? 'Document',
                   style: Theme.of(context).textTheme.bodyLarge!.copyWith(
-                    fontWeight: FontWeight.w700,
-                    fontSize: 14,
-                  ),
+                        fontWeight: FontWeight.w700,
+                        fontSize: 14,
+                      ),
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                 ),
                 Text(
                   '${widget.document.wordCount} words · ${widget.document.pageCount} pg',
                   style: Theme.of(context).textTheme.bodySmall!.copyWith(
-                    color: colorScheme.onSurfaceVariant,
-                    fontSize: 11,
-                  ),
+                        color: colorScheme.onSurfaceVariant,
+                        fontSize: 11,
+                      ),
                 ),
               ],
             ),
@@ -505,14 +530,15 @@ class _DocumentViewerScreenState extends State<DocumentViewerScreen> {
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
               Icon(CupertinoIcons.doc_richtext,
-                  size: 14, color: Theme.of(context).colorScheme.onSurfaceVariant),
+                  size: 14,
+                  color: Theme.of(context).colorScheme.onSurfaceVariant),
               const SizedBox(width: 6),
               Text(
                 'Page ${_currentPage + 1} of ${paths.length}',
                 style: Theme.of(context).textTheme.bodySmall!.copyWith(
-                  fontWeight: FontWeight.w600,
-                  color: Theme.of(context).colorScheme.onSurfaceVariant,
-                ),
+                      fontWeight: FontWeight.w600,
+                      color: Theme.of(context).colorScheme.onSurfaceVariant,
+                    ),
               ),
             ],
           ),
@@ -531,7 +557,8 @@ class _DocumentViewerScreenState extends State<DocumentViewerScreen> {
                   borderRadius: BorderRadius.circular(12),
                   boxShadow: [
                     BoxShadow(
-                      color: Theme.of(context).shadowColor.withValues(alpha: 0.1),
+                      color:
+                          Theme.of(context).shadowColor.withValues(alpha: 0.1),
                       blurRadius: 12,
                       offset: const Offset(0, 4),
                     ),
@@ -566,13 +593,14 @@ class _DocumentViewerScreenState extends State<DocumentViewerScreen> {
           mainAxisSize: MainAxisSize.min,
           children: [
             Icon(CupertinoIcons.doc_text,
-                size: 48, color: Theme.of(context).colorScheme.onSurfaceVariant),
+                size: 48,
+                color: Theme.of(context).colorScheme.onSurfaceVariant),
             const SizedBox(height: 12),
             Text(
               'No text could be extracted',
               style: Theme.of(context).textTheme.bodyMedium!.copyWith(
-                color: Theme.of(context).colorScheme.onSurfaceVariant,
-              ),
+                    color: Theme.of(context).colorScheme.onSurfaceVariant,
+                  ),
             ),
           ],
         ),
@@ -639,14 +667,23 @@ class _DocumentViewerScreenState extends State<DocumentViewerScreen> {
                     child: Row(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-                        Icon(CupertinoIcons.doc_text, size: 14,
-                          color: _splitTab == 0 ? colorScheme.onPrimaryContainer : colorScheme.onSurfaceVariant),
+                        Icon(CupertinoIcons.doc_text,
+                            size: 14,
+                            color: _splitTab == 0
+                                ? colorScheme.onPrimaryContainer
+                                : colorScheme.onSurfaceVariant),
                         const SizedBox(width: 6),
-                        Text('Original',
-                          style: Theme.of(context).textTheme.labelMedium!.copyWith(
-                            fontWeight: _splitTab == 0 ? FontWeight.w700 : FontWeight.w500,
-                            color: _splitTab == 0 ? colorScheme.onPrimaryContainer : colorScheme.onSurfaceVariant,
-                          ),
+                        Text(
+                          'Original',
+                          style:
+                              Theme.of(context).textTheme.labelMedium!.copyWith(
+                                    fontWeight: _splitTab == 0
+                                        ? FontWeight.w700
+                                        : FontWeight.w500,
+                                    color: _splitTab == 0
+                                        ? colorScheme.onPrimaryContainer
+                                        : colorScheme.onSurfaceVariant,
+                                  ),
                         ),
                       ],
                     ),
@@ -669,14 +706,23 @@ class _DocumentViewerScreenState extends State<DocumentViewerScreen> {
                     child: Row(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-                        Icon(CupertinoIcons.sparkles, size: 14,
-                          color: _splitTab == 1 ? colorScheme.onPrimaryContainer : colorScheme.onSurfaceVariant),
+                        Icon(CupertinoIcons.sparkles,
+                            size: 14,
+                            color: _splitTab == 1
+                                ? colorScheme.onPrimaryContainer
+                                : colorScheme.onSurfaceVariant),
                         const SizedBox(width: 6),
-                        Text(_toolResultLabel(_selectedTool ?? ''),
-                          style: Theme.of(context).textTheme.labelMedium!.copyWith(
-                            fontWeight: _splitTab == 1 ? FontWeight.w700 : FontWeight.w500,
-                            color: _splitTab == 1 ? colorScheme.onPrimaryContainer : colorScheme.onSurfaceVariant,
-                          ),
+                        Text(
+                          _toolResultLabel(_selectedTool ?? ''),
+                          style:
+                              Theme.of(context).textTheme.labelMedium!.copyWith(
+                                    fontWeight: _splitTab == 1
+                                        ? FontWeight.w700
+                                        : FontWeight.w500,
+                                    color: _splitTab == 1
+                                        ? colorScheme.onPrimaryContainer
+                                        : colorScheme.onSurfaceVariant,
+                                  ),
                         ),
                       ],
                     ),
@@ -702,11 +748,14 @@ class _DocumentViewerScreenState extends State<DocumentViewerScreen> {
                           const SizedBox(height: 12),
                           SelectableText(
                             widget.document.text,
-                            style: Theme.of(context).textTheme.bodyMedium!.copyWith(
-                              fontSize: 13,
-                              height: 1.6,
-                              color: colorScheme.onSurfaceVariant,
-                            ),
+                            style: Theme.of(context)
+                                .textTheme
+                                .bodyMedium!
+                                .copyWith(
+                                  fontSize: 13,
+                                  height: 1.6,
+                                  color: colorScheme.onSurfaceVariant,
+                                ),
                           ),
                         ],
                       ),
@@ -723,10 +772,13 @@ class _DocumentViewerScreenState extends State<DocumentViewerScreen> {
                           const SizedBox(height: 12),
                           SelectableText(
                             _resultText!,
-                            style: Theme.of(context).textTheme.bodyMedium!.copyWith(
-                              fontSize: 14,
-                              height: 1.7,
-                            ),
+                            style: Theme.of(context)
+                                .textTheme
+                                .bodyMedium!
+                                .copyWith(
+                                  fontSize: 14,
+                                  height: 1.7,
+                                ),
                           ),
                         ],
                       ),
@@ -777,7 +829,8 @@ class _DocumentViewerScreenState extends State<DocumentViewerScreen> {
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
       decoration: BoxDecoration(
         color: bannerColor.withValues(alpha: 0.08),
-        border: Border(bottom: BorderSide(color: bannerColor.withValues(alpha: 0.15))),
+        border: Border(
+            bottom: BorderSide(color: bannerColor.withValues(alpha: 0.15))),
       ),
       child: Row(
         children: [
@@ -787,19 +840,22 @@ class _DocumentViewerScreenState extends State<DocumentViewerScreen> {
             child: Text(
               bannerText,
               style: Theme.of(context).textTheme.bodySmall!.copyWith(
-                color: bannerColor,
-                fontWeight: FontWeight.w600,
-                fontSize: 12,
-              ),
+                    color: bannerColor,
+                    fontWeight: FontWeight.w600,
+                    fontSize: 12,
+                  ),
             ),
           ),
           if (_resultText != null)
             IconButtonM3E(
-              icon: Icon(CupertinoIcons.doc_on_clipboard, size: 16, color: bannerColor),
+              icon: Icon(CupertinoIcons.doc_on_clipboard,
+                  size: 16, color: bannerColor),
               onPressed: () {
                 Clipboard.setData(ClipboardData(text: _resultText!));
                 ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('Result copied'), duration: Duration(seconds: 1)),
+                  const SnackBar(
+                      content: Text('Result copied'),
+                      duration: Duration(seconds: 1)),
                 );
               },
               variant: IconButtonM3EVariant.standard,
@@ -832,10 +888,10 @@ class _DocumentViewerScreenState extends State<DocumentViewerScreen> {
           Text(
             _processingLabel,
             style: Theme.of(context).textTheme.bodySmall!.copyWith(
-              color: Theme.of(context).colorScheme.primary,
-              fontWeight: FontWeight.w600,
-              fontSize: 12,
-            ),
+                  color: Theme.of(context).colorScheme.primary,
+                  fontWeight: FontWeight.w600,
+                  fontSize: 12,
+                ),
           ),
         ],
       ),
@@ -865,16 +921,19 @@ class _DocumentViewerScreenState extends State<DocumentViewerScreen> {
             children: [
               _buildToolChip('grammar', 'Grammar', CupertinoIcons.textformat,
                   const Color(0xFFEF4444)),
-              _buildToolChip('paraphrase', 'Paraphrase',
-                  CupertinoIcons.arrow_2_squarepath, Theme.of(context).colorScheme.primary),
-              _buildToolChip('translate', 'Translate',
-                  CupertinoIcons.globe, const Color(0xFF3B82F6)),
+              _buildToolChip(
+                  'paraphrase',
+                  'Paraphrase',
+                  CupertinoIcons.arrow_2_squarepath,
+                  Theme.of(context).colorScheme.primary),
+              _buildToolChip('translate', 'Translate', CupertinoIcons.globe,
+                  const Color(0xFF3B82F6)),
               _buildToolChip('summarize', 'Summarize',
                   CupertinoIcons.text_justify, const Color(0xFFF59E0B)),
-              _buildToolChip('tone', 'Tone',
-                  CupertinoIcons.slider_horizontal_3, const Color(0xFF8B5CF6)),
-              _buildToolChip('ai_detect', 'AI Detect',
-                  CupertinoIcons.sparkles, const Color(0xFFEC4899)),
+              _buildToolChip('tone', 'Tone', CupertinoIcons.slider_horizontal_3,
+                  const Color(0xFF8B5CF6)),
+              _buildToolChip('ai_detect', 'AI Detect', CupertinoIcons.sparkles,
+                  const Color(0xFFEC4899)),
             ],
           ),
         ),
@@ -907,14 +966,18 @@ class _DocumentViewerScreenState extends State<DocumentViewerScreen> {
                     : colorScheme.surfaceContainer,
             borderRadius: BorderRadius.circular(24),
             border: Border.all(
-              color: isActive ? color : colorScheme.outlineVariant.withValues(alpha: 0.5),
+              color: isActive
+                  ? color
+                  : colorScheme.outlineVariant.withValues(alpha: 0.5),
               width: isActive ? 1.5 : 1,
             ),
           ),
           child: Row(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Icon(icon, size: 15, color: isActive ? color : colorScheme.onSurfaceVariant),
+              Icon(icon,
+                  size: 15,
+                  color: isActive ? color : colorScheme.onSurfaceVariant),
               const SizedBox(width: 6),
               Text(
                 label,
@@ -962,7 +1025,8 @@ class _DocumentViewerScreenState extends State<DocumentViewerScreen> {
       decoration: BoxDecoration(
         color: colorScheme.surface,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: colorScheme.outlineVariant.withValues(alpha: 0.3)),
+        border: Border.all(
+            color: colorScheme.outlineVariant.withValues(alpha: 0.3)),
         boxShadow: [
           BoxShadow(
             color: Colors.black.withValues(alpha: 0.04),
@@ -976,8 +1040,7 @@ class _DocumentViewerScreenState extends State<DocumentViewerScreen> {
   }
 
   Widget _buildDocHeader(String text) {
-    final wc =
-        text.split(RegExp(r'\s+')).where((w) => w.isNotEmpty).length;
+    final wc = text.split(RegExp(r'\s+')).where((w) => w.isNotEmpty).length;
     return Row(
       children: [
         Icon(CupertinoIcons.text_alignleft,
@@ -986,9 +1049,9 @@ class _DocumentViewerScreenState extends State<DocumentViewerScreen> {
         Text(
           '$wc words',
           style: Theme.of(context).textTheme.bodySmall!.copyWith(
-            color: Theme.of(context).colorScheme.onSurfaceVariant,
-            fontSize: 12,
-          ),
+                color: Theme.of(context).colorScheme.onSurfaceVariant,
+                fontSize: 12,
+              ),
         ),
         const Spacer(),
         GestureDetector(
@@ -996,8 +1059,7 @@ class _DocumentViewerScreenState extends State<DocumentViewerScreen> {
             Clipboard.setData(ClipboardData(text: text));
             ScaffoldMessenger.of(context).showSnackBar(
               const SnackBar(
-                  content: Text('Copied'),
-                  duration: Duration(seconds: 1)),
+                  content: Text('Copied'), duration: Duration(seconds: 1)),
             );
           },
           child: Row(

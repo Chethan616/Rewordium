@@ -22,8 +22,8 @@ class TermsConditionsScreen extends StatelessWidget {
         title: Text(
           'Terms & Conditions',
           style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-            fontWeight: FontWeight.w700,
-          ),
+                fontWeight: FontWeight.w700,
+              ),
         ),
         centerTitle: true,
       ),
@@ -35,16 +35,16 @@ class TermsConditionsScreen extends StatelessWidget {
             Text(
               'Terms and Conditions',
               style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-                fontWeight: FontWeight.w900,
-                color: Theme.of(context).colorScheme.primary,
-              ),
+                    fontWeight: FontWeight.w900,
+                    color: Theme.of(context).colorScheme.primary,
+                  ),
             ),
             const SizedBox(height: 8),
             Text(
               'Last updated: ${DateTime.now().toString().split(' ')[0]}',
               style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                color: Theme.of(context).colorScheme.onSurfaceVariant,
-              ),
+                    color: Theme.of(context).colorScheme.onSurfaceVariant,
+                  ),
             ),
             const SizedBox(height: 24),
             _buildSection(
@@ -227,18 +227,24 @@ We will respond to inquiries within 48 hours during business days.''',
             Container(
               padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
-                color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.1),
+                color: Theme.of(context)
+                    .colorScheme
+                    .primary
+                    .withValues(alpha: 0.1),
                 borderRadius: BorderRadius.circular(12),
                 border: Border.all(
-                  color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.2),
+                  color: Theme.of(context)
+                      .colorScheme
+                      .primary
+                      .withValues(alpha: 0.2),
                 ),
               ),
               child: Text(
                 'By using Rewordium, you acknowledge that you have read, understood, and agree to be bound by these Terms and Conditions.',
                 style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                  fontWeight: FontWeight.w600,
-                  color: Theme.of(context).colorScheme.primary,
-                ),
+                      fontWeight: FontWeight.w600,
+                      color: Theme.of(context).colorScheme.primary,
+                    ),
                 textAlign: TextAlign.center,
               ),
             ),
@@ -249,24 +255,27 @@ We will respond to inquiries within 48 hours during business days.''',
     );
   }
 
-  Widget _buildSection({required BuildContext context, required String title, required String content}) {
+  Widget _buildSection(
+      {required BuildContext context,
+      required String title,
+      required String content}) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
           title,
           style: Theme.of(context).textTheme.titleLarge?.copyWith(
-            fontWeight: FontWeight.w700,
-            color: Theme.of(context).colorScheme.primary,
-          ),
+                fontWeight: FontWeight.w700,
+                color: Theme.of(context).colorScheme.primary,
+              ),
         ),
         const SizedBox(height: 12),
         Text(
           content,
           style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-            height: 1.6,
-            color: Theme.of(context).colorScheme.onSurface,
-          ),
+                height: 1.6,
+                color: Theme.of(context).colorScheme.onSurface,
+              ),
         ),
         const SizedBox(height: 24),
       ],

@@ -53,7 +53,8 @@ class GroqService {
       // Get the API key from .env
       final envApiKey = dotenv.env['GROQ_API_KEY'] ?? '';
       if (kDebugMode) {
-        print('Initializing Groq service with key starting with: ${envApiKey.isNotEmpty ? envApiKey.substring(0, 5) : "empty"}...');
+        print(
+            'Initializing Groq service with key starting with: ${envApiKey.isNotEmpty ? envApiKey.substring(0, 5) : "empty"}...');
       }
 
       // Store API key securely
@@ -74,7 +75,8 @@ class GroqService {
         if (kDebugMode) print('Warning: Groq API key is empty');
       } else if (!apiKey.startsWith('gsk_')) {
         if (kDebugMode) {
-          print('Warning: Groq API key format may be incorrect. Keys should start with "gsk_"');
+          print(
+              'Warning: Groq API key format may be incorrect. Keys should start with "gsk_"');
         }
       }
 

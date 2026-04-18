@@ -171,7 +171,8 @@ class VersionService {
       final config = await getUpdateConfig();
       final String url;
       if (Platform.isIOS) {
-        url = 'https://apps.apple.com/app/id0000000000'; // placeholder until App Store listing
+        url =
+            'https://apps.apple.com/app/id0000000000'; // placeholder until App Store listing
       } else {
         url = config.playStoreUrl.isNotEmpty
             ? config.playStoreUrl

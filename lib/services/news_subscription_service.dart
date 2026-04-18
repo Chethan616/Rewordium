@@ -353,7 +353,8 @@ class _NewsSubscriptionDialogState extends State<NewsSubscriptionDialog> {
                       width: 16,
                       height: 16,
                       child: LoadingIndicatorM3E(
-                        constraints: BoxConstraints(maxWidth: 16, maxHeight: 16),
+                        constraints:
+                            BoxConstraints(maxWidth: 16, maxHeight: 16),
                       ),
                     )
                   : const Icon(Icons.mail, size: 18),

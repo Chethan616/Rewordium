@@ -1,7 +1,7 @@
 import 'package:flutter/foundation.dart';
 
 /// Application-wide logging utility that respects debug/release mode.
-/// 
+///
 /// In release mode, most logs are suppressed to avoid cluttering the console
 /// and improve performance. Only critical errors are logged in release mode.
 class AppLogger {

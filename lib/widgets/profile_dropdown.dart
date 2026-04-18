@@ -51,9 +51,11 @@ class ProfileDropdown extends StatelessWidget {
                 child: CircleAvatar(
                   radius: 40,
                   backgroundColor: colorScheme.surface,
-                  backgroundImage: photoUrl != null ? NetworkImage(photoUrl) : null,
+                  backgroundImage:
+                      photoUrl != null ? NetworkImage(photoUrl) : null,
                   child: photoUrl == null
-                      ? Icon(CupertinoIcons.person_fill, size: 36, color: colorScheme.primary)
+                      ? Icon(CupertinoIcons.person_fill,
+                          size: 36, color: colorScheme.primary)
                       : null,
                 ),
               ),
@@ -62,8 +64,8 @@ class ProfileDropdown extends StatelessWidget {
               Text(
                 userName,
                 style: Theme.of(context).textTheme.titleLarge!.copyWith(
-                  fontWeight: FontWeight.bold,
-                ),
+                      fontWeight: FontWeight.bold,
+                    ),
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
                 textAlign: TextAlign.center,
@@ -73,8 +75,8 @@ class ProfileDropdown extends StatelessWidget {
                 Text(
                   email,
                   style: Theme.of(context).textTheme.bodyMedium!.copyWith(
-                    color: colorScheme.onSurfaceVariant,
-                  ),
+                        color: colorScheme.onSurfaceVariant,
+                      ),
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   textAlign: TextAlign.center,
@@ -83,17 +85,21 @@ class ProfileDropdown extends StatelessWidget {
               const SizedBox(height: 12),
               // Pro badge
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
                 decoration: BoxDecoration(
-                  color: isPro ? colorScheme.primary : colorScheme.surfaceContainerHighest,
+                  color: isPro
+                      ? colorScheme.primary
+                      : colorScheme.surfaceContainerHighest,
                   borderRadius: BorderRadius.circular(20),
                 ),
                 child: Text(
                   isPro ? '⭐ Pro Member' : 'Free Plan',
                   style: Theme.of(context).textTheme.labelMedium!.copyWith(
-                    color: isPro ? Colors.white : colorScheme.onSurfaceVariant,
-                    fontWeight: FontWeight.w700,
-                  ),
+                        color:
+                            isPro ? Colors.white : colorScheme.onSurfaceVariant,
+                        fontWeight: FontWeight.w700,
+                      ),
                 ),
               ),
               const SizedBox(height: 24),
@@ -127,7 +133,8 @@ class ProfileDropdown extends StatelessWidget {
     );
   }
 
-  void _showSignOutConfirmation(BuildContext context, AuthProvider authProvider) {
+  void _showSignOutConfirmation(
+      BuildContext context, AuthProvider authProvider) {
     showModalBottomSheet(
       context: context,
       backgroundColor: Theme.of(context).colorScheme.surface,
@@ -149,7 +156,8 @@ class _SignOutConfirmationSheet extends StatefulWidget {
   });
 
   @override
-  State<_SignOutConfirmationSheet> createState() => _SignOutConfirmationSheetState();
+  State<_SignOutConfirmationSheet> createState() =>
+      _SignOutConfirmationSheetState();
 }
 
 class _SignOutConfirmationSheetState extends State<_SignOutConfirmationSheet> {
@@ -179,7 +187,8 @@ class _SignOutConfirmationSheetState extends State<_SignOutConfirmationSheet> {
           mainAxisSize: MainAxisSize.min,
           children: [
             Container(
-              width: 36, height: 5,
+              width: 36,
+              height: 5,
               decoration: BoxDecoration(
                 color: colorScheme.onSurfaceVariant.withValues(alpha: 0.3),
                 borderRadius: BorderRadius.circular(3),
@@ -193,8 +202,8 @@ class _SignOutConfirmationSheetState extends State<_SignOutConfirmationSheet> {
             Text(
               'You will need to sign in again to access your account.',
               style: Theme.of(context).textTheme.bodyMedium!.copyWith(
-                color: colorScheme.onSurfaceVariant,
-              ),
+                    color: colorScheme.onSurfaceVariant,
+                  ),
               textAlign: TextAlign.center,
             ),
             const SizedBox(height: 24),

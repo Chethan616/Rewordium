@@ -10,19 +10,19 @@ class AnimationOptimizer {
   static final Map<String, ByteData> _preloadedAnimations = {};
   static bool _isInitialized = false;
   static bool _isPreloadingComplete = false;
-  
+
   // Animation optimization settings
   static const bool useHardwareAcceleration = true;
   static const bool useCompositingOptimization = true;
-  
+
   /// Initialize the animation optimizer
   static Future<void> initialize() async {
     if (_isInitialized) return;
-    
+
     try {
       // Apply performance optimizations
       _applyGlobalOptimizations();
-      
+
       // Start preloading common animations in the background
       unawaited(_preloadCommonAnimations());
       _isInitialized = true;
@@ -33,20 +33,20 @@ class AnimationOptimizer {
       }
     }
   }
-  
+
   /// Apply global performance optimizations
   static void _applyGlobalOptimizations() {
     // Enable hardware acceleration where available
     if (useHardwareAcceleration && kDebugMode) {
       debugPrint('Hardware acceleration enabled for animations');
     }
-    
+
     // Optimize compositing layers
     if (useCompositingOptimization && kDebugMode) {
       debugPrint('Compositing optimization enabled');
     }
   }
-  
+
   /// Preload common animations used throughout the app
   static Future<void> _preloadCommonAnimations() async {
     try {
@@ -66,19 +66,18 @@ class AnimationOptimizer {
         'assets/lottie/summarizer.json',
         'assets/lottie/toneEditor.json',
       ];
-      
+
       // Load animations in parallel using compute for better performance
-      final results = await Future.wait(
-        animationPaths.map((path) => compute(_isolatePreloadAnimation, path))
-      );
-      
+      final results = await Future.wait(animationPaths
+          .map((path) => compute(_isolatePreloadAnimation, path)));
+
       // Store results in cache
       for (int i = 0; i < animationPaths.length; i++) {
         if (results[i] != null) {
           _preloadedAnimations[animationPaths[i]] = results[i] as ByteData;
         }
       }
-      
+
       _isPreloadingComplete = true;
       if (kDebugMode) {
         debugPrint('Preloaded ${_preloadedAnimations.length} animations');
@@ -90,7 +89,7 @@ class AnimationOptimizer {
       }
     }
   }
-  
+
   /// Isolate worker for preloading animations
   static Future<ByteData?> _isolatePreloadAnimation(String assetPath) async {
     try {
@@ -103,28 +102,27 @@ class AnimationOptimizer {
       return null;
     }
   }
-  
 
-  
   /// Get a preloaded animation
   static ByteData? getPreloadedAnimation(String assetPath) {
     return _preloadedAnimations[assetPath];
   }
-  
+
   /// Check if preloading is complete
   static bool isPreloadingComplete() {
     return _isPreloadingComplete;
   }
-  
+
   /// Optimize image assets for better performance
-  static Future<ui.Image> optimizeImage(ImageProvider provider, {Size? targetSize}) async {
+  static Future<ui.Image> optimizeImage(ImageProvider provider,
+      {Size? targetSize}) async {
     final Completer<ui.Image> completer = Completer<ui.Image>();
-    
+
     final ImageStream stream = provider.resolve(ImageConfiguration(
       size: targetSize,
       devicePixelRatio: WidgetsBinding.instance.window.devicePixelRatio,
     ));
-    
+
     late ImageStreamListener listener;
     listener = ImageStreamListener((ImageInfo info, bool _) {
       completer.complete(info.image);
@@ -133,11 +131,11 @@ class AnimationOptimizer {
       completer.completeError(error, stackTrace);
       stream.removeListener(listener);
     });
-    
+
     stream.addListener(listener);
     return completer.future;
   }
-  
+
   /// Helper method to create optimized animation widgets
   static Widget createOptimizedAnimationContainer({
     required Widget child,

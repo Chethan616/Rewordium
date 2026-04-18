@@ -22,8 +22,9 @@ abstract class KeyboardBase extends StatelessWidget {
 
   // Common method to handle text input
   void textInputHandler(String text, BuildContext context) {
-    final keyboardProvider = Provider.of<KeyboardProvider>(context, listen: false);
-    
+    final keyboardProvider =
+        Provider.of<KeyboardProvider>(context, listen: false);
+
     // Vibrate if haptic feedback is enabled
     if (keyboardProvider.soundOn) {
       Vibration.hasVibrator().then((hasVibrator) {
@@ -32,7 +33,7 @@ abstract class KeyboardBase extends StatelessWidget {
         }
       });
     }
-    
+
     if (onTextInput != null) {
       onTextInput!(text);
     } else {
@@ -43,14 +44,14 @@ abstract class KeyboardBase extends StatelessWidget {
         textSelection.end,
         text,
       );
-      
+
       final newSelection = TextSelection.collapsed(
         offset: textSelection.start + text.length,
       );
-      
+
       controller.text = newText;
       controller.selection = newSelection;
-      
+
       // Update suggestions based on current word
       final currentWord = _getCurrentWord(newText, newSelection.start);
       keyboardProvider.updateSuggestions(currentWord);
@@ -59,8 +60,9 @@ abstract class KeyboardBase extends StatelessWidget {
 
   // Common method to handle backspace
   void backspaceHandler(BuildContext context) {
-    final keyboardProvider = Provider.of<KeyboardProvider>(context, listen: false);
-    
+    final keyboardProvider =
+        Provider.of<KeyboardProvider>(context, listen: false);
+
     // Vibrate if haptic feedback is enabled
     if (keyboardProvider.soundOn) {
       Vibration.hasVibrator().then((hasVibrator) {
@@ -69,7 +71,7 @@ abstract class KeyboardBase extends StatelessWidget {
         }
       });
     }
-    
+
     if (onBackspace != null) {
       onBackspace!();
     } else {
@@ -77,7 +79,7 @@ abstract class KeyboardBase extends StatelessWidget {
       final textSelection = controller.selection;
       final selectionStart = textSelection.start;
       final selectionEnd = textSelection.end;
-      
+
       if (selectionStart == selectionEnd && selectionStart > 0) {
         // Delete the last character
         final newText = currentText.replaceRange(
@@ -85,7 +87,7 @@ abstract class KeyboardBase extends StatelessWidget {
           selectionEnd,
           '',
         );
-        
+
         controller.text = newText;
         controller.selection = TextSelection.collapsed(
           offset: selectionStart - 1,
@@ -97,13 +99,13 @@ abstract class KeyboardBase extends StatelessWidget {
           selectionEnd,
           '',
         );
-        
+
         controller.text = newText;
         controller.selection = TextSelection.collapsed(
           offset: selectionStart,
         );
       }
-      
+
       // Update suggestions based on current word
       final newText = controller.text;
       final newSelection = controller.selection;
@@ -115,10 +117,10 @@ abstract class KeyboardBase extends StatelessWidget {
   // Helper method to get the current word being typed
   String _getCurrentWord(String text, int cursorPosition) {
     if (text.isEmpty || cursorPosition <= 0) return '';
-    
+
     final beforeCursor = text.substring(0, cursorPosition);
     final lastSpaceIndex = beforeCursor.lastIndexOf(' ');
-    
+
     if (lastSpaceIndex == -1) {
       return beforeCursor;
     } else {
@@ -130,11 +132,11 @@ abstract class KeyboardBase extends StatelessWidget {
   Widget buildSuggestionBar(BuildContext context) {
     final keyboardProvider = Provider.of<KeyboardProvider>(context);
     final suggestions = keyboardProvider.suggestions;
-    
+
     if (!showSuggestions || suggestions.isEmpty) {
       return const SizedBox(height: 0);
     }
-    
+
     return Container(
       height: 40,
       decoration: BoxDecoration(
@@ -160,25 +162,25 @@ abstract class KeyboardBase extends StatelessWidget {
               final cursorPosition = textSelection.start;
               final beforeCursor = currentText.substring(0, cursorPosition);
               final afterCursor = currentText.substring(cursorPosition);
-              
+
               final lastSpaceIndex = beforeCursor.lastIndexOf(' ');
-              final prefix = lastSpaceIndex == -1 
-                  ? '' 
+              final prefix = lastSpaceIndex == -1
+                  ? ''
                   : beforeCursor.substring(0, lastSpaceIndex + 1);
-              
+
               final newText = prefix + suggestions[index] + afterCursor;
               controller.text = newText;
               controller.selection = TextSelection.collapsed(
                 offset: prefix.length + suggestions[index].length,
               );
-              
+
               keyboardProvider.clearSuggestions();
             },
             child: Container(
               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
               margin: const EdgeInsets.symmetric(vertical: 6),
               decoration: BoxDecoration(
-              color: Theme.of(context).colorScheme.surface,
+                color: Theme.of(context).colorScheme.surface,
                 borderRadius: BorderRadius.circular(16),
                 border: Border.all(
                   color: Colors.grey.withValues(alpha: 0.3),
@@ -197,7 +199,7 @@ abstract class KeyboardBase extends StatelessWidget {
       ),
     );
   }
-  
+
   // Build keyboard key
   Widget buildKey({
     required String text,
@@ -209,7 +211,7 @@ abstract class KeyboardBase extends StatelessWidget {
     IconData? icon,
     BorderRadius? borderRadius,
   });
-  
+
   // Build keyboard row
   Widget buildRow({
     required List<Widget> children,
@@ -223,10 +225,10 @@ abstract class KeyboardBase extends StatelessWidget {
       ),
     );
   }
-  
+
   // Build keyboard layout - to be implemented by subclasses
   Widget buildKeyboardLayout(BuildContext context);
-  
+
   @override
   Widget build(BuildContext context) {
     return Column(

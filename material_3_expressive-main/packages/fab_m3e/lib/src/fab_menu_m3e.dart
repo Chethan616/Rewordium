@@ -189,7 +189,8 @@ class _FabMenuM3EState extends State<FabMenuM3E>
       child: child,
     );
 
-    if (widget.heroTag != null && context.findAncestorWidgetOfExactType<Hero>() == null) {
+    if (widget.heroTag != null &&
+        context.findAncestorWidgetOfExactType<Hero>() == null) {
       return Hero(tag: widget.heroTag!, child: core);
     }
     return core;

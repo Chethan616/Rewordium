@@ -53,9 +53,8 @@ class AppBarM3E extends StatelessWidget implements PreferredSizeWidget {
     final height = toolbarHeight ?? metrics.smallHeight;
     final tStyle = titleStyleFor(context, collapsed: true);
 
-    final resolvedLeading = leading ?? (automaticallyImplyLeading
-        ? _maybeBackButton(context, fg)
-        : null);
+    final resolvedLeading = leading ??
+        (automaticallyImplyLeading ? _maybeBackButton(context, fg) : null);
 
     final resolvedTitle = title ??
         (titleText != null
@@ -85,7 +84,9 @@ class AppBarM3E extends StatelessWidget implements PreferredSizeWidget {
                     if (resolvedTitle != null)
                       Expanded(
                         child: Align(
-                          alignment: centerTitle ? Alignment.center : Alignment.centerLeft,
+                          alignment: centerTitle
+                              ? Alignment.center
+                              : Alignment.centerLeft,
                           child: resolvedTitle,
                         ),
                       )

@@ -1,5 +1,3 @@
-
-
 import 'package:flutter/material.dart';
 import 'package:widgetbook/widgetbook.dart';
 import 'package:widgetbook_annotation/widgetbook_annotation.dart' as widgetbook;
@@ -23,12 +21,13 @@ Widget _buildSplitButtonDemo(
         labelBuilder: (v) => v.name,
       );
 
-  final size = sizeFixed ?? context.knobs.object.dropdown<SplitButtonM3ESize>(
-    label: 'size',
-    initialOption: SplitButtonM3ESize.md,
-    options: SplitButtonM3ESize.values,
-    labelBuilder: (v) => v.name,
-  );
+  final size = sizeFixed ??
+      context.knobs.object.dropdown<SplitButtonM3ESize>(
+        label: 'size',
+        initialOption: SplitButtonM3ESize.md,
+        options: SplitButtonM3ESize.values,
+        labelBuilder: (v) => v.name,
+      );
 
   final shape = shapeFixed ??
       context.knobs.object.dropdown<SplitButtonM3EShape>(
@@ -38,8 +37,8 @@ Widget _buildSplitButtonDemo(
         labelBuilder: (v) => v.name,
       );
 
-  final trailingAlignment = context.knobs.object
-      .dropdown<SplitButtonM3ETrailingAlignment>(
+  final trailingAlignment =
+      context.knobs.object.dropdown<SplitButtonM3ETrailingAlignment>(
     label: 'trailingAlignment',
     initialOption: SplitButtonM3ETrailingAlignment.opticalCenter,
     options: SplitButtonM3ETrailingAlignment.values,
@@ -50,29 +49,31 @@ Widget _buildSplitButtonDemo(
       context.knobs.boolean(label: 'enabled', initialValue: true);
 
   // Content knobs
-  final effectiveLabel = labelFixed ??
-      context.knobs.string(label: 'label', initialValue: 'Save');
+  final effectiveLabel =
+      labelFixed ?? context.knobs.string(label: 'label', initialValue: 'Save');
 
   final includeIcon = iconFixed != null
       ? true
       : context.knobs.boolean(label: 'leadingIcon', initialValue: true);
 
-  final effectiveIcon = iconFixed ?? Icons.save_outlined; // TODO: icon picker knob
+  final effectiveIcon =
+      iconFixed ?? Icons.save_outlined; // TODO: icon picker knob
 
   // Tooltips knobs (helpful for semantics and tests)
-  final leadingTooltip = context.knobs
-      .string(label: 'leadingTooltip', initialValue: 'Save');
-  final trailingTooltip = context.knobs
-      .string(label: 'trailingTooltip', initialValue: 'Open menu');
+  final leadingTooltip =
+      context.knobs.string(label: 'leadingTooltip', initialValue: 'Save');
+  final trailingTooltip =
+      context.knobs.string(label: 'trailingTooltip', initialValue: 'Open menu');
 
   // Items knobs
-  final itemCount = itemsFixedCount ?? context.knobs.int.slider(
-    label: 'items count',
-    initialValue: 4,
-    min: 0,
-    max: 120,
-    divisions: 120,
-  );
+  final itemCount = itemsFixedCount ??
+      context.knobs.int.slider(
+        label: 'items count',
+        initialValue: 4,
+        min: 0,
+        max: 120,
+        divisions: 120,
+      );
 
   final disableEveryNth = context.knobs.int.slider(
     label: 'disable every Nth (0 = none)',
@@ -100,8 +101,8 @@ Widget _buildSplitButtonDemo(
       leadingIcon: includeIcon ? effectiveIcon : null,
       onPressed: enabled
           ? () => print(
-              'Primary pressed: size=${size.name}, shape=${shape.name}, emphasis=${emphasis.name}',
-            )
+                'Primary pressed: size=${size.name}, shape=${shape.name}, emphasis=${emphasis.name}',
+              )
           : null,
       items: items,
       onSelected: (v) => print('Menu selected → $v'),

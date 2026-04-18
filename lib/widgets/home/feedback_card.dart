@@ -76,14 +76,17 @@ class _FeedbackCardState extends State<FeedbackCard> {
         children: [
           Text(
             "Enjoying Rewordium?",
-            style: Theme.of(context).textTheme.bodyLarge?.copyWith(fontWeight: FontWeight.w600),
+            style: Theme.of(context)
+                .textTheme
+                .bodyLarge
+                ?.copyWith(fontWeight: FontWeight.w600),
           ),
           const SizedBox(height: 4),
           Text(
             "Your rating helps us grow!",
             style: Theme.of(context).textTheme.bodySmall?.copyWith(
-              color: Theme.of(context).colorScheme.onSurfaceVariant,
-            ),
+                  color: Theme.of(context).colorScheme.onSurfaceVariant,
+                ),
           ),
           const SizedBox(height: 12),
           SizedBox(
@@ -107,8 +110,8 @@ class _FeedbackCardState extends State<FeedbackCard> {
             child: Text(
               'Maybe Later',
               style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                color: Theme.of(context).colorScheme.onSurfaceVariant,
-              ),
+                    color: Theme.of(context).colorScheme.onSurfaceVariant,
+                  ),
             ),
           ),
         ],

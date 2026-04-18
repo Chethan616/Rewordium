@@ -78,9 +78,11 @@ class _AdminPanelState extends State<AdminPanel> with TickerProviderStateMixin {
     try {
       final users = await AdminService.getAllUsers();
       final stats = await AdminService.getUserStats();
-      final revenueStats = await AdminService.getRevenueStats(from: _revenueBaseline);
+      final revenueStats =
+          await AdminService.getRevenueStats(from: _revenueBaseline);
       final apiUsageStats = await AdminService.getApiUsageStats();
-      final transactions = await AdminService.getRecentTransactions(from: _revenueBaseline);
+      final transactions =
+          await AdminService.getRecentTransactions(from: _revenueBaseline);
 
       setState(() {
         _users = users;
@@ -333,9 +335,11 @@ class _AdminPanelState extends State<AdminPanel> with TickerProviderStateMixin {
       appBar: AppBar(
         title: Row(
           children: [
-            Icon(Icons.admin_panel_settings, size: 24, color: colorScheme.onPrimary),
+            Icon(Icons.admin_panel_settings,
+                size: 24, color: colorScheme.onPrimary),
             const SizedBox(width: 12),
-            Text('Admin Dashboard', style: TextStyle(color: colorScheme.onPrimary)),
+            Text('Admin Dashboard',
+                style: TextStyle(color: colorScheme.onPrimary)),
           ],
         ),
         elevation: 0,
@@ -367,15 +371,34 @@ class _AdminPanelState extends State<AdminPanel> with TickerProviderStateMixin {
           indicatorWeight: 3,
           labelColor: colorScheme.onPrimary,
           unselectedLabelColor: colorScheme.onPrimary.withValues(alpha: 0.7),
-          labelStyle: TextStyle(fontWeight: FontWeight.w600, fontSize: 13, color: colorScheme.onPrimary),
-          unselectedLabelStyle: TextStyle(fontWeight: FontWeight.w400, color: colorScheme.onPrimary.withValues(alpha: 0.7)),
+          labelStyle: TextStyle(
+              fontWeight: FontWeight.w600,
+              fontSize: 13,
+              color: colorScheme.onPrimary),
+          unselectedLabelStyle: TextStyle(
+              fontWeight: FontWeight.w400,
+              color: colorScheme.onPrimary.withValues(alpha: 0.7)),
           tabs: [
-            Tab(icon: Icon(Icons.dashboard_rounded, color: colorScheme.onPrimary), text: 'Overview'),
-            Tab(icon: Icon(Icons.attach_money_rounded, color: colorScheme.onPrimary), text: 'Revenue'),
-            Tab(icon: Icon(Icons.api_rounded, color: colorScheme.onPrimary), text: 'API Usage'),
-            Tab(icon: Icon(Icons.send_rounded, color: colorScheme.onPrimary), text: 'Notifications'),
-            Tab(icon: Icon(Icons.people_rounded, color: colorScheme.onPrimary), text: 'Users'),
-            Tab(icon: Icon(Icons.history_rounded, color: colorScheme.onPrimary), text: 'History'),
+            Tab(
+                icon:
+                    Icon(Icons.dashboard_rounded, color: colorScheme.onPrimary),
+                text: 'Overview'),
+            Tab(
+                icon: Icon(Icons.attach_money_rounded,
+                    color: colorScheme.onPrimary),
+                text: 'Revenue'),
+            Tab(
+                icon: Icon(Icons.api_rounded, color: colorScheme.onPrimary),
+                text: 'API Usage'),
+            Tab(
+                icon: Icon(Icons.send_rounded, color: colorScheme.onPrimary),
+                text: 'Notifications'),
+            Tab(
+                icon: Icon(Icons.people_rounded, color: colorScheme.onPrimary),
+                text: 'Users'),
+            Tab(
+                icon: Icon(Icons.history_rounded, color: colorScheme.onPrimary),
+                text: 'History'),
           ],
         ),
       ),
@@ -416,7 +439,10 @@ class _AdminPanelState extends State<AdminPanel> with TickerProviderStateMixin {
                     children: [
                       Text(
                         '👋 Welcome, Admin',
-                        style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                        style: Theme.of(context)
+                            .textTheme
+                            .headlineSmall
+                            ?.copyWith(
                               fontWeight: FontWeight.bold,
                               color: Theme.of(context).colorScheme.onPrimary,
                             ),
@@ -425,7 +451,10 @@ class _AdminPanelState extends State<AdminPanel> with TickerProviderStateMixin {
                       Text(
                         'Here\'s your app overview for today',
                         style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                              color: Theme.of(context).colorScheme.onPrimary.withValues(alpha: 0.85),
+                              color: Theme.of(context)
+                                  .colorScheme
+                                  .onPrimary
+                                  .withValues(alpha: 0.85),
                             ),
                       ),
                     ],
@@ -438,7 +467,8 @@ class _AdminPanelState extends State<AdminPanel> with TickerProviderStateMixin {
                           width: 16,
                           height: 16,
                           child: LoadingIndicatorM3E(
-                            constraints: BoxConstraints(maxWidth: 16, maxHeight: 16),
+                            constraints:
+                                BoxConstraints(maxWidth: 16, maxHeight: 16),
                           ),
                         )
                       : const Icon(Icons.refresh, size: 18),
@@ -447,7 +477,8 @@ class _AdminPanelState extends State<AdminPanel> with TickerProviderStateMixin {
                     backgroundColor: Theme.of(context).colorScheme.onPrimary,
                     foregroundColor: Theme.of(context).colorScheme.primary,
                     elevation: 0,
-                    padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 20, vertical: 12),
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(12),
                     ),
@@ -457,7 +488,7 @@ class _AdminPanelState extends State<AdminPanel> with TickerProviderStateMixin {
             ),
           ),
           const SizedBox(height: 24),
-          
+
           // Section Title
           Text(
             '📊 User Statistics',
@@ -647,7 +678,8 @@ class _AdminPanelState extends State<AdminPanel> with TickerProviderStateMixin {
             decoration: BoxDecoration(
               color: Theme.of(context).colorScheme.surfaceContainerLowest,
               borderRadius: BorderRadius.circular(16),
-              border: Border.all(color: Theme.of(context).colorScheme.outlineVariant),
+              border: Border.all(
+                  color: Theme.of(context).colorScheme.outlineVariant),
             ),
             child: Column(
               children: [
@@ -688,7 +720,8 @@ class _AdminPanelState extends State<AdminPanel> with TickerProviderStateMixin {
     final onetimeSubscribers = _revenueStats['onetimeSubscribers'] ?? 0;
     final activeSubscriptions = _revenueStats['activeSubscriptions'] ?? 0;
     final expiredSubscriptions = _revenueStats['expiredSubscriptions'] ?? 0;
-    final newSubscribersThisMonth = _revenueStats['newSubscribersThisMonth'] ?? 0;
+    final newSubscribersThisMonth =
+        _revenueStats['newSubscribersThisMonth'] ?? 0;
     final conversionRate = _revenueStats['conversionRate'] ?? 0.0;
 
     return SingleChildScrollView(
@@ -712,26 +745,44 @@ class _AdminPanelState extends State<AdminPanel> with TickerProviderStateMixin {
                     children: [
                       Text(
                         '💰 Revenue Analytics',
-                        style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                        style: Theme.of(context)
+                            .textTheme
+                            .headlineSmall
+                            ?.copyWith(
                               fontWeight: FontWeight.bold,
                               color: Theme.of(context).colorScheme.onPrimary,
                             ),
                       ),
                       const SizedBox(height: 8),
                       Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 12, vertical: 6),
                         decoration: BoxDecoration(
-                          color: Theme.of(context).colorScheme.onPrimary.withValues(alpha: 0.2),
+                          color: Theme.of(context)
+                              .colorScheme
+                              .onPrimary
+                              .withValues(alpha: 0.2),
                           borderRadius: BorderRadius.circular(20),
                         ),
                         child: Row(
                           mainAxisSize: MainAxisSize.min,
                           children: [
-                            Icon(Icons.flag, size: 14, color: Theme.of(context).colorScheme.onPrimary.withValues(alpha: 0.9)),
+                            Icon(Icons.flag,
+                                size: 14,
+                                color: Theme.of(context)
+                                    .colorScheme
+                                    .onPrimary
+                                    .withValues(alpha: 0.9)),
                             const SizedBox(width: 6),
                             Text(
                               'From: Jan 16, 2026',
-                              style: TextStyle(color: Theme.of(context).colorScheme.onPrimary.withValues(alpha: 0.9), fontSize: 12, fontWeight: FontWeight.w500),
+                              style: TextStyle(
+                                  color: Theme.of(context)
+                                      .colorScheme
+                                      .onPrimary
+                                      .withValues(alpha: 0.9),
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.w500),
                             ),
                           ],
                         ),
@@ -746,7 +797,8 @@ class _AdminPanelState extends State<AdminPanel> with TickerProviderStateMixin {
                           width: 16,
                           height: 16,
                           child: LoadingIndicatorM3E(
-                            constraints: BoxConstraints(maxWidth: 16, maxHeight: 16),
+                            constraints:
+                                BoxConstraints(maxWidth: 16, maxHeight: 16),
                           ),
                         )
                       : const Icon(Icons.refresh, size: 18),
@@ -755,7 +807,8 @@ class _AdminPanelState extends State<AdminPanel> with TickerProviderStateMixin {
                     backgroundColor: Theme.of(context).colorScheme.onPrimary,
                     foregroundColor: Theme.of(context).colorScheme.primary,
                     elevation: 0,
-                    padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 20, vertical: 12),
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(12),
                     ),
@@ -812,14 +865,15 @@ class _AdminPanelState extends State<AdminPanel> with TickerProviderStateMixin {
                     '\$${lastMonthRevenue.toStringAsFixed(2)}',
                     Icons.history,
                     Colors.purple,
-                    subtitle: '${revenueGrowth >= 0 ? '+' : ''}${revenueGrowth.toStringAsFixed(1)}% growth',
+                    subtitle:
+                        '${revenueGrowth >= 0 ? '+' : ''}${revenueGrowth.toStringAsFixed(1)}% growth',
                   ),
                 ),
               ],
             ),
-            
+
             const SizedBox(height: 24),
-            
+
             // Subscription Breakdown
             Text(
               '📊 Subscription Breakdown',
@@ -829,33 +883,47 @@ class _AdminPanelState extends State<AdminPanel> with TickerProviderStateMixin {
                   ),
             ),
             const SizedBox(height: 12),
-            
+
             Container(
               decoration: BoxDecoration(
                 color: Theme.of(context).colorScheme.surfaceContainerLowest,
                 borderRadius: BorderRadius.circular(16),
-                border: Border.all(color: Theme.of(context).colorScheme.outlineVariant),
+                border: Border.all(
+                    color: Theme.of(context).colorScheme.outlineVariant),
               ),
               child: Padding(
                 padding: const EdgeInsets.all(20),
                 child: Column(
                   children: [
-                    _buildSubscriptionRow('Monthly Subscribers', monthlySubscribers, Colors.blue, '\$2.98/mo'),
-                    Divider(color: Theme.of(context).colorScheme.outlineVariant),
-                    _buildSubscriptionRow('Yearly Subscribers', yearlySubscribers, Theme.of(context).colorScheme.primary, '\$19.00/yr'),
-                    Divider(color: Theme.of(context).colorScheme.outlineVariant),
-                    _buildSubscriptionRow('Lifetime/One-time', onetimeSubscribers, Colors.purple, '\$49.99'),
-                    Divider(color: Theme.of(context).colorScheme.outline, thickness: 2),
-                    _buildSubscriptionRow('Active Subscriptions', activeSubscriptions, Colors.teal, ''),
-                    Divider(color: Theme.of(context).colorScheme.outlineVariant),
-                    _buildSubscriptionRow('Expired', expiredSubscriptions, Colors.red, ''),
+                    _buildSubscriptionRow('Monthly Subscribers',
+                        monthlySubscribers, Colors.blue, '\$2.98/mo'),
+                    Divider(
+                        color: Theme.of(context).colorScheme.outlineVariant),
+                    _buildSubscriptionRow(
+                        'Yearly Subscribers',
+                        yearlySubscribers,
+                        Theme.of(context).colorScheme.primary,
+                        '\$19.00/yr'),
+                    Divider(
+                        color: Theme.of(context).colorScheme.outlineVariant),
+                    _buildSubscriptionRow('Lifetime/One-time',
+                        onetimeSubscribers, Colors.purple, '\$49.99'),
+                    Divider(
+                        color: Theme.of(context).colorScheme.outline,
+                        thickness: 2),
+                    _buildSubscriptionRow('Active Subscriptions',
+                        activeSubscriptions, Colors.teal, ''),
+                    Divider(
+                        color: Theme.of(context).colorScheme.outlineVariant),
+                    _buildSubscriptionRow(
+                        'Expired', expiredSubscriptions, Colors.red, ''),
                   ],
                 ),
               ),
             ),
-            
+
             const SizedBox(height: 24),
-            
+
             // Conversion & Performance
             Text(
               '🎯 Performance Metrics',
@@ -865,7 +933,7 @@ class _AdminPanelState extends State<AdminPanel> with TickerProviderStateMixin {
                   ),
             ),
             const SizedBox(height: 12),
-            
+
             Row(
               children: [
                 Expanded(
@@ -887,9 +955,9 @@ class _AdminPanelState extends State<AdminPanel> with TickerProviderStateMixin {
                 ),
               ],
             ),
-            
+
             const SizedBox(height: 24),
-            
+
             // Recent Transactions
             Text(
               '📝 Recent Transactions',
@@ -899,7 +967,7 @@ class _AdminPanelState extends State<AdminPanel> with TickerProviderStateMixin {
                   ),
             ),
             const SizedBox(height: 12),
-            
+
             if (_recentTransactions.isEmpty)
               Card(
                 color: Theme.of(context).colorScheme.surfaceContainerLowest,
@@ -908,7 +976,9 @@ class _AdminPanelState extends State<AdminPanel> with TickerProviderStateMixin {
                   child: Center(
                     child: Text(
                       'No transactions yet',
-                      style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant),
+                      style: TextStyle(
+                          color:
+                              Theme.of(context).colorScheme.onSurfaceVariant),
                     ),
                   ),
                 ),
@@ -926,10 +996,11 @@ class _AdminPanelState extends State<AdminPanel> with TickerProviderStateMixin {
                     final planType = tx['planType'] as String? ?? 'unknown';
                     final timestamp = tx['upgradedAt'] as Timestamp?;
                     final date = timestamp?.toDate();
-                    
+
                     return ListTile(
                       leading: CircleAvatar(
-                        backgroundColor: _getPlanColor(planType).withValues(alpha: 0.2),
+                        backgroundColor:
+                            _getPlanColor(planType).withValues(alpha: 0.2),
                         child: Icon(
                           _getPlanIcon(planType),
                           color: _getPlanColor(planType),
@@ -938,11 +1009,14 @@ class _AdminPanelState extends State<AdminPanel> with TickerProviderStateMixin {
                       ),
                       title: Text(
                         tx['userName'] ?? 'Unknown',
-                        style: TextStyle(color: Theme.of(context).colorScheme.onSurface),
+                        style: TextStyle(
+                            color: Theme.of(context).colorScheme.onSurface),
                       ),
                       subtitle: Text(
                         tx['email'] ?? '',
-                        style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant),
+                        style: TextStyle(
+                            color:
+                                Theme.of(context).colorScheme.onSurfaceVariant),
                       ),
                       trailing: Column(
                         mainAxisAlignment: MainAxisAlignment.center,
@@ -960,7 +1034,9 @@ class _AdminPanelState extends State<AdminPanel> with TickerProviderStateMixin {
                               _formatDate(date),
                               style: TextStyle(
                                 fontSize: 12,
-                                color: Theme.of(context).colorScheme.onSurfaceVariant,
+                                color: Theme.of(context)
+                                    .colorScheme
+                                    .onSurfaceVariant,
                               ),
                             ),
                         ],
@@ -975,7 +1051,9 @@ class _AdminPanelState extends State<AdminPanel> with TickerProviderStateMixin {
     );
   }
 
-  Widget _buildRevenueCard(String title, String value, IconData icon, Color color, {String? subtitle}) {
+  Widget _buildRevenueCard(
+      String title, String value, IconData icon, Color color,
+      {String? subtitle}) {
     return Container(
       decoration: BoxDecoration(
         color: Theme.of(context).colorScheme.surfaceContainerLowest,
@@ -1038,7 +1116,8 @@ class _AdminPanelState extends State<AdminPanel> with TickerProviderStateMixin {
     );
   }
 
-  Widget _buildSubscriptionRow(String label, int count, Color color, String price) {
+  Widget _buildSubscriptionRow(
+      String label, int count, Color color, String price) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 12),
@@ -1077,7 +1156,9 @@ class _AdminPanelState extends State<AdminPanel> with TickerProviderStateMixin {
                 if (price.isNotEmpty)
                   Text(
                     price,
-                    style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant, fontSize: 12),
+                    style: TextStyle(
+                        color: Theme.of(context).colorScheme.onSurfaceVariant,
+                        fontSize: 12),
                   ),
               ],
             ),
@@ -1102,7 +1183,8 @@ class _AdminPanelState extends State<AdminPanel> with TickerProviderStateMixin {
     );
   }
 
-  Widget _buildMetricCard(String title, String value, IconData icon, Color color) {
+  Widget _buildMetricCard(
+      String title, String value, IconData icon, Color color) {
     return Container(
       decoration: BoxDecoration(
         color: Theme.of(context).colorScheme.surfaceContainerLowest,
@@ -1136,7 +1218,7 @@ class _AdminPanelState extends State<AdminPanel> with TickerProviderStateMixin {
               style: TextStyle(
                 fontSize: 13,
                 fontWeight: FontWeight.w500,
-color: Theme.of(context).colorScheme.onSurfaceVariant,
+                color: Theme.of(context).colorScheme.onSurfaceVariant,
               ),
             ),
           ],
@@ -1190,7 +1272,7 @@ color: Theme.of(context).colorScheme.onSurfaceVariant,
   String _formatDate(DateTime date) {
     final now = DateTime.now();
     final diff = now.difference(date);
-    
+
     if (diff.inDays == 0) {
       return 'Today';
     } else if (diff.inDays == 1) {
@@ -1203,8 +1285,10 @@ color: Theme.of(context).colorScheme.onSurfaceVariant,
   }
 
   Widget _buildApiUsageTab() {
-    final totalApiCalls = (_apiUsageStats['totalApiCalls'] as num?)?.toInt() ?? 0;
-    final thisMonthApiCalls = (_apiUsageStats['thisMonthApiCalls'] as num?)?.toInt() ?? 0;
+    final totalApiCalls =
+        (_apiUsageStats['totalApiCalls'] as num?)?.toInt() ?? 0;
+    final thisMonthApiCalls =
+        (_apiUsageStats['thisMonthApiCalls'] as num?)?.toInt() ?? 0;
     final thisMonthCreditsUsed =
         (_apiUsageStats['thisMonthCreditsUsed'] as num?)?.toInt() ?? 0;
     final activeNow = (_apiUsageStats['activeNow'] as num?)?.toInt() ?? 0;
@@ -1215,8 +1299,9 @@ color: Theme.of(context).colorScheme.onSurfaceVariant,
     final dailyCreditUsage =
         (_apiUsageStats['dailyCreditUsage'] as List<dynamic>? ?? [])
             .cast<Map<String, dynamic>>();
-    final dailyApiUsage = (_apiUsageStats['dailyApiUsage'] as List<dynamic>? ?? [])
-        .cast<Map<String, dynamic>>();
+    final dailyApiUsage =
+        (_apiUsageStats['dailyApiUsage'] as List<dynamic>? ?? [])
+            .cast<Map<String, dynamic>>();
     final leaderboard = (_apiUsageStats['leaderboard'] as List<dynamic>? ?? [])
         .cast<Map<String, dynamic>>();
 
@@ -1363,7 +1448,8 @@ color: Theme.of(context).colorScheme.onSurfaceVariant,
                       final user = entry.value;
                       final name = user['name'] ?? 'Unknown User';
                       final email = user['email'] ?? '';
-                      final calls = (user['totalApiCalls'] as num?)?.toInt() ?? 0;
+                      final calls =
+                          (user['totalApiCalls'] as num?)?.toInt() ?? 0;
                       final credits =
                           (user['totalCreditsUsed'] as num?)?.toInt() ?? 0;
                       final successRate =
@@ -1447,20 +1533,24 @@ color: Theme.of(context).colorScheme.onSurfaceVariant,
                         child: Text(
                           date.length >= 10 ? date.substring(5, 10) : date,
                           style: TextStyle(
-                            color: Theme.of(context).colorScheme.onSurfaceVariant,
+                            color:
+                                Theme.of(context).colorScheme.onSurfaceVariant,
                           ),
                         ),
                       ),
                       Expanded(
                         child: LinearProgressIndicator(
-                          value: (value / ((entries
-                                      .map((e) => (e[valueKey] as num?)?.toInt() ?? 0)
+                          value: (value /
+                                  ((entries
+                                      .map((e) =>
+                                          (e[valueKey] as num?)?.toInt() ?? 0)
                                       .fold<int>(1, (a, b) => a > b ? a : b))))
                               .clamp(0.0, 1.0),
                           minHeight: 8,
                           borderRadius: BorderRadius.circular(6),
-                          backgroundColor:
-                              Theme.of(context).colorScheme.surfaceContainerHighest,
+                          backgroundColor: Theme.of(context)
+                              .colorScheme
+                              .surfaceContainerHighest,
                         ),
                       ),
                       const SizedBox(width: 10),
@@ -1685,10 +1775,10 @@ color: Theme.of(context).colorScheme.onSurfaceVariant,
   // Apply current filter and sort to users
   void _applyFilterAndSort() async {
     setState(() => _isLoading = true);
-    
+
     try {
       List<UserModel> result;
-      
+
       if (_searchController.text.isNotEmpty) {
         // If searching, use search results
         result = await AdminService.searchUsers(_searchController.text);
@@ -1700,7 +1790,7 @@ color: Theme.of(context).colorScheme.onSurfaceVariant,
           ascending: _sortAscending,
         );
       }
-      
+
       setState(() {
         _filteredUsers = result;
       });
@@ -1714,33 +1804,34 @@ color: Theme.of(context).colorScheme.onSurfaceVariant,
   // Export users to CSV
   Future<void> _exportUsersToCsv() async {
     setState(() => _isLoading = true);
-    
+
     try {
       // Use currently filtered users
       final usersToExport = _filteredUsers.isNotEmpty ? _filteredUsers : _users;
-      
+
       if (usersToExport.isEmpty) {
         _showStatus('No users to export', isError: true);
         return;
       }
-      
+
       final csvData = AdminService.generateUsersCsv(usersToExport);
-      
+
       // Get temp directory
       final directory = await getTemporaryDirectory();
       final timestamp = DateTime.now().millisecondsSinceEpoch;
       final filterSuffix = _filterBy == 'all' ? '' : '_$_filterBy';
-      final file = File('${directory.path}/rewordium_users${filterSuffix}_$timestamp.csv');
-      
+      final file = File(
+          '${directory.path}/rewordium_users${filterSuffix}_$timestamp.csv');
+
       await file.writeAsString(csvData);
-      
+
       // Share the file
       await Share.shareXFiles(
         [XFile(file.path)],
         subject: 'Rewordium Users Export',
         text: 'Exported ${usersToExport.length} users (Filter: $_filterBy)',
       );
-      
+
       _showStatus('Exported ${usersToExport.length} users successfully!');
     } catch (e) {
       _showStatus('Error exporting users: $e', isError: true);
@@ -1778,7 +1869,7 @@ color: Theme.of(context).colorScheme.onSurfaceVariant,
                 onChanged: _filterUsers,
               ),
               const SizedBox(height: 16),
-              
+
               // Filter and Sort Row
               SingleChildScrollView(
                 scrollDirection: Axis.horizontal,
@@ -1797,10 +1888,15 @@ color: Theme.of(context).colorScheme.onSurfaceVariant,
                           icon: const Icon(Icons.filter_list),
                           hint: const Text('Filter'),
                           items: const [
-                            DropdownMenuItem(value: 'all', child: Text('All Users')),
-                            DropdownMenuItem(value: 'pro', child: Text('Pro Users')),
-                            DropdownMenuItem(value: 'free', child: Text('Free Users')),
-                            DropdownMenuItem(value: 'news_subscribers', child: Text('📧 News Subscribers')),
+                            DropdownMenuItem(
+                                value: 'all', child: Text('All Users')),
+                            DropdownMenuItem(
+                                value: 'pro', child: Text('Pro Users')),
+                            DropdownMenuItem(
+                                value: 'free', child: Text('Free Users')),
+                            DropdownMenuItem(
+                                value: 'news_subscribers',
+                                child: Text('📧 News Subscribers')),
                           ],
                           onChanged: (value) {
                             setState(() => _filterBy = value ?? 'all');
@@ -1810,7 +1906,7 @@ color: Theme.of(context).colorScheme.onSurfaceVariant,
                       ),
                     ),
                     const SizedBox(width: 12),
-                    
+
                     // Sort dropdown
                     Container(
                       padding: const EdgeInsets.symmetric(horizontal: 12),
@@ -1824,10 +1920,14 @@ color: Theme.of(context).colorScheme.onSurfaceVariant,
                           icon: const Icon(Icons.sort),
                           hint: const Text('Sort By'),
                           items: const [
-                            DropdownMenuItem(value: 'createdAt', child: Text('Date Joined')),
-                            DropdownMenuItem(value: 'name', child: Text('Name')),
-                            DropdownMenuItem(value: 'email', child: Text('Email')),
-                            DropdownMenuItem(value: 'credits', child: Text('Credits')),
+                            DropdownMenuItem(
+                                value: 'createdAt', child: Text('Date Joined')),
+                            DropdownMenuItem(
+                                value: 'name', child: Text('Name')),
+                            DropdownMenuItem(
+                                value: 'email', child: Text('Email')),
+                            DropdownMenuItem(
+                                value: 'credits', child: Text('Credits')),
                           ],
                           onChanged: (value) {
                             setState(() => _sortBy = value ?? 'createdAt');
@@ -1837,11 +1937,13 @@ color: Theme.of(context).colorScheme.onSurfaceVariant,
                       ),
                     ),
                     const SizedBox(width: 8),
-                    
+
                     // Sort direction toggle
                     IconButton(
                       icon: Icon(
-                        _sortAscending ? Icons.arrow_upward : Icons.arrow_downward,
+                        _sortAscending
+                            ? Icons.arrow_upward
+                            : Icons.arrow_downward,
                         color: Colors.blue,
                       ),
                       tooltip: _sortAscending ? 'Ascending' : 'Descending',
@@ -1851,16 +1953,17 @@ color: Theme.of(context).colorScheme.onSurfaceVariant,
                       },
                     ),
                     const SizedBox(width: 12),
-                    
+
                     // Export button
                     ElevatedButton.icon(
                       onPressed: _isLoading ? null : _exportUsersToCsv,
-                      icon: _isLoading 
+                      icon: _isLoading
                           ? const SizedBox(
                               width: 16,
                               height: 16,
                               child: LoadingIndicatorM3E(
-                                constraints: BoxConstraints(maxWidth: 16, maxHeight: 16),
+                                constraints:
+                                    BoxConstraints(maxWidth: 16, maxHeight: 16),
                               ),
                             )
                           : const Icon(Icons.download, size: 18),
@@ -1874,10 +1977,11 @@ color: Theme.of(context).colorScheme.onSurfaceVariant,
                 ),
               ),
               const SizedBox(height: 12),
-              
+
               // Results summary
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                 decoration: BoxDecoration(
                   color: Colors.blue.withValues(alpha: 0.1),
                   borderRadius: BorderRadius.circular(8),
@@ -1897,21 +2001,26 @@ color: Theme.of(context).colorScheme.onSurfaceVariant,
                     if (_filterBy != 'all') ...[
                       const SizedBox(width: 8),
                       Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 8, vertical: 2),
                         decoration: BoxDecoration(
                           color: Colors.blue,
                           borderRadius: BorderRadius.circular(12),
                         ),
                         child: Text(
-                          _filterBy == 'news_subscribers' ? '📧 News' : _filterBy.toUpperCase(),
-                          style: TextStyle(color: Theme.of(context).colorScheme.onPrimary, fontSize: 11),
+                          _filterBy == 'news_subscribers'
+                              ? '📧 News'
+                              : _filterBy.toUpperCase(),
+                          style: TextStyle(
+                              color: Theme.of(context).colorScheme.onPrimary,
+                              fontSize: 11),
                         ),
                       ),
                     ],
                   ],
                 ),
               ),
-              
+
               if (_users.isEmpty && !_isLoading) ...[
                 const SizedBox(height: 16),
                 Container(
@@ -1919,7 +2028,8 @@ color: Theme.of(context).colorScheme.onSurfaceVariant,
                   decoration: BoxDecoration(
                     color: Colors.orange.withValues(alpha: 0.1),
                     borderRadius: BorderRadius.circular(8),
-                    border: Border.all(color: Colors.orange.withValues(alpha: 0.3)),
+                    border:
+                        Border.all(color: Colors.orange.withValues(alpha: 0.3)),
                   ),
                   child: Row(
                     children: [
@@ -2030,7 +2140,8 @@ color: Theme.of(context).colorScheme.onSurfaceVariant,
                 if (user.subscribedToNews) ...[
                   const SizedBox(width: 8),
                   Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                     decoration: BoxDecoration(
                       color: Colors.green.withValues(alpha: 0.2),
                       borderRadius: BorderRadius.circular(4),
@@ -2078,7 +2189,8 @@ color: Theme.of(context).colorScheme.onSurfaceVariant,
                       label: const Text('Send Message'),
                       style: ElevatedButton.styleFrom(
                         backgroundColor: Colors.blue,
-                        foregroundColor: Theme.of(context).colorScheme.onPrimary,
+                        foregroundColor:
+                            Theme.of(context).colorScheme.onPrimary,
                       ),
                     ),
                     ElevatedButton.icon(
@@ -2091,7 +2203,8 @@ color: Theme.of(context).colorScheme.onSurfaceVariant,
                       style: ElevatedButton.styleFrom(
                         backgroundColor:
                             user.isPro ? Colors.grey : Colors.orange,
-                        foregroundColor: Theme.of(context).colorScheme.onPrimary,
+                        foregroundColor:
+                            Theme.of(context).colorScheme.onPrimary,
                       ),
                     ),
                     ElevatedButton.icon(
@@ -2100,7 +2213,8 @@ color: Theme.of(context).colorScheme.onSurfaceVariant,
                       label: const Text('Add Credits'),
                       style: ElevatedButton.styleFrom(
                         backgroundColor: Colors.green,
-                        foregroundColor: Theme.of(context).colorScheme.onPrimary,
+                        foregroundColor:
+                            Theme.of(context).colorScheme.onPrimary,
                       ),
                     ),
                   ],
