@@ -74,7 +74,8 @@ class _UrlImportDialogState extends State<UrlImportDialog> {
       }
     } catch (e) {
       setState(() {
-        _errorText = 'Failed to import: ${e.toString().replaceAll('Exception: ', '')}';
+        _errorText =
+            'Failed to import: ${e.toString().replaceAll('Exception: ', '')}';
         _isLoading = false;
       });
     }
@@ -104,7 +105,10 @@ class _UrlImportDialogState extends State<UrlImportDialog> {
                 width: 40,
                 height: 4,
                 decoration: BoxDecoration(
-                  color: Theme.of(context).colorScheme.onSurfaceVariant.withValues(alpha: 0.2),
+                  color: Theme.of(context)
+                      .colorScheme
+                      .onSurfaceVariant
+                      .withValues(alpha: 0.2),
                   borderRadius: BorderRadius.circular(2),
                 ),
               ),
@@ -133,18 +137,22 @@ class _UrlImportDialogState extends State<UrlImportDialog> {
                       children: [
                         Text(
                           'Import from URL',
-                          style: Theme.of(context).textTheme.bodyLarge!.copyWith(
-                            fontWeight: FontWeight.w700,
-                            fontSize: 16,
-                          ),
+                          style:
+                              Theme.of(context).textTheme.bodyLarge!.copyWith(
+                                    fontWeight: FontWeight.w700,
+                                    fontSize: 16,
+                                  ),
                         ),
                         const SizedBox(height: 2),
                         Text(
                           'Paste a web page or PDF link',
-                          style: Theme.of(context).textTheme.bodySmall!.copyWith(
-                            color: Theme.of(context).colorScheme.onSurfaceVariant,
-                            fontSize: 12,
-                          ),
+                          style:
+                              Theme.of(context).textTheme.bodySmall!.copyWith(
+                                    color: Theme.of(context)
+                                        .colorScheme
+                                        .onSurfaceVariant,
+                                    fontSize: 12,
+                                  ),
                         ),
                       ],
                     ),
@@ -168,18 +176,27 @@ class _UrlImportDialogState extends State<UrlImportDialog> {
                     _errorText = null;
                   });
                 },
-                style: Theme.of(context).textTheme.bodyMedium!.copyWith(fontSize: 14),
+                style: Theme.of(context)
+                    .textTheme
+                    .bodyMedium!
+                    .copyWith(fontSize: 14),
                 decoration: InputDecoration(
                   hintText: 'https://example.com/article',
                   hintStyle: Theme.of(context).textTheme.bodyMedium!.copyWith(
-                    color: Theme.of(context).colorScheme.onSurfaceVariant.withValues(alpha: 0.4),
-                    fontSize: 14,
-                  ),
+                        color: Theme.of(context)
+                            .colorScheme
+                            .onSurfaceVariant
+                            .withValues(alpha: 0.4),
+                        fontSize: 14,
+                      ),
                   prefixIcon: Padding(
                     padding: const EdgeInsets.only(left: 14, right: 8),
                     child: Icon(
                       CupertinoIcons.globe,
-                      color: Theme.of(context).colorScheme.onSurfaceVariant.withValues(alpha: 0.4),
+                      color: Theme.of(context)
+                          .colorScheme
+                          .onSurfaceVariant
+                          .withValues(alpha: 0.4),
                       size: 18,
                     ),
                   ),
@@ -195,14 +212,19 @@ class _UrlImportDialogState extends State<UrlImportDialog> {
                           },
                           child: Icon(
                             CupertinoIcons.xmark_circle_fill,
-                            color:
-                                Theme.of(context).colorScheme.onSurfaceVariant.withValues(alpha: 0.3),
+                            color: Theme.of(context)
+                                .colorScheme
+                                .onSurfaceVariant
+                                .withValues(alpha: 0.3),
                             size: 18,
                           ),
                         )
                       : null,
                   filled: true,
-                  fillColor: Theme.of(context).colorScheme.onSurfaceVariant.withValues(alpha: 0.06),
+                  fillColor: Theme.of(context)
+                      .colorScheme
+                      .onSurfaceVariant
+                      .withValues(alpha: 0.06),
                   border: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(12),
                     borderSide: BorderSide.none,
@@ -278,22 +300,25 @@ class _UrlImportDialogState extends State<UrlImportDialog> {
                           width: 22,
                           height: 22,
                           child: LoadingIndicatorM3E(
-                            constraints: BoxConstraints(maxWidth: 22, maxHeight: 22),
+                            constraints:
+                                BoxConstraints(maxWidth: 22, maxHeight: 22),
                           ),
                         )
                       : Row(
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: [
-                            const Icon(CupertinoIcons.arrow_down_doc,
-                                size: 18),
+                            const Icon(CupertinoIcons.arrow_down_doc, size: 18),
                             const SizedBox(width: 8),
                             Text(
                               'Import Content',
-                              style: Theme.of(context).textTheme.bodyMedium!.copyWith(
-                                color: Colors.white,
-                                fontWeight: FontWeight.w600,
-                                fontSize: 15,
-                              ),
+                              style: Theme.of(context)
+                                  .textTheme
+                                  .bodyMedium!
+                                  .copyWith(
+                                    color: Colors.white,
+                                    fontWeight: FontWeight.w600,
+                                    fontSize: 15,
+                                  ),
                             ),
                           ],
                         ),
@@ -308,9 +333,12 @@ class _UrlImportDialogState extends State<UrlImportDialog> {
                 'Supports web articles, blog posts, and direct PDF links',
                 textAlign: TextAlign.center,
                 style: Theme.of(context).textTheme.bodySmall!.copyWith(
-                  color: Theme.of(context).colorScheme.onSurfaceVariant.withValues(alpha: 0.5),
-                  fontSize: 11,
-                ),
+                      color: Theme.of(context)
+                          .colorScheme
+                          .onSurfaceVariant
+                          .withValues(alpha: 0.5),
+                      fontSize: 11,
+                    ),
               ),
             ),
             const SizedBox(height: 8),

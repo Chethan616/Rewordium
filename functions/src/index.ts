@@ -8,9 +8,10 @@
  */
 
 import {onCall, HttpsError} from "firebase-functions/v2/https";
+import {onSchedule} from "firebase-functions/v2/scheduler";
 import {initializeApp} from "firebase-admin/app";
 import {getAuth} from "firebase-admin/auth";
-import {getFirestore} from "firebase-admin/firestore";
+import {FieldValue, getFirestore} from "firebase-admin/firestore";
 import {getMessaging} from "firebase-admin/messaging";
 
 // Initialize Firebase Admin SDK
@@ -25,6 +26,264 @@ const messaging = getMessaging();
 
 // Admin email - only this user can access admin functions
 const ADMIN_EMAIL = "chethankrishna2022@gmail.com";
+
+const GOOGLE_PLAY_PACKAGE_NAME =
+  process.env.GOOGLE_PLAY_PACKAGE_NAME || "com.noxquill.rewordium";
+const GOOGLE_PLAY_ANDROID_PUBLISHER_SCOPE =
+  "https://www.googleapis.com/auth/androidpublisher";
+const ENTITLED_SUBSCRIPTION_STATES = new Set<string>([
+  "SUBSCRIPTION_STATE_ACTIVE",
+  "SUBSCRIPTION_STATE_IN_GRACE_PERIOD",
+]);
+
+interface GooglePlayLineItem {
+  productId?: string;
+  expiryTime?: string;
+  autoRenewingPlan?: Record<string, unknown>;
+}
+
+interface GooglePlaySubscriptionV2Response {
+  subscriptionState?: string;
+  latestOrderId?: string;
+  lineItems?: GooglePlayLineItem[];
+}
+
+interface SubscriptionVerificationResult {
+  subscriptionState: string;
+  expiryDate: Date | null;
+  autoRenewing: boolean;
+  productId: string | null;
+  latestOrderId: string | null;
+}
+
+class PlayApiError extends Error {
+  status: number;
+
+  constructor(status: number, message: string) {
+    super(message);
+    this.status = status;
+  }
+}
+
+function toDateOrNull(value: unknown): Date | null {
+  if (!value) return null;
+
+  if (value instanceof Date) {
+    return value;
+  }
+
+  if (typeof value === "string") {
+    const parsedMillis = Date.parse(value);
+    if (Number.isNaN(parsedMillis)) {
+      return null;
+    }
+    return new Date(parsedMillis);
+  }
+
+  if (
+    typeof value === "object" &&
+    value !== null &&
+    "toDate" in value &&
+    typeof (value as {toDate?: unknown}).toDate === "function"
+  ) {
+    try {
+      return (value as {toDate: () => Date}).toDate();
+    } catch (error) {
+      console.warn("Failed converting Firestore timestamp to Date:", error);
+      return null;
+    }
+  }
+
+  return null;
+}
+
+function derivePlanTypeFromProduct(
+  productId: string | null,
+  fallbackPlanType?: string
+): string {
+  const fallback = (fallbackPlanType || "").trim().toLowerCase();
+  const product = (productId || "").toLowerCase();
+
+  if (product.includes("year") || product.includes("annual")) {
+    return "yearly";
+  }
+
+  if (product.includes("month")) {
+    return "monthly";
+  }
+
+  if (
+    fallback === "monthly" ||
+    fallback === "yearly" ||
+    fallback === "onetime" ||
+    fallback === "lifetime"
+  ) {
+    return fallback;
+  }
+
+  return "monthly";
+}
+
+function isSubscriptionEntitled(
+  subscriptionState: string,
+  expiryDate: Date | null
+): boolean {
+  if (!ENTITLED_SUBSCRIPTION_STATES.has(subscriptionState)) {
+    return false;
+  }
+
+  if (!expiryDate) {
+    return false;
+  }
+
+  return expiryDate.getTime() > Date.now();
+}
+
+async function getAndroidPublisherAccessToken(): Promise<string> {
+  const {GoogleAuth} = require("google-auth-library");
+  const googleAuth = new GoogleAuth({
+    scopes: [GOOGLE_PLAY_ANDROID_PUBLISHER_SCOPE],
+  });
+
+  const client = await googleAuth.getClient();
+  const accessToken = await client.getAccessToken();
+
+  if (!accessToken.token) {
+    throw new Error("Failed to obtain Android Publisher access token");
+  }
+
+  return accessToken.token;
+}
+
+async function fetchGooglePlaySubscription(
+  purchaseToken: string
+): Promise<SubscriptionVerificationResult> {
+  const accessToken = await getAndroidPublisherAccessToken();
+  const apiUrl =
+    "https://androidpublisher.googleapis.com/androidpublisher/v3/" +
+    `applications/${encodeURIComponent(GOOGLE_PLAY_PACKAGE_NAME)}` +
+    `/purchases/subscriptionsv2/tokens/${encodeURIComponent(purchaseToken)}`;
+
+  const response = await fetch(apiUrl, {
+    method: "GET",
+    headers: {
+      "Authorization": `Bearer ${accessToken}`,
+      "Accept": "application/json",
+    },
+  });
+
+  if (!response.ok) {
+    const errorBody = await response.text();
+    throw new PlayApiError(
+      response.status,
+      `Google Play API error ${response.status}: ${errorBody}`
+    );
+  }
+
+  const payload = await response.json() as GooglePlaySubscriptionV2Response;
+  const lineItems = Array.isArray(payload.lineItems) ? payload.lineItems : [];
+
+  let latestExpiry: Date | null = null;
+  let productId: string | null = null;
+  let autoRenewing = false;
+
+  for (const item of lineItems) {
+    if (!productId && item.productId) {
+      productId = item.productId;
+    }
+
+    if (item.autoRenewingPlan) {
+      autoRenewing = true;
+    }
+
+    const parsedExpiry = toDateOrNull(item.expiryTime);
+    if (
+      parsedExpiry &&
+      (!latestExpiry || parsedExpiry.getTime() > latestExpiry.getTime())
+    ) {
+      latestExpiry = parsedExpiry;
+    }
+  }
+
+  return {
+    subscriptionState: payload.subscriptionState || "UNKNOWN",
+    expiryDate: latestExpiry,
+    autoRenewing,
+    productId,
+    latestOrderId: payload.latestOrderId || null,
+  };
+}
+
+async function markSubscriptionActive(
+  userRef: FirebaseFirestore.DocumentReference,
+  verification: SubscriptionVerificationResult,
+  purchaseToken: string,
+  planType: string,
+  productId: string | null,
+  setUpgradeTimestamp: boolean
+): Promise<void> {
+  const updateData: Record<string, unknown> = {
+    isPro: true,
+    planType,
+    "subscription.planType": planType,
+    "subscription.status": "active",
+    "subscription.platform": "google_play",
+    "subscription.purchaseToken": purchaseToken,
+    "subscription.productId": productId,
+    "subscription.subscriptionState": verification.subscriptionState,
+    "subscription.autoRenewing": verification.autoRenewing,
+    "subscription.lastVerifiedAt": FieldValue.serverTimestamp(),
+    "subscription.verificationSource": "android_publisher_v3",
+  };
+
+  if (verification.latestOrderId) {
+    updateData["subscription.latestOrderId"] = verification.latestOrderId;
+  }
+
+  if (verification.expiryDate) {
+    updateData["subscription.expiryDate"] = verification.expiryDate;
+  }
+
+  if (setUpgradeTimestamp) {
+    updateData["upgradedAt"] = FieldValue.serverTimestamp();
+  }
+
+  await userRef.set(updateData, {merge: true});
+}
+
+async function markSubscriptionExpired(
+  userRef: FirebaseFirestore.DocumentReference,
+  purchaseToken: string,
+  planType: string,
+  productId: string | null,
+  subscriptionState: string,
+  expiryDate: Date | null,
+  reason: string
+): Promise<void> {
+  const updateData: Record<string, unknown> = {
+    isPro: false,
+    planType: "free",
+    credits: 20,
+    "subscription.planType": planType,
+    "subscription.status": "expired",
+    "subscription.platform": "google_play",
+    "subscription.purchaseToken": purchaseToken,
+    "subscription.subscriptionState": subscriptionState,
+    "subscription.lastVerifiedAt": FieldValue.serverTimestamp(),
+    "subscription.expiryReason": reason,
+    expiredAt: FieldValue.serverTimestamp(),
+  };
+
+  if (productId) {
+    updateData["subscription.productId"] = productId;
+  }
+
+  if (expiryDate) {
+    updateData["subscription.expiryDate"] = expiryDate;
+  }
+
+  await userRef.set(updateData, {merge: true});
+}
 
 /**
  * Verify if the current user is an admin
@@ -415,6 +674,273 @@ export const verifyIntegrity = onCall(async (request) => {
     throw new HttpsError("internal", "Failed to verify integrity token");
   }
 });
+
+/**
+ * Verify Google Play subscription on the backend and persist real entitlement state.
+ */
+export const verifyGooglePlaySubscription = onCall(async (request) => {
+  if (!request.auth?.uid) {
+    throw new HttpsError("unauthenticated", "User must be authenticated");
+  }
+
+  const purchaseToken = String(request.data?.purchaseToken ?? "").trim();
+  const productIdFromClient = String(request.data?.productId ?? "").trim();
+  const planTypeFromClient = String(request.data?.planType ?? "").trim();
+
+  if (!purchaseToken) {
+    throw new HttpsError("invalid-argument", "purchaseToken is required");
+  }
+
+  const userRef = db.collection("users").doc(request.auth.uid);
+
+  try {
+    const verification = await fetchGooglePlaySubscription(purchaseToken);
+    const effectiveProductId = verification.productId || productIdFromClient || null;
+    const effectivePlanType = derivePlanTypeFromProduct(
+      effectiveProductId,
+      planTypeFromClient
+    );
+    const isActive = isSubscriptionEntitled(
+      verification.subscriptionState,
+      verification.expiryDate
+    );
+
+    if (isActive) {
+      await markSubscriptionActive(
+        userRef,
+        verification,
+        purchaseToken,
+        effectivePlanType,
+        effectiveProductId,
+        true
+      );
+    } else {
+      await markSubscriptionExpired(
+        userRef,
+        purchaseToken,
+        effectivePlanType,
+        effectiveProductId,
+        verification.subscriptionState,
+        verification.expiryDate,
+        "play_state_inactive"
+      );
+    }
+
+    return {
+      isActive,
+      planType: isActive ? effectivePlanType : "free",
+      expiryDate: verification.expiryDate
+        ? verification.expiryDate.toISOString()
+        : null,
+      productId: effectiveProductId,
+      autoRenewing: verification.autoRenewing,
+      subscriptionState: verification.subscriptionState,
+      packageName: GOOGLE_PLAY_PACKAGE_NAME,
+    };
+  } catch (error) {
+    if (error instanceof PlayApiError && (error.status === 404 || error.status === 410)) {
+      const fallbackPlanType = derivePlanTypeFromProduct(
+        productIdFromClient || null,
+        planTypeFromClient
+      );
+
+      await markSubscriptionExpired(
+        userRef,
+        purchaseToken,
+        fallbackPlanType,
+        productIdFromClient || null,
+        "TOKEN_NOT_FOUND",
+        null,
+        "token_not_found_on_google_play"
+      );
+
+      return {
+        isActive: false,
+        planType: "free",
+        expiryDate: null,
+        productId: productIdFromClient || null,
+        autoRenewing: false,
+        subscriptionState: "TOKEN_NOT_FOUND",
+        packageName: GOOGLE_PLAY_PACKAGE_NAME,
+      };
+    }
+
+    console.error("Error verifying Google Play subscription:", error);
+    throw new HttpsError(
+      "internal",
+      "Failed to verify Google Play subscription"
+    );
+  }
+});
+
+/**
+ * Periodically reconcile Google Play subscriptions and force-expire overdue users.
+ */
+export const reconcileGooglePlaySubscriptions = onSchedule(
+  {
+    schedule: "every 6 hours",
+    timeZone: "Etc/UTC",
+  },
+  async () => {
+    const usersSnapshot = await db
+      .collection("users")
+      .where("isPro", "==", true)
+      .where("subscription.platform", "==", "google_play")
+      .get();
+
+    let processed = 0;
+    let verifiedActive = 0;
+    let forcedExpired = 0;
+    let renewed = 0;
+    let skippedNoToken = 0;
+    let skippedLifetime = 0;
+    let verificationErrors = 0;
+
+    const now = Date.now();
+
+    for (const userDoc of usersSnapshot.docs) {
+      processed++;
+
+      const userData = userDoc.data();
+      const subscriptionData =
+        (userData.subscription as Record<string, unknown> | undefined) || {};
+
+      const storedProductId =
+        typeof subscriptionData.productId === "string"
+          ? subscriptionData.productId
+          : null;
+
+      const storedPlanType =
+        typeof subscriptionData.planType === "string"
+          ? subscriptionData.planType
+          : typeof userData.planType === "string"
+            ? userData.planType
+            : undefined;
+
+      const resolvedPlanType = derivePlanTypeFromProduct(
+        storedProductId,
+        storedPlanType
+      );
+
+      if (resolvedPlanType === "onetime" || resolvedPlanType === "lifetime") {
+        skippedLifetime++;
+        continue;
+      }
+
+      const storedExpiry = toDateOrNull(subscriptionData.expiryDate);
+      const purchaseToken =
+        typeof subscriptionData.purchaseToken === "string"
+          ? subscriptionData.purchaseToken.trim()
+          : "";
+
+      if (!purchaseToken) {
+        if (storedExpiry && storedExpiry.getTime() <= now) {
+          await markSubscriptionExpired(
+            userDoc.ref,
+            "",
+            resolvedPlanType,
+            storedProductId,
+            "MISSING_TOKEN",
+            storedExpiry,
+            "missing_purchase_token"
+          );
+          forcedExpired++;
+        } else {
+          skippedNoToken++;
+        }
+        continue;
+      }
+
+      try {
+        const verification = await fetchGooglePlaySubscription(purchaseToken);
+        const effectiveProductId = verification.productId || storedProductId;
+        const effectivePlanType = derivePlanTypeFromProduct(
+          effectiveProductId,
+          resolvedPlanType
+        );
+
+        const isActive = isSubscriptionEntitled(
+          verification.subscriptionState,
+          verification.expiryDate
+        );
+
+        if (isActive) {
+          await markSubscriptionActive(
+            userDoc.ref,
+            verification,
+            purchaseToken,
+            effectivePlanType,
+            effectiveProductId,
+            false
+          );
+          verifiedActive++;
+
+          if (
+            storedExpiry &&
+            verification.expiryDate &&
+            verification.expiryDate.getTime() > storedExpiry.getTime()
+          ) {
+            renewed++;
+          }
+        } else {
+          await markSubscriptionExpired(
+            userDoc.ref,
+            purchaseToken,
+            effectivePlanType,
+            effectiveProductId,
+            verification.subscriptionState,
+            verification.expiryDate,
+            "play_state_inactive"
+          );
+          forcedExpired++;
+        }
+      } catch (error) {
+        if (error instanceof PlayApiError && (error.status === 404 || error.status === 410)) {
+          await markSubscriptionExpired(
+            userDoc.ref,
+            purchaseToken,
+            resolvedPlanType,
+            storedProductId,
+            "TOKEN_NOT_FOUND",
+            storedExpiry,
+            "token_not_found_on_google_play"
+          );
+          forcedExpired++;
+          continue;
+        }
+
+        verificationErrors++;
+        console.error(`Reconciliation error for user ${userDoc.id}:`, error);
+
+        if (storedExpiry && storedExpiry.getTime() <= now) {
+          await markSubscriptionExpired(
+            userDoc.ref,
+            purchaseToken,
+            resolvedPlanType,
+            storedProductId,
+            "UNKNOWN",
+            storedExpiry,
+            "local_expiry_after_verification_error"
+          );
+          forcedExpired++;
+        }
+      }
+    }
+
+    const summary = {
+      processed,
+      verifiedActive,
+      forcedExpired,
+      renewed,
+      skippedNoToken,
+      skippedLifetime,
+      verificationErrors,
+      packageName: GOOGLE_PLAY_PACKAGE_NAME,
+    };
+
+    console.log("Google Play reconciliation summary:", summary);
+  }
+);
 
 /**
  * Build a human-readable reason for blocking

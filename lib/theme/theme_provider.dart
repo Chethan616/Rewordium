@@ -147,7 +147,10 @@ class ThemeProvider extends ChangeNotifier {
       debugPrint('Error calling updateKeyboardTheme: $error');
     });
 
-    RewordiumKeyboardService.setDarkMode(isDark).catchError((error) {
+    RewordiumKeyboardService.setDarkMode(
+      isDark,
+      aggressiveRefresh: false,
+    ).catchError((error) {
       debugPrint('Error syncing keyboard dark mode: $error');
     });
   }
@@ -173,7 +176,10 @@ class ThemeProvider extends ChangeNotifier {
       return;
     }
     _lastKeyboardAccentHex = hex;
-    RewordiumKeyboardService.updateThemeColor(hex).catchError((error) {
+    RewordiumKeyboardService.updateThemeColor(
+      hex,
+      aggressiveRefresh: false,
+    ).catchError((error) {
       debugPrint('Error syncing keyboard accent color: $error');
     });
   }

@@ -102,12 +102,12 @@ void main() async {
   unawaited(UnifiedAIService.initialize().then((_) {
     isGroqInitialized = true;
     AppLogger.init('Groq service');
-    
+
     // Initialize AI Settings Bridge for Android native services
     AISettingsBridge.initialize();
     unawaited(AISettingsBridge.syncSettingsToAndroid());
     AppLogger.init('AI Settings Bridge');
-    
+
     // Initialize Deep Link Service for app shortcuts
     DeepLinkService.initialize();
     AppLogger.init('Deep Link Service');
@@ -130,12 +130,23 @@ void main() async {
 
   // Create billing service and set up subscription callback
   final billingService = BillingService();
-  billingService.onSubscriptionActive = (String productId, String? purchaseToken) {
+  billingService.onSubscriptionActive =
+      (String productId, String? purchaseToken) {
+    if (purchaseToken == null || purchaseToken.isEmpty) {
+      AppLogger.warning(
+        'Subscription callback without purchase token for product: $productId',
+      );
+      return;
+    }
+
     // Update auth provider when subscription is activated
     final planType = productId.contains('yearly') ? 'yearly' : 'monthly';
-    authProvider.activateProSubscription(
-      planType: planType,
-      purchaseToken: purchaseToken ?? productId,
+    unawaited(
+      authProvider.activateProSubscription(
+        planType: planType,
+        purchaseToken: purchaseToken,
+        productId: productId,
+      ),
     );
   };
 
@@ -235,7 +246,8 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
         final darkTheme = AppTheme.darkThemeWith(
           useDynamicColors ? darkDynamic : null,
         );
-        final activeScheme = isDarkMode ? darkTheme.colorScheme : lightTheme.colorScheme;
+        final activeScheme =
+            isDarkMode ? darkTheme.colorScheme : lightTheme.colorScheme;
 
         themeProvider.syncKeyboardAccent(activeScheme.primary);
 

@@ -107,7 +107,8 @@ Widget _buildRangeSliderM3EDemo(
   );
 
   // Labels & semantics
-  final hasLabels = context.knobs.boolean(label: 'use RangeLabels', initialValue: false);
+  final hasLabels =
+      context.knobs.boolean(label: 'use RangeLabels', initialValue: false);
   final startLabel = hasLabels
       ? context.knobs.string(label: 'start label', initialValue: 'Start')
       : null;
@@ -127,13 +128,16 @@ Widget _buildRangeSliderM3EDemo(
 
   final onChanged = disabled
       ? null
-      : (RangeValues v) => print('RangeSliderM3E onChanged -> ${v.start} - ${v.end}');
+      : (RangeValues v) =>
+          print('RangeSliderM3E onChanged -> ${v.start} - ${v.end}');
   final onChangeStart = disabled
       ? null
-      : (RangeValues v) => print('RangeSliderM3E onChangeStart -> ${v.start} - ${v.end}');
+      : (RangeValues v) =>
+          print('RangeSliderM3E onChangeStart -> ${v.start} - ${v.end}');
   final onChangeEnd = disabled
       ? null
-      : (RangeValues v) => print('RangeSliderM3E onChangeEnd -> ${v.start} - ${v.end}');
+      : (RangeValues v) =>
+          print('RangeSliderM3E onChangeEnd -> ${v.start} - ${v.end}');
 
   return Padding(
     padding: const EdgeInsets.all(16),

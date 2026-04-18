@@ -37,8 +37,10 @@ class DemoHome extends StatelessWidget {
       body: ListView(
         padding: const EdgeInsets.all(16),
         children: [
-          const Text('Basic usage',
-              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+          const Text(
+            'Basic usage',
+            style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+          ),
           const SizedBox(height: 8),
           SplitButtonM3E<String>(
             label: 'Save',
@@ -46,18 +48,24 @@ class DemoHome extends StatelessWidget {
             onPressed: () => _snack(context, 'Save pressed'),
             items: const [
               SplitButtonM3EItem<String>(
-                  value: 'draft', child: 'Save as draft'),
+                value: 'draft',
+                child: 'Save as draft',
+              ),
               SplitButtonM3EItem<String>(value: 'close', child: 'Save & close'),
             ],
             onSelected: (v) => _snack(context, 'Selected: $v'),
           ),
           const SizedBox(height: 24),
-          const Text('Variants × Sizes (round)',
-              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+          const Text(
+            'Variants × Sizes (round)',
+            style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+          ),
           const SizedBox(height: 8),
           for (final v in variants) ...[
-            Text(v.toString().split('.').last.toUpperCase(),
-                style: const TextStyle(fontWeight: FontWeight.bold)),
+            Text(
+              v.toString().split('.').last.toUpperCase(),
+              style: const TextStyle(fontWeight: FontWeight.bold),
+            ),
             const SizedBox(height: 8),
             Wrap(
               spacing: 12,
@@ -82,8 +90,10 @@ class DemoHome extends StatelessWidget {
             const SizedBox(height: 16),
           ],
           const SizedBox(height: 24),
-          const Text('Square shape',
-              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+          const Text(
+            'Square shape',
+            style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+          ),
           const SizedBox(height: 8),
           Wrap(
             spacing: 12,
@@ -96,7 +106,9 @@ class DemoHome extends StatelessWidget {
                   onPressed: () => _snack(context, 'Share primary'),
                   items: const [
                     SplitButtonM3EItem<String>(
-                        value: 'link', child: 'Copy link'),
+                      value: 'link',
+                      child: 'Copy link',
+                    ),
                     SplitButtonM3EItem<String>(value: 'email', child: 'Email'),
                   ],
                   onSelected: (v) => _snack(context, 'Selected: $v'),

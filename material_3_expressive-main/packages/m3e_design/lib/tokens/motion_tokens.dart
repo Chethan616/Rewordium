@@ -25,11 +25,16 @@ class M3EMotion {
   });
 
   const M3EMotion.expressive()
-      : spatialFast = const SpringDescription(mass: 1, stiffness: 500, damping: 30),
-        spatialMedium = const SpringDescription(mass: 1, stiffness: 350, damping: 28),
-        spatialGentle = const SpringDescription(mass: 1, stiffness: 220, damping: 24),
-        effectsFast = const SpringDescription(mass: 1, stiffness: 420, damping: 32),
-        effectsMedium = const SpringDescription(mass: 1, stiffness: 280, damping: 28),
+      : spatialFast =
+            const SpringDescription(mass: 1, stiffness: 500, damping: 30),
+        spatialMedium =
+            const SpringDescription(mass: 1, stiffness: 350, damping: 28),
+        spatialGentle =
+            const SpringDescription(mass: 1, stiffness: 220, damping: 24),
+        effectsFast =
+            const SpringDescription(mass: 1, stiffness: 420, damping: 32),
+        effectsMedium =
+            const SpringDescription(mass: 1, stiffness: 280, damping: 28),
         fast = const Duration(milliseconds: 150),
         medium = const Duration(milliseconds: 250),
         slow = const Duration(milliseconds: 400);
@@ -39,5 +44,6 @@ class M3EMotion {
 
 class SpringDescription {
   final double mass, stiffness, damping;
-  const SpringDescription({required this.mass, required this.stiffness, required this.damping});
+  const SpringDescription(
+      {required this.mass, required this.stiffness, required this.damping});
 }

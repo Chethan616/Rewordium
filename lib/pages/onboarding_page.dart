@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:package_info_plus/package_info_plus.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -15,14 +16,39 @@ import '../theme/theme_provider.dart';
 class OnboardingPage extends StatefulWidget {
   const OnboardingPage({super.key});
 
+  static const String _legacyCompletionKey = 'onboarding_completed';
+  static const String _versionedCompletionKey =
+      'onboarding_completed_for_version';
+
+  static Future<String> _currentBuildSignature() async {
+    final info = await PackageInfo.fromPlatform();
+    return '${info.version}+${info.buildNumber}';
+  }
+
   static Future<bool> hasCompleted() async {
     final prefs = await SharedPreferences.getInstance();
-    return prefs.getBool('onboarding_completed') ?? false;
+    try {
+      final currentSignature = await _currentBuildSignature();
+      final completedSignature = prefs.getString(_versionedCompletionKey);
+      if (completedSignature == null) {
+        // No version-scoped completion means onboarding must run on this build.
+        return false;
+      }
+      return completedSignature == currentSignature;
+    } catch (_) {
+      return prefs.getBool(_legacyCompletionKey) ?? false;
+    }
   }
 
   static Future<void> markCompleted() async {
     final prefs = await SharedPreferences.getInstance();
-    await prefs.setBool('onboarding_completed', true);
+    await prefs.setBool(_legacyCompletionKey, true);
+    try {
+      final currentSignature = await _currentBuildSignature();
+      await prefs.setString(_versionedCompletionKey, currentSignature);
+    } catch (_) {
+      // Persisting legacy completion still prevents lock-in if version lookup fails.
+    }
   }
 
   @override
@@ -429,7 +455,9 @@ class _OnboardingPageState extends State<OnboardingPage>
               : 'Enable Rewordium keyboard in system settings, then return to continue.',
         );
         if (shouldAutoOpenKeyboardSettings) {
-          await RewordiumKeyboardService.openKeyboardSettings();
+          await RewordiumKeyboardService.openKeyboardSettings(
+            autoReturnToApp: _awaitingSystemSetup,
+          );
         }
         return;
       }
@@ -1428,7 +1456,7 @@ class _OnboardingPageState extends State<OnboardingPage>
         if (_keyboardHapticsEnabled) ...[
           const SizedBox(height: 10),
           Text(
-            'Haptics mode preference',
+            'Haptics output mode',
             style: Theme.of(context).textTheme.titleSmall?.copyWith(
                   fontWeight: FontWeight.w700,
                 ),
@@ -1439,7 +1467,7 @@ class _OnboardingPageState extends State<OnboardingPage>
             runSpacing: 8,
             children: [
               ChoiceChip(
-                label: const Text('Follow system'),
+                label: const Text('System haptic interface'),
                 selected:
                     _keyboardHapticsMode == _KeyboardHapticsMode.followSystem,
                 onSelected: (_) {
@@ -1449,7 +1477,7 @@ class _OnboardingPageState extends State<OnboardingPage>
                 },
               ),
               ChoiceChip(
-                label: const Text('Always vibrate'),
+                label: const Text('Vibrator mode'),
                 selected:
                     _keyboardHapticsMode == _KeyboardHapticsMode.alwaysVibrate,
                 onSelected: (_) {

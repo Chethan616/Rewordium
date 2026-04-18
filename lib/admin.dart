@@ -390,7 +390,8 @@ class _AdminPanelState extends State<AdminPanel> {
                       width: 24,
                       height: 24,
                       child: LoadingIndicatorM3E(
-                        constraints: BoxConstraints(maxWidth: 24, maxHeight: 24),
+                        constraints:
+                            BoxConstraints(maxWidth: 24, maxHeight: 24),
                       ),
                     )
                   : const Text('Send Notification'),

@@ -13,7 +13,7 @@ class UpgradeDialog extends StatelessWidget {
       Navigator.of(context).pop();
       showProUpgradeScreen(context);
     });
-    
+
     return const SizedBox.shrink();
   }
 }

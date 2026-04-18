@@ -254,7 +254,8 @@ class _BrokenScreenState extends State<BrokenScreen>
                 ),
                 const SizedBox(height: 32),
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                   decoration: BoxDecoration(
                     color: Colors.orange.withOpacity(0.1),
                     borderRadius: BorderRadius.circular(20),
@@ -332,7 +333,8 @@ class _FallingWidgetAnimatorState extends State<_FallingWidgetAnimator>
 
     _controller = AnimationController(
       vsync: this,
-      duration: Duration(milliseconds: (widget.config.fallDuration * 1000).toInt()),
+      duration:
+          Duration(milliseconds: (widget.config.fallDuration * 1000).toInt()),
     );
 
     // Bouncy fall animation using custom curve – lands at bottom and bounces once
@@ -353,7 +355,8 @@ class _FallingWidgetAnimatorState extends State<_FallingWidgetAnimator>
     ));
 
     // Start animation after delay
-    Future.delayed(Duration(milliseconds: (widget.config.delay * 1000).toInt()), () {
+    Future.delayed(Duration(milliseconds: (widget.config.delay * 1000).toInt()),
+        () {
       if (mounted) {
         _controller.forward();
       }

@@ -6,7 +6,7 @@ import '../utils/app_logger.dart';
 
 /// Service for Google Play Integrity API
 /// Verifies app integrity and device authenticity via server-side verification
-/// 
+///
 /// Flow:
 /// 1. Flutter calls native Android code via MethodChannel
 /// 2. Android requests integrity token from Google Play
@@ -14,15 +14,18 @@ import '../utils/app_logger.dart';
 /// 4. Cloud Function decodes token and checks verdicts
 /// 5. Returns allow/block decision
 class PlayIntegrityService {
-  static const MethodChannel _channel = MethodChannel('com.noxquill.rewordium/integrity');
+  static const MethodChannel _channel =
+      MethodChannel('com.noxquill.rewordium/integrity');
   static const bool _verificationDisabled = true;
 
   // ── Cache keys & TTLs ─────────────────────────
-  static const String _kCacheResult  = 'pi_result';
-  static const String _kCacheTime    = 'pi_time';
+  static const String _kCacheResult = 'pi_result';
+  static const String _kCacheTime = 'pi_time';
   static const String _kCacheVersion = 'pi_version';
+
   /// Passed result stays valid for 24 hours.
   static const int _kPassTTLMs = 86400000;
+
   /// Failed result retries after 30 minutes.
   static const int _kFailTTLMs = 1800000;
 
@@ -32,7 +35,8 @@ class PlayIntegrityService {
   /// Call this from the splash — it is fast (~50 ms) on every subsequent cold start.
   static Future<bool> checkIntegrityWithCache() async {
     if (_verificationDisabled) {
-      AppLogger.warning('Play Integrity: verification disabled (temporary bypass)');
+      AppLogger.warning(
+          'Play Integrity: verification disabled (temporary bypass)');
       return true;
     }
 
@@ -40,15 +44,17 @@ class PlayIntegrityService {
 
     try {
       final prefs = await SharedPreferences.getInstance();
-      final cachedResult  = prefs.getBool(_kCacheResult);
-      final cachedTime    = prefs.getInt(_kCacheTime);
+      final cachedResult = prefs.getBool(_kCacheResult);
+      final cachedTime = prefs.getInt(_kCacheTime);
       final cachedVersion = prefs.getString(_kCacheVersion);
 
       // Invalidate cache when the app is updated
       final info = await PackageInfo.fromPlatform();
       final currentVersion = '${info.version}+${info.buildNumber}';
 
-      if (cachedResult != null && cachedTime != null && cachedVersion == currentVersion) {
+      if (cachedResult != null &&
+          cachedTime != null &&
+          cachedVersion == currentVersion) {
         final ageMs = DateTime.now().millisecondsSinceEpoch - cachedTime;
         final ttlMs = cachedResult ? _kPassTTLMs : _kFailTTLMs;
         if (ageMs < ttlMs) {
@@ -68,7 +74,8 @@ class PlayIntegrityService {
       await prefs.setString(_kCacheVersion, currentVersion);
       return result;
     } catch (e) {
-      AppLogger.error('Play Integrity: Cache error, falling back to live check', e);
+      AppLogger.error(
+          'Play Integrity: Cache error, falling back to live check', e);
       return checkIntegrity();
     }
   }
@@ -83,12 +90,11 @@ class PlayIntegrityService {
     } catch (_) {}
   }
 
-
   /// Returns true ONLY if ALL conditions pass:
   /// - MEETS_STRONG_INTEGRITY (device is genuine, not rooted)
   /// - PLAY_RECOGNIZED (app is the real, unmodified APK)
   /// - LICENSED (installed from Play Store, not sideloaded)
-  /// 
+  ///
   /// Returns false on ANY error (strict mode - block by default)
   static Future<bool> checkIntegrity() async {
     if (_verificationDisabled) {
@@ -104,18 +110,20 @@ class PlayIntegrityService {
       }
 
       AppLogger.info('Play Integrity: Starting verification...');
-      
+
       final result = await _channel.invokeMethod<bool>('checkIntegrity');
-      
+
       if (result == true) {
-        AppLogger.info('Play Integrity: ✅ All checks passed (Strong + PlayRecognized + Licensed)');
+        AppLogger.info(
+            'Play Integrity: ✅ All checks passed (Strong + PlayRecognized + Licensed)');
         return true;
       } else {
         AppLogger.warning('Play Integrity: ⛔ Verification FAILED');
         return false;
       }
     } on PlatformException catch (e) {
-      AppLogger.error('Play Integrity: Platform error - ${e.code}: ${e.message}', e);
+      AppLogger.error(
+          'Play Integrity: Platform error - ${e.code}: ${e.message}', e);
       // STRICT: Return false on errors - block the app
       // A legitimate Play Store install should never hit this
       return false;
@@ -144,7 +152,7 @@ class PlayIntegrityService {
       }
 
       final result = await _channel.invokeMethod<Map>('getIntegrityVerdict');
-      
+
       if (result != null) {
         final verdict = Map<String, dynamic>.from(result);
         AppLogger.info('Play Integrity: Detailed verdict received');
@@ -152,7 +160,7 @@ class PlayIntegrityService {
         AppLogger.info('  reason: ${verdict['reason']}');
         return verdict;
       }
-      
+
       return null;
     } catch (e) {
       AppLogger.error('Play Integrity: Error getting verdict', e);
@@ -164,7 +172,8 @@ class PlayIntegrityService {
   /// Should be called during app startup
   static Future<void> initialize() async {
     if (_verificationDisabled) {
-      AppLogger.warning('Play Integrity: initialize skipped (temporary bypass)');
+      AppLogger.warning(
+          'Play Integrity: initialize skipped (temporary bypass)');
       return;
     }
 

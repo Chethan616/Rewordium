@@ -1,5 +1,3 @@
-
-
 import 'package:flutter/material.dart';
 import 'package:progress_indicator_m3e/progress_indicator_m3e.dart';
 import 'package:widgetbook/widgetbook.dart';
@@ -53,8 +51,7 @@ Widget buildLinearProgressIndicatorM3EIndeterminateUseCase(
 }
 
 @UseCase(name: 'determinate', type: LinearProgressIndicatorM3E)
-Widget buildLinearProgressIndicatorM3EDeterminateUseCase(
-    BuildContext context) {
+Widget buildLinearProgressIndicatorM3EDeterminateUseCase(BuildContext context) {
   final double value = context.knobs.double.slider(
     label: 'value',
     initialValue: 0.5,

@@ -38,6 +38,10 @@ class MainActivity : FlutterActivity() {
         private const val ONBOARDING_RUNTIME_PREFS = "rewordium_onboarding_runtime"
         private const val KEY_RETURN_TO_APP_AFTER_ACCESSIBILITY_ENABLED =
             "return_to_app_after_accessibility_enabled"
+        private const val KEY_RETURN_TO_APP_AFTER_KEYBOARD_ENABLED =
+            "return_to_app_after_keyboard_enabled"
+        private const val KEYBOARD_RETURN_TO_APP_POLL_INTERVAL_MS = 700L
+        private const val KEYBOARD_RETURN_TO_APP_MAX_POLLS = 45
         
         // <-- ADDED: A new channel specifically for syncing user status and credits.
         private const val USER_STATUS_CHANNEL = "com.noxquill.rewordium/user_status"
@@ -50,6 +54,9 @@ class MainActivity : FlutterActivity() {
     private var isDeepLinkChannelReady: Boolean = false
     private var userStatusMethodChannel: MethodChannel? = null
     private var lastReboardSettingsLaunchAt: Long = 0L
+    private val keyboardReturnHandler = Handler(Looper.getMainLooper())
+    private var keyboardReturnRunnable: Runnable? = null
+    private var keyboardReturnPollCount: Int = 0
     private val creditConsumptionReceiver = object : BroadcastReceiver() {
         override fun onReceive(context: Context?, intent: Intent?) {
             if (intent?.action == "com.noxquill.rewordium.CONSUME_CREDIT_REQUEST") {
@@ -83,6 +90,8 @@ class MainActivity : FlutterActivity() {
 
     override fun onDestroy() {
         super.onDestroy()
+
+        stopKeyboardReturnPolling()
 
         isDeepLinkChannelReady = false
         deepLinkChannel = null
@@ -307,7 +316,12 @@ class MainActivity : FlutterActivity() {
                     result.success(isReboardEnabled())
                 }
                 "openKeyboardSettings" -> {
-                    openKeyboardSettings()
+                    val autoReturnToApp = call.argument<Boolean>("autoReturnToApp") ?: false
+                    getSharedPreferences(ONBOARDING_RUNTIME_PREFS, Context.MODE_PRIVATE)
+                        .edit()
+                        .putBoolean(KEY_RETURN_TO_APP_AFTER_KEYBOARD_ENABLED, autoReturnToApp)
+                        .apply()
+                    openKeyboardSettings(autoReturnToApp)
                     result.success(true)
                 }
                 "showInputMethodPicker" -> {
@@ -848,10 +862,73 @@ class MainActivity : FlutterActivity() {
         }
     }
 
-    private fun openKeyboardSettings() {
+    private fun openKeyboardSettings(autoReturnToApp: Boolean = false) {
         val intent = Intent(Settings.ACTION_INPUT_METHOD_SETTINGS)
         intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
         startActivity(intent)
+
+        if (autoReturnToApp) {
+            scheduleKeyboardReturnPolling()
+        } else {
+            stopKeyboardReturnPolling()
+        }
+    }
+
+    private fun scheduleKeyboardReturnPolling() {
+        stopKeyboardReturnPolling()
+        keyboardReturnPollCount = 0
+
+        keyboardReturnRunnable = object : Runnable {
+            override fun run() {
+                val runtimePrefs = getSharedPreferences(ONBOARDING_RUNTIME_PREFS, Context.MODE_PRIVATE)
+                val shouldReturn = runtimePrefs.getBoolean(KEY_RETURN_TO_APP_AFTER_KEYBOARD_ENABLED, false)
+                if (!shouldReturn) {
+                    stopKeyboardReturnPolling()
+                    return
+                }
+
+                if (isReboardEnabled()) {
+                    runtimePrefs.edit().putBoolean(KEY_RETURN_TO_APP_AFTER_KEYBOARD_ENABLED, false).apply()
+                    val launchIntent = packageManager.getLaunchIntentForPackage(packageName)?.apply {
+                        addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                        addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP)
+                        addFlags(Intent.FLAG_ACTIVITY_SINGLE_TOP)
+                    }
+                    if (launchIntent != null) {
+                        try {
+                            startActivity(launchIntent)
+                            Log.d(TAG, "Returned user to app after keyboard enablement")
+                            stopKeyboardReturnPolling()
+                            return
+                        } catch (e: Exception) {
+                            Log.w(TAG, "Unable to auto-return app after keyboard setup", e)
+                        }
+                    } else {
+                        Log.w(TAG, "Could not resolve launch intent for keyboard auto-return")
+                    }
+                }
+
+                keyboardReturnPollCount += 1
+                if (keyboardReturnPollCount >= KEYBOARD_RETURN_TO_APP_MAX_POLLS) {
+                    runtimePrefs.edit().putBoolean(KEY_RETURN_TO_APP_AFTER_KEYBOARD_ENABLED, false).apply()
+                    Log.d(TAG, "Keyboard auto-return polling timed out")
+                    stopKeyboardReturnPolling()
+                    return
+                }
+
+                keyboardReturnHandler.postDelayed(this, KEYBOARD_RETURN_TO_APP_POLL_INTERVAL_MS)
+            }
+        }
+
+        keyboardReturnRunnable?.let {
+            keyboardReturnHandler.postDelayed(it, KEYBOARD_RETURN_TO_APP_POLL_INTERVAL_MS)
+        }
+    }
+
+    private fun stopKeyboardReturnPolling() {
+        keyboardReturnRunnable?.let { keyboardReturnHandler.removeCallbacks(it) }
+        keyboardReturnRunnable = null
+        keyboardReturnPollCount = 0
     }
 
     private fun showInputMethodPicker(): Boolean {

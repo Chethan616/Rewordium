@@ -112,15 +112,18 @@ class _AIDetectorPageState extends State<AIDetectorPage> {
       // If is_ai_generated is true, set high probability
       probability = (_result!['is_ai_generated'] == true) ? 0.85 : 0.15;
     }
-    
+
     // Ensure probability is between 0 and 1
     if (probability > 1) probability = probability / 100;
     probability = probability.clamp(0.0, 1.0);
-    
+
     final String confidence = _result!['confidence']?.toString() ?? 'low';
-    final String reasoning = _result!['reasoning'] ?? _result!['explanation'] ?? 'No reasoning provided';
+    final String reasoning = _result!['reasoning'] ??
+        _result!['explanation'] ??
+        'No reasoning provided';
     final List<dynamic> humanIndicators = _result!['human_indicators'] ?? [];
-    final List<dynamic> aiIndicators = _result!['ai_indicators'] ?? _result!['indicators'] ?? [];
+    final List<dynamic> aiIndicators =
+        _result!['ai_indicators'] ?? _result!['indicators'] ?? [];
 
     showDialog(
       context: context,
@@ -226,8 +229,8 @@ class _AIDetectorPageState extends State<AIDetectorPage> {
             Text('AI Probability:',
                 style: TextStyle(fontWeight: FontWeight.bold)),
             Text('${(probability * 100).toStringAsFixed(1)}%',
-                style: TextStyle(
-                    fontWeight: FontWeight.bold, color: meterColor)),
+                style:
+                    TextStyle(fontWeight: FontWeight.bold, color: meterColor)),
           ],
         ),
         SizedBox(height: 8),
@@ -381,9 +384,12 @@ class _AIDetectorPageState extends State<AIDetectorPage> {
                         child: Text(
                           "Enter or paste text to check if it was written by AI",
                           textAlign: TextAlign.center,
-                          style: Theme.of(context).textTheme.bodyMedium!.copyWith(
-                            color: Theme.of(context).colorScheme.onSurfaceVariant,
-                          ),
+                          style:
+                              Theme.of(context).textTheme.bodyMedium!.copyWith(
+                                    color: Theme.of(context)
+                                        .colorScheme
+                                        .onSurfaceVariant,
+                                  ),
                         ),
                       ),
                       const SizedBox(height: 16),
@@ -405,8 +411,7 @@ class _AIDetectorPageState extends State<AIDetectorPage> {
                                   }
                                 } catch (e) {
                                   ScaffoldMessenger.of(context).showSnackBar(
-                                    SnackBar(
-                                        content: Text('Paste failed: $e')),
+                                    SnackBar(content: Text('Paste failed: $e')),
                                   );
                                 }
                               },

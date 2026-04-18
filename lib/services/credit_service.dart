@@ -27,7 +27,9 @@ class CreditService {
 
   static Future<int> getCredits(String uid) async {
     try {
-      final doc = await _usersCollection.doc(uid).get(const GetOptions(source: Source.server));
+      final doc = await _usersCollection
+          .doc(uid)
+          .get(const GetOptions(source: Source.server));
       if (doc.exists && doc.data() != null) {
         final data = doc.data() as Map<String, dynamic>;
         return data['credits'] as int? ?? 0;

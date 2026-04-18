@@ -147,7 +147,10 @@ class _LoginScreenState extends State<LoginScreen> {
                         height: 80,
                         width: 80,
                         decoration: BoxDecoration(
-                          color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.1),
+                          color: Theme.of(context)
+                              .colorScheme
+                              .primary
+                              .withValues(alpha: 0.1),
                           shape: BoxShape.circle,
                         ),
                         child: Icon(
@@ -161,17 +164,22 @@ class _LoginScreenState extends State<LoginScreen> {
                       // Heading
                       Text(
                         'Welcome Back',
-                        style: Theme.of(context).textTheme.headlineMedium!.copyWith(
-                          fontWeight: FontWeight.w900,
-                        ),
+                        style: Theme.of(context)
+                            .textTheme
+                            .headlineMedium!
+                            .copyWith(
+                              fontWeight: FontWeight.w900,
+                            ),
                         textAlign: TextAlign.center,
                       ),
                       const SizedBox(height: 8),
                       Text(
                         'Sign in to continue',
                         style: Theme.of(context).textTheme.bodyMedium!.copyWith(
-                          color: Theme.of(context).colorScheme.onSurfaceVariant,
-                        ),
+                              color: Theme.of(context)
+                                  .colorScheme
+                                  .onSurfaceVariant,
+                            ),
                         textAlign: TextAlign.center,
                       ),
                     ],
@@ -227,9 +235,9 @@ class _LoginScreenState extends State<LoginScreen> {
                       child: Text(
                         'Forgot Password?',
                         style: Theme.of(context).textTheme.bodySmall!.copyWith(
-                          color: Theme.of(context).colorScheme.primary,
-                          fontWeight: FontWeight.w600,
-                        ),
+                              color: Theme.of(context).colorScheme.primary,
+                              fontWeight: FontWeight.w600,
+                            ),
                       ),
                     ),
                   ),
@@ -251,7 +259,10 @@ class _LoginScreenState extends State<LoginScreen> {
                     children: [
                       Expanded(
                         child: Divider(
-                          color: Theme.of(context).colorScheme.onSurfaceVariant.withOpacity(0.3),
+                          color: Theme.of(context)
+                              .colorScheme
+                              .onSurfaceVariant
+                              .withOpacity(0.3),
                           thickness: 0.5,
                         ),
                       ),
@@ -259,15 +270,21 @@ class _LoginScreenState extends State<LoginScreen> {
                         padding: const EdgeInsets.symmetric(horizontal: 16),
                         child: Text(
                           'OR',
-                          style: Theme.of(context).textTheme.bodySmall!.copyWith(
-                            color: Theme.of(context).colorScheme.onSurfaceVariant,
-                            fontWeight: FontWeight.w500,
-                          ),
+                          style:
+                              Theme.of(context).textTheme.bodySmall!.copyWith(
+                                    color: Theme.of(context)
+                                        .colorScheme
+                                        .onSurfaceVariant,
+                                    fontWeight: FontWeight.w500,
+                                  ),
                         ),
                       ),
                       Expanded(
                         child: Divider(
-                          color: Theme.of(context).colorScheme.onSurfaceVariant.withOpacity(0.3),
+                          color: Theme.of(context)
+                              .colorScheme
+                              .onSurfaceVariant
+                              .withOpacity(0.3),
                           thickness: 0.5,
                         ),
                       ),
@@ -282,7 +299,10 @@ class _LoginScreenState extends State<LoginScreen> {
                     decoration: BoxDecoration(
                       borderRadius: BorderRadius.circular(16),
                       border: Border.all(
-                        color: Theme.of(context).colorScheme.onSurfaceVariant.withOpacity(0.3),
+                        color: Theme.of(context)
+                            .colorScheme
+                            .onSurfaceVariant
+                            .withOpacity(0.3),
                       ),
                     ),
                     child: Material(
@@ -302,9 +322,12 @@ class _LoginScreenState extends State<LoginScreen> {
                               const SizedBox(width: 12),
                               Text(
                                 'Continue with Google',
-                                style: Theme.of(context).textTheme.bodyMedium!.copyWith(
-                                  fontWeight: FontWeight.w500,
-                                ),
+                                style: Theme.of(context)
+                                    .textTheme
+                                    .bodyMedium!
+                                    .copyWith(
+                                      fontWeight: FontWeight.w500,
+                                    ),
                               ),
                             ],
                           ),
@@ -322,8 +345,10 @@ class _LoginScreenState extends State<LoginScreen> {
                       Text(
                         'Don\'t have an account?',
                         style: Theme.of(context).textTheme.bodyMedium!.copyWith(
-                          color: Theme.of(context).colorScheme.onSurfaceVariant,
-                        ),
+                              color: Theme.of(context)
+                                  .colorScheme
+                                  .onSurfaceVariant,
+                            ),
                       ),
                       TextButton(
                         onPressed: () {
@@ -340,10 +365,13 @@ class _LoginScreenState extends State<LoginScreen> {
                         ),
                         child: Text(
                           'Sign Up',
-                          style: Theme.of(context).textTheme.bodyMedium!.copyWith(
-                            color: Theme.of(context).colorScheme.primary,
-                            fontWeight: FontWeight.bold,
-                          ),
+                          style: Theme.of(context)
+                              .textTheme
+                              .bodyMedium!
+                              .copyWith(
+                                color: Theme.of(context).colorScheme.primary,
+                                fontWeight: FontWeight.bold,
+                              ),
                         ),
                       ),
                     ],
@@ -358,9 +386,12 @@ class _LoginScreenState extends State<LoginScreen> {
                       children: [
                         Text(
                           'By continuing, you agree to our',
-                          style: Theme.of(context).textTheme.bodySmall!.copyWith(
-                            color: Theme.of(context).colorScheme.onSurfaceVariant,
-                          ),
+                          style:
+                              Theme.of(context).textTheme.bodySmall!.copyWith(
+                                    color: Theme.of(context)
+                                        .colorScheme
+                                        .onSurfaceVariant,
+                                  ),
                           textAlign: TextAlign.center,
                         ),
                         const SizedBox(height: 8),
@@ -385,7 +416,9 @@ class _LoginScreenState extends State<LoginScreen> {
                                 decoration: BoxDecoration(
                                   border: Border(
                                     bottom: BorderSide(
-                                      color: Theme.of(context).colorScheme.primary
+                                      color: Theme.of(context)
+                                          .colorScheme
+                                          .primary
                                           .withValues(alpha: 0.5),
                                       width: 1,
                                     ),
@@ -393,10 +426,15 @@ class _LoginScreenState extends State<LoginScreen> {
                                 ),
                                 child: Text(
                                   'Terms & Conditions',
-                                  style: Theme.of(context).textTheme.bodySmall!.copyWith(
-                                    color: Theme.of(context).colorScheme.primary,
-                                    fontWeight: FontWeight.w600,
-                                  ),
+                                  style: Theme.of(context)
+                                      .textTheme
+                                      .bodySmall!
+                                      .copyWith(
+                                        color: Theme.of(context)
+                                            .colorScheme
+                                            .primary,
+                                        fontWeight: FontWeight.w600,
+                                      ),
                                 ),
                               ),
                             ),
@@ -405,9 +443,14 @@ class _LoginScreenState extends State<LoginScreen> {
                                   const EdgeInsets.symmetric(horizontal: 8),
                               child: Text(
                                 'and',
-                                style: Theme.of(context).textTheme.bodySmall!.copyWith(
-                                  color: Theme.of(context).colorScheme.onSurfaceVariant,
-                                ),
+                                style: Theme.of(context)
+                                    .textTheme
+                                    .bodySmall!
+                                    .copyWith(
+                                      color: Theme.of(context)
+                                          .colorScheme
+                                          .onSurfaceVariant,
+                                    ),
                               ),
                             ),
                             GestureDetector(
@@ -428,7 +471,9 @@ class _LoginScreenState extends State<LoginScreen> {
                                 decoration: BoxDecoration(
                                   border: Border(
                                     bottom: BorderSide(
-                                      color: Theme.of(context).colorScheme.primary
+                                      color: Theme.of(context)
+                                          .colorScheme
+                                          .primary
                                           .withValues(alpha: 0.5),
                                       width: 1,
                                     ),
@@ -436,10 +481,15 @@ class _LoginScreenState extends State<LoginScreen> {
                                 ),
                                 child: Text(
                                   'Privacy Policy',
-                                  style: Theme.of(context).textTheme.bodySmall!.copyWith(
-                                    color: Theme.of(context).colorScheme.primary,
-                                    fontWeight: FontWeight.w600,
-                                  ),
+                                  style: Theme.of(context)
+                                      .textTheme
+                                      .bodySmall!
+                                      .copyWith(
+                                        color: Theme.of(context)
+                                            .colorScheme
+                                            .primary,
+                                        fontWeight: FontWeight.w600,
+                                      ),
                                 ),
                               ),
                             ),
@@ -449,10 +499,16 @@ class _LoginScreenState extends State<LoginScreen> {
                         Container(
                           padding: const EdgeInsets.all(12),
                           decoration: BoxDecoration(
-                            color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.05),
+                            color: Theme.of(context)
+                                .colorScheme
+                                .primary
+                                .withValues(alpha: 0.05),
                             borderRadius: BorderRadius.circular(8),
                             border: Border.all(
-                              color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.1),
+                              color: Theme.of(context)
+                                  .colorScheme
+                                  .primary
+                                  .withValues(alpha: 0.1),
                             ),
                           ),
                           child: Row(
@@ -466,10 +522,15 @@ class _LoginScreenState extends State<LoginScreen> {
                               Expanded(
                                 child: Text(
                                   'Your privacy matters. We protect your data with industry-standard security.',
-                                  style: Theme.of(context).textTheme.bodySmall!.copyWith(
-                                    color: Theme.of(context).colorScheme.primary,
-                                    fontWeight: FontWeight.w500,
-                                  ),
+                                  style: Theme.of(context)
+                                      .textTheme
+                                      .bodySmall!
+                                      .copyWith(
+                                        color: Theme.of(context)
+                                            .colorScheme
+                                            .primary,
+                                        fontWeight: FontWeight.w500,
+                                      ),
                                 ),
                               ),
                             ],
@@ -508,8 +569,8 @@ class _LoginScreenState extends State<LoginScreen> {
           child: Text(
             label,
             style: Theme.of(context).textTheme.bodyMedium!.copyWith(
-              fontWeight: FontWeight.w600,
-            ),
+                  fontWeight: FontWeight.w600,
+                ),
           ),
         ),
         TextFormField(
@@ -521,10 +582,15 @@ class _LoginScreenState extends State<LoginScreen> {
           decoration: InputDecoration(
             hintText: hint,
             hintStyle: Theme.of(context).textTheme.bodyMedium!.copyWith(
-              color: Theme.of(context).colorScheme.onSurfaceVariant.withOpacity(0.5),
-            ),
+                  color: Theme.of(context)
+                      .colorScheme
+                      .onSurfaceVariant
+                      .withOpacity(0.5),
+                ),
             prefixIcon: icon != null
-                ? Icon(icon, color: Theme.of(context).colorScheme.onSurfaceVariant, size: 18)
+                ? Icon(icon,
+                    color: Theme.of(context).colorScheme.onSurfaceVariant,
+                    size: 18)
                 : null,
             suffixIcon: suffixIcon,
             contentPadding: const EdgeInsets.symmetric(
@@ -532,7 +598,10 @@ class _LoginScreenState extends State<LoginScreen> {
               vertical: 16,
             ),
             filled: true,
-            fillColor: Theme.of(context).colorScheme.onSurfaceVariant.withOpacity(0.05),
+            fillColor: Theme.of(context)
+                .colorScheme
+                .onSurfaceVariant
+                .withOpacity(0.05),
             border: OutlineInputBorder(
               borderRadius: BorderRadius.circular(12),
               borderSide: BorderSide.none,
@@ -544,7 +613,10 @@ class _LoginScreenState extends State<LoginScreen> {
             focusedBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(12),
               borderSide: BorderSide(
-                color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.3),
+                color: Theme.of(context)
+                    .colorScheme
+                    .primary
+                    .withValues(alpha: 0.3),
                 width: 1.5,
               ),
             ),
@@ -631,7 +703,10 @@ class _ForgotPasswordSheetState extends State<_ForgotPasswordSheet> {
                 width: 40,
                 height: 4,
                 decoration: BoxDecoration(
-                  color: Theme.of(context).colorScheme.onSurfaceVariant.withOpacity(0.3),
+                  color: Theme.of(context)
+                      .colorScheme
+                      .onSurfaceVariant
+                      .withOpacity(0.3),
                   borderRadius: BorderRadius.circular(2),
                 ),
               ),
@@ -668,15 +743,16 @@ class _ForgotPasswordSheetState extends State<_ForgotPasswordSheet> {
                     Text(
                       'Reset Email Sent!',
                       style: Theme.of(context).textTheme.titleLarge!.copyWith(
-                        fontWeight: FontWeight.w700,
-                      ),
+                            fontWeight: FontWeight.w700,
+                          ),
                     ),
                     const SizedBox(height: 8),
                     Text(
                       'Check your inbox at\n${widget.emailController.text.trim()}\nfor password reset instructions.',
                       style: Theme.of(context).textTheme.bodyMedium!.copyWith(
-                        color: Theme.of(context).colorScheme.onSurfaceVariant,
-                      ),
+                            color:
+                                Theme.of(context).colorScheme.onSurfaceVariant,
+                          ),
                       textAlign: TextAlign.center,
                     ),
                   ],
@@ -693,15 +769,15 @@ class _ForgotPasswordSheetState extends State<_ForgotPasswordSheet> {
               Text(
                 'Reset Password',
                 style: Theme.of(context).textTheme.titleLarge!.copyWith(
-                  fontWeight: FontWeight.w700,
-                ),
+                      fontWeight: FontWeight.w700,
+                    ),
               ),
               const SizedBox(height: 8),
               Text(
                 'Enter your email and we\'ll send you a link to reset your password.',
                 style: Theme.of(context).textTheme.bodyMedium!.copyWith(
-                  color: Theme.of(context).colorScheme.onSurfaceVariant,
-                ),
+                      color: Theme.of(context).colorScheme.onSurfaceVariant,
+                    ),
               ),
               const SizedBox(height: 20),
               TextFormField(
@@ -711,15 +787,21 @@ class _ForgotPasswordSheetState extends State<_ForgotPasswordSheet> {
                 decoration: InputDecoration(
                   hintText: 'Enter your email',
                   hintStyle: Theme.of(context).textTheme.bodyMedium!.copyWith(
-                    color: Theme.of(context).colorScheme.onSurfaceVariant.withOpacity(0.5),
-                  ),
+                        color: Theme.of(context)
+                            .colorScheme
+                            .onSurfaceVariant
+                            .withOpacity(0.5),
+                      ),
                   prefixIcon: Icon(
                     CupertinoIcons.mail,
                     color: Theme.of(context).colorScheme.onSurfaceVariant,
                     size: 18,
                   ),
                   filled: true,
-                  fillColor: Theme.of(context).colorScheme.onSurfaceVariant.withOpacity(0.05),
+                  fillColor: Theme.of(context)
+                      .colorScheme
+                      .onSurfaceVariant
+                      .withOpacity(0.05),
                   border: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(12),
                     borderSide: BorderSide.none,
@@ -727,7 +809,10 @@ class _ForgotPasswordSheetState extends State<_ForgotPasswordSheet> {
                   focusedBorder: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(12),
                     borderSide: BorderSide(
-                      color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.3),
+                      color: Theme.of(context)
+                          .colorScheme
+                          .primary
+                          .withValues(alpha: 0.3),
                       width: 1.5,
                     ),
                   ),

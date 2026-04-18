@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 
-
 import 'nav_badge_m3e.dart';
 
 class NavigationDestinationM3E {

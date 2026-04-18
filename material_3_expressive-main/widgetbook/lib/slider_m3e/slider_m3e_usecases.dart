@@ -120,15 +120,12 @@ Widget _buildSliderM3EDemo(
           initialValue: 'Progress',
         );
 
-  final onChanged = disabled
-      ? null
-      : (double v) => print('SliderM3E onChanged -> $v');
-  final onChangeStart = disabled
-      ? null
-      : (double v) => print('SliderM3E onChangeStart -> $v');
-  final onChangeEnd = disabled
-      ? null
-      : (double v) => print('SliderM3E onChangeEnd -> $v');
+  final onChanged =
+      disabled ? null : (double v) => print('SliderM3E onChanged -> $v');
+  final onChangeStart =
+      disabled ? null : (double v) => print('SliderM3E onChangeStart -> $v');
+  final onChangeEnd =
+      disabled ? null : (double v) => print('SliderM3E onChangeEnd -> $v');
 
   return Padding(
     padding: const EdgeInsets.all(16),

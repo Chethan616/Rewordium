@@ -9,7 +9,12 @@ class M3EShapeSet {
   final BorderRadius md;
   final BorderRadius lg;
   final BorderRadius xl;
-  const M3EShapeSet({required this.xs, required this.sm, required this.md, required this.lg, required this.xl});
+  const M3EShapeSet(
+      {required this.xs,
+      required this.sm,
+      required this.md,
+      required this.lg,
+      required this.xl});
 }
 
 @immutable
@@ -37,15 +42,16 @@ class M3EShapes {
       );
 
   static M3EShapes lerp(M3EShapes a, M3EShapes b, double t) => M3EShapes(
-    round: _lerpSet(a.round, b.round, t),
-    square: _lerpSet(a.square, b.square, t),
-  );
+        round: _lerpSet(a.round, b.round, t),
+        square: _lerpSet(a.square, b.square, t),
+      );
 
-  static M3EShapeSet _lerpSet(M3EShapeSet a, M3EShapeSet b, double t) => M3EShapeSet(
-    xs: BorderRadius.lerp(a.xs, b.xs, t)!,
-    sm: BorderRadius.lerp(a.sm, b.sm, t)!,
-    md: BorderRadius.lerp(a.md, b.md, t)!,
-    lg: BorderRadius.lerp(a.lg, b.lg, t)!,
-    xl: BorderRadius.lerp(a.xl, b.xl, t)!,
-  );
+  static M3EShapeSet _lerpSet(M3EShapeSet a, M3EShapeSet b, double t) =>
+      M3EShapeSet(
+        xs: BorderRadius.lerp(a.xs, b.xs, t)!,
+        sm: BorderRadius.lerp(a.sm, b.sm, t)!,
+        md: BorderRadius.lerp(a.md, b.md, t)!,
+        lg: BorderRadius.lerp(a.lg, b.lg, t)!,
+        xl: BorderRadius.lerp(a.xl, b.xl, t)!,
+      );
 }

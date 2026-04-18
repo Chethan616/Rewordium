@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart';
+import 'package:package_info_plus/package_info_plus.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:convert';
 import 'dart:async';
@@ -33,6 +34,20 @@ class Persona {
 }
 
 class KeyboardProvider extends ChangeNotifier {
+  static const String _onboardingVersionKey = 'onboarding_completed_for_version';
+
+  Future<bool> _hasCompletedOnboardingForCurrentBuild(
+    SharedPreferences sharedPrefs,
+  ) async {
+    try {
+      final info = await PackageInfo.fromPlatform();
+      final currentSignature = '${info.version}+${info.buildNumber}';
+      return sharedPrefs.getString(_onboardingVersionKey) == currentSignature;
+    } catch (_) {
+      return sharedPrefs.getBool('onboarding_completed') ?? false;
+    }
+  }
+
   // Show iOS-style dialog for keyboard reactivation
   void _showIOSStyleKeyboardActivationDialog(BuildContext context) {
     showDialog(
@@ -316,7 +331,9 @@ class KeyboardProvider extends ChangeNotifier {
 
       // If keyboard is enabled in phone settings, always set status to true
       if (isEnabled) {
-        if (kDebugMode) print('Keyboard is enabled in phone settings, setting status to true');
+        if (kDebugMode)
+          print(
+              'Keyboard is enabled in phone settings, setting status to true');
         _isSystemKeyboardEnabled = true;
 
         // Save to preferences
@@ -329,7 +346,8 @@ class KeyboardProvider extends ChangeNotifier {
         notifyListeners();
 
         // Log for debugging
-        if (kDebugMode) print('Successfully updated keyboard status to ENABLED');
+        if (kDebugMode)
+          print('Successfully updated keyboard status to ENABLED');
       }
       // Only update if the status has changed and keyboard is disabled
       else if (isEnabled != _isSystemKeyboardEnabled) {
@@ -343,7 +361,8 @@ class KeyboardProvider extends ChangeNotifier {
         notifyListeners();
 
         // Log for debugging
-        if (kDebugMode) print('Successfully updated keyboard status to DISABLED');
+        if (kDebugMode)
+          print('Successfully updated keyboard status to DISABLED');
       }
     } catch (e) {
       if (kDebugMode) print('Error checking keyboard status: $e');
@@ -375,7 +394,8 @@ class KeyboardProvider extends ChangeNotifier {
       await _keyboardService.setKeyboardPersonas(_selectedKeyboardPersonas);
 
       if (kDebugMode) {
-        print('Applied all keyboard settings: Layout=$_layout, Sound=$_soundOn, Personas=$_selectedKeyboardPersonas');
+        print(
+            'Applied all keyboard settings: Layout=$_layout, Sound=$_soundOn, Personas=$_selectedKeyboardPersonas');
       }
     } catch (e) {
       if (kDebugMode) print('Error applying keyboard settings: $e');
@@ -387,7 +407,7 @@ class KeyboardProvider extends ChangeNotifier {
     try {
       final sharedPrefs = await SharedPreferences.getInstance();
       final onboardingCompleted =
-          sharedPrefs.getBool('onboarding_completed') ?? false;
+          await _hasCompletedOnboardingForCurrentBuild(sharedPrefs);
       if (!onboardingCompleted) {
         if (kDebugMode) {
           print('Skipping keyboard enable prompt while onboarding is active');

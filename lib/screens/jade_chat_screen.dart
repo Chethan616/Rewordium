@@ -222,13 +222,14 @@ class _JadeChatScreenState extends State<JadeChatScreen>
                   Text(
                     'Jade',
                     style: Theme.of(context).textTheme.titleMedium!.copyWith(
-                      fontWeight: FontWeight.bold,
-                    ),
+                          fontWeight: FontWeight.bold,
+                        ),
                   ),
                   Row(
                     children: [
                       Container(
-                        width: 6, height: 6,
+                        width: 6,
+                        height: 6,
                         decoration: BoxDecoration(
                           color: colorScheme.tertiary,
                           shape: BoxShape.circle,
@@ -238,9 +239,9 @@ class _JadeChatScreenState extends State<JadeChatScreen>
                       Text(
                         'Online',
                         style: Theme.of(context).textTheme.bodySmall!.copyWith(
-                          color: colorScheme.onSurfaceVariant,
-                          fontSize: 11,
-                        ),
+                              color: colorScheme.onSurfaceVariant,
+                              fontSize: 11,
+                            ),
                       ),
                     ],
                   ),
@@ -252,7 +253,8 @@ class _JadeChatScreenState extends State<JadeChatScreen>
         actions: [
           IconButtonM3E(
             icon: const Icon(Icons.help_outline_rounded, size: 20),
-            onPressed: () => _sendQuickMessage("What settings can you control?"),
+            onPressed: () =>
+                _sendQuickMessage("What settings can you control?"),
             variant: IconButtonM3EVariant.standard,
           ),
           IconButtonM3E(
@@ -299,9 +301,8 @@ class _JadeChatScreenState extends State<JadeChatScreen>
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 4),
       child: Row(
-        mainAxisAlignment: message.isUser
-            ? MainAxisAlignment.end
-            : MainAxisAlignment.start,
+        mainAxisAlignment:
+            message.isUser ? MainAxisAlignment.end : MainAxisAlignment.start,
         crossAxisAlignment: CrossAxisAlignment.end,
         children: [
           if (!message.isUser) ...[
@@ -315,7 +316,9 @@ class _JadeChatScreenState extends State<JadeChatScreen>
                 borderRadius: BorderRadius.circular(16),
               ),
               child: message.isError
-                  ? Center(child: Icon(Icons.warning_rounded, size: 16, color: colorScheme.error))
+                  ? Center(
+                      child: Icon(Icons.warning_rounded,
+                          size: 16, color: colorScheme.error))
                   : const AnimatedJadeAvatar(
                       size: 32,
                       enableRotation: true,
@@ -351,22 +354,22 @@ class _JadeChatScreenState extends State<JadeChatScreen>
                   SelectableText(
                     message.content,
                     style: Theme.of(context).textTheme.bodyMedium!.copyWith(
-                      color: message.isUser
-                          ? colorScheme.onPrimary
-                          : message.isError
-                              ? colorScheme.onErrorContainer
-                              : colorScheme.onSurface,
-                    ),
+                          color: message.isUser
+                              ? colorScheme.onPrimary
+                              : message.isError
+                                  ? colorScheme.onErrorContainer
+                                  : colorScheme.onSurface,
+                        ),
                   ),
                   const SizedBox(height: 4),
                   Text(
                     _formatTime(message.timestamp),
                     style: Theme.of(context).textTheme.bodySmall!.copyWith(
-                      color: message.isUser
-                          ? colorScheme.onPrimary.withValues(alpha: 0.6)
-                          : colorScheme.onSurfaceVariant,
-                      fontSize: 10,
-                    ),
+                          color: message.isUser
+                              ? colorScheme.onPrimary.withValues(alpha: 0.6)
+                              : colorScheme.onSurfaceVariant,
+                          fontSize: 10,
+                        ),
                   ),
                 ],
               ),
@@ -381,7 +384,8 @@ class _JadeChatScreenState extends State<JadeChatScreen>
                 color: colorScheme.secondaryContainer,
                 borderRadius: BorderRadius.circular(14),
               ),
-              child: Icon(Icons.person_rounded, size: 16, color: colorScheme.onSecondaryContainer),
+              child: Icon(Icons.person_rounded,
+                  size: 16, color: colorScheme.onSecondaryContainer),
             ),
           ],
         ],
@@ -456,8 +460,8 @@ class _JadeChatScreenState extends State<JadeChatScreen>
                   decoration: InputDecoration(
                     hintText: "Ask Jade anything...",
                     hintStyle: Theme.of(context).textTheme.bodyMedium!.copyWith(
-                      color: colorScheme.onSurfaceVariant,
-                    ),
+                          color: colorScheme.onSurfaceVariant,
+                        ),
                     border: InputBorder.none,
                     contentPadding: const EdgeInsets.symmetric(
                       horizontal: 18,
@@ -478,7 +482,8 @@ class _JadeChatScreenState extends State<JadeChatScreen>
                 child: _isTyping
                     ? LoadingIndicatorM3E(
                         key: const ValueKey('loading'),
-                        constraints: const BoxConstraints(maxWidth: 20, maxHeight: 20),
+                        constraints:
+                            const BoxConstraints(maxWidth: 20, maxHeight: 20),
                         color: colorScheme.onPrimary,
                       )
                     : Icon(
@@ -488,12 +493,14 @@ class _JadeChatScreenState extends State<JadeChatScreen>
                         size: 20,
                       ),
               ),
-              onPressed: _isTyping ? null : () {
-                _sendButtonController.forward().then((_) {
-                  _sendButtonController.reverse();
-                });
-                _sendMessage();
-              },
+              onPressed: _isTyping
+                  ? null
+                  : () {
+                      _sendButtonController.forward().then((_) {
+                        _sendButtonController.reverse();
+                      });
+                      _sendMessage();
+                    },
               variant: IconButtonM3EVariant.filled,
             ),
           ],
@@ -522,7 +529,8 @@ class _JadeChatScreenState extends State<JadeChatScreen>
     // If the message ends with a space/colon, it's a prompt — just populate the input
     if (message.endsWith(': ')) {
       _messageController.text = message;
-      _messageController.selection = TextSelection.collapsed(offset: message.length);
+      _messageController.selection =
+          TextSelection.collapsed(offset: message.length);
       _messageFocusNode.requestFocus();
       return;
     }
@@ -533,10 +541,26 @@ class _JadeChatScreenState extends State<JadeChatScreen>
   Widget _buildQuickActionsBar() {
     final colorScheme = Theme.of(context).colorScheme;
     final quickActions = [
-      {'icon': Icons.edit_note_rounded, 'label': 'Improve Text', 'message': 'Help me improve this text: '},
-      {'icon': Icons.auto_awesome_rounded, 'label': 'Paraphrase', 'message': 'Paraphrase this for me: '},
-      {'icon': Icons.dark_mode_rounded, 'label': 'Dark Mode', 'message': 'Switch to dark mode'},
-      {'icon': Icons.help_rounded, 'label': 'What Can You Do?', 'message': 'What can you help me with?'},
+      {
+        'icon': Icons.edit_note_rounded,
+        'label': 'Improve Text',
+        'message': 'Help me improve this text: '
+      },
+      {
+        'icon': Icons.auto_awesome_rounded,
+        'label': 'Paraphrase',
+        'message': 'Paraphrase this for me: '
+      },
+      {
+        'icon': Icons.dark_mode_rounded,
+        'label': 'Dark Mode',
+        'message': 'Switch to dark mode'
+      },
+      {
+        'icon': Icons.help_rounded,
+        'label': 'What Can You Do?',
+        'message': 'What can you help me with?'
+      },
     ];
 
     return Padding(
@@ -550,23 +574,27 @@ class _JadeChatScreenState extends State<JadeChatScreen>
               child: GestureDetector(
                 onTap: () => _sendQuickMessage(action['message'] as String),
                 child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
                   decoration: BoxDecoration(
                     color: colorScheme.surfaceContainer,
                     borderRadius: BorderRadius.circular(20),
-                    border: Border.all(color: colorScheme.outlineVariant.withValues(alpha: 0.5)),
+                    border: Border.all(
+                        color:
+                            colorScheme.outlineVariant.withValues(alpha: 0.5)),
                   ),
                   child: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      Icon(action['icon'] as IconData, size: 16, color: colorScheme.primary),
+                      Icon(action['icon'] as IconData,
+                          size: 16, color: colorScheme.primary),
                       const SizedBox(width: 6),
                       Text(
                         action['label'] as String,
                         style: Theme.of(context).textTheme.labelSmall!.copyWith(
-                          color: colorScheme.onSurface,
-                          fontWeight: FontWeight.w500,
-                        ),
+                              color: colorScheme.onSurface,
+                              fontWeight: FontWeight.w500,
+                            ),
                       ),
                     ],
                   ),

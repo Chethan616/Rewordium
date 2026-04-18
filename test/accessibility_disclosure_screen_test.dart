@@ -14,30 +14,63 @@ void main() {
     );
 
     expect(
-      find.text('Enable Accessibility Service for Rewordium'),
+      find.text('Accessibility Permission Required'),
       findsOneWidget,
     );
     expect(
       find.text(
-        'Rewordium uses Android Accessibility Service to read on-screen text ONLY when you actively use features like rewrite, grammar correction, or translation. It helps provide suggestions and allows inserting improved text into input fields.',
+        'Rewordium uses the Android Accessibility Service to read and modify text across apps in real time.',
       ),
       findsOneWidget,
     );
     expect(
-      find.text('• Read visible text only when you trigger a feature'),
-      findsOneWidget,
-    );
-    expect(
-      find.text('• Provide AI-powered rewriting and suggestions'),
-      findsOneWidget,
-    );
-    expect(
-      find.text('• Insert improved text into active input fields'),
+      find.text('Why this is required:'),
       findsOneWidget,
     );
     expect(
       find.text(
-        'Rewordium does NOT collect, store, or share personal or sensitive data without your consent.\nAccessibility access is used only to provide app features.\nBy tapping Continue, you explicitly agree to enable this permission.',
+        'Android does not provide any other API for cross-app text reading and writing. This permission is essential for core features like AI rewriting, grammar correction, and inserting improved text into input fields across apps.',
+      ),
+      findsOneWidget,
+    );
+    expect(
+      find.text('Data Access:'),
+      findsOneWidget,
+    );
+    expect(
+      find.text('• Reads on-screen text only when you actively use features'),
+      findsOneWidget,
+    );
+    expect(
+      find.text(
+          '• Does NOT access passwords, payment data, or sensitive fields'),
+      findsOneWidget,
+    );
+    expect(
+      find.text('• Does NOT collect, store, or share any personal data'),
+      findsOneWidget,
+    );
+    expect(
+      find.text(
+        'This app does not collect or transmit personal or sensitive data.',
+      ),
+      findsOneWidget,
+    );
+    expect(
+      find.text(
+        'This is a core feature and will not work without this permission.',
+      ),
+      findsOneWidget,
+    );
+    expect(
+      find.text(
+        'By tapping "Continue", you explicitly consent to enable this service.\nYou can disable it anytime in device settings.',
+      ),
+      findsOneWidget,
+    );
+    expect(
+      find.text(
+        'This permission is required for core functionality and cannot be replaced by any other Android API.',
       ),
       findsOneWidget,
     );

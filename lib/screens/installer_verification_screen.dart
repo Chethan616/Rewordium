@@ -197,10 +197,19 @@ class _InstallerVerificationScreenState
                       height: 96,
                       decoration: BoxDecoration(
                         color: _hasFailed
-                            ? Theme.of(context).colorScheme.error.withValues(alpha: 0.1)
+                            ? Theme.of(context)
+                                .colorScheme
+                                .error
+                                .withValues(alpha: 0.1)
                             : _isComplete
-                                ? Theme.of(context).colorScheme.primary.withValues(alpha: 0.1)
-                                : Theme.of(context).colorScheme.primary.withValues(alpha: 0.08),
+                                ? Theme.of(context)
+                                    .colorScheme
+                                    .primary
+                                    .withValues(alpha: 0.1)
+                                : Theme.of(context)
+                                    .colorScheme
+                                    .primary
+                                    .withValues(alpha: 0.08),
                         shape: BoxShape.circle,
                       ),
                       child: Icon(
@@ -221,10 +230,12 @@ class _InstallerVerificationScreenState
 
                   // Title
                   Text(
-                    _hasFailed ? 'Verification Failed' : 'Verifying Installation',
+                    _hasFailed
+                        ? 'Verification Failed'
+                        : 'Verifying Installation',
                     style: Theme.of(context).textTheme.headlineSmall!.copyWith(
-                      color: Theme.of(context).colorScheme.onSurface,
-                    ),
+                          color: Theme.of(context).colorScheme.onSurface,
+                        ),
                   ),
 
                   const SizedBox(height: 8),
@@ -236,8 +247,9 @@ class _InstallerVerificationScreenState
                       _statusText,
                       key: ValueKey(_statusText),
                       style: Theme.of(context).textTheme.bodyMedium!.copyWith(
-                        color: Theme.of(context).colorScheme.onSurfaceVariant,
-                      ),
+                            color:
+                                Theme.of(context).colorScheme.onSurfaceVariant,
+                          ),
                     ),
                   ),
 
@@ -252,7 +264,11 @@ class _InstallerVerificationScreenState
                       borderRadius: BorderRadius.circular(28),
                       boxShadow: [
                         BoxShadow(
-                          color: Colors.black.withValues(alpha: Theme.of(context).brightness == Brightness.dark ? 0.25 : 0.06),
+                          color: Colors.black.withValues(
+                              alpha: Theme.of(context).brightness ==
+                                      Brightness.dark
+                                  ? 0.25
+                                  : 0.06),
                           offset: const Offset(0, 2),
                           blurRadius: 12,
                         ),
@@ -270,8 +286,10 @@ class _InstallerVerificationScreenState
                           padding: const EdgeInsets.symmetric(vertical: 12),
                           child: Divider(
                             height: 1,
-                            color:
-                                Theme.of(context).colorScheme.onSurfaceVariant.withValues(alpha: 0.15),
+                            color: Theme.of(context)
+                                .colorScheme
+                                .onSurfaceVariant
+                                .withValues(alpha: 0.15),
                           ),
                         ),
                         _buildStepRow(
@@ -284,8 +302,10 @@ class _InstallerVerificationScreenState
                           padding: const EdgeInsets.symmetric(vertical: 12),
                           child: Divider(
                             height: 1,
-                            color:
-                                Theme.of(context).colorScheme.onSurfaceVariant.withValues(alpha: 0.15),
+                            color: Theme.of(context)
+                                .colorScheme
+                                .onSurfaceVariant
+                                .withValues(alpha: 0.15),
                           ),
                         ),
                         _buildStepRow(
@@ -304,10 +324,13 @@ class _InstallerVerificationScreenState
                   Text(
                     'Rewordium Security',
                     style: Theme.of(context).textTheme.bodySmall!.copyWith(
-                      color: Theme.of(context).colorScheme.onSurfaceVariant.withValues(alpha: 0.5),
-                      letterSpacing: 1.0,
-                      fontSize: 11,
-                    ),
+                          color: Theme.of(context)
+                              .colorScheme
+                              .onSurfaceVariant
+                              .withValues(alpha: 0.5),
+                          letterSpacing: 1.0,
+                          fontSize: 11,
+                        ),
                   ),
                 ],
               ),
@@ -347,16 +370,16 @@ class _InstallerVerificationScreenState
               Text(
                 title,
                 style: Theme.of(context).textTheme.bodyMedium!.copyWith(
-                  fontWeight: FontWeight.w600,
-                ),
+                      fontWeight: FontWeight.w600,
+                    ),
               ),
               const SizedBox(height: 2),
               Text(
                 subtitle,
                 style: Theme.of(context).textTheme.bodySmall!.copyWith(
-                  color: Theme.of(context).colorScheme.onSurfaceVariant,
-                  fontSize: 12,
-                ),
+                      color: Theme.of(context).colorScheme.onSurfaceVariant,
+                      fontSize: 12,
+                    ),
               ),
             ],
           ),
@@ -390,7 +413,10 @@ class _InstallerVerificationScreenState
         return Icon(
           CupertinoIcons.circle,
           size: 20,
-          color: Theme.of(context).colorScheme.onSurfaceVariant.withValues(alpha: 0.4),
+          color: Theme.of(context)
+              .colorScheme
+              .onSurfaceVariant
+              .withValues(alpha: 0.4),
         );
       case _StepState.checking:
         return SizedBox(

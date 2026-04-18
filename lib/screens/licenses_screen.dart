@@ -40,7 +40,10 @@ class LicensesScreen extends StatelessWidget {
                       color: Theme.of(context).colorScheme.surface,
                       borderRadius: BorderRadius.circular(12),
                       border: Border.all(
-                        color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.2),
+                        color: Theme.of(context)
+                            .colorScheme
+                            .primary
+                            .withValues(alpha: 0.2),
                       ),
                     ),
                     child: Column(
@@ -56,9 +59,12 @@ class LicensesScreen extends StatelessWidget {
                             const SizedBox(width: 8),
                             Text(
                               "FlorisBoard Credits",
-                              style: Theme.of(context).textTheme.bodyLarge!.copyWith(
-                                fontWeight: FontWeight.bold,
-                              ),
+                              style: Theme.of(context)
+                                  .textTheme
+                                  .bodyLarge!
+                                  .copyWith(
+                                    fontWeight: FontWeight.bold,
+                                  ),
                             ),
                           ],
                         ),
@@ -67,18 +73,24 @@ class LicensesScreen extends StatelessWidget {
                           "Rewordium's keyboard is based on FlorisBoard. "
                           "Autocorrect, suggestions, and glide typing improvements in this app "
                           "build on that open-source work.",
-                          style: Theme.of(context).textTheme.bodyMedium!.copyWith(
-                            color: Theme.of(context).colorScheme.onSurfaceVariant,
-                            height: 1.45,
-                          ),
+                          style:
+                              Theme.of(context).textTheme.bodyMedium!.copyWith(
+                                    color: Theme.of(context)
+                                        .colorScheme
+                                        .onSurfaceVariant,
+                                    height: 1.45,
+                                  ),
                         ),
                         const SizedBox(height: 8),
                         Text(
                           "Copyright (C) 2020-2026 Patrick Goldinger and contributors",
-                          style: Theme.of(context).textTheme.bodySmall!.copyWith(
-                            color: Theme.of(context).colorScheme.onSurfaceVariant,
-                            fontWeight: FontWeight.w600,
-                          ),
+                          style:
+                              Theme.of(context).textTheme.bodySmall!.copyWith(
+                                    color: Theme.of(context)
+                                        .colorScheme
+                                        .onSurfaceVariant,
+                                    fontWeight: FontWeight.w600,
+                                  ),
                         ),
                       ],
                     ),
@@ -101,7 +113,10 @@ class LicensesScreen extends StatelessWidget {
                       color: Theme.of(context).colorScheme.surface,
                       borderRadius: BorderRadius.circular(12),
                       border: Border.all(
-                        color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.2),
+                        color: Theme.of(context)
+                            .colorScheme
+                            .primary
+                            .withValues(alpha: 0.2),
                       ),
                     ),
                     child: Column(
@@ -117,9 +132,12 @@ class LicensesScreen extends StatelessWidget {
                             const SizedBox(width: 8),
                             Text(
                               "About Licenses",
-                              style: Theme.of(context).textTheme.bodyLarge!.copyWith(
-                                fontWeight: FontWeight.bold,
-                              ),
+                              style: Theme.of(context)
+                                  .textTheme
+                                  .bodyLarge!
+                                  .copyWith(
+                                    fontWeight: FontWeight.bold,
+                                  ),
                             ),
                           ],
                         ),
@@ -130,10 +148,13 @@ class LicensesScreen extends StatelessWidget {
                           "The keyboard component is based on FlorisBoard, an open source keyboard "
                           "licensed under the Apache License 2.0. This license allows us to use, modify, "
                           "and distribute the software while providing proper attribution.",
-                          style: Theme.of(context).textTheme.bodyMedium!.copyWith(
-                            color: Theme.of(context).colorScheme.onSurfaceVariant,
-                            height: 1.5,
-                          ),
+                          style:
+                              Theme.of(context).textTheme.bodyMedium!.copyWith(
+                                    color: Theme.of(context)
+                                        .colorScheme
+                                        .onSurfaceVariant,
+                                    height: 1.5,
+                                  ),
                         ),
                       ],
                     ),
@@ -186,9 +207,12 @@ class LicensesScreen extends StatelessWidget {
                               children: [
                                 Text(
                                   "All Licenses",
-                                  style: Theme.of(context).textTheme.bodyLarge!.copyWith(
-                                    fontWeight: FontWeight.w600,
-                                  ),
+                                  style: Theme.of(context)
+                                      .textTheme
+                                      .bodyLarge!
+                                      .copyWith(
+                                        fontWeight: FontWeight.w600,
+                                      ),
                                 ),
                                 const SizedBox(height: 4),
                                 Text(
@@ -200,7 +224,8 @@ class LicensesScreen extends StatelessWidget {
                           ),
                           Icon(
                             Icons.chevron_right,
-                            color: Theme.of(context).colorScheme.onSurfaceVariant,
+                            color:
+                                Theme.of(context).colorScheme.onSurfaceVariant,
                           ),
                         ],
                       ),
@@ -260,8 +285,8 @@ class LicensesScreen extends StatelessWidget {
                     Text(
                       title,
                       style: Theme.of(context).textTheme.bodyLarge!.copyWith(
-                        fontWeight: FontWeight.bold,
-                      ),
+                            fontWeight: FontWeight.bold,
+                          ),
                     ),
                     const SizedBox(height: 4),
                     Text(
@@ -314,7 +339,11 @@ class LicensesScreen extends StatelessWidget {
               label: const Text("View Full License"),
               style: OutlinedButton.styleFrom(
                 foregroundColor: Theme.of(context).colorScheme.primary,
-                side: BorderSide(color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.3)),
+                side: BorderSide(
+                    color: Theme.of(context)
+                        .colorScheme
+                        .primary
+                        .withValues(alpha: 0.3)),
                 padding: const EdgeInsets.symmetric(vertical: 12),
               ),
             ),
@@ -357,7 +386,10 @@ class LicensesScreen extends StatelessWidget {
               width: 40,
               height: 4,
               decoration: BoxDecoration(
-                color: Theme.of(context).colorScheme.onSurfaceVariant.withValues(alpha: 0.3),
+                color: Theme.of(context)
+                    .colorScheme
+                    .onSurfaceVariant
+                    .withValues(alpha: 0.3),
                 borderRadius: BorderRadius.circular(2),
               ),
             ),
@@ -385,10 +417,10 @@ class LicensesScreen extends StatelessWidget {
                 child: Text(
                   licenseText,
                   style: Theme.of(context).textTheme.bodyMedium!.copyWith(
-                    fontFamily: 'monospace',
-                    fontSize: 12,
-                    height: 1.5,
-                  ),
+                        fontFamily: 'monospace',
+                        fontSize: 12,
+                        height: 1.5,
+                      ),
                 ),
               ),
             ),

@@ -20,22 +20,6 @@ class AccessibilityDisclosureScreen extends StatefulWidget {
 
 class _AccessibilityDisclosureScreenState
     extends State<AccessibilityDisclosureScreen> {
-  static const String _title = 'Enable Accessibility Service for Rewordium';
-  static const String _description =
-      'Rewordium uses Android Accessibility Service to read on-screen text ONLY when you actively use features like rewrite, grammar correction, or translation. It helps provide suggestions and allows inserting improved text into input fields.';
-
-  static const String _bulletRead =
-      '• Read visible text only when you trigger a feature';
-  static const String _bulletRewrite =
-      '• Provide AI-powered rewriting and suggestions';
-  static const String _bulletInsert =
-      '• Insert improved text into active input fields';
-
-  static const String _complianceText =
-      'Rewordium does NOT collect, store, or share personal or sensitive data without your consent.\n'
-      'Accessibility access is used only to provide app features.\n'
-      'By tapping Continue, you explicitly agree to enable this permission.';
-
   void _onNotNow() {
     Navigator.of(context).pop(false);
   }
@@ -51,7 +35,7 @@ class _AccessibilityDisclosureScreenState
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Permission Disclosure'),
+        title: const Text('Accessibility Permission Required'),
       ),
       body: SafeArea(
         child: Padding(
@@ -77,23 +61,55 @@ class _AccessibilityDisclosureScreenState
                       ),
                       const SizedBox(height: 16),
                       Text(
-                        _title,
+                        'Rewordium uses the Android Accessibility Service to read and modify text across apps in real time.',
                         style: theme.textTheme.headlineSmall?.copyWith(
                           fontWeight: FontWeight.w800,
                         ),
                       ),
-                      const SizedBox(height: 12),
+                      const SizedBox(height: 18),
                       Text(
-                        _description,
-                        style: theme.textTheme.bodyLarge?.copyWith(
+                        'Why this is required:',
+                        style: theme.textTheme.titleMedium?.copyWith(
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      Text(
+                        'Android does not provide any other API for cross-app text reading and writing. This permission is essential for core features like AI rewriting, grammar correction, and inserting improved text into input fields across apps.',
+                        style: theme.textTheme.bodyMedium?.copyWith(
                           color: cs.onSurfaceVariant,
                           height: 1.5,
                         ),
                       ),
                       const SizedBox(height: 18),
-                      _bulletLine(context, _bulletRead),
-                      _bulletLine(context, _bulletRewrite),
-                      _bulletLine(context, _bulletInsert),
+                      Text(
+                        'Data Access:',
+                        style: theme.textTheme.titleMedium?.copyWith(
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      _bulletLine(
+                        context,
+                        '• Reads on-screen text only when you actively use features',
+                      ),
+                      _bulletLine(
+                        context,
+                        '• Does NOT access passwords, payment data, or sensitive fields',
+                      ),
+                      _bulletLine(
+                        context,
+                        '• Does NOT collect, store, or share any personal data',
+                      ),
+                      const SizedBox(height: 8),
+                      Text(
+                        'This app does not collect or transmit personal or sensitive data.',
+                        style: theme.textTheme.bodyMedium?.copyWith(
+                          color: cs.onSurfaceVariant,
+                          height: 1.45,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
                       const SizedBox(height: 20),
                       Container(
                         width: double.infinity,
@@ -104,12 +120,29 @@ class _AccessibilityDisclosureScreenState
                           border: Border.all(color: cs.tertiary),
                         ),
                         child: Text(
-                          _complianceText,
+                          'This is a core feature and will not work without this permission.',
                           style: theme.textTheme.bodyMedium?.copyWith(
                             color: cs.onTertiaryContainer,
                             height: 1.5,
                             fontWeight: FontWeight.w600,
                           ),
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+                      Text(
+                        'By tapping "Continue", you explicitly consent to enable this service.\nYou can disable it anytime in device settings.',
+                        style: theme.textTheme.bodyMedium?.copyWith(
+                          color: cs.onSurfaceVariant,
+                          height: 1.5,
+                        ),
+                      ),
+                      const SizedBox(height: 14),
+                      Text(
+                        'This permission is required for core functionality and cannot be replaced by any other Android API.',
+                        style: theme.textTheme.bodyMedium?.copyWith(
+                          color: cs.onSurface,
+                          height: 1.45,
+                          fontWeight: FontWeight.w600,
                         ),
                       ),
                     ],

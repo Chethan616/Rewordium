@@ -246,8 +246,7 @@ class AdminService {
       }
 
       final now = DateTime.now();
-      final monthKey =
-          '${now.year}-${now.month.toString().padLeft(2, '0')}';
+      final monthKey = '${now.year}-${now.month.toString().padLeft(2, '0')}';
 
       final globalDoc = await _firestore
           .collection('analytics_global')
@@ -257,8 +256,8 @@ class AdminService {
 
       final monthlyApiCalls =
           _toIntMap(globalData['monthlyApiCalls'] as Map<String, dynamic>?);
-      final monthlyCreditsUsed = _toIntMap(
-          globalData['monthlyCreditsUsed'] as Map<String, dynamic>?);
+      final monthlyCreditsUsed =
+          _toIntMap(globalData['monthlyCreditsUsed'] as Map<String, dynamic>?);
       final dailyCreditsUsed =
           _toIntMap(globalData['dailyCreditsUsed'] as Map<String, dynamic>?);
       final dailyApiCalls =
@@ -274,8 +273,7 @@ class AdminService {
                 'credits': entry.value,
               })
           .toList()
-        ..sort((a, b) =>
-            (a['date'] as String).compareTo(b['date'] as String));
+        ..sort((a, b) => (a['date'] as String).compareTo(b['date'] as String));
 
       final dailyApiUsageList = dailyApiCalls.entries
           .where((entry) => entry.key.startsWith(monthKey))
@@ -284,8 +282,7 @@ class AdminService {
                 'calls': entry.value,
               })
           .toList()
-        ..sort((a, b) =>
-            (a['date'] as String).compareTo(b['date'] as String));
+        ..sort((a, b) => (a['date'] as String).compareTo(b['date'] as String));
 
       final leaderboardSnapshot = await _firestore
           .collection('user_usage_stats')
@@ -406,7 +403,7 @@ class AdminService {
       int activeSubscriptions = 0;
       int expiredSubscriptions = 0;
       int filteredProCount = 0;
-      
+
       final now = DateTime.now();
       final startOfMonth = DateTime(now.year, now.month, 1);
       final startOfLastMonth = DateTime(now.year, now.month - 1, 1);
@@ -422,7 +419,8 @@ class AdminService {
       for (final doc in proUsersSnapshot.docs) {
         final data = doc.data();
         final subscription = data['subscription'] as Map<String, dynamic>?;
-        final planType = data['planType'] as String? ?? subscription?['planType'] as String?;
+        final planType =
+            data['planType'] as String? ?? subscription?['planType'] as String?;
         final upgradedAt = data['upgradedAt'] as Timestamp?;
         final expiryDate = subscription?['expiryDate'] as Timestamp?;
 
@@ -436,7 +434,7 @@ class AdminService {
         }
 
         filteredProCount++;
-        
+
         // Count by plan type
         if (planType == 'monthly') {
           monthlySubscribers++;
@@ -473,7 +471,8 @@ class AdminService {
             } else if (planType == 'onetime' || planType == 'lifetime') {
               thisMonthRevenue += onetimePrice;
             }
-          } else if (upgradeDate.isAfter(startOfLastMonth) && upgradeDate.isBefore(startOfMonth)) {
+          } else if (upgradeDate.isAfter(startOfLastMonth) &&
+              upgradeDate.isBefore(startOfMonth)) {
             if (planType == 'monthly') {
               lastMonthRevenue += monthlyPrice;
             } else if (planType == 'yearly') {
@@ -489,14 +488,16 @@ class AdminService {
       totalRevenue += monthlyRevenue + yearlyRevenue;
 
       // Estimate MRR (Monthly Recurring Revenue)
-      final mrr = (monthlySubscribers * monthlyPrice) + (yearlySubscribers * (yearlyPrice / 12));
+      final mrr = (monthlySubscribers * monthlyPrice) +
+          (yearlySubscribers * (yearlyPrice / 12));
 
       // Calculate revenue growth
-      final revenueGrowth = lastMonthRevenue > 0 
+      final revenueGrowth = lastMonthRevenue > 0
           ? ((thisMonthRevenue - lastMonthRevenue) / lastMonthRevenue * 100)
           : (thisMonthRevenue > 0 ? 100.0 : 0.0);
 
-      debugPrint('Revenue stats: Total: \$$totalRevenue, MRR: \$$mrr, This Month: \$$thisMonthRevenue');
+      debugPrint(
+          'Revenue stats: Total: \$$totalRevenue, MRR: \$$mrr, This Month: \$$thisMonthRevenue');
 
       return {
         'totalRevenue': totalRevenue,
@@ -513,9 +514,11 @@ class AdminService {
         'expiredSubscriptions': expiredSubscriptions,
         'newSubscribersThisMonth': newSubscribersThisMonth,
         // Conversion rate based on filtered pro count when baseline is provided
-        'conversionRate': filteredProCount > 0 
-        ? (filteredProCount / (await _firestore.collection('users').get()).size * 100)
-        : 0.0,
+        'conversionRate': filteredProCount > 0
+            ? (filteredProCount /
+                (await _firestore.collection('users').get()).size *
+                100)
+            : 0.0,
       };
     } catch (e) {
       debugPrint('Error getting revenue stats: $e');
@@ -544,7 +547,8 @@ class AdminService {
 
   // Get recent subscription transactions
   // Optional 'from' baseline will only include transactions after this time
-  static Future<List<Map<String, dynamic>>> getRecentTransactions({int limit = 20, DateTime? from}) async {
+  static Future<List<Map<String, dynamic>>> getRecentTransactions(
+      {int limit = 20, DateTime? from}) async {
     try {
       if (!isAdmin()) return [];
 
@@ -567,7 +571,9 @@ class AdminService {
           'userId': doc.id,
           'userName': data['name'] ?? 'Unknown',
           'email': data['email'] ?? '',
-          'planType': data['planType'] ?? data['subscription']?['planType'] ?? 'unknown',
+          'planType': data['planType'] ??
+              data['subscription']?['planType'] ??
+              'unknown',
           'upgradedAt': data['upgradedAt'],
           'status': data['subscription']?['status'] ?? 'active',
         };
@@ -1038,18 +1044,19 @@ class AdminService {
   // Generate CSV data for users
   static String generateUsersCsv(List<UserModel> users) {
     final buffer = StringBuffer();
-    
+
     // CSV Header
-    buffer.writeln('UID,Name,Email,User Type,Plan Type,Credits,Sign-in Method,Created At,Subscribed to News,Status');
-    
+    buffer.writeln(
+        'UID,Name,Email,User Type,Plan Type,Credits,Sign-in Method,Created At,Subscribed to News,Status');
+
     // CSV Rows
     for (final user in users) {
-      final createdAtStr = '${user.createdAt.year}-${user.createdAt.month.toString().padLeft(2, '0')}-${user.createdAt.day.toString().padLeft(2, '0')}';
+      final createdAtStr =
+          '${user.createdAt.year}-${user.createdAt.month.toString().padLeft(2, '0')}-${user.createdAt.day.toString().padLeft(2, '0')}';
       buffer.writeln(
-        '"${user.uid}","${_escapeCsv(user.name)}","${_escapeCsv(user.email)}","${user.userType}","${user.planType ?? 'N/A'}",${user.credits},"${user.signInMethod}","$createdAtStr",${user.subscribedToNews},"${user.status}"'
-      );
+          '"${user.uid}","${_escapeCsv(user.name)}","${_escapeCsv(user.email)}","${user.userType}","${user.planType ?? 'N/A'}",${user.credits},"${user.signInMethod}","$createdAtStr",${user.subscribedToNews},"${user.status}"');
     }
-    
+
     return buffer.toString();
   }
 

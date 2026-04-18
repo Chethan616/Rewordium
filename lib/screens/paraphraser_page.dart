@@ -465,7 +465,8 @@ class _ParaphraserPageState extends State<ParaphraserPage>
       setState(() {
         _isLoading = false;
       });
-      _setErrorState('Error paraphrasing text: $e', _ParaphraserRetryAction.persona);
+      _setErrorState(
+          'Error paraphrasing text: $e', _ParaphraserRetryAction.persona);
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Error paraphrasing text: $e')),
       );
@@ -511,7 +512,8 @@ class _ParaphraserPageState extends State<ParaphraserPage>
         final cacheKey = _buildCacheKeyForMode(text);
         final cachedResult = _sessionResultCache[cacheKey];
         final result = cachedResult ??
-            await UnifiedAIService.paraphraseWithCustomPrompt(text, _customPrompt!);
+            await UnifiedAIService.paraphraseWithCustomPrompt(
+                text, _customPrompt!);
 
         // Handle API errors with snackbar
         if (result.containsKey('error')) {
@@ -583,7 +585,8 @@ class _ParaphraserPageState extends State<ParaphraserPage>
       setState(() {
         _isLoading = false;
       });
-      _setErrorState('Error paraphrasing text: $e', _ParaphraserRetryAction.mode);
+      _setErrorState(
+          'Error paraphrasing text: $e', _ParaphraserRetryAction.mode);
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Error paraphrasing text: $e')),
       );
@@ -603,7 +606,8 @@ class _ParaphraserPageState extends State<ParaphraserPage>
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Icon(Icons.error_outline, size: 18, color: colorScheme.onErrorContainer),
+          Icon(Icons.error_outline,
+              size: 18, color: colorScheme.onErrorContainer),
           const SizedBox(width: 8),
           Expanded(
             child: Text(
@@ -711,7 +715,8 @@ class _ParaphraserPageState extends State<ParaphraserPage>
                   child: Align(
                     alignment: Alignment.topCenter,
                     child: ConstrainedBox(
-                      constraints: BoxConstraints(maxHeight: r.inputFieldHeight),
+                      constraints:
+                          BoxConstraints(maxHeight: r.inputFieldHeight),
                       child: SizedBox(
                         width: double.infinity,
                         child: _buildInputView(colorScheme),
@@ -798,21 +803,23 @@ class _ParaphraserPageState extends State<ParaphraserPage>
                   color: colorScheme.primary,
                   borderRadius: BorderRadius.circular(10),
                 ),
-                child: const Icon(Icons.auto_awesome, size: 16, color: Colors.white),
+                child: const Icon(Icons.auto_awesome,
+                    size: 16, color: Colors.white),
               ),
               const SizedBox(width: 10),
               Expanded(
                 child: Text(
                   'Paraphrased ($_selectedMode)',
                   style: Theme.of(context).textTheme.titleSmall!.copyWith(
-                    fontWeight: FontWeight.bold,
-                  ),
+                        fontWeight: FontWeight.bold,
+                      ),
                 ),
               ),
               IconButtonM3E(
                 icon: const Icon(Icons.copy_rounded, size: 16),
                 onPressed: () {
-                  Clipboard.setData(ClipboardData(text: _resultController.text));
+                  Clipboard.setData(
+                      ClipboardData(text: _resultController.text));
                   ScaffoldMessenger.of(context).showSnackBar(
                     const SnackBar(content: Text('Copied to clipboard')),
                   );
@@ -858,7 +865,8 @@ class _ParaphraserPageState extends State<ParaphraserPage>
             decoration: BoxDecoration(
               color: colorScheme.surfaceContainer,
               borderRadius: BorderRadius.circular(16),
-              border: Border.all(color: colorScheme.primary.withValues(alpha: 0.15)),
+              border: Border.all(
+                  color: colorScheme.primary.withValues(alpha: 0.15)),
             ),
             child: SingleChildScrollView(
               physics: const BouncingScrollPhysics(),
@@ -872,17 +880,19 @@ class _ParaphraserPageState extends State<ParaphraserPage>
                   if (_alternatives.isNotEmpty) ...[
                     const SizedBox(height: 16),
                     Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 10, vertical: 4),
                       decoration: BoxDecoration(
                         color: colorScheme.primary.withValues(alpha: 0.08),
                         borderRadius: BorderRadius.circular(8),
                       ),
                       child: Text(
                         'Alternatives',
-                        style: Theme.of(context).textTheme.labelMedium!.copyWith(
-                          fontWeight: FontWeight.bold,
-                          color: colorScheme.primary,
-                        ),
+                        style:
+                            Theme.of(context).textTheme.labelMedium!.copyWith(
+                                  fontWeight: FontWeight.bold,
+                                  color: colorScheme.primary,
+                                ),
                       ),
                     ),
                     const SizedBox(height: 8),
@@ -902,7 +912,8 @@ class _ParaphraserPageState extends State<ParaphraserPage>
                           decoration: BoxDecoration(
                             color: colorScheme.surface,
                             borderRadius: BorderRadius.circular(12),
-                            border: Border.all(color: colorScheme.outlineVariant),
+                            border:
+                                Border.all(color: colorScheme.outlineVariant),
                           ),
                           child: Row(
                             crossAxisAlignment: CrossAxisAlignment.start,
@@ -911,22 +922,28 @@ class _ParaphraserPageState extends State<ParaphraserPage>
                                 width: 24,
                                 height: 24,
                                 decoration: BoxDecoration(
-                                  color: colorScheme.primary.withValues(alpha: 0.1),
+                                  color: colorScheme.primary
+                                      .withValues(alpha: 0.1),
                                   borderRadius: BorderRadius.circular(8),
                                 ),
                                 child: Center(
                                   child: Text(
                                     '${i + 1}',
-                                    style: Theme.of(context).textTheme.labelSmall!.copyWith(
-                                      color: colorScheme.primary,
-                                      fontWeight: FontWeight.bold,
-                                    ),
+                                    style: Theme.of(context)
+                                        .textTheme
+                                        .labelSmall!
+                                        .copyWith(
+                                          color: colorScheme.primary,
+                                          fontWeight: FontWeight.bold,
+                                        ),
                                   ),
                                 ),
                               ),
                               const SizedBox(width: 10),
                               Expanded(
-                                child: Text(_alternatives[i], style: Theme.of(context).textTheme.bodySmall!),
+                                child: Text(_alternatives[i],
+                                    style:
+                                        Theme.of(context).textTheme.bodySmall!),
                               ),
                             ],
                           ),
@@ -970,14 +987,20 @@ class _ParaphraserPageState extends State<ParaphraserPage>
             child: Row(
               mainAxisSize: MainAxisSize.min,
               children: [
-                _buildTabButton('Modes', !_usePersona, () => setState(() {
-                      _usePersona = false;
-                      _persistDraft();
-                    })),
-                _buildTabButton('Personas', _usePersona, () => setState(() {
-                      _usePersona = true;
-                      _persistDraft();
-                    })),
+                _buildTabButton(
+                    'Modes',
+                    !_usePersona,
+                    () => setState(() {
+                          _usePersona = false;
+                          _persistDraft();
+                        })),
+                _buildTabButton(
+                    'Personas',
+                    _usePersona,
+                    () => setState(() {
+                          _usePersona = true;
+                          _persistDraft();
+                        })),
               ],
             ),
           ),
@@ -985,14 +1008,18 @@ class _ParaphraserPageState extends State<ParaphraserPage>
           // Scrollable chips
           SizedBox(
             height: r.h(38),
-            child: !_usePersona ? _buildModeChips(colorScheme) : _buildPersonaChips(colorScheme),
+            child: !_usePersona
+                ? _buildModeChips(colorScheme)
+                : _buildPersonaChips(colorScheme),
           ),
           SizedBox(height: r.h(10)),
           // Paraphrase button
           Padding(
             padding: r.symmetric(horizontal: 16),
             child: CustomButton(
-              text: _resultController.text.isNotEmpty ? "Paraphrase Again" : "Paraphrase",
+              text: _resultController.text.isNotEmpty
+                  ? "Paraphrase Again"
+                  : "Paraphrase",
               onPressed: _isLoading ? null : _paraphraseText,
               width: double.infinity,
               isLoading: _isLoading,
@@ -1018,9 +1045,11 @@ class _ParaphraserPageState extends State<ParaphraserPage>
         child: Text(
           label,
           style: Theme.of(context).textTheme.labelMedium!.copyWith(
-            fontWeight: active ? FontWeight.bold : FontWeight.normal,
-            color: active ? colorScheme.onPrimary : colorScheme.onSurfaceVariant,
-          ),
+                fontWeight: active ? FontWeight.bold : FontWeight.normal,
+                color: active
+                    ? colorScheme.onPrimary
+                    : colorScheme.onSurfaceVariant,
+              ),
         ),
       ),
     );
@@ -1041,8 +1070,16 @@ class _ParaphraserPageState extends State<ParaphraserPage>
 
   Widget _buildModeChips(ColorScheme colorScheme) {
     final modes = [
-      "Standard", "Fluency", "Academic", "Humanize", "Formal",
-      "Simple", "Creative", "Expand", "Shorten", "Custom",
+      "Standard",
+      "Fluency",
+      "Academic",
+      "Humanize",
+      "Formal",
+      "Simple",
+      "Creative",
+      "Expand",
+      "Shorten",
+      "Custom",
     ];
     return ListView.separated(
       scrollDirection: Axis.horizontal,
@@ -1063,9 +1100,12 @@ class _ParaphraserPageState extends State<ParaphraserPage>
             duration: const Duration(milliseconds: 200),
             padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
             decoration: BoxDecoration(
-              color: selected ? colorScheme.primary : colorScheme.surfaceContainer,
+              color:
+                  selected ? colorScheme.primary : colorScheme.surfaceContainer,
               borderRadius: BorderRadius.circular(20),
-              border: selected ? null : Border.all(color: colorScheme.outlineVariant),
+              border: selected
+                  ? null
+                  : Border.all(color: colorScheme.outlineVariant),
             ),
             child: Row(
               mainAxisSize: MainAxisSize.min,
@@ -1073,15 +1113,20 @@ class _ParaphraserPageState extends State<ParaphraserPage>
                 Icon(
                   _modeIcons[mode] ?? Icons.text_format,
                   size: 14,
-                  color: selected ? colorScheme.onPrimary : colorScheme.onSurfaceVariant,
+                  color: selected
+                      ? colorScheme.onPrimary
+                      : colorScheme.onSurfaceVariant,
                 ),
                 const SizedBox(width: 6),
                 Text(
                   mode,
                   style: Theme.of(context).textTheme.labelMedium!.copyWith(
-                    color: selected ? colorScheme.onPrimary : colorScheme.onSurfaceVariant,
-                    fontWeight: selected ? FontWeight.bold : FontWeight.normal,
-                  ),
+                        color: selected
+                            ? colorScheme.onPrimary
+                            : colorScheme.onSurfaceVariant,
+                        fontWeight:
+                            selected ? FontWeight.bold : FontWeight.normal,
+                      ),
                 ),
               ],
             ),
@@ -1111,9 +1156,13 @@ class _ParaphraserPageState extends State<ParaphraserPage>
             duration: const Duration(milliseconds: 200),
             padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
             decoration: BoxDecoration(
-              color: selected ? colorScheme.secondary : colorScheme.surfaceContainer,
+              color: selected
+                  ? colorScheme.secondary
+                  : colorScheme.surfaceContainer,
               borderRadius: BorderRadius.circular(20),
-              border: selected ? null : Border.all(color: colorScheme.outlineVariant),
+              border: selected
+                  ? null
+                  : Border.all(color: colorScheme.outlineVariant),
             ),
             child: Row(
               mainAxisSize: MainAxisSize.min,
@@ -1121,9 +1170,12 @@ class _ParaphraserPageState extends State<ParaphraserPage>
                 Text(
                   persona.name,
                   style: Theme.of(context).textTheme.labelMedium!.copyWith(
-                    color: selected ? colorScheme.onSecondary : colorScheme.onSurfaceVariant,
-                    fontWeight: selected ? FontWeight.bold : FontWeight.normal,
-                  ),
+                        color: selected
+                            ? colorScheme.onSecondary
+                            : colorScheme.onSurfaceVariant,
+                        fontWeight:
+                            selected ? FontWeight.bold : FontWeight.normal,
+                      ),
                 ),
               ],
             ),

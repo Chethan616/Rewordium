@@ -14,7 +14,7 @@ class DemoApp extends StatelessWidget {
       theme: ThemeData(
         useMaterial3: true,
         colorScheme: ColorScheme.fromSeed(seedColor: Colors.indigo),
-/*        extensions: const [IconButtonM3ETokens.fallback()],*/
+        /*        extensions: const [IconButtonM3ETokens.fallback()],*/
       ),
       home: const DemoHome(),
     );
@@ -41,98 +41,113 @@ class _DemoHomeState extends State<DemoHome> {
       body: ListView(
         padding: const EdgeInsets.all(16),
         children: [
-          Wrap(spacing: 12, runSpacing: 12, children: [
-            Column(
-              children: [
-                const Text('Variants × Sizes (round - width default)',
-                    style:
-                        TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-                const SizedBox(height: 8),
-                for (final v in variants) ...[
-                  Text(v.toString().split('.').last.toUpperCase(),
-                      style: const TextStyle(fontWeight: FontWeight.bold)),
-                  const SizedBox(height: 8),
-                  Wrap(
-                    spacing: 12,
-                    runSpacing: 12,
-                    children: [
-                      for (final s in sizes)
-                        IconButtonM3E(
-                          variant: v,
-                          size: s,
-                          width: IconButtonM3EWidth.defaultWidth,
-                          icon: const Icon(Icons.mic),
-                          tooltip: 'Mic',
-                          onPressed: () {},
-                        ),
-                    ],
+          Wrap(
+            spacing: 12,
+            runSpacing: 12,
+            children: [
+              Column(
+                children: [
+                  const Text(
+                    'Variants × Sizes (round - width default)',
+                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
                   ),
-                  const SizedBox(height: 16),
-                ],
-              ],
-            ),
-            Column(
-              children: [
-                const Text('Variants × Sizes (round - width narrow)',
-                    style:
-                        TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-                const SizedBox(height: 8),
-                for (final v in variants) ...[
-                  Text(v.toString().split('.').last.toUpperCase(),
-                      style: const TextStyle(fontWeight: FontWeight.bold)),
                   const SizedBox(height: 8),
-                  Wrap(
-                    spacing: 12,
-                    runSpacing: 12,
-                    children: [
-                      for (final s in sizes)
-                        IconButtonM3E(
-                          variant: v,
-                          size: s,
-                          width: IconButtonM3EWidth.narrow,
-                          icon: const Icon(Icons.mic),
-                          tooltip: 'Mic',
-                          onPressed: () {},
-                        ),
-                    ],
-                  ),
-                  const SizedBox(height: 16),
+                  for (final v in variants) ...[
+                    Text(
+                      v.toString().split('.').last.toUpperCase(),
+                      style: const TextStyle(fontWeight: FontWeight.bold),
+                    ),
+                    const SizedBox(height: 8),
+                    Wrap(
+                      spacing: 12,
+                      runSpacing: 12,
+                      children: [
+                        for (final s in sizes)
+                          IconButtonM3E(
+                            variant: v,
+                            size: s,
+                            width: IconButtonM3EWidth.defaultWidth,
+                            icon: const Icon(Icons.mic),
+                            tooltip: 'Mic',
+                            onPressed: () {},
+                          ),
+                      ],
+                    ),
+                    const SizedBox(height: 16),
+                  ],
                 ],
-              ],
-            ),
-            Column(
-              children: [
-                const Text('Variants × Sizes (round - width narrow)',
-                    style:
-                        TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-                const SizedBox(height: 8),
-                for (final v in variants) ...[
-                  Text(v.toString().split('.').last.toUpperCase(),
-                      style: const TextStyle(fontWeight: FontWeight.bold)),
+              ),
+              Column(
+                children: [
+                  const Text(
+                    'Variants × Sizes (round - width narrow)',
+                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                  ),
                   const SizedBox(height: 8),
-                  Wrap(
-                    spacing: 12,
-                    runSpacing: 12,
-                    children: [
-                      for (final s in sizes)
-                        IconButtonM3E(
-                          variant: v,
-                          size: s,
-                          width: IconButtonM3EWidth.wide,
-                          icon: const Icon(Icons.mic),
-                          tooltip: 'Mic',
-                          onPressed: () {},
-                        ),
-                    ],
-                  ),
-                  const SizedBox(height: 16),
+                  for (final v in variants) ...[
+                    Text(
+                      v.toString().split('.').last.toUpperCase(),
+                      style: const TextStyle(fontWeight: FontWeight.bold),
+                    ),
+                    const SizedBox(height: 8),
+                    Wrap(
+                      spacing: 12,
+                      runSpacing: 12,
+                      children: [
+                        for (final s in sizes)
+                          IconButtonM3E(
+                            variant: v,
+                            size: s,
+                            width: IconButtonM3EWidth.narrow,
+                            icon: const Icon(Icons.mic),
+                            tooltip: 'Mic',
+                            onPressed: () {},
+                          ),
+                      ],
+                    ),
+                    const SizedBox(height: 16),
+                  ],
                 ],
-              ],
-            ),
-          ]),
+              ),
+              Column(
+                children: [
+                  const Text(
+                    'Variants × Sizes (round - width narrow)',
+                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                  ),
+                  const SizedBox(height: 8),
+                  for (final v in variants) ...[
+                    Text(
+                      v.toString().split('.').last.toUpperCase(),
+                      style: const TextStyle(fontWeight: FontWeight.bold),
+                    ),
+                    const SizedBox(height: 8),
+                    Wrap(
+                      spacing: 12,
+                      runSpacing: 12,
+                      children: [
+                        for (final s in sizes)
+                          IconButtonM3E(
+                            variant: v,
+                            size: s,
+                            width: IconButtonM3EWidth.wide,
+                            icon: const Icon(Icons.mic),
+                            tooltip: 'Mic',
+                            onPressed: () {},
+                          ),
+                      ],
+                    ),
+                    const SizedBox(height: 16),
+                  ],
+                ],
+              ),
+            ],
+          ),
           const SizedBox(height: 24),
-          const Text('Square shape',
-              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+          const Text(
+            'Square shape',
+            style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+          ),
           const SizedBox(height: 8),
           Wrap(
             spacing: 12,
@@ -150,8 +165,10 @@ class _DemoHomeState extends State<DemoHome> {
             ],
           ),
           const SizedBox(height: 32),
-          const Text('Toggle example',
-              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+          const Text(
+            'Toggle example',
+            style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+          ),
           const SizedBox(height: 8),
           Wrap(
             spacing: 12,

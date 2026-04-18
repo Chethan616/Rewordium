@@ -28,8 +28,9 @@ class NotificationService {
       requestBadgePermission: true,
       requestSoundPermission: true,
     );
-    
-    final InitializationSettings initializationSettings = InitializationSettings(
+
+    final InitializationSettings initializationSettings =
+        InitializationSettings(
       android: initializationSettingsAndroid,
       iOS: initializationSettingsIOS,
     );
@@ -84,11 +85,10 @@ class NotificationService {
       presentSound: true,
     );
 
-    const NotificationDetails platformChannelSpecifics =
-        NotificationDetails(
-          android: androidPlatformChannelSpecifics,
-          iOS: iOSPlatformChannelSpecifics,
-        );
+    const NotificationDetails platformChannelSpecifics = NotificationDetails(
+      android: androidPlatformChannelSpecifics,
+      iOS: iOSPlatformChannelSpecifics,
+    );
 
     await _flutterLocalNotificationsPlugin.show(
       id: 0,

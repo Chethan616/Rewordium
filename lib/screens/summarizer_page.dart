@@ -78,8 +78,10 @@ class _SummarizerPageState extends State<SummarizerPage> {
 
     try {
       final result = DocumentChunkingService.needsChunking(text)
-          ? await DocumentChunkingService.summarizeLarge(text, length: _selectedLength.toLowerCase())
-          : await UnifiedAIService.summarizeText(text, length: _selectedLength.toLowerCase());
+          ? await DocumentChunkingService.summarizeLarge(text,
+              length: _selectedLength.toLowerCase())
+          : await UnifiedAIService.summarizeText(text,
+              length: _selectedLength.toLowerCase());
 
       setState(() {
         _summaryResult = result;
@@ -106,8 +108,8 @@ class _SummarizerPageState extends State<SummarizerPage> {
 
     final int originalWordCount = _summaryResult!['word_count_original'] ?? 0;
     final int summaryWordCount = _summaryResult!['word_count_summary'] ?? 0;
-    final double reductionPercentage = originalWordCount > 0 
-        ? ((originalWordCount - summaryWordCount) / originalWordCount * 100) 
+    final double reductionPercentage = originalWordCount > 0
+        ? ((originalWordCount - summaryWordCount) / originalWordCount * 100)
         : 0;
 
     showDialog(
@@ -133,8 +135,7 @@ class _SummarizerPageState extends State<SummarizerPage> {
                 Text('Reduced by ${reductionPercentage.toStringAsFixed(1)}%',
                     style: TextStyle(fontSize: 12, color: Colors.orange)),
                 SizedBox(height: 16),
-                Text('Summary:',
-                    style: TextStyle(fontWeight: FontWeight.bold)),
+                Text('Summary:', style: TextStyle(fontWeight: FontWeight.bold)),
                 Container(
                   padding: const EdgeInsets.all(12),
                   decoration: BoxDecoration(
@@ -155,8 +156,10 @@ class _SummarizerPageState extends State<SummarizerPage> {
                       child: Row(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Text('${index + 1}. ', 
-                              style: TextStyle(fontWeight: FontWeight.bold, color: Colors.orange)),
+                          Text('${index + 1}. ',
+                              style: TextStyle(
+                                  fontWeight: FontWeight.bold,
+                                  color: Colors.orange)),
                           Expanded(child: Text(_keyPoints[index])),
                         ],
                       ),
@@ -175,14 +178,14 @@ class _SummarizerPageState extends State<SummarizerPage> {
           TextButton(
             onPressed: () {
               String textToCopy = _resultController.text;
-              
+
               if (_keyPoints.isNotEmpty) {
                 textToCopy += '\n\nKey Points:\n';
                 for (int i = 0; i < _keyPoints.length; i++) {
                   textToCopy += '${i + 1}. ${_keyPoints[i]}\n';
                 }
               }
-              
+
               Clipboard.setData(ClipboardData(text: textToCopy));
               ScaffoldMessenger.of(context).showSnackBar(
                 const SnackBar(content: Text('Summary copied to clipboard')),
@@ -293,15 +296,21 @@ class _SummarizerPageState extends State<SummarizerPage> {
               padding: const EdgeInsets.symmetric(horizontal: 16),
               child: Row(
                 children: [
-                  Text("Summary Length:", style: Theme.of(context).textTheme.bodySmall!.copyWith(fontWeight: FontWeight.w600)),
+                  Text("Summary Length:",
+                      style: Theme.of(context)
+                          .textTheme
+                          .bodySmall!
+                          .copyWith(fontWeight: FontWeight.w600)),
                   SizedBox(width: 8),
                   Expanded(
                     child: Container(
-                      padding: EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                      padding:
+                          EdgeInsets.symmetric(horizontal: 12, vertical: 4),
                       decoration: BoxDecoration(
                         color: Colors.orange.withOpacity(0.05),
                         borderRadius: BorderRadius.circular(10),
-                        border: Border.all(color: Colors.orange.withOpacity(0.2)),
+                        border:
+                            Border.all(color: Colors.orange.withOpacity(0.2)),
                         boxShadow: [
                           BoxShadow(
                             color: Colors.orange.withOpacity(0.05),
@@ -321,10 +330,11 @@ class _SummarizerPageState extends State<SummarizerPage> {
                           ),
                           borderRadius: BorderRadius.circular(10),
                           dropdownColor: Theme.of(context).colorScheme.surface,
-                          style: Theme.of(context).textTheme.bodyMedium!.copyWith(
-                            color: Colors.orange.shade700,
-                            fontWeight: FontWeight.w500,
-                          ),
+                          style:
+                              Theme.of(context).textTheme.bodyMedium!.copyWith(
+                                    color: Colors.orange.shade700,
+                                    fontWeight: FontWeight.w500,
+                                  ),
                           items: _summaryLengths.map((String length) {
                             return DropdownMenuItem<String>(
                               value: length,
@@ -377,9 +387,12 @@ class _SummarizerPageState extends State<SummarizerPage> {
                         child: Text(
                           "Enter or paste text to create a concise summary",
                           textAlign: TextAlign.center,
-                          style: Theme.of(context).textTheme.bodyMedium!.copyWith(
-                            color: Theme.of(context).colorScheme.onSurfaceVariant,
-                          ),
+                          style:
+                              Theme.of(context).textTheme.bodyMedium!.copyWith(
+                                    color: Theme.of(context)
+                                        .colorScheme
+                                        .onSurfaceVariant,
+                                  ),
                         ),
                       ),
                       const SizedBox(height: 16),
@@ -401,8 +414,7 @@ class _SummarizerPageState extends State<SummarizerPage> {
                                   }
                                 } catch (e) {
                                   ScaffoldMessenger.of(context).showSnackBar(
-                                    SnackBar(
-                                        content: Text('Paste failed: $e')),
+                                    SnackBar(content: Text('Paste failed: $e')),
                                   );
                                 }
                               },

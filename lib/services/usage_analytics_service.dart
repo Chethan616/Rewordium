@@ -59,7 +59,8 @@ class UsageAnalyticsService {
         'createdAt': FieldValue.serverTimestamp(),
       });
 
-      final userStatsRef = _firestore.collection('user_usage_stats').doc(user.uid);
+      final userStatsRef =
+          _firestore.collection('user_usage_stats').doc(user.uid);
       batch.set(
         userStatsRef,
         {
@@ -79,7 +80,8 @@ class UsageAnalyticsService {
         SetOptions(merge: true),
       );
 
-      final globalRef = _firestore.collection('analytics_global').doc('usage_counters');
+      final globalRef =
+          _firestore.collection('analytics_global').doc('usage_counters');
       batch.set(
         globalRef,
         {
@@ -144,7 +146,8 @@ class UsageAnalyticsService {
         SetOptions(merge: true),
       );
 
-      final globalRef = _firestore.collection('analytics_global').doc('usage_counters');
+      final globalRef =
+          _firestore.collection('analytics_global').doc('usage_counters');
       batch.set(
         globalRef,
         {

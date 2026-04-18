@@ -1,5 +1,3 @@
-
-
 import 'package:flutter/material.dart';
 import 'package:widgetbook/widgetbook.dart';
 import 'package:widgetbook_annotation/widgetbook_annotation.dart' as widgetbook;
@@ -46,9 +44,12 @@ Widget _buildExtendedFab(
   );
 
   final label = context.knobs.string(label: 'label', initialValue: labelText);
-  final withIcon = context.knobs.boolean(label: 'with_icon', initialValue: icon != null);
-  final isEnabled = context.knobs.boolean(label: 'enabled', initialValue: enabled);
-  final shouldExpand = context.knobs.boolean(label: 'expand', initialValue: expand);
+  final withIcon =
+      context.knobs.boolean(label: 'with_icon', initialValue: icon != null);
+  final isEnabled =
+      context.knobs.boolean(label: 'enabled', initialValue: enabled);
+  final shouldExpand =
+      context.knobs.boolean(label: 'expand', initialValue: expand);
   final dblElevation = context.knobs.doubleOrNull.slider(
     label: 'elevation',
     initialValue: elevation,
@@ -56,14 +57,20 @@ Widget _buildExtendedFab(
     max: 24.0,
     divisions: 24,
   );
-  final tip = context.knobs.stringOrNull(label: 'tooltip', initialValue: tooltip);
-  final semLabel = context.knobs.stringOrNull(label: 'semanticLabel', initialValue: semanticLabel);
-  final useHero = context.knobs.boolean(label: 'wrap in Hero', initialValue: heroTag != null);
+  final tip =
+      context.knobs.stringOrNull(label: 'tooltip', initialValue: tooltip);
+  final semLabel = context.knobs
+      .stringOrNull(label: 'semanticLabel', initialValue: semanticLabel);
+  final useHero = context.knobs
+      .boolean(label: 'wrap in Hero', initialValue: heroTag != null);
 
   final Widget fab = ExtendedFabM3E(
     label: Text(label, overflow: TextOverflow.ellipsis),
     icon: withIcon ? const Icon(Icons.add) : null,
-    onPressed: isEnabled ? () => print('ExtendedFabM3E pressed (kind=$selectedKind, size=$selectedSize)') : null,
+    onPressed: isEnabled
+        ? () => print(
+            'ExtendedFabM3E pressed (kind=$selectedKind, size=$selectedSize)')
+        : null,
     tooltip: tip,
     heroTag: useHero ? (heroTag ?? 'extended-fab-hero') : null,
     kind: selectedKind,
@@ -82,12 +89,14 @@ Widget _buildExtendedFab(
 
 @widgetbook.UseCase(name: 'default', type: ExtendedFabM3E)
 Widget buildExtendedFabM3EUseCase(BuildContext context) {
-  return _buildExtendedFab(context, kind: FabM3EKind.primary, icon: const Icon(Icons.add));
+  return _buildExtendedFab(context,
+      kind: FabM3EKind.primary, icon: const Icon(Icons.add));
 }
 
 @widgetbook.UseCase(name: 'with_icon', type: ExtendedFabM3E)
 Widget buildExtendedFabM3EWithIconUseCase(BuildContext context) {
-  return _buildExtendedFab(context, kind: FabM3EKind.primary, icon: const Icon(Icons.add));
+  return _buildExtendedFab(context,
+      kind: FabM3EKind.primary, icon: const Icon(Icons.add));
 }
 
 @widgetbook.UseCase(name: 'without_label', type: ExtendedFabM3E)
@@ -97,30 +106,42 @@ Widget buildExtendedFabM3EWithoutLabelUseCase(BuildContext context) {
 
 @widgetbook.UseCase(name: 'disabled', type: ExtendedFabM3E)
 Widget buildExtendedFabM3EDisabledUseCase(BuildContext context) {
-  return _buildExtendedFab(context, kind: FabM3EKind.primary, icon: const Icon(Icons.add), enabled: false);
+  return _buildExtendedFab(context,
+      kind: FabM3EKind.primary, icon: const Icon(Icons.add), enabled: false);
 }
 
 @widgetbook.UseCase(name: 'expand', type: ExtendedFabM3E)
 Widget buildExtendedFabM3EExpandUseCase(BuildContext context) {
-  return _buildExtendedFab(context, kind: FabM3EKind.primary, icon: const Icon(Icons.add), expand: true);
+  return _buildExtendedFab(context,
+      kind: FabM3EKind.primary, icon: const Icon(Icons.add), expand: true);
 }
 
 @widgetbook.UseCase(name: 'long_text', type: ExtendedFabM3E)
 Widget buildExtendedFabM3ELongTextUseCase(BuildContext context) {
-  return _buildExtendedFab(context, kind: FabM3EKind.primary, icon: const Icon(Icons.add), labelText: 'Compose a very long descriptive label that may overflow');
+  return _buildExtendedFab(context,
+      kind: FabM3EKind.primary,
+      icon: const Icon(Icons.add),
+      labelText: 'Compose a very long descriptive label that may overflow');
 }
 
 @widgetbook.UseCase(name: 'secondary', type: ExtendedFabM3E)
 Widget buildExtendedFabM3ESecondaryUseCase(BuildContext context) {
-  return _buildExtendedFab(context, kind: FabM3EKind.secondary, icon: const Icon(Icons.edit));
+  return _buildExtendedFab(context,
+      kind: FabM3EKind.secondary, icon: const Icon(Icons.edit));
 }
 
 @widgetbook.UseCase(name: 'square_shape', type: ExtendedFabM3E)
 Widget buildExtendedFabM3ESquareShapeUseCase(BuildContext context) {
-  return _buildExtendedFab(context, kind: FabM3EKind.primary, icon: const Icon(Icons.add), shape: FabM3EShapeFamily.square);
+  return _buildExtendedFab(context,
+      kind: FabM3EKind.primary,
+      icon: const Icon(Icons.add),
+      shape: FabM3EShapeFamily.square);
 }
 
 @widgetbook.UseCase(name: 'compact_density', type: ExtendedFabM3E)
 Widget buildExtendedFabM3ECompactDensityUseCase(BuildContext context) {
-  return _buildExtendedFab(context, kind: FabM3EKind.primary, icon: const Icon(Icons.add), density: FabM3EDensity.compact);
+  return _buildExtendedFab(context,
+      kind: FabM3EKind.primary,
+      icon: const Icon(Icons.add),
+      density: FabM3EDensity.compact);
 }

@@ -266,8 +266,8 @@ class _SystemKeyboardScreenState extends State<SystemKeyboardScreen> {
                             const SizedBox(height: 16),
                             SwitchListTile(
                               title: const Text('Haptic Feedback'),
-                              subtitle: const Text(
-                                  'Vibrate when a key is pressed'),
+                              subtitle:
+                                  const Text('Vibrate when a key is pressed'),
                               value: _hapticFeedbackEnabled,
                               onChanged: _setHapticFeedback,
                               activeColor: Theme.of(context).primaryColor,

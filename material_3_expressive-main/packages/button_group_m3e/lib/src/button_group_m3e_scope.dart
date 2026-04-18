@@ -22,8 +22,7 @@ class ButtonGroupM3EScope extends InheritedWidget {
 
   static ButtonGroupM3EScope? maybeOf(BuildContext context) =>
       context.dependOnInheritedWidgetOfExactType<ButtonGroupM3EScope>();
-  static ButtonGroupM3EScope of(BuildContext context) =>
-      maybeOf(context)!;
+  static ButtonGroupM3EScope of(BuildContext context) => maybeOf(context)!;
 
   @override
   bool updateShouldNotify(covariant ButtonGroupM3EScope oldWidget) =>
@@ -52,8 +51,7 @@ class ButtonGroupM3EItemScope extends InheritedWidget {
 
   static ButtonGroupM3EItemScope? maybeOf(BuildContext context) =>
       context.dependOnInheritedWidgetOfExactType<ButtonGroupM3EItemScope>();
-  static ButtonGroupM3EItemScope of(BuildContext context) =>
-      maybeOf(context)!;
+  static ButtonGroupM3EItemScope of(BuildContext context) => maybeOf(context)!;
 
   @override
   bool updateShouldNotify(covariant ButtonGroupM3EItemScope oldWidget) =>

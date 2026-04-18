@@ -46,7 +46,10 @@ class IntegrityBlockedScreen extends StatelessWidget {
                     width: 96,
                     height: 96,
                     decoration: BoxDecoration(
-                      color: Theme.of(context).colorScheme.error.withValues(alpha: 0.1),
+                      color: Theme.of(context)
+                          .colorScheme
+                          .error
+                          .withValues(alpha: 0.1),
                       shape: BoxShape.circle,
                     ),
                     child: Icon(
@@ -62,8 +65,8 @@ class IntegrityBlockedScreen extends StatelessWidget {
                   Text(
                     'Unauthorized Copy',
                     style: Theme.of(context).textTheme.headlineMedium!.copyWith(
-                      color: Theme.of(context).colorScheme.onSurface,
-                    ),
+                          color: Theme.of(context).colorScheme.onSurface,
+                        ),
                   ),
 
                   const SizedBox(height: 12),
@@ -75,9 +78,10 @@ class IntegrityBlockedScreen extends StatelessWidget {
                       'This app was not installed from the Google Play Store and cannot be used.',
                       textAlign: TextAlign.center,
                       style: Theme.of(context).textTheme.bodyMedium!.copyWith(
-                        color: Theme.of(context).colorScheme.onSurfaceVariant,
-                        height: 1.5,
-                      ),
+                            color:
+                                Theme.of(context).colorScheme.onSurfaceVariant,
+                            height: 1.5,
+                          ),
                     ),
                   ),
 
@@ -92,7 +96,11 @@ class IntegrityBlockedScreen extends StatelessWidget {
                       borderRadius: BorderRadius.circular(28),
                       boxShadow: [
                         BoxShadow(
-                          color: Colors.black.withValues(alpha: Theme.of(context).brightness == Brightness.dark ? 0.25 : 0.06),
+                          color: Colors.black.withValues(
+                              alpha: Theme.of(context).brightness ==
+                                      Brightness.dark
+                                  ? 0.25
+                                  : 0.06),
                           offset: const Offset(0, 2),
                           blurRadius: 12,
                         ),
@@ -109,7 +117,10 @@ class IntegrityBlockedScreen extends StatelessWidget {
                         ),
                         Divider(
                           height: 28,
-                          color: Theme.of(context).colorScheme.onSurfaceVariant.withValues(alpha: 0.15),
+                          color: Theme.of(context)
+                              .colorScheme
+                              .onSurfaceVariant
+                              .withValues(alpha: 0.15),
                         ),
                         _buildInfoRow(
                           context,
@@ -120,7 +131,10 @@ class IntegrityBlockedScreen extends StatelessWidget {
                         ),
                         Divider(
                           height: 28,
-                          color: Theme.of(context).colorScheme.onSurfaceVariant.withValues(alpha: 0.15),
+                          color: Theme.of(context)
+                              .colorScheme
+                              .onSurfaceVariant
+                              .withValues(alpha: 0.15),
                         ),
                         _buildInfoRow(
                           context,
@@ -141,7 +155,8 @@ class IntegrityBlockedScreen extends StatelessWidget {
                     height: 52,
                     child: ElevatedButton.icon(
                       onPressed: _openPlayStore,
-                      icon: const Icon(CupertinoIcons.play_rectangle_fill, size: 20),
+                      icon: const Icon(CupertinoIcons.play_rectangle_fill,
+                          size: 20),
                       label: const Text(
                         'Open Play Store',
                         style: TextStyle(
@@ -178,7 +193,9 @@ class IntegrityBlockedScreen extends StatelessWidget {
                           );
                         }
                       },
-                      icon: Icon(CupertinoIcons.arrow_counterclockwise, size: 16, color: Theme.of(context).colorScheme.primary),
+                      icon: Icon(CupertinoIcons.arrow_counterclockwise,
+                          size: 16,
+                          color: Theme.of(context).colorScheme.primary),
                       label: Text(
                         'Retry Verification',
                         style: TextStyle(
@@ -189,7 +206,10 @@ class IntegrityBlockedScreen extends StatelessWidget {
                       ),
                       style: OutlinedButton.styleFrom(
                         side: BorderSide(
-                          color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.3),
+                          color: Theme.of(context)
+                              .colorScheme
+                              .primary
+                              .withValues(alpha: 0.3),
                         ),
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(16),
@@ -208,7 +228,10 @@ class IntegrityBlockedScreen extends StatelessWidget {
                       onPressed: () {
                         SystemNavigator.pop();
                       },
-                      icon: Icon(CupertinoIcons.xmark, size: 16, color: Theme.of(context).colorScheme.onSurfaceVariant),
+                      icon: Icon(CupertinoIcons.xmark,
+                          size: 16,
+                          color:
+                              Theme.of(context).colorScheme.onSurfaceVariant),
                       label: Text(
                         'Close App',
                         style: TextStyle(
@@ -219,7 +242,10 @@ class IntegrityBlockedScreen extends StatelessWidget {
                       ),
                       style: OutlinedButton.styleFrom(
                         side: BorderSide(
-                          color: Theme.of(context).colorScheme.onSurfaceVariant.withValues(alpha: 0.3),
+                          color: Theme.of(context)
+                              .colorScheme
+                              .onSurfaceVariant
+                              .withValues(alpha: 0.3),
                         ),
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(16),
@@ -234,10 +260,13 @@ class IntegrityBlockedScreen extends StatelessWidget {
                   Text(
                     'Rewordium Security',
                     style: Theme.of(context).textTheme.bodySmall!.copyWith(
-                      color: Theme.of(context).colorScheme.onSurfaceVariant.withValues(alpha: 0.5),
-                      letterSpacing: 1.0,
-                      fontSize: 11,
-                    ),
+                          color: Theme.of(context)
+                              .colorScheme
+                              .onSurfaceVariant
+                              .withValues(alpha: 0.5),
+                          letterSpacing: 1.0,
+                          fontSize: 11,
+                        ),
                   ),
 
                   const SizedBox(height: 24),
@@ -276,16 +305,16 @@ class IntegrityBlockedScreen extends StatelessWidget {
               Text(
                 title,
                 style: Theme.of(context).textTheme.bodyMedium!.copyWith(
-                  fontWeight: FontWeight.w600,
-                ),
+                      fontWeight: FontWeight.w600,
+                    ),
               ),
               const SizedBox(height: 2),
               Text(
                 subtitle,
                 style: Theme.of(context).textTheme.bodySmall!.copyWith(
-                  color: Theme.of(context).colorScheme.onSurfaceVariant,
-                  fontSize: 12,
-                ),
+                      color: Theme.of(context).colorScheme.onSurfaceVariant,
+                      fontSize: 12,
+                    ),
               ),
             ],
           ),

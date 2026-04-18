@@ -53,7 +53,8 @@ class FirebaseService {
   }
 
   // --- CHANGED: This function now also sets the initial `lastCreditRefresh` timestamp.
-  static Future<void> createUserDocument(User user, String name, {bool subscribedToNews = false}) async {
+  static Future<void> createUserDocument(User user, String name,
+      {bool subscribedToNews = false}) async {
     try {
       // Use a server-generated timestamp for accuracy.
       final now = FieldValue.serverTimestamp();
@@ -224,7 +225,8 @@ class FirebaseService {
               email: email.trim(), password: password);
 
       if (userCredential.user != null) {
-        await createUserDocument(userCredential.user!, name.trim(), subscribedToNews: subscribedToNews);
+        await createUserDocument(userCredential.user!, name.trim(),
+            subscribedToNews: subscribedToNews);
       }
 
       return userCredential.user;

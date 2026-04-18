@@ -121,10 +121,10 @@ class UnifiedAIService {
               '⚠️ Advanced AI Settings are enabled but no API key is provided.\n\nPlease go to Settings → Advanced AI Settings and either:\n• Enter a valid API key, or\n• Disable Advanced AI Settings to use the default Groq service',
         };
       }
-      
+
       // Check for rate limit / token exhaustion errors
-      if (errorString.contains('rate') || 
-          errorString.contains('limit') || 
+      if (errorString.contains('rate') ||
+          errorString.contains('limit') ||
           errorString.contains('quota') ||
           errorString.contains('429') ||
           errorString.contains('exhausted') ||
@@ -136,9 +136,9 @@ class UnifiedAIService {
               '⚠️ API rate limit or token quota exceeded.\n\nYour AI provider has reached its usage limit. Please wait a moment and try again, or check your API plan.',
         };
       }
-      
+
       // Check for invalid API key errors
-      if (errorString.contains('401') || 
+      if (errorString.contains('401') ||
           errorString.contains('unauthorized') ||
           errorString.contains('invalid') && errorString.contains('key')) {
         return {
@@ -148,9 +148,9 @@ class UnifiedAIService {
               '⚠️ Invalid API key.\n\nThe API key you provided is not valid. Please check your API key in Settings → Advanced AI Settings.',
         };
       }
-      
+
       // Check for missing endpoint
-      if (errorString.contains('endpoint') || 
+      if (errorString.contains('endpoint') ||
           errorString.contains('url') ||
           errorString.contains('host')) {
         return {
@@ -218,16 +218,19 @@ class UnifiedAIService {
         return {
           'error': 'RATE_LIMIT',
           'errorType': 'RATE_LIMIT',
-          'content': '⚠️ Groq API rate limit exceeded. Please wait a moment and try again.',
+          'content':
+              '⚠️ Groq API rate limit exceeded. Please wait a moment and try again.',
         };
       } else if (response.statusCode == 401) {
         return {
           'error': 'INVALID_API_KEY',
           'errorType': 'INVALID_API_KEY',
-          'content': '⚠️ Invalid Groq API key. Please check your configuration.',
+          'content':
+              '⚠️ Invalid Groq API key. Please check your configuration.',
         };
       } else {
-        throw Exception('Groq API error: ${response.statusCode} - ${response.body}');
+        throw Exception(
+            'Groq API error: ${response.statusCode} - ${response.body}');
       }
     } catch (e) {
       print('Groq request error: $e');

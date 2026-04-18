@@ -55,11 +55,11 @@ class _HomeScreenState extends State<HomeScreen> {
     final useDynamicColors = themeProvider.useDynamicColors;
     final r = Responsive.of(context);
     final heroBackgroundColor = useDynamicColors
-      ? colorScheme.secondaryContainer
-      : (isDarkMode ? const Color(0xFF1E1E1E) : Colors.white);
+        ? colorScheme.secondaryContainer
+        : (isDarkMode ? const Color(0xFF1E1E1E) : Colors.white);
     final heroAccentColor = useDynamicColors
-      ? colorScheme.onSecondaryContainer
-      : (isDarkMode ? const Color(0xFFAFFF99) : colorScheme.primary);
+        ? colorScheme.onSecondaryContainer
+        : (isDarkMode ? const Color(0xFFAFFF99) : colorScheme.primary);
 
     return ExpressiveRefreshIndicator(
       onRefresh: () async {
@@ -68,117 +68,122 @@ class _HomeScreenState extends State<HomeScreen> {
       color: colorScheme.primary,
       backgroundColor: colorScheme.surface,
       child: SingleChildScrollView(
-      physics: const AlwaysScrollableScrollPhysics(
-        parent: BouncingScrollPhysics(),
-      ),
-      child: SafeArea(
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // Hero header card
-            Container(
-              margin: r.all(16),
-              padding: r.all(20),
-              decoration: BoxDecoration(
-                color: heroBackgroundColor,
-                borderRadius: BorderRadius.circular(r.r(28)),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withValues(alpha: isDarkMode ? 0.25 : 0.08),
-                    blurRadius: 20,
-                    offset: const Offset(0, 8),
-                  ),
-                ],
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              isLoggedIn ? "Welcome back" : "Welcome to",
-                              style: textTheme.bodyLarge?.copyWith(
-                                color: heroAccentColor.withValues(alpha: 0.8),
+        physics: const AlwaysScrollableScrollPhysics(
+          parent: BouncingScrollPhysics(),
+        ),
+        child: SafeArea(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // Hero header card
+              Container(
+                margin: r.all(16),
+                padding: r.all(20),
+                decoration: BoxDecoration(
+                  color: heroBackgroundColor,
+                  borderRadius: BorderRadius.circular(r.r(28)),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black
+                          .withValues(alpha: isDarkMode ? 0.25 : 0.08),
+                      blurRadius: 20,
+                      offset: const Offset(0, 8),
+                    ),
+                  ],
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                isLoggedIn ? "Welcome back" : "Welcome to",
+                                style: textTheme.bodyLarge?.copyWith(
+                                  color: heroAccentColor.withValues(alpha: 0.8),
+                                ),
                               ),
-                            ),
-                            Text(
-                              userName,
-                              style: textTheme.headlineMedium?.copyWith(
-                                color: heroAccentColor,
-                                fontWeight: FontWeight.w800,
+                              Text(
+                                userName,
+                                style: textTheme.headlineMedium?.copyWith(
+                                  color: heroAccentColor,
+                                  fontWeight: FontWeight.w800,
+                                ),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
                               ),
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                            ),
-                          ],
-                        ),
-                      ),
-                      SizedBox(width: r.w(8)),
-                      if (!isLoggedIn)
-                        ButtonM3E(
-                          onPressed: () {
-                            Navigator.push(
-                              context,
-                              MaterialPageRoute(
-                                  builder: (_) => const LoginScreen()),
-                            );
-                          },
-                          label: const Text("Log in"),
-                          style: ButtonM3EStyle.filled,
-                          size: ButtonM3ESize.sm,
-                          shape: ButtonM3EShape.round,
-                        )
-                      else
-                        GestureDetector(
-                          onTap: () => _showProfileSheet(context),
-                          child: Container(
-                            padding: r.all(3),
-                            decoration: BoxDecoration(
-                              shape: BoxShape.circle,
-                              border: Border.all(color: heroAccentColor, width: 2),
-                            ),
-                            child: CircleAvatar(
-                              radius: r.r(20),
-                              backgroundColor: heroAccentColor.withValues(alpha: 0.15),
-                              backgroundImage: authProvider.user?.photoURL != null
-                                  ? NetworkImage(authProvider.user!.photoURL!)
-                                  : null,
-                              child: authProvider.user?.photoURL == null
-                                  ? Icon(CupertinoIcons.person_fill, size: r.r(20), color: heroAccentColor)
-                                  : null,
-                            ),
+                            ],
                           ),
                         ),
-                    ],
-                  ),
-                  SizedBox(height: r.h(12)),
-                  Text(
-                    "Improve your writing with AI",
-                    style: textTheme.bodyMedium?.copyWith(
-                      color: heroAccentColor.withValues(alpha: 0.6),
+                        SizedBox(width: r.w(8)),
+                        if (!isLoggedIn)
+                          ButtonM3E(
+                            onPressed: () {
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                    builder: (_) => const LoginScreen()),
+                              );
+                            },
+                            label: const Text("Log in"),
+                            style: ButtonM3EStyle.filled,
+                            size: ButtonM3ESize.sm,
+                            shape: ButtonM3EShape.round,
+                          )
+                        else
+                          GestureDetector(
+                            onTap: () => _showProfileSheet(context),
+                            child: Container(
+                              padding: r.all(3),
+                              decoration: BoxDecoration(
+                                shape: BoxShape.circle,
+                                border: Border.all(
+                                    color: heroAccentColor, width: 2),
+                              ),
+                              child: CircleAvatar(
+                                radius: r.r(20),
+                                backgroundColor:
+                                    heroAccentColor.withValues(alpha: 0.15),
+                                backgroundImage: authProvider.user?.photoURL !=
+                                        null
+                                    ? NetworkImage(authProvider.user!.photoURL!)
+                                    : null,
+                                child: authProvider.user?.photoURL == null
+                                    ? Icon(CupertinoIcons.person_fill,
+                                        size: r.r(20), color: heroAccentColor)
+                                    : null,
+                              ),
+                            ),
+                          ),
+                      ],
                     ),
-                  ),
-                ],
+                    SizedBox(height: r.h(12)),
+                    Text(
+                      "Improve your writing with AI",
+                      style: textTheme.bodyMedium?.copyWith(
+                        color: heroAccentColor.withValues(alpha: 0.6),
+                      ),
+                    ),
+                  ],
+                ),
               ),
-            ),
-            SizedBox(height: r.h(4)),
-            _buildSectionTitle(context, "Your Tools"),
-            _ToolsRow(useDynamicColors: useDynamicColors),
-            SizedBox(height: r.h(4)),
-            _buildSectionTitle(context, "Setup Status"),
-            const KeyboardStatusCard(),
-            const AssistantStatusCard(),
-            const FeedbackCard(),
-            SizedBox(height: r.h(20)),
-          ],
+              SizedBox(height: r.h(4)),
+              _buildSectionTitle(context, "Your Tools"),
+              _ToolsRow(useDynamicColors: useDynamicColors),
+              SizedBox(height: r.h(4)),
+              _buildSectionTitle(context, "Setup Status"),
+              const KeyboardStatusCard(),
+              const AssistantStatusCard(),
+              const FeedbackCard(),
+              SizedBox(height: r.h(20)),
+            ],
+          ),
         ),
       ),
-    ),
     );
   }
 
@@ -310,7 +315,9 @@ class _ToolsRow extends StatelessWidget {
               try {
                 if (!await DocGate.check(context)) return;
                 final result = await DocumentService.scanDocument();
-                if (result != null && result.text.isNotEmpty && context.mounted) {
+                if (result != null &&
+                    result.text.isNotEmpty &&
+                    context.mounted) {
                   Navigator.push(
                     context,
                     MaterialPageRoute(
@@ -333,13 +340,17 @@ class _ToolsRow extends StatelessWidget {
             title: "Import File",
             subtitle: "PDF, DOCX, TXT",
             icon: CupertinoIcons.doc_on_doc,
-            color: useDynamicColors ? colorScheme.primary : const Color(0xFF1E3A8A),
+            color: useDynamicColors
+                ? colorScheme.primary
+                : const Color(0xFF1E3A8A),
             r: r,
             onTap: () async {
               try {
                 if (!await DocGate.check(context)) return;
                 final result = await DocumentService.pickFile();
-                if (result != null && result.text.isNotEmpty && context.mounted) {
+                if (result != null &&
+                    result.text.isNotEmpty &&
+                    context.mounted) {
                   Navigator.push(
                     context,
                     MaterialPageRoute(

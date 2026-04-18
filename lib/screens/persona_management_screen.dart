@@ -9,14 +9,16 @@ class PersonaManagementScreen extends StatefulWidget {
   const PersonaManagementScreen({Key? key}) : super(key: key);
 
   @override
-  State<PersonaManagementScreen> createState() => _PersonaManagementScreenState();
+  State<PersonaManagementScreen> createState() =>
+      _PersonaManagementScreenState();
 }
 
-class _PersonaManagementScreenState extends State<PersonaManagementScreen> with SingleTickerProviderStateMixin {
+class _PersonaManagementScreenState extends State<PersonaManagementScreen>
+    with SingleTickerProviderStateMixin {
   late AnimationController _animationController;
   final TextEditingController _nameController = TextEditingController();
   final TextEditingController _descriptionController = TextEditingController();
-  
+
   @override
   void initState() {
     super.initState();
@@ -26,7 +28,7 @@ class _PersonaManagementScreenState extends State<PersonaManagementScreen> with 
     );
     _animationController.forward();
   }
-  
+
   @override
   void dispose() {
     _animationController.dispose();
@@ -68,9 +70,12 @@ class _PersonaManagementScreenState extends State<PersonaManagementScreen> with 
           ),
           ElevatedButton(
             onPressed: () {
-              if (_nameController.text.isNotEmpty && _descriptionController.text.isNotEmpty) {
-                final provider = Provider.of<KeyboardProvider>(context, listen: false);
-                provider.addPersona(_nameController.text, _descriptionController.text);
+              if (_nameController.text.isNotEmpty &&
+                  _descriptionController.text.isNotEmpty) {
+                final provider =
+                    Provider.of<KeyboardProvider>(context, listen: false);
+                provider.addPersona(
+                    _nameController.text, _descriptionController.text);
                 _nameController.clear();
                 _descriptionController.clear();
                 Navigator.pop(context);
@@ -92,7 +97,9 @@ class _PersonaManagementScreenState extends State<PersonaManagementScreen> with 
       child: Container(
         margin: const EdgeInsets.symmetric(vertical: 8, horizontal: 16),
         decoration: BoxDecoration(
-          color: isSelected ? Theme.of(context).colorScheme.primary.withValues(alpha: 0.1) : Colors.white,
+          color: isSelected
+              ? Theme.of(context).colorScheme.primary.withValues(alpha: 0.1)
+              : Colors.white,
           borderRadius: BorderRadius.circular(16),
           boxShadow: [
             BoxShadow(
@@ -101,8 +108,9 @@ class _PersonaManagementScreenState extends State<PersonaManagementScreen> with 
               offset: const Offset(0, 4),
             ),
           ],
-          border: isSelected 
-              ? Border.all(color: Theme.of(context).colorScheme.primary, width: 2)
+          border: isSelected
+              ? Border.all(
+                  color: Theme.of(context).colorScheme.primary, width: 2)
               : Border.all(color: Colors.grey.shade200),
         ),
         child: Padding(
@@ -113,7 +121,9 @@ class _PersonaManagementScreenState extends State<PersonaManagementScreen> with 
                 width: 50,
                 height: 50,
                 decoration: BoxDecoration(
-                  color: isSelected ? Theme.of(context).colorScheme.primary : Colors.grey.shade200,
+                  color: isSelected
+                      ? Theme.of(context).colorScheme.primary
+                      : Colors.grey.shade200,
                   shape: BoxShape.circle,
                 ),
                 child: Center(
@@ -134,7 +144,9 @@ class _PersonaManagementScreenState extends State<PersonaManagementScreen> with 
                       style: TextStyle(
                         fontSize: 18,
                         fontWeight: FontWeight.bold,
-                        color: isSelected ? Theme.of(context).colorScheme.primary : Colors.black,
+                        color: isSelected
+                            ? Theme.of(context).colorScheme.primary
+                            : Colors.black,
                       ),
                     ),
                     const SizedBox(height: 4),

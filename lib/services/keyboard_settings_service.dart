@@ -25,7 +25,7 @@ class KeyboardSettingsService {
   static Future<dynamic> _handleMethodCall(MethodCall call) async {
     print('🔔 KeyboardSettingsService received method call: ${call.method}');
     print('📊 Method call arguments: ${call.arguments}');
-    
+
     switch (call.method) {
       case 'showKeyboardSettings':
         final bool isDarkMode = call.arguments['isDarkMode'] ?? false;

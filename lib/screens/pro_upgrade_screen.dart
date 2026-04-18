@@ -70,7 +70,8 @@ class _ProUpgradeScreenState extends State<ProUpgradeScreen> {
         backgroundColor: Colors.transparent,
         elevation: 0,
         leading: IconButton(
-          icon: Icon(Icons.close, color: Theme.of(context).colorScheme.onSurface),
+          icon:
+              Icon(Icons.close, color: Theme.of(context).colorScheme.onSurface),
           onPressed: () => Navigator.of(context).pop(),
         ),
         title: Text(
@@ -152,10 +153,12 @@ class _ProUpgradeScreenState extends State<ProUpgradeScreen> {
                       onPressed: () =>
                           _handleRestorePurchases(context, billingService),
                       icon: Icon(Icons.restore,
-                          color: Theme.of(context).colorScheme.primary, size: 18),
+                          color: Theme.of(context).colorScheme.primary,
+                          size: 18),
                       label: Text(
                         'Restore Purchases',
-                        style: TextStyle(color: Theme.of(context).colorScheme.primary),
+                        style: TextStyle(
+                            color: Theme.of(context).colorScheme.primary),
                       ),
                     ),
                   ],
@@ -202,8 +205,8 @@ class _ProUpgradeScreenState extends State<ProUpgradeScreen> {
         Text(
           'Get unlimited access to all Pro features',
           style: Theme.of(context).textTheme.bodyMedium!.copyWith(
-            color: Theme.of(context).colorScheme.onSurfaceVariant,
-          ),
+                color: Theme.of(context).colorScheme.onSurfaceVariant,
+              ),
           textAlign: TextAlign.center,
         ),
       ],
@@ -269,14 +272,16 @@ class _ProUpgradeScreenState extends State<ProUpgradeScreen> {
                       Text(
                         feature.$1,
                         style: Theme.of(context).textTheme.bodyMedium!.copyWith(
-                          fontWeight: FontWeight.w600,
-                        ),
+                              fontWeight: FontWeight.w600,
+                            ),
                       ),
                       Text(
                         feature.$3,
                         style: Theme.of(context).textTheme.bodySmall!.copyWith(
-                          color: Theme.of(context).colorScheme.onSurfaceVariant,
-                        ),
+                              color: Theme.of(context)
+                                  .colorScheme
+                                  .onSurfaceVariant,
+                            ),
                       ),
                     ],
                   ),
@@ -352,9 +357,10 @@ class _ProUpgradeScreenState extends State<ProUpgradeScreen> {
                       Flexible(
                         child: Text(
                           title,
-                          style: Theme.of(context).textTheme.bodyLarge!.copyWith(
-                            fontWeight: FontWeight.bold,
-                          ),
+                          style:
+                              Theme.of(context).textTheme.bodyLarge!.copyWith(
+                                    fontWeight: FontWeight.bold,
+                                  ),
                           overflow: TextOverflow.ellipsis,
                         ),
                       ),
@@ -387,8 +393,8 @@ class _ProUpgradeScreenState extends State<ProUpgradeScreen> {
                   Text(
                     description,
                     style: Theme.of(context).textTheme.bodySmall!.copyWith(
-                      color: Theme.of(context).colorScheme.onSurfaceVariant,
-                    ),
+                          color: Theme.of(context).colorScheme.onSurfaceVariant,
+                        ),
                   ),
                 ],
               ),
@@ -402,19 +408,19 @@ class _ProUpgradeScreenState extends State<ProUpgradeScreen> {
                   Text(
                     price,
                     style: Theme.of(context).textTheme.titleMedium!.copyWith(
-                      color: Theme.of(context).brightness == Brightness.dark
-                          ? Colors.green.shade400
-                          : Colors.green.shade700,
-                      fontWeight: FontWeight.bold,
-                    ),
+                          color: Theme.of(context).brightness == Brightness.dark
+                              ? Colors.green.shade400
+                              : Colors.green.shade700,
+                          fontWeight: FontWeight.bold,
+                        ),
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                   ),
                   Text(
                     period,
                     style: Theme.of(context).textTheme.bodySmall!.copyWith(
-                      color: Theme.of(context).colorScheme.onSurfaceVariant,
-                    ),
+                          color: Theme.of(context).colorScheme.onSurfaceVariant,
+                        ),
                   ),
                 ],
               ),
@@ -481,7 +487,10 @@ class _ProUpgradeScreenState extends State<ProUpgradeScreen> {
           const SizedBox(height: 12),
           Text(
             'Store Unavailable',
-            style: Theme.of(context).textTheme.bodyLarge!.copyWith(fontWeight: FontWeight.bold),
+            style: Theme.of(context)
+                .textTheme
+                .bodyLarge!
+                .copyWith(fontWeight: FontWeight.bold),
           ),
           const SizedBox(height: 8),
           Text(
@@ -565,8 +574,8 @@ class _ProUpgradeScreenState extends State<ProUpgradeScreen> {
                   Text(
                     billingService.stateMessage,
                     style: Theme.of(context).textTheme.bodyMedium!.copyWith(
-                      color: Theme.of(context).colorScheme.onSurfaceVariant,
-                    ),
+                          color: Theme.of(context).colorScheme.onSurfaceVariant,
+                        ),
                     textAlign: TextAlign.center,
                   ),
                   const SizedBox(height: 32),
@@ -581,8 +590,8 @@ class _ProUpgradeScreenState extends State<ProUpgradeScreen> {
                         ? 'Secure payment powered by App Store'
                         : 'Secure payment powered by Google Play',
                     style: Theme.of(context).textTheme.bodySmall!.copyWith(
-                      color: Theme.of(context).colorScheme.onSurfaceVariant,
-                    ),
+                          color: Theme.of(context).colorScheme.onSurfaceVariant,
+                        ),
                   ),
                 ],
               ),
@@ -631,8 +640,8 @@ class _ProUpgradeScreenState extends State<ProUpgradeScreen> {
               Text(
                 billingService.stateMessage,
                 style: Theme.of(context).textTheme.bodyMedium!.copyWith(
-                  color: Theme.of(context).colorScheme.onSurfaceVariant,
-                ),
+                      color: Theme.of(context).colorScheme.onSurfaceVariant,
+                    ),
                 textAlign: TextAlign.center,
               ),
               const SizedBox(height: 48),
@@ -677,7 +686,8 @@ class _ProUpgradeScreenState extends State<ProUpgradeScreen> {
         backgroundColor: Colors.transparent,
         elevation: 0,
         leading: IconButton(
-          icon: Icon(Icons.close, color: Theme.of(context).colorScheme.onSurface),
+          icon:
+              Icon(Icons.close, color: Theme.of(context).colorScheme.onSurface),
           onPressed: () {
             billingService.resetState();
             Navigator.of(context).pop();
@@ -715,8 +725,8 @@ class _ProUpgradeScreenState extends State<ProUpgradeScreen> {
               Text(
                 billingService.stateMessage,
                 style: Theme.of(context).textTheme.bodyMedium!.copyWith(
-                  color: Theme.of(context).colorScheme.onSurfaceVariant,
-                ),
+                      color: Theme.of(context).colorScheme.onSurfaceVariant,
+                    ),
                 textAlign: TextAlign.center,
               ),
               const SizedBox(height: 48),
@@ -774,7 +784,8 @@ class _ProUpgradeScreenState extends State<ProUpgradeScreen> {
         backgroundColor: Colors.transparent,
         elevation: 0,
         leading: IconButton(
-          icon: Icon(Icons.close, color: Theme.of(context).colorScheme.onSurface),
+          icon:
+              Icon(Icons.close, color: Theme.of(context).colorScheme.onSurface),
           onPressed: () {
             billingService.resetState();
             Navigator.of(context).pop();
@@ -812,8 +823,8 @@ class _ProUpgradeScreenState extends State<ProUpgradeScreen> {
               Text(
                 billingService.stateMessage,
                 style: Theme.of(context).textTheme.bodyMedium!.copyWith(
-                  color: Theme.of(context).colorScheme.onSurfaceVariant,
-                ),
+                      color: Theme.of(context).colorScheme.onSurfaceVariant,
+                    ),
                 textAlign: TextAlign.center,
               ),
               const SizedBox(height: 48),
@@ -903,7 +914,8 @@ class _ProUpgradeScreenState extends State<ProUpgradeScreen> {
           children: [
             LoadingIndicatorM3E(),
             const SizedBox(width: 20),
-            Text('Restoring purchases...', style: Theme.of(context).textTheme.bodyMedium!),
+            Text('Restoring purchases...',
+                style: Theme.of(context).textTheme.bodyMedium!),
           ],
         ),
       ),

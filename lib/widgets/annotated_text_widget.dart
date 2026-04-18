@@ -247,11 +247,12 @@ class AnnotatedTextWidget extends StatelessWidget {
     );
   }
 
-  TextStyle _baseStyle(BuildContext context) => Theme.of(context).textTheme.bodyMedium!.copyWith(
-        fontSize: 14,
-        height: 1.7,
-        color: Theme.of(context).colorScheme.onSurface,
-      );
+  TextStyle _baseStyle(BuildContext context) =>
+      Theme.of(context).textTheme.bodyMedium!.copyWith(
+            fontSize: 14,
+            height: 1.7,
+            color: Theme.of(context).colorScheme.onSurface,
+          );
 }
 
 // ──────────────────────────────────────────────────
@@ -308,9 +309,9 @@ void showGrammarCorrectionPopup(
                   Text(
                     'Grammar Issue',
                     style: Theme.of(ctx).textTheme.bodyLarge!.copyWith(
-                      fontWeight: FontWeight.w700,
-                      fontSize: 16,
-                    ),
+                          fontWeight: FontWeight.w700,
+                          fontSize: 16,
+                        ),
                   ),
                 ],
               ),
@@ -319,10 +320,10 @@ void showGrammarCorrectionPopup(
               // Original
               Text('Original',
                   style: Theme.of(ctx).textTheme.bodySmall!.copyWith(
-                    color: Theme.of(ctx).colorScheme.onSurfaceVariant,
-                    fontSize: 11,
-                    fontWeight: FontWeight.w600,
-                  )),
+                        color: Theme.of(ctx).colorScheme.onSurfaceVariant,
+                        fontSize: 11,
+                        fontWeight: FontWeight.w600,
+                      )),
               const SizedBox(height: 4),
               Container(
                 width: double.infinity,
@@ -335,10 +336,10 @@ void showGrammarCorrectionPopup(
                 child: Text(
                   annotation.original,
                   style: Theme.of(ctx).textTheme.bodyMedium!.copyWith(
-                    fontSize: 13,
-                    decoration: TextDecoration.lineThrough,
-                    color: const Color(0xFFEF4444),
-                  ),
+                        fontSize: 13,
+                        decoration: TextDecoration.lineThrough,
+                        color: const Color(0xFFEF4444),
+                      ),
                 ),
               ),
               const SizedBox(height: 10),
@@ -346,10 +347,10 @@ void showGrammarCorrectionPopup(
               // Correction
               Text('Correction',
                   style: Theme.of(ctx).textTheme.bodySmall!.copyWith(
-                    color: Theme.of(ctx).colorScheme.onSurfaceVariant,
-                    fontSize: 11,
-                    fontWeight: FontWeight.w600,
-                  )),
+                        color: Theme.of(ctx).colorScheme.onSurfaceVariant,
+                        fontSize: 11,
+                        fontWeight: FontWeight.w600,
+                      )),
               const SizedBox(height: 4),
               Container(
                 width: double.infinity,
@@ -362,10 +363,10 @@ void showGrammarCorrectionPopup(
                 child: Text(
                   annotation.correction,
                   style: Theme.of(ctx).textTheme.bodyMedium!.copyWith(
-                    fontSize: 13,
-                    color: const Color(0xFF16A34A),
-                    fontWeight: FontWeight.w500,
-                  ),
+                        fontSize: 13,
+                        color: const Color(0xFF16A34A),
+                        fontWeight: FontWeight.w500,
+                      ),
                 ),
               ),
 
@@ -374,18 +375,18 @@ void showGrammarCorrectionPopup(
                 const SizedBox(height: 10),
                 Text('Why',
                     style: Theme.of(ctx).textTheme.bodySmall!.copyWith(
-                      color: Theme.of(ctx).colorScheme.onSurfaceVariant,
-                      fontSize: 11,
-                      fontWeight: FontWeight.w600,
-                    )),
+                          color: Theme.of(ctx).colorScheme.onSurfaceVariant,
+                          fontSize: 11,
+                          fontWeight: FontWeight.w600,
+                        )),
                 const SizedBox(height: 4),
                 Text(
                   annotation.explanation,
                   style: Theme.of(ctx).textTheme.bodySmall!.copyWith(
-                    fontSize: 12,
-                    color: Theme.of(ctx).colorScheme.onSurfaceVariant,
-                    height: 1.4,
-                  ),
+                        fontSize: 12,
+                        color: Theme.of(ctx).colorScheme.onSurfaceVariant,
+                        height: 1.4,
+                      ),
                 ),
               ],
 
