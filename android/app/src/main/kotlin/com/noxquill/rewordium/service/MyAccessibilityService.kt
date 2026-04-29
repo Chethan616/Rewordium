@@ -959,8 +959,15 @@ class MyAccessibilityService : AccessibilityService(), BubbleInteractionListener
             return
         }
 
+        val usingExternalApiForGate = try {
+            AIConfigProvider.reloadConfig(this).isAdvancedEnabled
+        } catch (e: Exception) {
+            Log.w(TAG, "Failed to evaluate AI provider mode for credit gate", e)
+            false
+        }
+
         // --- The Credit Check Gate ---
-        if (!creditManager.canPerformAction()) {
+        if (!usingExternalApiForGate && !creditManager.canPerformAction()) {
             showOverlaySnackbar(
                 message = "Out of credits. Please upgrade to continue.",
                 actionText = "UPGRADE",
@@ -1227,14 +1234,18 @@ class MyAccessibilityService : AccessibilityService(), BubbleInteractionListener
                     return@launch
                 }
                 
-                // Send intent to MainActivity to consume credit via Flutter
-                if (BuildConfig.DEBUG) Log.d(TAG, "Requesting credit consumption via Flutter...")
-                val consumeCreditIntent = Intent("com.noxquill.rewordium.CONSUME_CREDIT_REQUEST")
-                consumeCreditIntent.setPackage(packageName)
-                sendBroadcast(consumeCreditIntent)
-                
-                // Small delay to allow credit consumption to process
-                delay(API_DELAY)
+                if (!config.isAdvancedEnabled) {
+                    // Send intent to MainActivity to consume credit via Flutter.
+                    if (BuildConfig.DEBUG) Log.d(TAG, "Requesting credit consumption via Flutter...")
+                    val consumeCreditIntent = Intent("com.noxquill.rewordium.CONSUME_CREDIT_REQUEST")
+                    consumeCreditIntent.setPackage(packageName)
+                    sendBroadcast(consumeCreditIntent)
+
+                    // Small delay to allow credit consumption to process
+                    delay(API_DELAY)
+                } else if (BuildConfig.DEBUG) {
+                    Log.d(TAG, "Advanced AI mode enabled, skipping app credit consumption")
+                }
 
                 if (BuildConfig.DEBUG) {
                     Log.d(TAG, "Making API request with provider=${config.provider}, model=${config.getEffectiveModel()}")

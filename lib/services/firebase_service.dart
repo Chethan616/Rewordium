@@ -123,12 +123,74 @@ class FirebaseService {
     }
   }
 
-  // Consume a credit for free users
-  static Future<bool> consumeCredit(String uid) async {
+  // Consume one credit for free users using an atomic transaction.
+  static Future<bool> consumeCredit(
+    String uid, {
+    String source = 'firebase_service',
+  }) async {
     try {
-      final userDoc = await _firestore.collection('users').doc(uid).get();
-      final userData = userDoc.data();
+      var actionAllowed = false;
+      var creditDebited = false;
 
+      final userRef = _firestore.collection('users').doc(uid);
+
+      await _firestore.runTransaction((transaction) async {
+        final userSnap = await transaction.get(userRef);
+        final userData = userSnap.data();
+
+        if (userData == null) {
+          actionAllowed = false;
+          return;
+        }
+
+        final isPro = userData['isPro'] as bool? ?? false;
+        if (isPro) {
+          // Pro users are always allowed and never consume credits.
+          actionAllowed = true;
+          creditDebited = false;
+          return;
+        }
+
+        final currentCredits = (userData['credits'] as num?)?.toInt() ?? 0;
+        if (currentCredits <= 0) {
+          actionAllowed = false;
+          creditDebited = false;
+          return;
+        }
+
+        transaction.update(userRef, {
+          'credits': currentCredits - 1,
+          'lastUpdated': FieldValue.serverTimestamp(),
+        });
+
+        actionAllowed = true;
+        creditDebited = true;
+      });
+
+      clearUserCache(uid);
+
+      if (creditDebited) {
+        await UsageAnalyticsService.recordCreditUsage(
+          uid: uid,
+          creditsUsed: 1,
+          source: source,
+        );
+      }
+
+      return actionAllowed;
+    } catch (e) {
+      return false;
+    }
+  }
+
+  /// Fetch the latest credit entitlement from server (no cache).
+  static Future<bool> hasAvailableCredits(String uid) async {
+    try {
+      final userDoc = await _firestore
+          .collection('users')
+          .doc(uid)
+          .get(const GetOptions(source: Source.server));
+      final userData = userDoc.data();
       if (userData == null) {
         return false;
       }
@@ -138,18 +200,8 @@ class FirebaseService {
         return true;
       }
 
-      final currentCredits = userData['credits'] as int? ?? 0;
-      if (currentCredits <= 0) {
-        return false;
-      }
-
-      await updateUserCredits(uid, currentCredits - 1);
-      await UsageAnalyticsService.recordCreditUsage(
-        uid: uid,
-        creditsUsed: 1,
-        source: 'firebase_service',
-      );
-      return true;
+      final currentCredits = (userData['credits'] as num?)?.toInt() ?? 0;
+      return currentCredits > 0;
     } catch (e) {
       return false;
     }

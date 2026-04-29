@@ -260,9 +260,17 @@ class AdvancedAISettingsService {
     return settings.enabled && settings.isApiKeyValid();
   }
 
+  /// Returns true when the user has enabled advanced settings with a valid key.
+  /// In this mode, requests use user-provided APIs and should not consume app credits.
+  static Future<bool> isUsingExternalApi() async {
+    final settings = await loadSettings();
+    return settings.enabled && settings.isApiKeyValid();
+  }
+
   /// Get API configuration for current settings
   static Future<Map<String, dynamic>> getAPIConfig() async {
     final settings = await loadSettings();
+    final usesExternalApi = settings.enabled && settings.isApiKeyValid();
 
     // If advanced settings are enabled but API key is invalid, throw error
     if (settings.enabled && !settings.isApiKeyValid()) {
@@ -277,6 +285,8 @@ class AdvancedAISettingsService {
         'apiKey': '', // Will use default from .env
         'model': 'llama-3.1-8b-instant',
         'maxTokens': 8192,
+        'isAdvancedEnabled': false,
+        'usesExternalApi': false,
       };
     }
 
@@ -288,6 +298,8 @@ class AdvancedAISettingsService {
           ? settings.getDefaultModelName()
           : settings.modelName,
       'maxTokens': settings.maxTokens,
+      'isAdvancedEnabled': settings.enabled,
+      'usesExternalApi': usesExternalApi,
     };
   }
 }

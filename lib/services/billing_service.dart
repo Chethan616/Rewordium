@@ -3,7 +3,6 @@ import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:in_app_purchase/in_app_purchase.dart';
 import 'package:in_app_purchase_android/in_app_purchase_android.dart';
-import 'package:in_app_purchase_android/billing_client_wrappers.dart';
 
 /// Purchase state for UI - never expose raw billing codes
 enum PurchaseState {
@@ -80,7 +79,12 @@ class BillingService extends ChangeNotifier {
 
   // Callbacks
   Function(bool success, String? message)? onPurchaseComplete;
-  Function(String productId, String? purchaseToken)? onSubscriptionActive;
+  Function(
+    String productId,
+    String? purchaseToken,
+    DateTime? purchaseDate,
+    bool isRestored,
+  )? onSubscriptionActive;
   Function(PurchaseState state)? onStateChanged;
 
   // Getters
@@ -309,9 +313,19 @@ class BillingService extends ChangeNotifier {
           break;
 
         case PurchaseStatus.purchased:
+          _purchasePending = false;
+          _handleSuccessfulPurchase(purchaseDetails, isRestored: false);
+          // Complete restore completer if we were restoring
+          if (_isRestoring &&
+              _restoreCompleter != null &&
+              !_restoreCompleter!.isCompleted) {
+            _restoreCompleter!.complete(true);
+          }
+          break;
+
         case PurchaseStatus.restored:
           _purchasePending = false;
-          _handleSuccessfulPurchase(purchaseDetails);
+          _handleSuccessfulPurchase(purchaseDetails, isRestored: true);
           // Complete restore completer if we were restoring
           if (_isRestoring &&
               _restoreCompleter != null &&
@@ -355,11 +369,8 @@ class BillingService extends ChangeNotifier {
   void _handlePurchaseError(PurchaseDetails purchaseDetails) {
     // Check for specific error codes on Android
     if (Platform.isAndroid && purchaseDetails is GooglePlayPurchaseDetails) {
-      final billingResponse =
-          purchaseDetails.billingClientPurchase.purchaseState;
-
       // Check error message for "already owned" scenario
-      final errorMessage = purchaseDetails.error?.message?.toLowerCase() ?? '';
+      final errorMessage = (purchaseDetails.error?.message ?? '').toLowerCase();
       if (errorMessage.contains('already') || errorMessage.contains('owned')) {
         _updateState(PurchaseState.alreadyOwned);
         onPurchaseComplete?.call(false, null);
@@ -368,7 +379,7 @@ class BillingService extends ChangeNotifier {
     }
 
     // Check generic error message
-    final errorMessage = purchaseDetails.error?.message?.toLowerCase() ?? '';
+    final errorMessage = (purchaseDetails.error?.message ?? '').toLowerCase();
     if (errorMessage.contains('already') ||
         errorMessage.contains('owned') ||
         errorMessage.contains('item_already_owned')) {
@@ -391,7 +402,10 @@ class BillingService extends ChangeNotifier {
   }
 
   /// Handle successful purchase
-  void _handleSuccessfulPurchase(PurchaseDetails purchaseDetails) {
+  void _handleSuccessfulPurchase(
+    PurchaseDetails purchaseDetails, {
+    required bool isRestored,
+  }) {
     // Add to purchases list
     _purchases.removeWhere((p) => p.productID == purchaseDetails.productID);
     _purchases.add(purchaseDetails);
@@ -401,15 +415,26 @@ class BillingService extends ChangeNotifier {
 
     // Get purchase token for Android
     String? purchaseToken;
+    DateTime? purchaseDate;
     if (Platform.isAndroid && purchaseDetails is GooglePlayPurchaseDetails) {
       purchaseToken = purchaseDetails.billingClientPurchase.purchaseToken;
+      final purchaseTime = purchaseDetails.billingClientPurchase.purchaseTime;
+      if (purchaseTime > 0) {
+        purchaseDate =
+            DateTime.fromMillisecondsSinceEpoch(purchaseTime, isUtc: true);
+      }
     }
 
     // Update state to success
     _updateState(PurchaseState.success);
 
     // Notify listeners
-    onSubscriptionActive?.call(purchaseDetails.productID, purchaseToken);
+    onSubscriptionActive?.call(
+      purchaseDetails.productID,
+      purchaseToken,
+      purchaseDate,
+      isRestored,
+    );
     onPurchaseComplete?.call(true, null);
   }
 

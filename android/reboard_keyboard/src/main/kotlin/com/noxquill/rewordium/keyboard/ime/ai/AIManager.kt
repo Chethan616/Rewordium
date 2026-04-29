@@ -17,11 +17,16 @@
 package com.noxquill.rewordium.keyboard.ime.ai
 
 import android.content.Context
+import android.content.Intent
 import android.util.Log
+import com.google.firebase.auth.FirebaseAuth
+import com.google.firebase.firestore.FieldValue
+import com.google.firebase.firestore.FirebaseFirestore
 import com.google.gson.Gson
 import com.google.gson.annotations.SerializedName
 import com.noxquill.rewordium.keyboard.BuildConfig
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.tasks.await
 import kotlinx.coroutines.withContext
 import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.OkHttpClient
@@ -156,17 +161,187 @@ class AIManager(private val context: Context) {
             false
         }
     }
+
+    private fun isProUser(): Boolean {
+        return try {
+            val prefs = context.getSharedPreferences("keyboard_settings", Context.MODE_PRIVATE)
+            prefs.getBoolean("user_is_pro", false)
+        } catch (e: Exception) {
+            Log.w(TAG, "Error checking pro status", e)
+            false
+        }
+    }
+
+    private fun getCachedCredits(): Int {
+        return try {
+            val prefs = context.getSharedPreferences("keyboard_settings", Context.MODE_PRIVATE)
+            prefs.getInt("user_credits", 0)
+        } catch (e: Exception) {
+            Log.w(TAG, "Error reading cached credits", e)
+            0
+        }
+    }
+
+    private fun isUsingExternalApi(config: AIConfigProvider.AIConfig): Boolean {
+        // Advanced mode means the user is using their own API configuration.
+        return config.isAdvancedEnabled
+    }
+
+    private fun updateLocalCreditState(
+        isLoggedIn: Boolean = true,
+        isPro: Boolean,
+        credits: Int,
+    ) {
+        val normalizedCredits = credits.coerceAtLeast(0)
+
+        val keyboardPrefs = context.getSharedPreferences("keyboard_settings", Context.MODE_PRIVATE)
+        keyboardPrefs.edit()
+            .putBoolean("user_logged_in", isLoggedIn)
+            .putBoolean("user_is_pro", isPro)
+            .putInt("user_credits", normalizedCredits)
+            .apply()
+
+        val accessibilityPrefs = context.getSharedPreferences("rewordium_user_status", Context.MODE_PRIVATE)
+        accessibilityPrefs.edit()
+            .putBoolean("is_logged_in_user", isLoggedIn)
+            .putBoolean("is_pro_user", isPro)
+            .putInt("user_credits", normalizedCredits)
+            .apply()
+
+        val statusIntent = Intent("com.noxquill.rewordium.ACCESSIBILITY_USER_STATUS_UPDATED")
+        statusIntent.putExtra("isLoggedIn", isLoggedIn)
+        statusIntent.putExtra("isPro", isPro)
+        statusIntent.putExtra("credits", normalizedCredits)
+        statusIntent.addFlags(Intent.FLAG_INCLUDE_STOPPED_PACKAGES)
+        context.sendBroadcast(statusIntent)
+    }
+
+    private suspend fun verifyCreditAvailabilityForRequest(config: AIConfigProvider.AIConfig): Result<Unit> {
+        if (isUsingExternalApi(config) || isProUser()) {
+            return Result.success(Unit)
+        }
+
+        val uid = FirebaseAuth.getInstance().currentUser?.uid
+        if (uid.isNullOrBlank()) {
+            return Result.failure(AIException("Please log in to use AI features"))
+        }
+
+        return withContext(Dispatchers.IO) {
+            try {
+                val userSnap = FirebaseFirestore.getInstance()
+                    .collection("users")
+                    .document(uid)
+                    .get()
+                    .await()
+
+                if (!userSnap.exists()) {
+                    return@withContext Result.failure(AIException("Unable to verify credits"))
+                }
+
+                val remoteIsPro = userSnap.getBoolean("isPro") ?: false
+                val remoteCredits = (userSnap.getLong("credits") ?: 0L).toInt().coerceAtLeast(0)
+                updateLocalCreditState(isLoggedIn = true, isPro = remoteIsPro, credits = remoteCredits)
+
+                if (remoteIsPro || remoteCredits > 0) {
+                    Result.success(Unit)
+                } else {
+                    Result.failure(AIException("Out of credits. Please upgrade to continue."))
+                }
+            } catch (e: Exception) {
+                Log.w(TAG, "Credit availability sync failed, using cached keyboard state", e)
+                if (getCachedCredits() > 0) {
+                    Result.success(Unit)
+                } else {
+                    Result.failure(AIException("Out of credits. Please upgrade to continue."))
+                }
+            }
+        }
+    }
+
+    private suspend fun consumeCreditAfterSuccess(config: AIConfigProvider.AIConfig): Result<Unit> {
+        if (isUsingExternalApi(config) || isProUser()) {
+            return Result.success(Unit)
+        }
+
+        val uid = FirebaseAuth.getInstance().currentUser?.uid
+        if (uid.isNullOrBlank()) {
+            return Result.failure(AIException("Please log in to use AI features"))
+        }
+
+        return withContext(Dispatchers.IO) {
+            try {
+                val userRef = FirebaseFirestore.getInstance().collection("users").document(uid)
+
+                val consumeResult = FirebaseFirestore.getInstance().runTransaction { transaction ->
+                    val userSnap = transaction.get(userRef)
+
+                    if (!userSnap.exists()) {
+                        return@runTransaction Triple(false, false, 0)
+                    }
+
+                    val remoteIsPro = userSnap.getBoolean("isPro") ?: false
+                    if (remoteIsPro) {
+                        return@runTransaction Triple(true, true, 0)
+                    }
+
+                    val currentCredits = (userSnap.getLong("credits") ?: 0L).toInt()
+                    if (currentCredits <= 0) {
+                        return@runTransaction Triple(false, false, 0)
+                    }
+
+                    val updatedCredits = currentCredits - 1
+                    transaction.update(
+                        userRef,
+                        mapOf(
+                            "credits" to updatedCredits,
+                            "lastUpdated" to FieldValue.serverTimestamp(),
+                        ),
+                    )
+
+                    Triple(true, false, updatedCredits)
+                }.await()
+
+                val actionAllowed = consumeResult.first
+                val remoteIsPro = consumeResult.second
+                val remainingCredits = consumeResult.third
+
+                updateLocalCreditState(
+                    isLoggedIn = true,
+                    isPro = remoteIsPro,
+                    credits = remainingCredits,
+                )
+
+                if (actionAllowed) {
+                    Result.success(Unit)
+                } else {
+                    Result.failure(AIException("Out of credits. Please upgrade to continue."))
+                }
+            } catch (e: Exception) {
+                Log.e(TAG, "Failed to consume keyboard credit", e)
+                Result.failure(AIException("Unable to consume credit. Please try again."))
+            }
+        }
+    }
     
     /**
      * Make an API request with the given config and prompt
      */
     private suspend fun makeApiRequest(config: AIConfigProvider.AIConfig, systemPrompt: String, userPrompt: String, overrideMaxTokens: Int? = null): Result<String> {
-        return withContext(Dispatchers.IO) {
+        val creditAvailability = verifyCreditAvailabilityForRequest(config)
+        if (creditAvailability.isFailure) {
+            return Result.failure(
+                creditAvailability.exceptionOrNull()
+                    ?: AIException("Out of credits. Please upgrade to continue."),
+            )
+        }
+
+        val requestResult = withContext(Dispatchers.IO) {
             try {
-                // Handle Gemini separately as it uses a different API format
+                // Handle Gemini separately as it uses a different API format.
                 if (config.isGemini()) {
                     return@withContext makeGeminiRequest(config, systemPrompt, userPrompt, overrideMaxTokens)
                 }
+
                 val request = GroqRequest(
                     model = config.model,
                     messages = listOf(
@@ -182,13 +357,15 @@ class AIManager(private val context: Context) {
                     .url(config.getBaseUrl())
                     .addHeader("Content-Type", "application/json")
                     .post(requestBody)
-                // Add appropriate auth header based on provider
+
+                // Add appropriate auth header based on provider.
                 if (config.isClaude()) {
                     httpRequestBuilder.addHeader("x-api-key", config.apiKey)
                     httpRequestBuilder.addHeader("anthropic-version", "2023-06-01")
                 } else {
                     httpRequestBuilder.addHeader("Authorization", config.getAuthHeader())
                 }
+
                 val httpRequest = httpRequestBuilder.build()
                 Log.d(TAG, "Making API request to ${config.provider} at ${config.getBaseUrl()}")
                 val response = client.newCall(httpRequest).execute()
@@ -205,10 +382,12 @@ class AIManager(private val context: Context) {
                     }
                     return@withContext Result.failure(AIException(errorMessage))
                 }
+
                 val responseBody = response.body?.string()
                 if (responseBody.isNullOrBlank()) {
                     return@withContext Result.failure(AIException("Empty response from API"))
                 }
+
                 Log.d(TAG, "Response body: ${responseBody.take(500)}")
                 val groqResponse = gson.fromJson(responseBody, GroqResponse::class.java)
                 val rewrittenText = groqResponse.choices?.firstOrNull()?.message?.content
@@ -216,11 +395,12 @@ class AIManager(private val context: Context) {
                 if (filtered.isNullOrBlank()) {
                     return@withContext Result.failure(AIException("No usable content in response"))
                 }
+
                 Result.success(filtered)
             } catch (e: Exception) {
                 Log.e(TAG, "Error making API request", e)
                 val errorMessage = when {
-                    e.message?.contains("timeout", ignoreCase = true) == true -> 
+                    e.message?.contains("timeout", ignoreCase = true) == true ->
                         "Request timed out"
                     e.message?.contains("Unable to resolve host", ignoreCase = true) == true ->
                         "No internet connection"
@@ -229,6 +409,20 @@ class AIManager(private val context: Context) {
                 Result.failure(AIException(errorMessage))
             }
         }
+
+        if (requestResult.isFailure) {
+            return requestResult
+        }
+
+        val consumeResult = consumeCreditAfterSuccess(config)
+        if (consumeResult.isFailure) {
+            return Result.failure(
+                consumeResult.exceptionOrNull()
+                    ?: AIException("Out of credits. Please upgrade to continue."),
+            )
+        }
+
+        return requestResult
     }
     
     /**
