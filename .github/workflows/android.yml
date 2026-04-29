@@ -23,6 +23,13 @@ jobs:
       - name: Grant execute permission for gradlew
         run: chmod +x android/gradlew
 
+      - name: Create missing assets
+        run: |
+          mkdir -p assets/config assets/templates
+          touch assets/config/.gitkeep
+          touch assets/templates/.gitkeep
+          touch .env
+
       - name: Decode Keystore
         run: |
           echo "${{ secrets.KEYSTORE_BASE64 }}" | base64 --decode > android/app/keystore.jks
