@@ -53,7 +53,7 @@ jobs:
           FLUTTER_NO_DAEMON: true
 
       - name: Build APK
-        run: flutter build apk --release --split-per-abi
+        run: flutter build apk --release --target-platform android-arm64
         env:
           KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
           KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
