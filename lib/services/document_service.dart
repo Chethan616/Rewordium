@@ -35,7 +35,7 @@ class DocumentService {
     List<String>? allowedExtensions,
   }) async {
     try {
-      final result = await FilePicker.platform.pickFiles(
+      final result = await FilePicker.pickFiles(
         type: FileType.custom,
         allowedExtensions: allowedExtensions ?? ['pdf', 'docx', 'doc', 'txt'],
         allowMultiple: false,
