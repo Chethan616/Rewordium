@@ -65,13 +65,13 @@ android {
     compileOptions {
         // Flag to enable support for the new language APIs
         isCoreLibraryDesugaringEnabled = true
-        // Sets Java compatibility to Java 11
-        sourceCompatibility = JavaVersion.VERSION_11
-        targetCompatibility = JavaVersion.VERSION_11
+        // Sets Java compatibility to Java 17
+        sourceCompatibility = JavaVersion.VERSION_17
+        targetCompatibility = JavaVersion.VERSION_17
     }
 
     kotlinOptions {
-        jvmTarget = JavaVersion.VERSION_11.toString()
+        jvmTarget = JavaVersion.VERSION_17.toString()
     }
 
     sourceSets {
@@ -132,12 +132,13 @@ android {
 
     signingConfigs {
         create("release") {
-            keyAlias = "upload"
-            // Read passwords and store file from local key.properties when available.
-            // Falls back to placeholders so no secrets are stored in the repo.
-            keyPassword = keystoreProperties.getProperty("keyPassword") ?: "YOUR_KEY_PASSWORD"
-            storeFile = file(keystoreProperties.getProperty("storeFile") ?: "upload-keystore.jks")
-            storePassword = keystoreProperties.getProperty("storePassword") ?: "YOUR_STORE_PASSWORD"
+            // Priority: Environment Variables (CI) -> key.properties (Local) -> Defaults
+            keyAlias = System.getenv("KEY_ALIAS") ?: keystoreProperties.getProperty("keyAlias") ?: "upload"
+            keyPassword = System.getenv("KEY_PASSWORD") ?: keystoreProperties.getProperty("keyPassword") ?: "YOUR_KEY_PASSWORD"
+            storePassword = System.getenv("KEYSTORE_PASSWORD") ?: keystoreProperties.getProperty("storePassword") ?: "YOUR_STORE_PASSWORD"
+            
+            val keystorePath = if (System.getenv("KEY_ALIAS") != null) "keystore.jks" else (keystoreProperties.getProperty("storeFile") ?: "upload-keystore.jks")
+            storeFile = file(keystorePath)
         }
     }
 

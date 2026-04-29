@@ -131,7 +131,12 @@ void main() async {
   // Create billing service and set up subscription callback
   final billingService = BillingService();
   billingService.onSubscriptionActive =
-      (String productId, String? purchaseToken) {
+      (
+    String productId,
+    String? purchaseToken,
+    DateTime? purchaseDate,
+    bool isRestored,
+  ) {
     if (purchaseToken == null || purchaseToken.isEmpty) {
       AppLogger.warning(
         'Subscription callback without purchase token for product: $productId',
@@ -140,12 +145,23 @@ void main() async {
     }
 
     // Update auth provider when subscription is activated
-    final planType = productId.contains('yearly') ? 'yearly' : 'monthly';
+    final normalizedProductId = productId.trim().toLowerCase();
+    final planType = switch (normalizedProductId) {
+      'rewordium_pro_yearly' => 'yearly',
+      'rewordium_pro_monthly' => 'monthly',
+      _ when normalizedProductId.contains('year') ||
+              normalizedProductId.contains('annual') =>
+        'yearly',
+      _ => 'monthly',
+    };
+
     unawaited(
       authProvider.activateProSubscription(
         planType: planType,
         purchaseToken: purchaseToken,
         productId: productId,
+        purchaseDate: purchaseDate,
+        isRestored: isRestored,
       ),
     );
   };

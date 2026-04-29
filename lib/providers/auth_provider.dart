@@ -16,6 +16,8 @@ class AuthProvider extends ChangeNotifier {
 
   static const _platform = MethodChannel('com.noxquill.rewordium/user_status');
   static final FirebaseFirestore _firestore = FirebaseFirestore.instance;
+  static const String _monthlyProductId = 'rewordium_pro_monthly';
+  static const String _yearlyProductId = 'rewordium_pro_yearly';
 
   User? get user => _user;
   bool get isLoggedIn => _user != null;
@@ -100,35 +102,31 @@ class AuthProvider extends ChangeNotifier {
       _userName = userData['name'];
       final bool isCurrentlyPro = userData['isPro'] ?? false;
       _isPro = isCurrentlyPro;
-      _credits = userData['credits'] ?? 0;
-      await _updateNativeServiceStatus();
 
       // Load current credits without any automatic refresh logic
       if (!isCurrentlyPro) {
         _credits = userData['credits'] as int? ?? 0;
+        _planType = (userData['planType'] as String?) ?? 'free';
       } else {
         // Pro users have unlimited credits
         _credits = null;
-      }
-
-      // Pro Subscription Expiration Check
-      if (isCurrentlyPro) {
         final subData = userData['subscription'] as Map<String, dynamic>?;
         _planType = subData?['planType'] as String?;
 
         // Check if subscription has expired (except for onetime/lifetime plans)
-        if (_planType != 'onetime' && subData?['expiryDate'] != null) {
-          final expiryDate = (subData!['expiryDate'] as Timestamp).toDate();
-          if (DateTime.now().isAfter(expiryDate)) {
-            debugPrint('🔄 Subscription expired, revoking Pro status');
-            await _handleExpiredSubscription();
-            _isPro = false;
-            _planType = 'free';
-          }
+        final expiryDate = _parseSubscriptionExpiry(subData?['expiryDate']);
+        if (_planType != 'onetime' &&
+            expiryDate != null &&
+            DateTime.now().toUtc().isAfter(expiryDate)) {
+          debugPrint('🔄 Subscription expired, revoking Pro status');
+          await _handleExpiredSubscription();
+          _isPro = false;
+          _planType = 'free';
+          _credits = 20;
         }
       }
 
-      _updateNativeServiceStatus();
+      await _updateNativeServiceStatus();
       notifyListeners();
     } catch (e) {
       _userName = _user?.displayName ?? _user?.email ?? 'Unknown';
@@ -177,6 +175,8 @@ class AuthProvider extends ChangeNotifier {
     required String planType,
     required String purchaseToken,
     required String productId,
+    DateTime? purchaseDate,
+    bool isRestored = false,
   }) async {
     if (_user == null) return;
 
@@ -186,36 +186,65 @@ class AuthProvider extends ChangeNotifier {
     }
 
     try {
-      final normalizedPlanType =
-          planType.toLowerCase().contains('year') ? 'yearly' : 'monthly';
+      final normalizedPlanType = _normalizePlanType(planType, productId);
+      final entitlementDuration = normalizedPlanType == 'yearly'
+          ? const Duration(days: 365)
+          : const Duration(days: 30);
 
-      final now = DateTime.now();
-      final expiryDate = normalizedPlanType == 'yearly'
-          ? DateTime(now.year + 1, now.month, now.day, now.hour, now.minute,
-              now.second)
-          : now.add(const Duration(days: 30));
+      final purchaseMoment = (purchaseDate ?? DateTime.now()).toUtc();
+      var resolvedExpiryDate = purchaseMoment.add(entitlementDuration);
 
-      await _firestore.collection('users').doc(_user!.uid).set({
+      final userRef = _firestore.collection('users').doc(_user!.uid);
+      final existingDoc = await userRef.get();
+      final existingData = existingDoc.data();
+      final existingSub = existingData?['subscription'];
+
+      if (existingSub is Map<String, dynamic>) {
+        final existingToken =
+            (existingSub['purchaseToken']?.toString() ?? '').trim();
+        final existingExpiry = _parseSubscriptionExpiry(existingSub['expiryDate']);
+
+        // Prevent accidental extension during repeated restores by preserving
+        // persisted entitlement when it is already later for the same purchase token.
+        if (existingToken == purchaseToken && existingExpiry != null) {
+          if (isRestored &&
+              purchaseDate == null &&
+              existingExpiry.isAfter(DateTime.now().toUtc())) {
+            resolvedExpiryDate = existingExpiry;
+          }
+
+          if (isRestored && existingExpiry.isAfter(resolvedExpiryDate)) {
+            resolvedExpiryDate = existingExpiry;
+          } else if (existingExpiry.isAfter(DateTime.now().toUtc()) &&
+              existingExpiry.isAfter(resolvedExpiryDate)) {
+            resolvedExpiryDate = existingExpiry;
+          }
+        }
+      }
+
+      await userRef.set({
         'isPro': true,
         'planType': normalizedPlanType,
         'upgradedAt': FieldValue.serverTimestamp(),
         'lastUpdated': FieldValue.serverTimestamp(),
+        'lastPurchaseAt': FieldValue.serverTimestamp(),
         'subscription': {
           'planType': normalizedPlanType,
           'status': 'active',
           'platform': 'google_play',
           'productId': productId,
           'purchaseToken': purchaseToken,
+          'purchaseDate': Timestamp.fromDate(purchaseMoment),
           'startDate': FieldValue.serverTimestamp(),
           'lastVerifiedAt': FieldValue.serverTimestamp(),
           'verificationSource': 'client_firestore_only',
-          'expiryDate': Timestamp.fromDate(expiryDate),
+          'expiryDate': Timestamp.fromDate(resolvedExpiryDate),
         },
       }, SetOptions(merge: true));
 
       debugPrint(
         '✅ Pro subscription activated via Firestore '
-        '(plan: $normalizedPlanType, expiry: $expiryDate)',
+        '(plan: $normalizedPlanType, expiry: $resolvedExpiryDate, restored: $isRestored)',
       );
 
       await _loadUserData();
@@ -223,6 +252,41 @@ class AuthProvider extends ChangeNotifier {
       debugPrint('❌ Error activating Pro subscription: $e');
       await _loadUserData();
     }
+  }
+
+  String _normalizePlanType(String planType, String productId) {
+    final normalizedProductId = productId.trim().toLowerCase();
+    if (normalizedProductId == _yearlyProductId) {
+      return 'yearly';
+    }
+    if (normalizedProductId == _monthlyProductId) {
+      return 'monthly';
+    }
+
+    final normalizedPlanType = planType.trim().toLowerCase();
+    if (normalizedPlanType == 'yearly' ||
+        normalizedPlanType.contains('year') ||
+        normalizedPlanType.contains('annual')) {
+      return 'yearly';
+    }
+
+    return 'monthly';
+  }
+
+  DateTime? _parseSubscriptionExpiry(dynamic expiryDateRaw) {
+    if (expiryDateRaw is Timestamp) {
+      return expiryDateRaw.toDate().toUtc();
+    }
+
+    if (expiryDateRaw is String) {
+      try {
+        return DateTime.parse(expiryDateRaw).toUtc();
+      } catch (_) {
+        return null;
+      }
+    }
+
+    return null;
   }
 
   Future<bool> signUpWithEmailAndPassword(

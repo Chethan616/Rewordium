@@ -3,6 +3,7 @@ import 'package:http/http.dart' as http;
 import 'package:firebase_auth/firebase_auth.dart';
 
 import '../models/advanced_ai_settings.dart';
+import 'firebase_service.dart';
 import 'groq_service.dart';
 import 'in_app_review_service.dart';
 import 'usage_analytics_service.dart';
@@ -10,6 +11,15 @@ import 'usage_analytics_service.dart';
 /// Unified AI Service that supports multiple LLM providers
 /// Falls back to Groq + LLaMA if no custom API key is configured
 class UnifiedAIService {
+  static Map<String, dynamic> _outOfCreditsResponse() {
+    return {
+      'error': 'OUT_OF_CREDITS',
+      'errorType': 'OUT_OF_CREDITS',
+      'content':
+          '⚠️ You are out of credits. Upgrade to Pro or connect your own API in Advanced AI Settings.',
+    };
+  }
+
   /// Make an AI request using the configured provider
   static Future<Map<String, dynamic>> makeRequest({
     required String systemPrompt,
@@ -18,7 +28,8 @@ class UnifiedAIService {
     bool requireJson = false,
   }) async {
     // Gate: require login for all AI features
-    if (FirebaseAuth.instance.currentUser == null) {
+    final currentUser = FirebaseAuth.instance.currentUser;
+    if (currentUser == null) {
       return {
         'error': 'NOT_LOGGED_IN',
         'errorType': 'NOT_LOGGED_IN',
@@ -26,11 +37,14 @@ class UnifiedAIService {
       };
     }
 
+    final uid = currentUser.uid;
     String provider = 'unknown';
+    bool usesExternalApi = false;
 
     try {
       final config = await AdvancedAISettingsService.getAPIConfig();
       provider = config['provider'] as String;
+      usesExternalApi = config['usesExternalApi'] == true;
 
       Map<String, dynamic> result;
 
@@ -85,11 +99,36 @@ class UnifiedAIService {
       }
 
       final isSuccess = result['success'] == true && result['error'] == null;
+
+      int creditsUsed = 0;
+
+      // Charge app credits only for successful default-provider requests.
+      if (isSuccess && !usesExternalApi) {
+        final consumed = await FirebaseService.consumeCredit(
+          uid,
+          source: 'unified_ai_service',
+        );
+
+        if (!consumed) {
+          await UsageAnalyticsService.recordApiCall(
+            feature: 'ai_request',
+            provider: provider,
+            success: false,
+            errorType: 'OUT_OF_CREDITS',
+            creditsUsed: 0,
+          );
+          return _outOfCreditsResponse();
+        }
+
+        creditsUsed = 1;
+      }
+
       await UsageAnalyticsService.recordApiCall(
         feature: 'ai_request',
         provider: provider,
         success: isSuccess,
         errorType: isSuccess ? null : result['errorType']?.toString(),
+        creditsUsed: creditsUsed,
       );
 
       await UsageAnalyticsService.touchUserActivity();
@@ -107,6 +146,7 @@ class UnifiedAIService {
         provider: provider,
         success: false,
         errorType: 'UNKNOWN',
+        creditsUsed: 0,
       );
       final errorString = e.toString().toLowerCase();
 
