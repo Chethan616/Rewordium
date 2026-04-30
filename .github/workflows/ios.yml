@@ -23,6 +23,12 @@ jobs:
       - name: Install Dependencies
         run: flutter pub get
 
+      - name: Prepare .env for CI
+        run: |
+          cat > .env <<EOF
+          GROQ_API_KEY=${{ secrets.GROQ_API_KEY }}
+          EOF
+
       - name: Build iOS App (No Codesign)
         # Build with Flutter, then ensure Xcode builds without code signing so
         # we end up with an unsigned .app that can be packaged for Sideloadly.
