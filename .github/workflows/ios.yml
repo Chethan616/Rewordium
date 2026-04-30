@@ -56,6 +56,11 @@ jobs:
                   f.write(base64.b64decode(app_id))
           PY
 
+      - name: Set iOS bundle identifier
+        run: |
+          /usr/libexec/PlistBuddy -c "Set :CFBundleIdentifier com.noxquill.rewordium" ios/Runner/Info.plist || \
+          /usr/libexec/PlistBuddy -c "Add :CFBundleIdentifier string com.noxquill.rewordium" ios/Runner/Info.plist
+
       - name: Build iOS App (No Codesign)
         # Build with Flutter, then ensure Xcode builds without code signing so
         # we end up with an unsigned .app that can be packaged for Sideloadly.
@@ -63,7 +68,7 @@ jobs:
           flutter build ios --release --no-codesign
           # Extra Xcode build ensures a proper Release .app is produced without signing.
           xcodebuild -workspace ios/Runner.xcworkspace -scheme Runner -configuration Release -sdk iphoneos -destination 'generic/platform=iOS' -derivedDataPath build/ios/DerivedData -quiet clean build \
-            CODE_SIGNING_ALLOWED=NO CODE_SIGN_IDENTITY="" CODE_SIGNING_REQUIRED=NO DEVELOPMENT_TEAM=""
+            CODE_SIGNING_ALLOWED=NO CODE_SIGN_IDENTITY="" CODE_SIGNING_REQUIRED=NO DEVELOPMENT_TEAM="" PRODUCT_BUNDLE_IDENTIFIER=com.noxquill.rewordium
 
       - name: Package Unsigned IPA for Sideloadly
         # Sideloadly expects an IPA, which is just a zipped 'Payload' folder containing the .app
