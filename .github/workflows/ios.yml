@@ -29,13 +29,40 @@ jobs:
           GROQ_API_KEY=${{ secrets.GROQ_API_KEY }}
           EOF
 
+      - name: Restore Firebase iOS config
+        env:
+          IOS_GOOGLESERVICE_INFO_PLIST_BASE64: ${{ secrets.IOS_GOOGLESERVICE_INFO_PLIST_BASE64 }}
+          IOS_FIREBASE_APP_ID_FILE_BASE64: ${{ secrets.IOS_FIREBASE_APP_ID_FILE_BASE64 }}
+        run: |
+          python3 - <<'PY'
+          import base64
+          import os
+          import pathlib
+          import sys
+
+          gs = os.environ.get("IOS_GOOGLESERVICE_INFO_PLIST_BASE64", "")
+          if not gs:
+              sys.stderr.write("Missing IOS_GOOGLESERVICE_INFO_PLIST_BASE64\n")
+              sys.exit(1)
+
+          pathlib.Path("ios/Runner").mkdir(parents=True, exist_ok=True)
+          with open("ios/Runner/GoogleService-Info.plist", "wb") as f:
+              f.write(base64.b64decode(gs))
+
+          app_id = os.environ.get("IOS_FIREBASE_APP_ID_FILE_BASE64", "")
+          if app_id:
+              pathlib.Path("ios").mkdir(parents=True, exist_ok=True)
+              with open("ios/firebase_app_id_file.json", "wb") as f:
+                  f.write(base64.b64decode(app_id))
+          PY
+
       - name: Build iOS App (No Codesign)
         # Build with Flutter, then ensure Xcode builds without code signing so
         # we end up with an unsigned .app that can be packaged for Sideloadly.
         run: |
-          flutter build ios --release --no-codesign --config-only
+          flutter build ios --release --no-codesign
           # Extra Xcode build ensures a proper Release .app is produced without signing.
-          xcodebuild -workspace ios/Runner.xcworkspace -scheme Runner -configuration Release -sdk iphoneos CONFIGURATION_BUILD_DIR=build/ios/iphoneos -quiet clean build \
+          xcodebuild -workspace ios/Runner.xcworkspace -scheme Runner -configuration Release -sdk iphoneos -destination 'generic/platform=iOS' -derivedDataPath build/ios/DerivedData -quiet clean build \
             CODE_SIGNING_ALLOWED=NO CODE_SIGN_IDENTITY="" CODE_SIGNING_REQUIRED=NO DEVELOPMENT_TEAM=""
 
       - name: Package Unsigned IPA for Sideloadly
@@ -43,7 +70,7 @@ jobs:
         # This completely bypasses Xcode's strict provisioning profile requirements for exporting!
         run: |
           mkdir -p Payload
-          mv build/ios/iphoneos/Runner.app Payload/
+          mv build/ios/DerivedData/Build/Products/Release-iphoneos/Runner.app Payload/
           zip -r -q rewordium-unsigned.ipa Payload
 
       - name: Upload IPA Artifact
