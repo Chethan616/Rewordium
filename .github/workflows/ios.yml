@@ -1,89 +1,86 @@
 name: iOS Sideloadly Build
 
 on:
-push:
-branches:
-- main
-workflow_dispatch:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
 
 jobs:
-build:
-runs-on: macos-15
+  build:
+    runs-on: macos-15
+    
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
 
-```
-steps:
-  - name: Checkout Code
-    uses: actions/checkout@v4
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: 'stable'
+          cache: true
 
-  - name: Setup Flutter
-    uses: subosito/flutter-action@v2
-    with:
-      channel: stable
-      cache: true
+      - name: Install Dependencies
+        run: flutter pub get
 
-  - name: Install Dependencies
-    run: flutter pub get
+      - name: Prepare .env for CI
+        run: |
+          cat > .env <<EOF
+          GROQ_API_KEY=${{ secrets.GROQ_API_KEY }}
+          EOF
 
-  - name: Prepare .env for CI
-    run: |
-      cat > .env <<EOF
-      GROQ_API_KEY=${{ secrets.GROQ_API_KEY }}
-      EOF
+      - name: Restore Firebase iOS config
+        env:
+          IOS_GOOGLESERVICE_INFO_PLIST_BASE64: ${{ secrets.IOS_GOOGLESERVICE_INFO_PLIST_BASE64 }}
+          IOS_FIREBASE_APP_ID_FILE_BASE64: ${{ secrets.IOS_FIREBASE_APP_ID_FILE_BASE64 }}
+        run: |
+          python3 - <<'PY'
+          import base64
+          import os
+          import pathlib
+          import sys
 
-  - name: Restore Firebase iOS config
-    env:
-      IOS_GOOGLESERVICE_INFO_PLIST_BASE64: ${{ secrets.IOS_GOOGLESERVICE_INFO_PLIST_BASE64 }}
-      IOS_FIREBASE_APP_ID_FILE_BASE64: ${{ secrets.IOS_FIREBASE_APP_ID_FILE_BASE64 }}
-    run: |
-      python3 - <<'PY'
-      import base64, os, pathlib, sys
+          gs = os.environ.get("IOS_GOOGLESERVICE_INFO_PLIST_BASE64", "")
+          if not gs:
+              sys.stderr.write("Missing IOS_GOOGLESERVICE_INFO_PLIST_BASE64\n")
+              sys.exit(1)
 
-      gs = os.environ.get("IOS_GOOGLESERVICE_INFO_PLIST_BASE64", "")
-      if not gs:
-          sys.stderr.write("Missing IOS_GOOGLESERVICE_INFO_PLIST_BASE64\n")
-          sys.exit(1)
+          pathlib.Path("ios/Runner").mkdir(parents=True, exist_ok=True)
+          with open("ios/Runner/GoogleService-Info.plist", "wb") as f:
+              f.write(base64.b64decode(gs))
 
-      pathlib.Path("ios/Runner").mkdir(parents=True, exist_ok=True)
-      with open("ios/Runner/GoogleService-Info.plist", "wb") as f:
-          f.write(base64.b64decode(gs))
+          app_id = os.environ.get("IOS_FIREBASE_APP_ID_FILE_BASE64", "")
+          if app_id:
+              pathlib.Path("ios").mkdir(parents=True, exist_ok=True)
+              with open("ios/firebase_app_id_file.json", "wb") as f:
+                  f.write(base64.b64decode(app_id))
+          PY
 
-      app_id = os.environ.get("IOS_FIREBASE_APP_ID_FILE_BASE64", "")
-      if app_id:
-          pathlib.Path("ios").mkdir(parents=True, exist_ok=True)
-          with open("ios/firebase_app_id_file.json", "wb") as f:
-              f.write(base64.b64decode(app_id))
-      PY
+      - name: Set iOS bundle identifier
+        run: |
+          /usr/libexec/PlistBuddy -c "Set :CFBundleIdentifier com.noxquill.rewordium" ios/Runner/Info.plist || \
+          /usr/libexec/PlistBuddy -c "Add :CFBundleIdentifier string com.noxquill.rewordium" ios/Runner/Info.plist
 
-  - name: Set iOS bundle identifier
-    run: |
-      /usr/libexec/PlistBuddy -c "Set :CFBundleIdentifier com.noxquill.rewordium" ios/Runner/Info.plist || \
-      /usr/libexec/PlistBuddy -c "Add :CFBundleIdentifier string com.noxquill.rewordium" ios/Runner/Info.plist
+      - name: Build iOS App (No Codesign)
+        # Build with Flutter, then ensure Xcode builds without code signing so
+        # we end up with an unsigned .app that can be packaged for Sideloadly.
+        run: |
+          flutter build ios --release --no-codesign
+          # Extra Xcode build ensures a proper Release .app is produced without signing.
+          # We REMOVE PRODUCT_BUNDLE_IDENTIFIER from here to avoid overriding framework IDs.
+          xcodebuild -workspace ios/Runner.xcworkspace -scheme Runner -configuration Release -sdk iphoneos -destination 'generic/platform=iOS' -derivedDataPath build/ios/DerivedData -quiet clean build \
+            CODE_SIGNING_ALLOWED=NO CODE_SIGN_IDENTITY="" CODE_SIGNING_REQUIRED=NO DEVELOPMENT_TEAM=""
 
-  - name: Build iOS App (No Codesign)
-    run: |
-      flutter build ios --release --no-codesign
-      xcodebuild \
-        -workspace ios/Runner.xcworkspace \
-        -scheme Runner \
-        -configuration Release \
-        -sdk iphoneos \
-        -destination 'generic/platform=iOS' \
-        -derivedDataPath build/ios/DerivedData \
-        CODE_SIGNING_ALLOWED=NO \
-        CODE_SIGNING_REQUIRED=NO \
-        CODE_SIGN_IDENTITY="" \
-        DEVELOPMENT_TEAM="" \
-        clean build
+      - name: Package Unsigned IPA for Sideloadly
+        # Sideloadly expects an IPA, which is just a zipped 'Payload' folder containing the .app
+        # This completely bypasses Xcode's strict provisioning profile requirements for exporting!
+        run: |
+          mkdir -p Payload
+          mv build/ios/DerivedData/Build/Products/Release-iphoneos/Runner.app Payload/
+          zip -r -q rewordium-unsigned.ipa Payload
 
-  - name: Package Unsigned IPA for Sideloadly
-    run: |
-      mkdir -p Payload
-      cp -r build/ios/DerivedData/Build/Products/Release-iphoneos/Runner.app Payload/
-      zip -r rewordium-unsigned.ipa Payload
-
-  - name: Upload IPA Artifact
-    uses: actions/upload-artifact@v4
-    with:
-      name: rewordium-ios-sideloadly
-      path: rewordium-unsigned.ipa
-```
+      - name: Upload IPA Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: rewordium-ios-sideloadly
+          path: rewordium-unsigned.ipa
