@@ -18,7 +18,7 @@ steps:
   - name: Setup Flutter
     uses: subosito/flutter-action@v2
     with:
-      channel: 'stable'
+      channel: stable
       cache: true
 
   - name: Install Dependencies
@@ -36,10 +36,7 @@ steps:
       IOS_FIREBASE_APP_ID_FILE_BASE64: ${{ secrets.IOS_FIREBASE_APP_ID_FILE_BASE64 }}
     run: |
       python3 - <<'PY'
-      import base64
-      import os
-      import pathlib
-      import sys
+      import base64, os, pathlib, sys
 
       gs = os.environ.get("IOS_GOOGLESERVICE_INFO_PLIST_BASE64", "")
       if not gs:
@@ -63,21 +60,26 @@ steps:
       /usr/libexec/PlistBuddy -c "Add :CFBundleIdentifier string com.noxquill.rewordium" ios/Runner/Info.plist
 
   - name: Build iOS App (No Codesign)
-    # Build with Flutter, then ensure Xcode builds without code signing so
-    # we end up with an unsigned .app that can be packaged for Sideloadly.
     run: |
       flutter build ios --release --no-codesign
-      # Extra Xcode build ensures a proper Release .app is produced without signing.
-      xcodebuild -workspace ios/Runner.xcworkspace -scheme Runner -configuration Release -sdk iphoneos -destination 'generic/platform=iOS' -derivedDataPath build/ios/DerivedData -quiet clean build \
-        CODE_SIGNING_ALLOWED=NO CODE_SIGN_IDENTITY="" CODE_SIGNING_REQUIRED=NO DEVELOPMENT_TEAM=""
+      xcodebuild \
+        -workspace ios/Runner.xcworkspace \
+        -scheme Runner \
+        -configuration Release \
+        -sdk iphoneos \
+        -destination 'generic/platform=iOS' \
+        -derivedDataPath build/ios/DerivedData \
+        CODE_SIGNING_ALLOWED=NO \
+        CODE_SIGNING_REQUIRED=NO \
+        CODE_SIGN_IDENTITY="" \
+        DEVELOPMENT_TEAM="" \
+        clean build
 
   - name: Package Unsigned IPA for Sideloadly
-    # Sideloadly expects an IPA, which is just a zipped 'Payload' folder containing the .app
-    # This completely bypasses Xcode's strict provisioning profile requirements for exporting!
     run: |
       mkdir -p Payload
-      mv build/ios/DerivedData/Build/Products/Release-iphoneos/Runner.app Payload/
-      zip -r -q rewordium-unsigned.ipa Payload
+      cp -r build/ios/DerivedData/Build/Products/Release-iphoneos/Runner.app Payload/
+      zip -r rewordium-unsigned.ipa Payload
 
   - name: Upload IPA Artifact
     uses: actions/upload-artifact@v4
