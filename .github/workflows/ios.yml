@@ -35,7 +35,7 @@ jobs:
         run: |
           flutter build ios --release --no-codesign --config-only
           # Extra Xcode build ensures a proper Release .app is produced without signing.
-          xcodebuild -workspace ios/Runner.xcworkspace -scheme Runner -configuration Release -sdk iphoneos CONFIGURATION_BUILD_DIR=build/ios/iphoneos clean build \
+          xcodebuild -workspace ios/Runner.xcworkspace -scheme Runner -configuration Release -sdk iphoneos CONFIGURATION_BUILD_DIR=build/ios/iphoneos -quiet clean build \
             CODE_SIGNING_ALLOWED=NO CODE_SIGN_IDENTITY="" CODE_SIGNING_REQUIRED=NO DEVELOPMENT_TEAM=""
 
       - name: Package Unsigned IPA for Sideloadly
