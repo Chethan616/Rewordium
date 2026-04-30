@@ -24,8 +24,13 @@ jobs:
         run: flutter pub get
 
       - name: Build iOS App (No Codesign)
-        # This builds the unsigned .app payload
-        run: flutter build ios --release --no-codesign
+        # Build with Flutter, then ensure Xcode builds without code signing so
+        # we end up with an unsigned .app that can be packaged for Sideloadly.
+        run: |
+          flutter build ios --release --no-codesign --config-only
+          # Extra Xcode build ensures a proper Release .app is produced without signing.
+          xcodebuild -workspace ios/Runner.xcworkspace -scheme Runner -configuration Release -sdk iphoneos CONFIGURATION_BUILD_DIR=build/ios/iphoneos clean build \
+            CODE_SIGNING_ALLOWED=NO CODE_SIGN_IDENTITY="" CODE_SIGNING_REQUIRED=NO DEVELOPMENT_TEAM=""
 
       - name: Package Unsigned IPA for Sideloadly
         # Sideloadly expects an IPA, which is just a zipped 'Payload' folder containing the .app
