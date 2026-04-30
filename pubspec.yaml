@@ -117,6 +117,7 @@ dev_dependencies:
 
 # Force archive v4 so pdfrx and lottie resolve (lottie 2.x pins archive ^3 but works fine with 4)
 dependency_overrides:
+  device_info_plus: 11.0.0
   connectivity_plus: 7.0.0
   archive: ^4.0.0
   m3e_design:
