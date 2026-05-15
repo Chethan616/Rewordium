@@ -5,7 +5,7 @@
     <shortcut
         android:shortcutId="manage_keyboard"
         android:enabled="true"
-        android:icon="@drawable/ic_settings"
+        android:icon="@drawable/ic_shortcut_keyboard"
         android:shortcutShortLabel="@string/shortcut_keyboard_short"
         android:shortcutLongLabel="@string/shortcut_keyboard_long">
         <intent
@@ -19,7 +19,7 @@
     <shortcut
         android:shortcutId="manage_ai_preferences"
         android:enabled="true"
-        android:icon="@drawable/ic_ai_sparkle"
+        android:icon="@drawable/ic_shortcut_ai"
         android:shortcutShortLabel="@string/shortcut_ai_short"
         android:shortcutLongLabel="@string/shortcut_ai_long">
         <intent

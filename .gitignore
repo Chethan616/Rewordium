@@ -28,6 +28,10 @@ config/*.json
 .env.production
 !.env.example
 
+# Google Play public key (local-only)
+lib/config/google_play_config.dart
+!lib/config/google_play_config.example.dart
+
 # API keys files
 **/api-keys.json
 **/secrets.json

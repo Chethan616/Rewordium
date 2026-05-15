@@ -13,6 +13,7 @@ class AuthProvider extends ChangeNotifier {
   bool _isPro = false;
   String? _planType;
   int? _credits;
+  DateTime? _subscriptionExpiry;
 
   static const _platform = MethodChannel('com.noxquill.rewordium/user_status');
   static final FirebaseFirestore _firestore = FirebaseFirestore.instance;
@@ -27,6 +28,7 @@ class AuthProvider extends ChangeNotifier {
   bool get isPro => _isPro;
   String? get planType => _planType;
   int? get credits => _credits;
+  DateTime? get subscriptionExpiry => _subscriptionExpiry;
 
   bool get canPerformAction => isPro || (_credits ?? 0) > 0;
 
@@ -63,6 +65,7 @@ class AuthProvider extends ChangeNotifier {
         _isPro = false;
         _planType = null;
         _credits = null;
+        _subscriptionExpiry = null;
         await _updateNativeServiceStatus(); // Ensure we await the status update
         notifyListeners();
       }
@@ -107,6 +110,7 @@ class AuthProvider extends ChangeNotifier {
       if (!isCurrentlyPro) {
         _credits = userData['credits'] as int? ?? 0;
         _planType = (userData['planType'] as String?) ?? 'free';
+        _subscriptionExpiry = null;
       } else {
         // Pro users have unlimited credits
         _credits = null;
@@ -115,6 +119,10 @@ class AuthProvider extends ChangeNotifier {
 
         // Check if subscription has expired (except for onetime/lifetime plans)
         final expiryDate = _parseSubscriptionExpiry(subData?['expiryDate']);
+        _subscriptionExpiry =
+            (_planType == 'onetime' || _planType == 'lifetime')
+                ? null
+                : expiryDate;
         if (_planType != 'onetime' &&
             expiryDate != null &&
             DateTime.now().toUtc().isAfter(expiryDate)) {
@@ -123,6 +131,7 @@ class AuthProvider extends ChangeNotifier {
           _isPro = false;
           _planType = 'free';
           _credits = 20;
+          _subscriptionExpiry = null;
         }
       }
 
@@ -132,6 +141,7 @@ class AuthProvider extends ChangeNotifier {
       _userName = _user?.displayName ?? _user?.email ?? 'Unknown';
       _isPro = false;
       _credits = 0;
+      _subscriptionExpiry = null;
       await _updateNativeServiceStatus();
       notifyListeners();
     }
@@ -597,6 +607,12 @@ class AuthProvider extends ChangeNotifier {
         final data = doc.data()!;
         _isPro = data['isPro'] ?? false;
         _planType = data['subscription']?['planType'] ?? 'free';
+        _subscriptionExpiry = _parseSubscriptionExpiry(
+          data['subscription']?['expiryDate'],
+        );
+        if (_planType == 'onetime' || _planType == 'lifetime') {
+          _subscriptionExpiry = null;
+        }
 
         // Check if subscription is still valid
         if (_isPro && data['subscription'] != null) {

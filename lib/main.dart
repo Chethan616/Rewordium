@@ -107,15 +107,16 @@ void main() async {
     AISettingsBridge.initialize();
     unawaited(AISettingsBridge.syncSettingsToAndroid());
     AppLogger.init('AI Settings Bridge');
-
-    // Initialize Deep Link Service for app shortcuts
-    DeepLinkService.initialize();
-    AppLogger.init('Deep Link Service');
   }).catchError((e) {
     AppLogger.warning('Error initializing Groq service: $e');
     // Continue with app launch but some features may be limited
     isGroqInitialized = true;
   }));
+
+  // Initialize Deep Link Service for app shortcuts immediately
+  // (not dependent on AI service being ready)
+  DeepLinkService.initialize();
+  AppLogger.init('Deep Link Service');
 
   // Initialize keyboard provider with minimal setup
   final keyboardProvider = KeyboardProvider();

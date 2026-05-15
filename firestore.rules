@@ -30,6 +30,31 @@ service cloud.firestore {
       // Users can read/write their own data when authenticated
       allow read, write: if isSelf(userId);
     }
+
+    // Usage analytics - allow clients to record their own usage
+    match /usage_events/{eventId} {
+      allow read: if isAdmin();
+      allow create: if isSignedIn() &&
+        request.resource.data.uid == request.auth.uid;
+      allow update, delete: if isAdmin();
+    }
+
+    match /credit_usage_events/{eventId} {
+      allow read: if isAdmin();
+      allow create: if isSignedIn() &&
+        request.resource.data.uid == request.auth.uid;
+      allow update, delete: if isAdmin();
+    }
+
+    match /user_usage_stats/{userId} {
+      allow read: if isAdmin();
+      allow write: if isSelf(userId) || isAdmin();
+    }
+
+    match /analytics_global/{docId} {
+      allow read: if isAdmin();
+      allow write: if isSignedIn();
+    }
     
     // Notifications collection - admin can read/write, users can read
     match /notifications/{notificationId} {

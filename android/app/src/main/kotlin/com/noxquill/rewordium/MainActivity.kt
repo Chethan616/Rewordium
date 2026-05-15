@@ -522,6 +522,22 @@ class MainActivity : FlutterActivity() {
                         result.success(false)
                     }
                 }
+                "bringAppToForeground" -> {
+                    try {
+                        val launchIntent = packageManager.getLaunchIntentForPackage(packageName)?.apply {
+                            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                            addFlags(Intent.FLAG_ACTIVITY_REORDER_TO_FRONT)
+                        }
+                        if (launchIntent != null) {
+                            startActivity(launchIntent)
+                            Log.d(TAG, "✅ Brought app to foreground")
+                        }
+                        result.success(true)
+                    } catch (e: Exception) {
+                        Log.w(TAG, "Error bringing app to foreground: ${e.message}")
+                        result.success(false)
+                    }
+                }
                 else -> {
                     Log.w(TAG, "Method not implemented on keyboard channel: ${call.method}")
                     result.notImplemented()

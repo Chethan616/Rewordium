@@ -214,7 +214,30 @@ class BillingService extends ChangeNotifier {
     _updateState(PurchaseState.processing);
 
     try {
-      final purchaseParam = PurchaseParam(productDetails: productDetails);
+      const specialOfferId = 'special-discount';
+      PurchaseParam purchaseParam;
+
+      if (Platform.isAndroid && productDetails is GooglePlayProductDetails) {
+        String? offerToken;
+        final offers =
+          productDetails.productDetails.subscriptionOfferDetails;
+        if (offers != null) {
+          for (final offer in offers) {
+            if (offer.offerId == specialOfferId &&
+                offer.offerIdToken.isNotEmpty) {
+              offerToken = offer.offerIdToken;
+              break;
+            }
+          }
+        }
+
+        purchaseParam = GooglePlayPurchaseParam(
+          productDetails: productDetails,
+          offerToken: offerToken,
+        );
+      } else {
+        purchaseParam = PurchaseParam(productDetails: productDetails);
+      }
 
       // For subscriptions, we use buyNonConsumable
       final success = await _inAppPurchase.buyNonConsumable(
