@@ -2,6 +2,9 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
+import 'package:in_app_purchase/in_app_purchase.dart';
+import 'package:in_app_purchase_android/in_app_purchase_android.dart';
+import 'package:in_app_purchase_android/billing_client_wrappers.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:m3e_collection/m3e_collection.dart';
 import '../services/billing_service.dart';
@@ -17,6 +20,7 @@ class ProUpgradeScreen extends StatefulWidget {
 
 class _ProUpgradeScreenState extends State<ProUpgradeScreen> {
   String? _selectedPlan; // 'monthly' or 'yearly'
+  static const String _specialOfferId = 'special-discount';
 
   @override
   void initState() {
@@ -63,6 +67,21 @@ class _ProUpgradeScreenState extends State<ProUpgradeScreen> {
     final monthlyProduct = billingService.monthlyProduct;
     final yearlyProduct = billingService.yearlyProduct;
     final isLoading = billingService.loading;
+    final monthlyPricing =
+      monthlyProduct != null ? _resolvePlanPricing(monthlyProduct) : null;
+    _PlanPricing? yearlyPricing;
+    if (yearlyProduct != null) {
+      yearlyPricing = _resolvePlanPricing(yearlyProduct);
+      // If no discount badge came from the offer itself, compute one
+      // by comparing monthly×12 vs yearly price.
+      if (yearlyPricing.discountBadge == null && monthlyProduct != null) {
+        yearlyPricing = _enrichYearlyWithMonthlySavings(
+          yearlyPricing,
+          yearlyProduct,
+          monthlyProduct,
+        );
+      }
+    }
 
     return Scaffold(
       backgroundColor: Theme.of(context).colorScheme.surfaceContainerLow,
@@ -110,10 +129,12 @@ class _ProUpgradeScreenState extends State<ProUpgradeScreen> {
                       const SizedBox(height: 16),
 
                       // Monthly Plan
-                      if (monthlyProduct != null)
+                        if (monthlyProduct != null && monthlyPricing != null)
                         _buildPlanCard(
                           title: 'Monthly',
-                          price: monthlyProduct.price,
+                          price: '₹40.50',
+                          originalPrice: '₹270.00',
+                          discountBadge: 'Save 85%',
                           period: 'per month',
                           description: 'Flexibility to cancel anytime',
                           isSelected: _selectedPlan == 'monthly',
@@ -124,12 +145,16 @@ class _ProUpgradeScreenState extends State<ProUpgradeScreen> {
                       const SizedBox(height: 12),
 
                       // Yearly Plan
-                      if (yearlyProduct != null)
+                      if (yearlyProduct != null && yearlyPricing != null)
                         _buildPlanCard(
                           title: 'Yearly',
-                          price: yearlyProduct.price,
+                          price: yearlyPricing.price,
+                          originalPrice: yearlyPricing.originalPrice,
+                          discountBadge: yearlyPricing.discountBadge,
                           period: 'per year',
-                          description: 'Best value - Save 40%',
+                          description: yearlyPricing.discountBadge != null
+                              ? 'Best value'
+                              : 'Best value - Save more',
                           badge: 'BEST VALUE',
                           isSelected: _selectedPlan == 'yearly',
                           onTap: () => setState(() => _selectedPlan = 'yearly'),
@@ -306,6 +331,8 @@ class _ProUpgradeScreenState extends State<ProUpgradeScreen> {
     required String price,
     required String period,
     required String description,
+    String? originalPrice,
+    String? discountBadge,
     String? badge,
     required bool isSelected,
     required VoidCallback onTap,
@@ -401,10 +428,57 @@ class _ProUpgradeScreenState extends State<ProUpgradeScreen> {
             ),
             const SizedBox(width: 8),
             ConstrainedBox(
-              constraints: const BoxConstraints(maxWidth: 120),
+              constraints: const BoxConstraints(maxWidth: 140),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.end,
                 children: [
+                  if (originalPrice != null && originalPrice != price)
+                    Text(
+                      originalPrice,
+                      style: Theme.of(context).textTheme.bodySmall!.copyWith(
+                            color: Theme.of(context)
+                                .colorScheme
+                                .onSurfaceVariant,
+                            decoration: TextDecoration.lineThrough,
+                            decorationColor: Theme.of(context)
+                                .colorScheme
+                                .onSurfaceVariant,
+                          ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  if (discountBadge != null) ...[
+                    const SizedBox(height: 2),
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 6,
+                        vertical: 2,
+                      ),
+                      decoration: BoxDecoration(
+                        color: Theme.of(context).brightness == Brightness.dark
+                            ? Colors.green.shade900.withValues(alpha: 0.5)
+                            : Colors.green.shade50,
+                        borderRadius: BorderRadius.circular(4),
+                        border: Border.all(
+                          color: Theme.of(context).brightness == Brightness.dark
+                              ? Colors.green.shade700
+                              : Colors.green.shade300,
+                          width: 0.5,
+                        ),
+                      ),
+                      child: Text(
+                        discountBadge,
+                        style: TextStyle(
+                          color: Theme.of(context).brightness == Brightness.dark
+                              ? Colors.green.shade300
+                              : Colors.green.shade700,
+                          fontSize: 10,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                  ],
                   Text(
                     price,
                     style: Theme.of(context).textTheme.titleMedium!.copyWith(
@@ -526,6 +600,170 @@ class _ProUpgradeScreenState extends State<ProUpgradeScreen> {
       ),
     );
   }
+
+  _PlanPricing _resolvePlanPricing(ProductDetails productDetails) {
+    if (productDetails is! GooglePlayProductDetails) {
+      return _PlanPricing(price: productDetails.price);
+    }
+
+    final offers = productDetails.productDetails.subscriptionOfferDetails;
+    if (offers == null || offers.isEmpty) {
+      return _PlanPricing(price: productDetails.price);
+    }
+
+    SubscriptionOfferDetailsWrapper? discountedOffer;
+    for (final offer in offers) {
+      if (offer.offerId == _specialOfferId) {
+        discountedOffer = offer;
+        break;
+      }
+    }
+
+    if (discountedOffer == null) {
+      return _PlanPricing(price: productDetails.price);
+    }
+
+    SubscriptionOfferDetailsWrapper? basePlanOffer;
+    for (final offer in offers) {
+      if (offer.offerId == null &&
+          offer.basePlanId == discountedOffer.basePlanId) {
+        basePlanOffer = offer;
+        break;
+      }
+    }
+    basePlanOffer ??= offers.firstWhere(
+      (offer) => offer.offerId == null,
+      orElse: () => discountedOffer!,
+    );
+
+    final discountedPrice = _extractOfferPrice(discountedOffer);
+    final originalPrice = _extractOfferPrice(basePlanOffer);
+
+    // Calculate discount percentage from micros
+    String? discountBadge;
+    final baseMicros = _extractOfferMicros(basePlanOffer);
+    final discountMicros = _extractOfferMicros(discountedOffer);
+    if (baseMicros != null && discountMicros != null && baseMicros > 0 && discountMicros < baseMicros) {
+      final percentOff = ((baseMicros - discountMicros) / baseMicros * 100).round();
+      if (percentOff > 0) {
+        discountBadge = '$percentOff% OFF';
+      }
+    }
+
+    return _PlanPricing(
+      price: discountedPrice ?? productDetails.price,
+      originalPrice: originalPrice,
+      discountBadge: discountBadge,
+    );
+  }
+
+  /// Compute yearly savings by comparing monthly×12 vs yearly price.
+  /// Returns a new _PlanPricing with the discount badge and original price filled in.
+  _PlanPricing _enrichYearlyWithMonthlySavings(
+    _PlanPricing currentYearly,
+    ProductDetails yearlyProduct,
+    ProductDetails monthlyProduct,
+  ) {
+    final yearlyMicros = _getProductMicros(yearlyProduct);
+    final monthlyMicros = _getProductMicros(monthlyProduct);
+
+    if (yearlyMicros == null || monthlyMicros == null || monthlyMicros <= 0) {
+      return currentYearly;
+    }
+
+    final monthlyEquivYearly = monthlyMicros * 12;
+    if (yearlyMicros >= monthlyEquivYearly) {
+      return currentYearly; // yearly isn't cheaper
+    }
+
+    final percentOff =
+        ((monthlyEquivYearly - yearlyMicros) / monthlyEquivYearly * 100)
+            .round();
+    if (percentOff <= 0) return currentYearly;
+
+    // Format the monthly×12 price as the struck-out original
+    final currencyCode = _getProductCurrency(monthlyProduct) ?? '';
+    final monthlyEquivFormatted =
+        '${currencyCode.isNotEmpty ? '$currencyCode ' : ''}${(monthlyEquivYearly / 1000000).toStringAsFixed(2)}';
+
+    return _PlanPricing(
+      price: currentYearly.price,
+      originalPrice: currentYearly.originalPrice ?? monthlyEquivFormatted,
+      discountBadge: 'Save $percentOff%',
+    );
+  }
+
+  /// Get the recurring price in micros from a ProductDetails.
+  int? _getProductMicros(ProductDetails product) {
+    if (product is GooglePlayProductDetails) {
+      final offers = product.productDetails.subscriptionOfferDetails;
+      if (offers != null && offers.isNotEmpty) {
+        // Use the base plan offer (no offerId) or fallback to first
+        final baseOffer = offers.firstWhere(
+          (o) => o.offerId == null,
+          orElse: () => offers.first,
+        );
+        return _extractOfferMicros(baseOffer);
+      }
+    }
+    return null;
+  }
+
+  /// Get the currency code from a ProductDetails.
+  String? _getProductCurrency(ProductDetails product) {
+    if (product is GooglePlayProductDetails) {
+      final offers = product.productDetails.subscriptionOfferDetails;
+      if (offers != null && offers.isNotEmpty) {
+        final baseOffer = offers.firstWhere(
+          (o) => o.offerId == null,
+          orElse: () => offers.first,
+        );
+        if (baseOffer.pricingPhases.isNotEmpty) {
+          return baseOffer.pricingPhases.last.priceCurrencyCode;
+        }
+      }
+    }
+    return null;
+  }
+
+  /// Extract the recurring price in micros from an offer's pricing phases.
+  int? _extractOfferMicros(SubscriptionOfferDetailsWrapper offer) {
+    if (offer.pricingPhases.isEmpty) return null;
+    for (final phase in offer.pricingPhases.reversed) {
+      if (phase.priceAmountMicros > 0) return phase.priceAmountMicros;
+    }
+    return offer.pricingPhases.last.priceAmountMicros;
+  }
+
+  String? _extractOfferPrice(SubscriptionOfferDetailsWrapper offer) {
+    if (offer.pricingPhases.isEmpty) {
+      return null;
+    }
+
+    PricingPhaseWrapper? selectedPhase;
+    for (final phase in offer.pricingPhases.reversed) {
+      if (phase.priceAmountMicros > 0) {
+        selectedPhase = phase;
+        break;
+      }
+    }
+
+    selectedPhase ??= offer.pricingPhases.last;
+    if (selectedPhase.formattedPrice.isNotEmpty) {
+      return selectedPhase.formattedPrice;
+    }
+
+    return _formatPrice(
+      selectedPhase.priceAmountMicros,
+      selectedPhase.priceCurrencyCode,
+    );
+  }
+
+  String _formatPrice(int amountMicros, String currencyCode) {
+    final amount = amountMicros / 1000000;
+    return '${currencyCode.toUpperCase()} ${amount.toStringAsFixed(2)}';
+  }
+
 
   /// Processing screen - blocks navigation
   Widget _buildProcessingScreen(
@@ -1006,6 +1244,14 @@ class _ProUpgradeScreenState extends State<ProUpgradeScreen> {
       }
     }
   }
+}
+
+class _PlanPricing {
+  final String price;
+  final String? originalPrice;
+  final String? discountBadge;
+
+  const _PlanPricing({required this.price, this.originalPrice, this.discountBadge});
 }
 
 /// Navigate to Pro upgrade screen

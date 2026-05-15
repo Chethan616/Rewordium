@@ -967,6 +967,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
   Widget _buildUserProfile(BuildContext context, String name, bool isPro,
       AuthProvider authProvider) {
     final planType = authProvider.planType;
+    final subscriptionExpiry = authProvider.subscriptionExpiry;
 
     final photoUrl = authProvider.user?.photoURL;
     final email = authProvider.user?.email;
@@ -1019,11 +1020,11 @@ class _SettingsScreenState extends State<SettingsScreen> {
                             size: 16),
                       if (isPro) const SizedBox(width: 4),
                       Text(
-                        isPro
-                            ? (planType == 'onetime'
-                                ? "Lifetime Pro User"
-                                : "Pro User")
-                            : "Standard User",
+                        _buildProStatusLabel(
+                          isPro: isPro,
+                          planType: planType,
+                          subscriptionExpiry: subscriptionExpiry,
+                        ),
                         style: Theme.of(context)
                             .textTheme
                             .bodySmall!
@@ -1164,6 +1165,30 @@ class _SettingsScreenState extends State<SettingsScreen> {
         ),
       ],
     );
+  }
+
+  String _buildProStatusLabel({
+    required bool isPro,
+    required String? planType,
+    required DateTime? subscriptionExpiry,
+  }) {
+    if (!isPro) {
+      return 'Standard User';
+    }
+
+    final baseLabel = planType == 'onetime' ? 'Lifetime Pro User' : 'Pro User';
+    if (planType == 'onetime' || planType == 'lifetime') {
+      return baseLabel;
+    }
+
+    if (subscriptionExpiry == null) {
+      return baseLabel;
+    }
+
+    final now = DateTime.now().toUtc();
+    final diff = subscriptionExpiry.toUtc().difference(now);
+    final daysLeft = diff.isNegative ? 0 : (diff.inHours / 24).ceil();
+    return '$baseLabel - $daysLeft days remaining';
   }
 
   IconData _getPersonaIcon(String personaName) {

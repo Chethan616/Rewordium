@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Google-style shortcut icon: AI / Auto Awesome (circle bg + sparkle icon) -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="48dp"
+    android:height="48dp"
+    android:viewportWidth="48"
+    android:viewportHeight="48">
+
+    <!-- Circular background -->
+    <path
+        android:fillColor="#E3F2FD"
+        android:pathData="M24,24m-24,0a24,24 0,1 1,48 0a24,24 0,1 1,-48 0"/>
+
+    <!-- Auto Awesome / Sparkle icon (Material Symbols, centered) -->
+    <path
+        android:fillColor="#1565C0"
+        android:pathData="M25,11l-2.5,10L12,23.5l10.5,2.5L25,36.5l2.5,-10.5L38,23.5l-10.5,-2.5z"/>
+
+    <!-- Small sparkle top-right -->
+    <path
+        android:fillColor="#42A5F5"
+        android:pathData="M34,13l-1,4l-4,1l4,1l1,4l1,-4l4,-1l-4,-1z"/>
+
+    <!-- Small sparkle bottom-left -->
+    <path
+        android:fillColor="#42A5F5"
+        android:pathData="M16,29l-0.8,3.2L12,33l3.2,0.8L16,37l0.8,-3.2L20,33l-3.2,-0.8z"/>
+</vector>

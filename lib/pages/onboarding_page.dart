@@ -27,17 +27,7 @@ class OnboardingPage extends StatefulWidget {
 
   static Future<bool> hasCompleted() async {
     final prefs = await SharedPreferences.getInstance();
-    try {
-      final currentSignature = await _currentBuildSignature();
-      final completedSignature = prefs.getString(_versionedCompletionKey);
-      if (completedSignature == null) {
-        // No version-scoped completion means onboarding must run on this build.
-        return false;
-      }
-      return completedSignature == currentSignature;
-    } catch (_) {
-      return prefs.getBool(_legacyCompletionKey) ?? false;
-    }
+    return prefs.getBool(_legacyCompletionKey) ?? false;
   }
 
   static Future<void> markCompleted() async {

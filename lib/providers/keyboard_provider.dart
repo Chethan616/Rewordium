@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart';
-import 'package:package_info_plus/package_info_plus.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:convert';
 import 'dart:async';
@@ -34,18 +33,10 @@ class Persona {
 }
 
 class KeyboardProvider extends ChangeNotifier {
-  static const String _onboardingVersionKey = 'onboarding_completed_for_version';
-
   Future<bool> _hasCompletedOnboardingForCurrentBuild(
     SharedPreferences sharedPrefs,
   ) async {
-    try {
-      final info = await PackageInfo.fromPlatform();
-      final currentSignature = '${info.version}+${info.buildNumber}';
-      return sharedPrefs.getString(_onboardingVersionKey) == currentSignature;
-    } catch (_) {
-      return sharedPrefs.getBool('onboarding_completed') ?? false;
-    }
+    return sharedPrefs.getBool('onboarding_completed') ?? false;
   }
 
   // Show iOS-style dialog for keyboard reactivation
@@ -331,6 +322,7 @@ class KeyboardProvider extends ChangeNotifier {
 
       // If keyboard is enabled in phone settings, always set status to true
       if (isEnabled) {
+        final wasDisabledBefore = !_isSystemKeyboardEnabled;
         if (kDebugMode)
           print(
               'Keyboard is enabled in phone settings, setting status to true');
@@ -344,6 +336,13 @@ class KeyboardProvider extends ChangeNotifier {
         await applyAllKeyboardSettings();
 
         notifyListeners();
+
+        // If keyboard was just toggled on, bring the app to the foreground
+        if (wasDisabledBefore) {
+          if (kDebugMode)
+            print('Keyboard was just enabled — bringing app to foreground');
+          await _keyboardService.bringAppToForeground();
+        }
 
         // Log for debugging
         if (kDebugMode)

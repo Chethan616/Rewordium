@@ -99,6 +99,18 @@ class KeyboardService {
     }
   }
 
+  /// Bring the app to the foreground (e.g. after keyboard is enabled in settings).
+  Future<void> bringAppToForeground() async {
+    if (!_isAndroid) return;
+    try {
+      await _channel.invokeMethod('bringAppToForeground');
+    } on MissingPluginException {
+      // Not implemented on this build
+    } on PlatformException catch (e) {
+      print('Error bringing app to foreground: ${e.message}');
+    }
+  }
+
   /// Set the keyboard layout for the system-wide keyboard
   Future<bool> setKeyboardLayout(KeyboardLayout layout) async {
     if (!_isAndroid) return false;

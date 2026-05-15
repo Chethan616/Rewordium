@@ -31,6 +31,29 @@ class WhatsNewSheet {
   // Add a new entry for each release. Older entries are kept for reference
   // but only the *current* version's items are displayed.
   static final Map<String, List<_WhatsNewItem>> _features = {
+    '2.9.1+75': [
+      const _WhatsNewItem(
+        icon: CupertinoIcons.bolt_fill,
+        color: Color(0xFF22C55E),
+        title: 'AI Preferences Shortcut Fixed',
+        description:
+            'App shortcut routing now opens Advanced AI Settings without restarting the app.',
+      ),
+      const _WhatsNewItem(
+        icon: CupertinoIcons.clock_fill,
+        color: Color(0xFF3B82F6),
+        title: 'Pro Days Remaining',
+        description:
+            'Settings now shows the days remaining on your Pro subscription.',
+      ),
+      const _WhatsNewItem(
+        icon: CupertinoIcons.tag_fill,
+        color: Color(0xFFF59E0B),
+        title: 'Discount Pricing Details',
+        description:
+            'Plan cards show the original price alongside discounted offers.',
+      ),
+    ],
     '2.9.0+74': [
       const _WhatsNewItem(
         icon: CupertinoIcons.checkmark_seal_fill,
