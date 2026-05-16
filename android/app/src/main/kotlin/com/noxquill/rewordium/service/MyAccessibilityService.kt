@@ -2678,8 +2678,17 @@ class MyAccessibilityService : AccessibilityService(), BubbleInteractionListener
             }
 
             val themedContext = ContextThemeWrapper(this, R.style.Theme_App_Translucent)
-            val glowView = GoogleEdgeGlowView(themedContext).also { it.startPulse() }
+            val glowView = GoogleEdgeGlowView(themedContext)
             edgeGlowView = glowView
+
+            glowView.alpha = 0f
+            glowView.animate()
+                .alpha(1f)
+                .setDuration(350)
+                .setInterpolator(android.view.animation.DecelerateInterpolator())
+                .withEndAction { glowView.startPulse() }
+                .start()
+
 
             val params = WindowManager.LayoutParams(
                 WindowManager.LayoutParams.MATCH_PARENT,
@@ -2716,10 +2725,9 @@ class MyAccessibilityService : AccessibilityService(), BubbleInteractionListener
             edgeGlowHideRunnable = null
 
             edgeGlowView?.let { view ->
-                view.stopPulse()
                 view.animate()
                     .alpha(0f)
-                    .setDuration(220)
+                    .setDuration(400)
                     .setInterpolator(android.view.animation.AccelerateInterpolator())
                     .withEndAction {
                         try {

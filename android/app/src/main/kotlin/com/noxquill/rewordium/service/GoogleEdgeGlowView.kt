@@ -3,19 +3,18 @@ package com.noxquill.rewordium.service
 import android.animation.ValueAnimator
 import android.content.Context
 import android.graphics.Canvas
-import android.graphics.LinearGradient
+import android.graphics.Color
 import android.graphics.Paint
-import android.graphics.RadialGradient
-import android.graphics.Shader
+import android.graphics.SweepGradient
 import android.util.AttributeSet
 import android.view.View
 import android.view.animation.AccelerateDecelerateInterpolator
+import kotlin.math.atan2
 import kotlin.math.min
 
 /**
- * Google Circle-to-Search–style edge glow.
- * Edge bands (color-interpolated between adjacent corners) are drawn first;
- * corner blooms sit on top with soft 6-stop radials.
+ * Continuous Google Circle-to-Search–style edge glow.
+ * Smoothly blends the 4 Google colors around the screen edges.
  */
 class GoogleEdgeGlowView @JvmOverloads constructor(
     context: Context,
@@ -23,17 +22,26 @@ class GoogleEdgeGlowView @JvmOverloads constructor(
 ) : View(context, attrs) {
 
     private val paint = Paint(Paint.ANTI_ALIAS_FLAG)
-    private var pulse = 0.75f
+    private var pulse = 0.5f
     private var pulseAnimator: ValueAnimator? = null
+    
+    // Google Colors
+    private val colorBlue = Color.argb(255, 0x42, 0x85, 0xF4)
+    private val colorRed = Color.argb(255, 0xEA, 0x43, 0x35)
+    private val colorYellow = Color.argb(255, 0xFB, 0xBC, 0x04)
+    private val colorGreen = Color.argb(255, 0x34, 0xA8, 0x53)
 
     init {
         setLayerType(LAYER_TYPE_HARDWARE, null)
+        paint.style = Paint.Style.STROKE
+        paint.strokeCap = Paint.Cap.ROUND
+        paint.strokeJoin = Paint.Join.ROUND
     }
 
     fun startPulse() {
         stopPulse()
-        pulseAnimator = ValueAnimator.ofFloat(0.5f, 1f).apply {
-            duration = 2400L
+        pulseAnimator = ValueAnimator.ofFloat(0.3f, 1f).apply {
+            duration = 1800L
             repeatMode = ValueAnimator.REVERSE
             repeatCount = ValueAnimator.INFINITE
             interpolator = AccelerateDecelerateInterpolator()
@@ -56,155 +64,55 @@ class GoogleEdgeGlowView @JvmOverloads constructor(
         val h = height.toFloat()
         if (w <= 0f || h <= 0f) return
 
-        // Slightly richer / darker than before
-        val a = (0.36f * pulse * 255f).toInt().coerceIn(0, 255)
-        val eA = (a * 0.42f).toInt()
-        val cr = min(w, h) * 0.50f
+        val cx = w / 2f
+        val cy = h / 2f
 
-        // ── 1. Edge bands FIRST (each half interpolates between adjacent corner colors) ──
+        // Get angles for corners mapped to 0..1 for SweepGradient
+        val br = getAnglePos(w / 2f, h / 2f)
+        val bl = getAnglePos(-w / 2f, h / 2f)
+        val tl = getAnglePos(-w / 2f, -h / 2f)
+        val tr = getAnglePos(w / 2f, -h / 2f)
 
-        val topH = h * 0.42f
-        paint.shader = LinearGradient(
-            0f, 0f, 0f, topH,
-            intArrayOf(
-                argb(eA, 0x42, 0x85, 0xF4),
-                argb((eA * 0.35f).toInt(), 0x42, 0x85, 0xF4),
-                argb(0, 0x42, 0x85, 0xF4),
-            ),
-            floatArrayOf(0f, 0.4f, 1f),
-            Shader.TileMode.CLAMP,
-        )
-        canvas.drawRect(0f, 0f, w / 2f, topH, paint)
+        // Interpolate the color at exactly 0.0 (the right edge, between Top-Right and Bottom-Right)
+        val fraction = (1f - tr) / (1f - tr + br)
+        val cRight = blendColors(colorRed, colorYellow, fraction)
 
-        paint.shader = LinearGradient(
-            0f, 0f, 0f, topH,
-            intArrayOf(
-                argb(eA, 0xEA, 0x43, 0x35),
-                argb((eA * 0.35f).toInt(), 0xEA, 0x43, 0x35),
-                argb(0, 0xEA, 0x43, 0x35),
-            ),
-            floatArrayOf(0f, 0.4f, 1f),
-            Shader.TileMode.CLAMP,
-        )
-        canvas.drawRect(w / 2f, 0f, w, topH, paint)
+        val positions = floatArrayOf(0f, br, bl, tl, tr, 1f)
+        val colors = intArrayOf(cRight, colorYellow, colorGreen, colorBlue, colorRed, cRight)
 
-        val botTop = h - h * 0.42f
-        paint.shader = LinearGradient(
-            0f, h, 0f, botTop,
-            intArrayOf(
-                argb(eA, 0x34, 0xA8, 0x53),
-                argb((eA * 0.35f).toInt(), 0x34, 0xA8, 0x53),
-                argb(0, 0x34, 0xA8, 0x53),
-            ),
-            floatArrayOf(0f, 0.4f, 1f),
-            Shader.TileMode.CLAMP,
-        )
-        canvas.drawRect(0f, botTop, w / 2f, h, paint)
+        paint.shader = SweepGradient(cx, cy, colors, positions)
 
-        paint.shader = LinearGradient(
-            0f, h, 0f, botTop,
-            intArrayOf(
-                argb(eA, 0xFB, 0xBC, 0x04),
-                argb((eA * 0.35f).toInt(), 0xFB, 0xBC, 0x04),
-                argb(0, 0xFB, 0xBC, 0x04),
-            ),
-            floatArrayOf(0f, 0.4f, 1f),
-            Shader.TileMode.CLAMP,
-        )
-        canvas.drawRect(w / 2f, botTop, w, h, paint)
+        val baseAlpha = (0.8f * pulse * 255f).toInt()
 
-        val sideW = w * 0.38f
-        paint.shader = LinearGradient(
-            0f, 0f, sideW, 0f,
-            intArrayOf(
-                argb((eA * 0.75f).toInt(), 0x42, 0x85, 0xF4),
-                argb(0, 0x42, 0x85, 0xF4),
-            ),
-            floatArrayOf(0f, 1f),
-            Shader.TileMode.CLAMP,
-        )
-        canvas.drawRect(0f, 0f, sideW, h / 2f, paint)
+        val maxStroke = min(w, h) * 0.20f
+        val steps = 8
+        val rx = min(w, h) * 0.06f
 
-        paint.shader = LinearGradient(
-            0f, 0f, sideW, 0f,
-            intArrayOf(
-                argb((eA * 0.75f).toInt(), 0x34, 0xA8, 0x53),
-                argb(0, 0x34, 0xA8, 0x53),
-            ),
-            floatArrayOf(0f, 1f),
-            Shader.TileMode.CLAMP,
-        )
-        canvas.drawRect(0f, h / 2f, sideW, h, paint)
-
-        paint.shader = LinearGradient(
-            w, 0f, w - sideW, 0f,
-            intArrayOf(
-                argb((eA * 0.75f).toInt(), 0xEA, 0x43, 0x35),
-                argb(0, 0xEA, 0x43, 0x35),
-            ),
-            floatArrayOf(0f, 1f),
-            Shader.TileMode.CLAMP,
-        )
-        canvas.drawRect(w - sideW, 0f, w, h / 2f, paint)
-
-        paint.shader = LinearGradient(
-            w, 0f, w - sideW, 0f,
-            intArrayOf(
-                argb((eA * 0.75f).toInt(), 0xFB, 0xBC, 0x04),
-                argb(0, 0xFB, 0xBC, 0x04),
-            ),
-            floatArrayOf(0f, 1f),
-            Shader.TileMode.CLAMP,
-        )
-        canvas.drawRect(w - sideW, h / 2f, w, h, paint)
-
-        // ── 2. Corner blooms ON TOP — 6-stop soft radials ──
-        drawCornerBloom(canvas, 0f, 0f, cr, 0xFF4285F4.toInt(), a)
-        drawCornerBloom(canvas, w, 0f, cr, 0xFFEA4335.toInt(), (a * 0.95f).toInt())
-        drawCornerBloom(canvas, 0f, h, cr, 0xFF34A853.toInt(), (a * 0.90f).toInt())
-        drawCornerBloom(canvas, w, h, cr, 0xFFFBBC04.toInt(), (a * 0.85f).toInt())
+        for (i in steps downTo 1) {
+            val stepFraction = i.toFloat() / steps
+            paint.strokeWidth = maxStroke * stepFraction
+            
+            // Alpha distribution: thickest strokes are faint, thinnest are solid
+            val layerAlphaFraction = 1f - (stepFraction * 0.85f)
+            paint.alpha = (baseAlpha * layerAlphaFraction / steps * 2.5f).toInt().coerceIn(0, 255)
+            
+            canvas.drawRoundRect(0f, 0f, w, h, rx, rx, paint)
+        }
     }
 
-    private fun drawCornerBloom(
-        canvas: Canvas,
-        cornerX: Float,
-        cornerY: Float,
-        radius: Float,
-        color: Int,
-        alpha: Int,
-    ) {
-        if (alpha <= 0) return
-        val r = (color shr 16) and 0xFF
-        val g = (color shr  8) and 0xFF
-        val b = color and 0xFF
-        val effectiveRadius = min(radius, min(width, height) * 0.55f)
-        paint.shader = RadialGradient(
-            cornerX,
-            cornerY,
-            effectiveRadius,
-            intArrayOf(
-                argb(alpha, r, g, b),
-                argb((alpha * 0.75f).toInt(), r, g, b),
-                argb((alpha * 0.40f).toInt(), r, g, b),
-                argb((alpha * 0.12f).toInt(), r, g, b),
-                argb((alpha * 0.03f).toInt(), r, g, b),
-                argb(0, r, g, b),
-            ),
-            floatArrayOf(0f, 0.18f, 0.40f, 0.65f, 0.85f, 1f),
-            Shader.TileMode.CLAMP,
-        )
-        val pad = effectiveRadius
-        canvas.drawRect(
-            (cornerX - pad).coerceAtLeast(0f),
-            (cornerY - pad).coerceAtLeast(0f),
-            (cornerX + pad).coerceAtMost(width.toFloat()),
-            (cornerY + pad).coerceAtMost(height.toFloat()),
-            paint,
-        )
+    private fun getAnglePos(dx: Float, dy: Float): Float {
+        var angle = Math.toDegrees(atan2(dy.toDouble(), dx.toDouble())).toFloat()
+        if (angle < 0) angle += 360f
+        return angle / 360f
     }
 
-    private fun argb(alpha: Int, r: Int, g: Int, b: Int): Int {
-        return android.graphics.Color.argb(alpha.coerceIn(0, 255), r, g, b)
+    private fun blendColors(color1: Int, color2: Int, ratio: Float): Int {
+        val inverseRatio = 1f - ratio
+        val a = (Color.alpha(color1) * inverseRatio + Color.alpha(color2) * ratio).toInt()
+        val r = (Color.red(color1) * inverseRatio + Color.red(color2) * ratio).toInt()
+        val g = (Color.green(color1) * inverseRatio + Color.green(color2) * ratio).toInt()
+        val b = (Color.blue(color1) * inverseRatio + Color.blue(color2) * ratio).toInt()
+        return Color.argb(a.coerceIn(0, 255), r.coerceIn(0, 255), g.coerceIn(0, 255), b.coerceIn(0, 255))
     }
 
     override fun onDetachedFromWindow() {
