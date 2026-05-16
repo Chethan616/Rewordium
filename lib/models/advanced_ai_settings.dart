@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'dart:convert';
 
@@ -73,7 +73,7 @@ class AdvancedAISettings {
       case AIProvider.anthropic:
         return 'claude-3-opus-20240229';
       case AIProvider.groq:
-        return 'llama3-70b-8192';
+        return 'qwen/qwen3-32b';
       case AIProvider.custom:
         return '';
     }
@@ -125,7 +125,7 @@ enum AIProvider {
   String get displayName {
     switch (this) {
       case AIProvider.groq:
-        return 'Groq (LLaMA 3 - Default)';
+        return 'Groq (Qwen - Default)';
       case AIProvider.gemini:
         return 'Google Gemini';
       case AIProvider.openai:
@@ -283,7 +283,7 @@ class AdvancedAISettingsService {
       return {
         'provider': 'groq',
         'apiKey': '', // Will use default from .env
-        'model': 'llama-3.1-8b-instant',
+        'model': 'qwen/qwen3-32b',
         'maxTokens': 8192,
         'isAdvancedEnabled': false,
         'usesExternalApi': false,
@@ -303,3 +303,4 @@ class AdvancedAISettingsService {
     };
   }
 }
+

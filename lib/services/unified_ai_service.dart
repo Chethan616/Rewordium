@@ -9,14 +9,21 @@ import 'in_app_review_service.dart';
 import 'usage_analytics_service.dart';
 
 /// Unified AI Service that supports multiple LLM providers
-/// Falls back to Groq + LLaMA if no custom API key is configured
+/// Falls back to Groq + Qwen when no custom API key is configured
 class UnifiedAIService {
+  /// Strips qwen3's chain-of-thought `<think>...</think>` blocks from responses.
+  static String _stripThinkTags(String text) {
+    return text
+        .replaceAll(RegExp(r'<think>[\s\S]*?</think>', caseSensitive: false), '')
+        .trim();
+  }
+
   static Map<String, dynamic> _outOfCreditsResponse() {
     return {
       'error': 'OUT_OF_CREDITS',
       'errorType': 'OUT_OF_CREDITS',
       'content':
-          '⚠️ You are out of credits. Upgrade to Pro or connect your own API in Advanced AI Settings.',
+          'âš ï¸ You are out of credits. Upgrade to Pro or connect your own API in Advanced AI Settings.',
     };
   }
 
@@ -33,7 +40,7 @@ class UnifiedAIService {
       return {
         'error': 'NOT_LOGGED_IN',
         'errorType': 'NOT_LOGGED_IN',
-        'content': '⚠️ Please log in to use AI features.',
+        'content': 'âš ï¸ Please log in to use AI features.',
       };
     }
 
@@ -158,7 +165,7 @@ class UnifiedAIService {
           'error': 'MISSING_API_KEY',
           'errorType': 'MISSING_API_KEY',
           'content':
-              '⚠️ Advanced AI Settings are enabled but no API key is provided.\n\nPlease go to Settings → Advanced AI Settings and either:\n• Enter a valid API key, or\n• Disable Advanced AI Settings to use the default Groq service',
+              'âš ï¸ Advanced AI Settings are enabled but no API key is provided.\n\nPlease go to Settings â†’ Advanced AI Settings and either:\nâ€¢ Enter a valid API key, or\nâ€¢ Disable Advanced AI Settings to use the default Groq service',
         };
       }
 
@@ -173,7 +180,7 @@ class UnifiedAIService {
           'error': 'RATE_LIMIT',
           'errorType': 'RATE_LIMIT',
           'content':
-              '⚠️ API rate limit or token quota exceeded.\n\nYour AI provider has reached its usage limit. Please wait a moment and try again, or check your API plan.',
+              'âš ï¸ API rate limit or token quota exceeded.\n\nYour AI provider has reached its usage limit. Please wait a moment and try again, or check your API plan.',
         };
       }
 
@@ -185,7 +192,7 @@ class UnifiedAIService {
           'error': 'INVALID_API_KEY',
           'errorType': 'INVALID_API_KEY',
           'content':
-              '⚠️ Invalid API key.\n\nThe API key you provided is not valid. Please check your API key in Settings → Advanced AI Settings.',
+              'âš ï¸ Invalid API key.\n\nThe API key you provided is not valid. Please check your API key in Settings â†’ Advanced AI Settings.',
         };
       }
 
@@ -197,7 +204,7 @@ class UnifiedAIService {
           'error': 'MISSING_ENDPOINT',
           'errorType': 'MISSING_ENDPOINT',
           'content':
-              '⚠️ Custom endpoint URL is missing or invalid.\n\nPlease provide a valid API endpoint URL in Settings → Advanced AI Settings.',
+              'âš ï¸ Custom endpoint URL is missing or invalid.\n\nPlease provide a valid API endpoint URL in Settings â†’ Advanced AI Settings.',
         };
       }
 
@@ -216,6 +223,8 @@ class UnifiedAIService {
     required String userMessage,
     required double temperature,
     required bool requireJson,
+    String model = 'qwen/qwen3-32b',
+    int? maxTokens,
   }) async {
     try {
       await GroqService.initialize();
@@ -233,12 +242,15 @@ class UnifiedAIService {
               'Authorization': 'Bearer $apiKey',
             },
             body: jsonEncode({
-              'model': 'llama-3.1-8b-instant',
+              'model': model,
               'messages': [
                 {'role': 'system', 'content': systemPrompt},
                 {'role': 'user', 'content': userMessage},
               ],
               'temperature': temperature,
+              'top_p': 0.95,
+              'presence_penalty': 0.3,
+              if (maxTokens != null) 'max_tokens': maxTokens,
               if (requireJson) 'response_format': {'type': 'json_object'},
             }),
           )
@@ -246,7 +258,7 @@ class UnifiedAIService {
 
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
-        final content = data['choices'][0]['message']['content'];
+        final content = _stripThinkTags(data['choices'][0]['message']['content']);
 
         return {
           'success': true,
@@ -259,14 +271,14 @@ class UnifiedAIService {
           'error': 'RATE_LIMIT',
           'errorType': 'RATE_LIMIT',
           'content':
-              '⚠️ Groq API rate limit exceeded. Please wait a moment and try again.',
+              'âš ï¸ Groq API rate limit exceeded. Please wait a moment and try again.',
         };
       } else if (response.statusCode == 401) {
         return {
           'error': 'INVALID_API_KEY',
           'errorType': 'INVALID_API_KEY',
           'content':
-              '⚠️ Invalid Groq API key. Please check your configuration.',
+              'âš ï¸ Invalid Groq API key. Please check your configuration.',
         };
       } else {
         throw Exception(
@@ -372,7 +384,7 @@ class UnifiedAIService {
 
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
-        final content = data['choices'][0]['message']['content'];
+        final content = _stripThinkTags(data['choices'][0]['message']['content']);
 
         return {
           'success': true,
@@ -487,7 +499,7 @@ class UnifiedAIService {
 
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
-        final content = data['choices'][0]['message']['content'];
+        final content = _stripThinkTags(data['choices'][0]['message']['content']);
 
         return {
           'success': true,
@@ -513,15 +525,28 @@ class UnifiedAIService {
     String text,
     String tone,
   ) async {
-    final systemPrompt =
-        'You are a helpful paraphrasing assistant. Your task is to completely rewrite the following text in a $tone tone while preserving the original meaning but using different words and sentence structures. Return a JSON response with: {"paraphrased_text": "the rewritten text"}';
+    final config = await AdvancedAISettingsService.getAPIConfig();
+    final isDefaultGroq = config['provider'] == 'groq';
 
-    final result = await makeRequest(
-      systemPrompt: systemPrompt,
-      userMessage: text,
-      temperature: 0.8,
-      requireJson: true,
-    );
+    const systemPromptTemplate =
+        'You are an expert email writer and editor with years of professional writing experience. Rewrite the text in a {TONE} tone, keeping the meaning intact but using fresh, natural language that sounds like a real person wrote it. Return a JSON response with: {"paraphrased_text": "the rewritten text"}';
+    final systemPrompt = systemPromptTemplate.replaceAll('{TONE}', tone);
+
+    final result = isDefaultGroq
+        ? await _makeGroqRequest(
+            systemPrompt: systemPrompt,
+            userMessage: text,
+            temperature: 0.9,
+            requireJson: true,
+            model: 'qwen/qwen3-32b',
+            maxTokens: 300,
+          )
+        : await makeRequest(
+            systemPrompt: systemPrompt,
+            userMessage: text,
+            temperature: 0.9,
+            requireJson: true,
+          );
 
     if (result.containsKey('error')) {
       return result;
@@ -544,15 +569,27 @@ class UnifiedAIService {
 
   /// Get grammar check using configured provider
   static Future<Map<String, dynamic>> checkGrammar(String text) async {
-    final systemPrompt =
-        'You are a grammar assistant. Analyze the text for errors and return JSON: {"corrected_text": "corrected version", "error_count": number, "errors": [{"original": "", "correction": "", "explanation": ""}]}';
+    const systemPrompt =
+        'You are an expert editor and proofreader. Fix grammar, spelling, and punctuation errors in the text below, keeping the writer\'s voice intact. Return JSON: {"corrected_text": "corrected version", "error_count": number, "errors": [{"original": "", "correction": "", "explanation": ""}]}';
 
-    final result = await makeRequest(
-      systemPrompt: systemPrompt,
-      userMessage: text,
-      temperature: 0.3,
-      requireJson: true,
-    );
+    final config = await AdvancedAISettingsService.getAPIConfig();
+    final isDefaultGroq = config['provider'] == 'groq';
+
+    final result = isDefaultGroq
+        ? await _makeGroqRequest(
+            systemPrompt: systemPrompt,
+            userMessage: text,
+            temperature: 0.3,
+            requireJson: true,
+            model: 'qwen/qwen3-32b',
+            maxTokens: 300,
+          )
+        : await makeRequest(
+            systemPrompt: systemPrompt,
+            userMessage: text,
+            temperature: 0.3,
+            requireJson: true,
+          );
 
     if (result.containsKey('error')) {
       return result;
@@ -588,15 +625,28 @@ class UnifiedAIService {
     String text,
     String targetLanguage,
   ) async {
-    final systemPrompt =
-        'You are a professional translator. Translate the following text to $targetLanguage. Return a JSON response with: {"translated_text": "the translated text", "source_language": "detected language", "confidence": 0.95}';
+    final systemPromptTemplate =
+        'You are a professional translator with native-level fluency. Translate the text into {LANG}, preserving the original meaning, tone, and style naturally â€” avoid literal or robotic phrasing. Return a JSON response with: {"translated_text": "the translated text", "source_language": "detected language", "confidence": 0.95}';
+    final systemPrompt = systemPromptTemplate.replaceAll('{LANG}', targetLanguage);
 
-    final result = await makeRequest(
-      systemPrompt: systemPrompt,
-      userMessage: text,
-      temperature: 0.3,
-      requireJson: true,
-    );
+    final config = await AdvancedAISettingsService.getAPIConfig();
+    final isDefaultGroq = config['provider'] == 'groq';
+
+    final result = isDefaultGroq
+        ? await _makeGroqRequest(
+            systemPrompt: systemPrompt,
+            userMessage: text,
+            temperature: 0.3,
+            requireJson: true,
+            model: 'qwen/qwen3-32b',
+            maxTokens: 300,
+          )
+        : await makeRequest(
+            systemPrompt: systemPrompt,
+            userMessage: text,
+            temperature: 0.3,
+            requireJson: true,
+          );
 
     if (result.containsKey('error')) {
       return {
@@ -704,15 +754,28 @@ class UnifiedAIService {
     String text,
     String targetTone,
   ) async {
-    final systemPrompt =
-        'You are a tone editing expert. Rewrite the following text to match a $targetTone tone, while preserving the original meaning. Return JSON: {"edited_text": "the rewritten text", "original_tone": "assessment", "changes_made": ["change 1"]}';
+    final systemPromptTemplate =
+        'You are an expert email writer and editor. Rewrite the text to match a {TONE} tone, keeping the original meaning and making it sound natural â€” not corporate or robotic. Return JSON: {"edited_text": "the rewritten text", "original_tone": "assessment", "changes_made": ["change 1"]}';
+    final systemPrompt = systemPromptTemplate.replaceAll('{TONE}', targetTone);
 
-    final result = await makeRequest(
-      systemPrompt: systemPrompt,
-      userMessage: text,
-      temperature: 0.5,
-      requireJson: true,
-    );
+    final config = await AdvancedAISettingsService.getAPIConfig();
+    final isDefaultGroq = config['provider'] == 'groq';
+
+    final result = isDefaultGroq
+        ? await _makeGroqRequest(
+            systemPrompt: systemPrompt,
+            userMessage: text,
+            temperature: 0.9,
+            requireJson: true,
+            model: 'qwen/qwen3-32b',
+            maxTokens: 300,
+          )
+        : await makeRequest(
+            systemPrompt: systemPrompt,
+            userMessage: text,
+            temperature: 0.9,
+            requireJson: true,
+          );
 
     if (result.containsKey('error')) {
       return {
@@ -742,14 +805,26 @@ class UnifiedAIService {
     String personaPrompt,
   ) async {
     final systemPrompt =
-        'You are a paraphrasing assistant with a specific persona. $personaPrompt. Rewrite the text while maintaining this persona. Return JSON: {"paraphrased_text": "the rewritten text", "alternatives": ["alt 1", "alt 2"]}';
+        '$personaPrompt Write naturally and keep the original meaning. Return JSON: {"paraphrased_text": "the rewritten text", "alternatives": ["alt 1", "alt 2"]}';
 
-    final result = await makeRequest(
-      systemPrompt: systemPrompt,
-      userMessage: text,
-      temperature: 0.8,
-      requireJson: true,
-    );
+    final config = await AdvancedAISettingsService.getAPIConfig();
+    final isDefaultGroq = config['provider'] == 'groq';
+
+    final result = isDefaultGroq
+        ? await _makeGroqRequest(
+            systemPrompt: systemPrompt,
+            userMessage: text,
+            temperature: 0.9,
+            requireJson: true,
+            model: 'qwen/qwen3-32b',
+            maxTokens: 300,
+          )
+        : await makeRequest(
+            systemPrompt: systemPrompt,
+            userMessage: text,
+            temperature: 0.9,
+            requireJson: true,
+          );
 
     if (result.containsKey('error')) {
       return {
@@ -806,3 +881,4 @@ class UnifiedAIService {
     await GroqService.initialize();
   }
 }
+

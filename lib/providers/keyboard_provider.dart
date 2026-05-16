@@ -180,6 +180,19 @@ class KeyboardProvider extends ChangeNotifier {
   Map<String, dynamic> _performanceMetrics = {};
   Timer? _performanceTimer;
 
+  // --- Performance optimizations ---
+  /// In-memory SharedPreferences cache. Hydrated once in [initializeFromPrefs].
+  /// All subsequent reads use this reference to avoid repeated disk I/O.
+  SharedPreferences? _prefs;
+
+  /// Debounce timer for [applyAllKeyboardSettings].
+  /// Batches rapid back-to-back setting calls into a single 300ms-delayed execution.
+  Timer? _applyDebounce;
+
+  /// Whether the app is currently in the foreground. Used to pause heavy
+  /// background timers (performance metrics polling) when not visible.
+  bool _isInForeground = true;
+
   KeyboardLayout get layout => _layout;
   bool get soundOn => _soundOn;
   List<String> get suggestions => _suggestions;
@@ -189,6 +202,7 @@ class KeyboardProvider extends ChangeNotifier {
   void dispose() {
     stopKeyboardStatusCheck();
     _performanceTimer?.cancel();
+    _applyDebounce?.cancel();
     super.dispose();
   }
 
@@ -218,14 +232,16 @@ class KeyboardProvider extends ChangeNotifier {
 
   // Initialize provider state from SharedPreferences and keyboard service
   Future<void> initializeFromPrefs() async {
-    final prefs = await SharedPreferences.getInstance();
+    // Hydrate the in-memory prefs cache once.
+    _prefs = await SharedPreferences.getInstance();
+    final prefs = _prefs!;
 
     // Check if the keyboard is enabled in the system
     final isEnabled = await _keyboardService.isKeyboardEnabled();
     _isSystemKeyboardEnabled = isEnabled;
     await prefs.setBool('system_keyboard_enabled', isEnabled);
 
-    print('Keyboard enabled status: $isEnabled');
+    if (kDebugMode) print('Keyboard enabled status: $isEnabled');
 
     _isParaphraserEnabled = prefs.getBool('paraphraser_enabled') ?? false;
 
@@ -235,7 +251,6 @@ class KeyboardProvider extends ChangeNotifier {
     // Get current layout from keyboard service if available
     try {
       final currentLayout = await _keyboardService.getCurrentLayout();
-      // Convert between the two enum types (they have different case conventions)
       switch (currentLayout) {
         case service.KeyboardLayout.onePlus:
           _layout = KeyboardLayout.oneplus;
@@ -248,7 +263,6 @@ class KeyboardProvider extends ChangeNotifier {
           break;
       }
     } catch (e) {
-      // If service fails, use saved preferences
       final layoutIndex = prefs.getInt('keyboard_layout') ?? 0;
       _layout = KeyboardLayout.values[layoutIndex];
     }
@@ -263,8 +277,6 @@ class KeyboardProvider extends ChangeNotifier {
 
     // Apply settings to the keyboard service
     await _keyboardService.setHapticFeedback(_soundOn);
-    // Note: setParaphraserButton method not implemented in service yet
-    // await _keyboardService.setParaphraserButton(_isParaphraserEnabled);
 
     // Set the active persona in the keyboard service if enabled
     if (_isSystemKeyboardEnabled) {
@@ -285,16 +297,17 @@ class KeyboardProvider extends ChangeNotifier {
     // Cancel any existing timer
     _keyboardStatusCheckTimer?.cancel();
 
-    // Check keyboard status more frequently (every 2 seconds)
+    // Poll every 5s — the event-driven path (keyboard just enabled) handles
+    // the fast-path case; 5s is sufficient for background status sync.
     _keyboardStatusCheckTimer =
-        Timer.periodic(const Duration(seconds: 2), (_) async {
+        Timer.periodic(const Duration(seconds: 5), (_) async {
       await _checkKeyboardStatus();
     });
 
-    // Also check immediately and force a check after a short delay
+    // Check immediately
     _checkKeyboardStatus();
 
-    // Force another check after a short delay to ensure we get the correct status
+    // Force another check after 500ms to catch any race at startup
     Future.delayed(const Duration(milliseconds: 500), () {
       _checkKeyboardStatus();
     });
@@ -368,10 +381,18 @@ class KeyboardProvider extends ChangeNotifier {
     }
   }
 
-  // Apply all keyboard settings to the keyboard service
+  /// Apply all keyboard settings to the keyboard service.
+  /// Debounced: rapid successive calls are coalesced into one execution
+  /// after a 300ms quiet period to avoid flooding the MethodChannel.
   Future<void> applyAllKeyboardSettings() async {
+    _applyDebounce?.cancel();
+    _applyDebounce = Timer(const Duration(milliseconds: 300), () async {
+      await _applyAllKeyboardSettingsNow();
+    });
+  }
+
+  Future<void> _applyAllKeyboardSettingsNow() async {
     try {
-      // Convert layout enum to service enum
       service.KeyboardLayout serviceLayout;
       switch (_layout) {
         case KeyboardLayout.oneplus:
@@ -387,17 +408,15 @@ class KeyboardProvider extends ChangeNotifier {
 
       await _keyboardService.setKeyboardLayout(serviceLayout);
       await _keyboardService.setHapticFeedback(_soundOn);
-      // Note: setParaphraserButton method not implemented in service yet
-      // await _keyboardService.setParaphraserButton(_isParaphraserEnabled);
       await _keyboardService.setPersona(_activePersona);
       await _keyboardService.setKeyboardPersonas(_selectedKeyboardPersonas);
 
       if (kDebugMode) {
-        print(
-            'Applied all keyboard settings: Layout=$_layout, Sound=$_soundOn, Personas=$_selectedKeyboardPersonas');
+        debugPrint(
+            'Applied all keyboard settings: Layout=\$_layout, Sound=\$_soundOn, Personas=\$_selectedKeyboardPersonas');
       }
     } catch (e) {
-      if (kDebugMode) print('Error applying keyboard settings: $e');
+      if (kDebugMode) debugPrint('Error applying keyboard settings: \$e');
     }
   }
 
@@ -997,10 +1016,12 @@ class KeyboardProvider extends ChangeNotifier {
     notifyListeners();
   }
 
-  // Start performance monitoring for swipe gestures
+  // Start performance monitoring for swipe gestures.
+  // Only runs when app is in the foreground to save battery.
   void _startPerformanceMonitoring() {
     _performanceTimer?.cancel();
     _performanceTimer = Timer.periodic(const Duration(seconds: 5), (_) async {
+      if (!_isInForeground) return; // Skip polling when backgrounded
       try {
         if (_swipeGesturesEnabled) {
           final metrics = await SwipeGestureService.getPerformanceMetrics();
@@ -1008,8 +1029,19 @@ class KeyboardProvider extends ChangeNotifier {
           notifyListeners();
         }
       } catch (e) {
-        debugPrint('Error getting performance metrics: $e');
+        debugPrint('Error getting performance metrics: \$e');
       }
     });
+  }
+
+  /// Called by the app lifecycle observer (e.g. from main.dart) to pause/resume
+  /// background timers for battery efficiency.
+  void onAppLifecycleChange(AppLifecycleState state) {
+    _isInForeground = state == AppLifecycleState.resumed;
+    if (!_isInForeground) {
+      _performanceTimer?.cancel();
+    } else if (_swipeGesturesEnabled) {
+      _startPerformanceMonitoring();
+    }
   }
 }

@@ -41,6 +41,14 @@ abstract class SwipeGesture {
     class Detector(private val listener: Listener) {
         private val prefs by FlorisPreferenceStore
 
+        // Minimum total displacement (dp) before a TOUCH_UP gesture is fired.
+        // Prevents tiny accidental drags from triggering actions.
+        private val MIN_GESTURE_DISTANCE_DP = 12.0
+
+        // Cooldown (ms) between consecutive gesture firings to prevent double-triggers.
+        private val GESTURE_COOLDOWN_MS = 120L
+        private var lastGestureFireMs: Long = 0L
+
         var isEnabled: Boolean = true
         private var pointerMap: PointerMap<GesturePointer> = PointerMap { GesturePointer() }
         private val velocityTracker: VelocityTracker = VelocityTracker.obtain()
@@ -71,14 +79,18 @@ abstract class SwipeGesture {
                 val currentY = ViewUtils.px2dp(event.getY(pointer.index))
                 val absDiffX = currentX - gesturePointer.firstX
                 val absDiffY = currentY - gesturePointer.firstY
-                val relDiffX = currentX - gesturePointer.lastX
-                val relDiffY = currentY - gesturePointer.lastY
+                val rawRelDiffX = currentX - gesturePointer.lastX
+                val rawRelDiffY = currentY - gesturePointer.lastY
                 val thresholdWidth = prefs.gestures.swipeDistanceThreshold.get().dp.value.toDouble()
                 val unitWidth = thresholdWidth / 4.0
-                return if (alwaysTriggerOnMove || abs(relDiffX) > (thresholdWidth / 2.0) || abs(relDiffY) > (thresholdWidth / 2.0)) {
+                return if (alwaysTriggerOnMove || abs(rawRelDiffX) > (thresholdWidth / 2.0) || abs(rawRelDiffY) > (thresholdWidth / 2.0)) {
                     gesturePointer.lastX = currentX
                     gesturePointer.lastY = currentY
-                    val direction = detectDirection(relDiffX.toDouble(), relDiffY.toDouble())
+                    // Push raw deltas into the 3-sample ring buffer and compute EMA for direction
+                    gesturePointer.pushSmooth(rawRelDiffX.toDouble(), rawRelDiffY.toDouble())
+                    val smoothedX = gesturePointer.smoothedRelX()
+                    val smoothedY = gesturePointer.smoothedRelY()
+                    val direction = detectDirection(smoothedX, smoothedY)
                     val newAbsUnitCountX = (absDiffX / unitWidth).toInt()
                     val newAbsUnitCountY = (absDiffY / unitWidth).toInt()
                     val relUnitCountX = newAbsUnitCountX - gesturePointer.absUnitCountX
@@ -116,7 +128,14 @@ abstract class SwipeGesture {
                 val thresholdSpeed = prefs.gestures.swipeVelocityThreshold.get().toDouble()
                 val thresholdWidth = prefs.gestures.swipeDistanceThreshold.get().dp.value.toDouble()
                 val unitWidth = thresholdWidth / 4.0
-                return if ((abs(absDiffX) > thresholdWidth || abs(absDiffY) > thresholdWidth) && (abs(velocityX) > thresholdSpeed || abs(velocityY) > thresholdSpeed)) {
+                // Guard: require minimum displacement AND velocity, AND respect cooldown
+                val now = System.currentTimeMillis()
+                val meetsDisplacement = abs(absDiffX) > MIN_GESTURE_DISTANCE_DP || abs(absDiffY) > MIN_GESTURE_DISTANCE_DP
+                val meetsThreshold = (abs(absDiffX) > thresholdWidth || abs(absDiffY) > thresholdWidth) &&
+                        (abs(velocityX) > thresholdSpeed || abs(velocityY) > thresholdSpeed)
+                val notInCooldown = (now - lastGestureFireMs) >= GESTURE_COOLDOWN_MS
+                return if (meetsDisplacement && meetsThreshold && notInCooldown) {
+                    lastGestureFireMs = now
                     val direction = detectDirection(absDiffX.toDouble(), absDiffY.toDouble())
                     gesturePointer.absUnitCountX = (absDiffX / unitWidth).toInt()
                     gesturePointer.absUnitCountY = (absDiffY / unitWidth).toInt()
@@ -188,6 +207,32 @@ abstract class SwipeGesture {
             var absUnitCountX: Int = 0
             var absUnitCountY: Int = 0
 
+            // 3-sample ring buffer for velocity smoothing (EMA approximation)
+            private val smoothDeltaX = FloatArray(3)
+            private val smoothDeltaY = FloatArray(3)
+            private var smoothIdx = 0
+
+            fun pushSmooth(dx: Double, dy: Double) {
+                smoothDeltaX[smoothIdx] = dx.toFloat()
+                smoothDeltaY[smoothIdx] = dy.toFloat()
+                smoothIdx = (smoothIdx + 1) % 3
+            }
+
+            /** Weighted average: newest sample weight 0.5, second 0.3, oldest 0.2 */
+            fun smoothedRelX(): Double {
+                val i0 = (smoothIdx + 2) % 3 // newest
+                val i1 = (smoothIdx + 1) % 3
+                val i2 = smoothIdx             // oldest
+                return (smoothDeltaX[i0] * 0.5 + smoothDeltaX[i1] * 0.3 + smoothDeltaX[i2] * 0.2)
+            }
+
+            fun smoothedRelY(): Double {
+                val i0 = (smoothIdx + 2) % 3
+                val i1 = (smoothIdx + 1) % 3
+                val i2 = smoothIdx
+                return (smoothDeltaY[i0] * 0.5 + smoothDeltaY[i1] * 0.3 + smoothDeltaY[i2] * 0.2)
+            }
+
             override fun reset() {
                 super.reset()
                 firstX = 0.0f
@@ -196,6 +241,9 @@ abstract class SwipeGesture {
                 lastY = 0.0f
                 absUnitCountX = 0
                 absUnitCountY = 0
+                smoothDeltaX.fill(0f)
+                smoothDeltaY.fill(0f)
+                smoothIdx = 0
             }
         }
     }

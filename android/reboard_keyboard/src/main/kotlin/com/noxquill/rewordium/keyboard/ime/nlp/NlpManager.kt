@@ -47,6 +47,7 @@ import org.florisboard.lib.kotlin.collectLatestIn
 import org.florisboard.lib.kotlin.guardedByLock
 import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.atomic.AtomicInteger
+import kotlinx.coroutines.Job
 import kotlin.properties.Delegates
 
 private const val BLANK_STR_PATTERN = "^\\s*$"
@@ -88,6 +89,10 @@ class NlpManager(context: Context) {
     val debugOverlaySuggestionsInfos = LruCache<Long, Pair<String, SpellingResult>>(10)
     var debugOverlayVersion = MutableLiveData(0)
     private val debugOverlayVersionSource = AtomicInteger(0)
+
+    // Holds the last suggestion coroutine job so we can cancel it if a newer request arrives,
+    // implementing "latest-wins" cancellation and avoiding wasted CPU on superseded requests.
+    private var suggestJob: Job? = null
 
     init {
         clipboardManager.primaryClipFlow.collectLatestIn(scope) {
@@ -183,7 +188,9 @@ class NlpManager(context: Context) {
 
     fun suggest(subtype: Subtype, content: EditorContent) {
         val reqTime = SystemClock.uptimeMillis()
-        scope.launch {
+        // Cancel any in-flight suggestion request — latest keystroke wins.
+        suggestJob?.cancel()
+        suggestJob = scope.launch {
             val emojiSuggestions = when {
                 prefs.emoji.suggestionEnabled.get() -> {
                     emojiSuggestionProvider.suggest(

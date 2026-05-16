@@ -1,4 +1,4 @@
-package com.noxquill.rewordium.service
+﻿package com.noxquill.rewordium.service
 
 import android.content.Context
 import android.content.SharedPreferences
@@ -30,7 +30,7 @@ object AIConfigProvider {
     const val PROVIDER_CUSTOM = "custom"
     
     // Default values
-    private const val DEFAULT_MODEL = "llama-3.1-8b-instant"
+    private const val DEFAULT_MODEL = "qwen/qwen3-32b"
     private const val DEFAULT_MAX_TOKENS = 8192
     
     data class AIConfig(
@@ -166,3 +166,4 @@ object AIConfigProvider {
         return getConfig(context)
     }
 }
+

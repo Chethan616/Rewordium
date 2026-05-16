@@ -47,18 +47,13 @@ class PermissionHandler {
     return result.isGranted || result.isLimited;
   }
 
-  // Request camera permission (only once)
-  Future<bool> requestCameraPermission() async {
-    return _requestPermissionOnce(Permission.camera, 'camera');
-  }
-
-  // Request microphone permission (only once)
-  Future<bool> requestMicrophonePermission() async {
-    return _requestPermissionOnce(Permission.microphone, 'microphone');
-  }
-
   // Request photos permission (only once)
   Future<bool> requestPhotosPermission() async {
     return _requestPermissionOnce(Permission.photos, 'photos');
+  }
+
+  // Request notification permission (only once)
+  Future<bool> requestNotificationPermission() async {
+    return _requestPermissionOnce(Permission.notification, 'notification');
   }
 }
