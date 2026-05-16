@@ -900,7 +900,7 @@ class MyAccessibilityService : AccessibilityService(), BubbleInteractionListener
             Toast.makeText(this, "📖 Reading screen content to help you respond!", Toast.LENGTH_LONG).show()
             
             // Continue with the screen content as input
-            return startGeneration(screenContent)
+            return startGeneration("screen content detected:\n$screenContent")
         }
         isStoppedByUser = false
 
@@ -1885,7 +1885,7 @@ class MyAccessibilityService : AccessibilityService(), BubbleInteractionListener
             activeSourceNode = null
             
             // Clean up gradient wave animation
-            hideGoogleEdgeGlow()
+            hideGoogleEdgeGlow(0L)
             
             floatingBubbleView?.resetIdleTimer()
             
@@ -2121,6 +2121,10 @@ class MyAccessibilityService : AccessibilityService(), BubbleInteractionListener
             Toast.makeText(this, "No suggestions found.", Toast.LENGTH_SHORT).show()
             return
         }
+        
+        // Start fading the glow effect slowly after response is generated
+        hideGoogleEdgeGlow(1500L)
+        
         suggestionLayout.visibility = View.VISIBLE
         val inflater = LayoutInflater.from(ContextThemeWrapper(this, R.style.Theme_App_Translucent))
         container.removeAllViews()
@@ -2661,34 +2665,22 @@ class MyAccessibilityService : AccessibilityService(), BubbleInteractionListener
     
     private var edgeGlowView: GoogleEdgeGlowView? = null
     private var isEdgeGlowActive = false
-    private var edgeGlowHideHandler: Handler? = null
-    private var edgeGlowHideRunnable: Runnable? = null
 
     private fun showGoogleEdgeGlow() {
         if (isEdgeGlowActive) return
 
         try {
             isEdgeGlowActive = true
-            edgeGlowView?.let { existing ->
-                existing.stopPulse()
-                try {
-                    windowManager.removeView(existing)
-                } catch (_: Exception) {
-                }
+
+            // Remove any stale view first (no-op if already removed)
+            edgeGlowView?.let { stale ->
+                stale.cancelHide()
+                try { windowManager.removeView(stale) } catch (_: Exception) {}
             }
 
             val themedContext = ContextThemeWrapper(this, R.style.Theme_App_Translucent)
             val glowView = GoogleEdgeGlowView(themedContext)
             edgeGlowView = glowView
-
-            glowView.alpha = 0f
-            glowView.animate()
-                .alpha(1f)
-                .setDuration(350)
-                .setInterpolator(android.view.animation.DecelerateInterpolator())
-                .withEndAction { glowView.startPulse() }
-                .start()
-
 
             val params = WindowManager.LayoutParams(
                 WindowManager.LayoutParams.MATCH_PARENT,
@@ -2701,52 +2693,57 @@ class MyAccessibilityService : AccessibilityService(), BubbleInteractionListener
                 WindowManager.LayoutParams.FLAG_NOT_TOUCHABLE or
                     WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or
                     WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN or
+                    WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS or
                     WindowManager.LayoutParams.FLAG_HARDWARE_ACCELERATED,
                 PixelFormat.TRANSLUCENT,
-            )
+            ).also { lp ->
+                // Draw behind the display cutout (notch / camera punch-hole)
+                // so the glow appears at the physical screen edges, not the app edge.
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
+                    lp.layoutInDisplayCutoutMode =
+                        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+                            WindowManager.LayoutParams.LAYOUT_IN_DISPLAY_CUTOUT_MODE_ALWAYS
+                        } else {
+                            WindowManager.LayoutParams.LAYOUT_IN_DISPLAY_CUTOUT_MODE_SHORT_EDGES
+                        }
+                }
+            }
 
             windowManager.addView(glowView, params)
 
-            edgeGlowHideHandler = Handler(Looper.getMainLooper())
-            edgeGlowHideRunnable = Runnable { hideGoogleEdgeGlow() }
-            edgeGlowHideHandler?.postDelayed(edgeGlowHideRunnable!!, 2800)
+            // Fade the glow in smoothly
+            glowView.showGlow()
+
         } catch (e: Exception) {
             Log.e(TAG, "Error showing edge glow overlay", e)
             isEdgeGlowActive = false
         }
     }
 
-    private fun hideGoogleEdgeGlow() {
-        if (!isEdgeGlowActive && edgeGlowView == null) return
+    /**
+     * Schedule a graceful fade-out of the edge glow.
+     * [delayMs] = how long to keep the glow visible after calling this.
+     * Defaults to 1500 ms (1.5 s) so the user can appreciate the finish.
+     */
+    private fun hideGoogleEdgeGlow(delayMs: Long = 1500L) {
+        val view = edgeGlowView ?: run {
+            isEdgeGlowActive = false
+            return
+        }
 
-        try {
-            edgeGlowHideHandler?.removeCallbacks(edgeGlowHideRunnable ?: return)
-            edgeGlowHideHandler = null
-            edgeGlowHideRunnable = null
-
-            edgeGlowView?.let { view ->
-                view.animate()
-                    .alpha(0f)
-                    .setDuration(400)
-                    .setInterpolator(android.view.animation.AccelerateInterpolator())
-                    .withEndAction {
-                        try {
-                            windowManager.removeView(view)
-                        } catch (e: Exception) {
-                            Log.w(TAG, "Edge glow overlay already removed", e)
-                        } finally {
-                            edgeGlowView = null
-                            isEdgeGlowActive = false
-                        }
-                    }
-                    .start()
-            } ?: run {
+        view.scheduleHide(delayMs) {
+            try {
+                view.visibility = View.GONE
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.HONEYCOMB) {
+                    view.setLayerType(View.LAYER_TYPE_NONE, null)
+                }
+                windowManager.removeView(view)
+            } catch (e: Exception) {
+                Log.w(TAG, "Edge glow overlay already removed", e)
+            } finally {
+                edgeGlowView = null
                 isEdgeGlowActive = false
             }
-        } catch (e: Exception) {
-            Log.w(TAG, "Error during edge glow cleanup", e)
-            isEdgeGlowActive = false
-            edgeGlowView = null
         }
     }
     
