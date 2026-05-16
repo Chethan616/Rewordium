@@ -16,7 +16,6 @@ import android.content.SharedPreferences
 import android.view.WindowManager
 import android.view.animation.AccelerateDecelerateInterpolator
 import android.widget.FrameLayout
-import androidx.appcompat.widget.AppCompatImageView
 import com.airbnb.lottie.LottieAnimationView
 import com.noxquill.rewordium.R
 import kotlin.math.abs
@@ -41,21 +40,18 @@ class FloatingBubbleView @JvmOverloads constructor(
     private val bubbleSizePx: Int
     var listener: BubbleInteractionListener? = null
 
-    // --- NEW: Constants for animations and state ---
     private val DRAG_THRESHOLD_PX = 15
     private val ANIMATION_DURATION = 250L
     private val IDLE_TIMEOUT_MS = 4500L
     private val IDLE_ALPHA = 0.6f
     private val IDLE_SCALE = 0.75f
-    private val ROTATION_DURATION = 3000L // 3 seconds for full rotation
+    private val ROTATION_DURATION = 3000L
 
-    // --- NEW: State tracking, idle timer, and rotation animator ---
     private val idleHandler = Handler(Looper.getMainLooper())
     private var isIdle = false
     private val idleRunnable = Runnable { enterIdleState() }
     private var rotationAnimator: ObjectAnimator? = null
 
-    // Dragging Info
     private var initialX = 0
     private var initialY = 0
     private var initialTouchX = 0f
@@ -64,16 +60,14 @@ class FloatingBubbleView @JvmOverloads constructor(
 
     init {
         LayoutInflater.from(context).inflate(R.layout.floating_assistant_layout, this, true)
-        bubbleImageView = findViewById<LottieAnimationView>(R.id.bubble_image_view)
+        bubbleImageView = findViewById(R.id.bubble_image_view)
         bubbleSizePx = (48 * context.resources.displayMetrics.density).toInt()
 
         val screenHeight = context.resources.displayMetrics.heightPixels
-        val screenWidth = context.resources.displayMetrics.widthPixels
 
-        // Load saved position or use default left edge position
         val savedX = prefs.getInt(PREF_X, 0)
         val savedY = prefs.getInt(PREF_Y, screenHeight / 2 - bubbleSizePx / 2)
-        
+
         wmParams = WindowManager.LayoutParams(
             bubbleSizePx,
             bubbleSizePx,
@@ -85,18 +79,14 @@ class FloatingBubbleView @JvmOverloads constructor(
             x = savedX
             y = savedY
         }
-        
-        // --- NEW: Start the idle timer when the bubble is created ---
+
         resetIdleTimer()
-        
-        // --- NEW: Start continuous clockwise rotation ---
         startRotationAnimation()
     }
 
     override fun onTouchEvent(event: MotionEvent): Boolean {
         when (event.action) {
             MotionEvent.ACTION_DOWN -> {
-                // --- NEW: Any touch stops the idle timer and "wakes up" the bubble ---
                 cancelIdleTimer()
                 if (isIdle) {
                     exitIdleState()
@@ -125,13 +115,9 @@ class FloatingBubbleView @JvmOverloads constructor(
             }
             MotionEvent.ACTION_UP -> {
                 if (isDragging) {
-                    // Save the final position after dragging
                     savePosition(wmParams.x, wmParams.y)
-                    // Animate to the nearest edge after dragging
                     animateToEdge()
                 } else {
-                    // It's a tap, the service will handle the UI, so don't restart the idle timer here.
-                    // The service will call resetIdleTimer() when the bottom sheet closes.
                     listener?.onBubbleTapped()
                 }
                 return true
@@ -140,7 +126,6 @@ class FloatingBubbleView @JvmOverloads constructor(
         return false
     }
 
-    // --- NEW: Public functions to be called by the Service ---
     fun resetIdleTimer() {
         cancelIdleTimer()
         idleHandler.postDelayed(idleRunnable, IDLE_TIMEOUT_MS)
@@ -150,7 +135,6 @@ class FloatingBubbleView @JvmOverloads constructor(
         idleHandler.removeCallbacks(idleRunnable)
     }
 
-    // --- NEW: Animation logic ---
     private fun startRotationAnimation() {
         rotationAnimator = ObjectAnimator.ofFloat(bubbleImageView, "rotation", 0f, 360f).apply {
             duration = ROTATION_DURATION
@@ -159,7 +143,7 @@ class FloatingBubbleView @JvmOverloads constructor(
             start()
         }
     }
-    
+
     private fun stopRotationAnimation() {
         rotationAnimator?.cancel()
         rotationAnimator = null
@@ -176,11 +160,6 @@ class FloatingBubbleView @JvmOverloads constructor(
             )
             duration = ANIMATION_DURATION
             interpolator = AccelerateDecelerateInterpolator()
-            addListener(object : android.animation.AnimatorListenerAdapter() {
-                override fun onAnimationEnd(animation: android.animation.Animator) {
-                    // Animation ended for idle state
-                }
-            })
             start()
         }
     }
@@ -196,11 +175,6 @@ class FloatingBubbleView @JvmOverloads constructor(
             )
             duration = ANIMATION_DURATION
             interpolator = AccelerateDecelerateInterpolator()
-            addListener(object : android.animation.AnimatorListenerAdapter() {
-                override fun onAnimationEnd(animation: android.animation.Animator) {
-                    // Animation ended for exit idle state
-                }
-            })
             start()
         }
     }
@@ -211,22 +185,22 @@ class FloatingBubbleView @JvmOverloads constructor(
         windowManager.updateViewLayout(this, wmParams)
         listener?.onBubbleMoved(x, y)
     }
-    
+
     private fun savePosition(x: Int, y: Int) {
         prefs.edit()
             .putInt(PREF_X, x)
             .putInt(PREF_Y, y)
             .apply()
     }
-    
+
     private fun animateToEdge() {
         val screenWidth = context.resources.displayMetrics.widthPixels
         val centerOfBubble = wmParams.x + bubbleSizePx / 2
-        
+
         val targetX = if (centerOfBubble < screenWidth / 2) {
-            0 // Snap to left edge
+            0
         } else {
-            screenWidth - bubbleSizePx // Snap to right edge
+            screenWidth - bubbleSizePx
         }
 
         val animator = ValueAnimator.ofInt(wmParams.x, targetX)
@@ -238,7 +212,6 @@ class FloatingBubbleView @JvmOverloads constructor(
         }
         animator.addListener(object : android.animation.AnimatorListenerAdapter() {
             override fun onAnimationEnd(animation: android.animation.Animator) {
-                // Save the final position after animation completes
                 savePosition(wmParams.x, wmParams.y)
                 resetIdleTimer()
             }
@@ -249,11 +222,9 @@ class FloatingBubbleView @JvmOverloads constructor(
     override fun onWindowVisibilityChanged(visibility: Int) {
         super.onWindowVisibilityChanged(visibility)
         if (visibility == VISIBLE) {
-            // Resume animation when visible
             bubbleImageView.resumeAnimation()
             startRotationAnimation()
         } else {
-            // Pause animation when not visible to save resources
             bubbleImageView.pauseAnimation()
             stopRotationAnimation()
         }
@@ -261,11 +232,8 @@ class FloatingBubbleView @JvmOverloads constructor(
 
     override fun onDetachedFromWindow() {
         super.onDetachedFromWindow()
-        // Clean up the handler when the view is removed
         cancelIdleTimer()
-        // Stop rotation animation
         stopRotationAnimation()
-        // Stop and clear the Lottie animation to prevent memory leaks
         bubbleImageView.cancelAnimation()
         bubbleImageView.setImageDrawable(null)
     }
