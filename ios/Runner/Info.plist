@@ -47,12 +47,8 @@
 		<true/>
 		<key>FLTEnableImpeller</key>
 		<true/>
-		<key>NSCameraUsageDescription</key>
-		<string>Rewordium needs camera access to scan documents for text extraction.</string>
-		<key>NSMicrophoneUsageDescription</key>
-		<string>Rewordium needs microphone access for voice input.</string>
 		<key>NSPhotoLibraryUsageDescription</key>
-		<string>Rewordium needs photo library access to import documents.</string>
+	<string>Rewordium needs photo library access to import documents.</string>
 		<key>UIBackgroundModes</key>
 		<array>
 			<string>fetch</string>

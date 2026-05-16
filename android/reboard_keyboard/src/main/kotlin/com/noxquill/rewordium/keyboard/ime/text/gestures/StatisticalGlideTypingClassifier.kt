@@ -88,14 +88,17 @@ class StatisticalGlideTypingClassifier(context: Context) : GlideTypingClassifier
          * Standard deviation of the distribution of distances between the locations of two gestures
          * representing the same word. It's expressed as a factor of key radius as it's applied to
          * un-normalized gestures and is therefore dependent on the size of the keys/keyboard.
+         * Tightened from 0.58 → 0.46 to penalise spatially-offset gestures more aggressively,
+         * improving precision for common short words.
          */
-        private const val LOCATION_STD = 0.58f
+        private const val LOCATION_STD = 0.46f
 
         /**
          * This is a very small cache that caches suggestions, so that they aren't recalculated e.g when releasing
          * a pointer when the suggestions were already calculated. Avoids a lot of micro pauses.
+         * Raised from 24 to 48 for better hit rate during fast glide sessions.
          */
-        private const val SUGGESTION_CACHE_SIZE = 24
+        private const val SUGGESTION_CACHE_SIZE = 48
 
         /**
          * For multiple subtypes, the pruner is cached.
@@ -323,8 +326,10 @@ class StatisticalGlideTypingClassifier(context: Context) : GlideTypingClassifier
             val startY = userGesture.getFirstY()
             val endX = userGesture.getLastX()
             val endY = userGesture.getLastY()
-            val startKeys = findNClosestKeys(startX, startY, 4, keys)
-            val endKeys = findNClosestKeys(endX, endY, 4, keys)
+            // Search 6 nearest keys (up from 4) — improves short-word accuracy
+            // since the gesture end-point is often slightly offset from the key centre.
+            val startKeys = findNClosestKeys(startX, startY, 6, keys)
+            val endKeys = findNClosestKeys(endX, endY, 6, keys)
             for (startKey in startKeys) {
                 for (endKey in endKeys) {
                     val keyPair = Pair(startKey, endKey)

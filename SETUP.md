@@ -129,7 +129,7 @@ flutter build appbundle --release
 
 The app uses a multi-provider AI architecture:
 
-- **Default**: Groq (LLaMA 3.1 8B Instant) — requires `GROQ_API_KEY` in `.env` and `android/local.properties`
+- **Default**: Groq (Qwen 2.5 32B Instruct) — requires `GROQ_API_KEY` in `.env` and `android/local.properties`
 - **Advanced**: Users can configure OpenAI, Gemini, Anthropic Claude, or a custom OpenAI-compatible endpoint via the in-app Advanced AI Settings screen
 
 The Groq API key flows through two paths:

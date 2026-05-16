@@ -10,6 +10,11 @@ import 'dart:async';
 import 'screens/home_screen.dart';
 import 'screens/paraphraser_page.dart';
 import 'screens/grammar_page.dart';
+import 'screens/translator_page.dart';
+import 'screens/ai_detector_page.dart';
+import 'screens/summarizer_page.dart';
+import 'screens/tone_editor_page.dart';
+import 'screens/jade_chat_screen.dart';
 import 'screens/settings_screen.dart';
 import 'screens/splash_screen.dart';
 import 'screens/auth/login_screen.dart';
@@ -33,6 +38,7 @@ import 'services/billing_service.dart';
 import 'services/deep_link_service.dart';
 import 'services/usage_analytics_service.dart';
 import 'widgets/tool_popup.dart';
+import 'widgets/physics_fab.dart';
 import 'widgets/whats_new_sheet.dart';
 
 // Global navigator key for app-wide navigation
@@ -340,7 +346,7 @@ class HomePage extends StatefulWidget {
   State<HomePage> createState() => _HomePageState();
 }
 
-class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
+class _HomePageState extends State<HomePage> with TickerProviderStateMixin, WidgetsBindingObserver {
   int _selectedIndex = 0;
   late TabController _tabController;
   final PermissionHandler _permissionHandler = PermissionHandler();
@@ -355,6 +361,7 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     _tabController = TabController(length: 4, vsync: this);
     _tabController.addListener(_handleTabChange);
     homeTabNavigationRequest.addListener(_handleTabNavigationRequest);
@@ -372,10 +379,17 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
     });
   }
 
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    // Forward lifecycle changes to KeyboardProvider so it can pause/resume
+    // background timers for battery efficiency.
+    final kbProvider = context.read<KeyboardProvider>();
+    kbProvider.onAppLifecycleChange(state);
+  }
+
   Future<void> _requestPermissions() async {
-    await _permissionHandler.requestCameraPermission();
-    await _permissionHandler.requestMicrophonePermission();
     await _permissionHandler.requestPhotosPermission();
+    await _permissionHandler.requestNotificationPermission();
   }
 
   void _handleTabNavigationRequest() {
@@ -398,6 +412,7 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
 
   @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
     homeTabNavigationRequest.removeListener(_handleTabNavigationRequest);
     _tabController.removeListener(_handleTabChange);
     _tabController.dispose();
@@ -411,12 +426,78 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
     });
   }
 
-  void _showToolPopup() {
-    showModalBottomSheet(
-      context: context,
-      backgroundColor: Colors.transparent,
-      isScrollControlled: true,
-      builder: (context) => ToolPopup(onSelectHomeTab: _onItemTapped),
+
+  Widget _buildPhysicsFab(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+    return PhysicsFab(
+      tooltip: 'Tools',
+      closedIcon: const Icon(CupertinoIcons.square_grid_2x2),
+      actions: [
+        FabAction(
+          label: 'Paraphraser',
+          icon: CupertinoIcons.text_badge_checkmark,
+          color: colorScheme.primary,
+          onColor: colorScheme.onPrimary,
+          onTap: () => _onItemTapped(1),
+        ),
+        FabAction(
+          label: 'Grammar',
+          icon: CupertinoIcons.checkmark_seal_fill,
+          color: colorScheme.error,
+          onColor: colorScheme.onError,
+          onTap: () => _onItemTapped(2),
+        ),
+        FabAction(
+          label: 'Translator',
+          icon: CupertinoIcons.globe,
+          color: colorScheme.tertiary,
+          onColor: colorScheme.onTertiary,
+          onTap: () => Navigator.push(
+            context,
+            MaterialPageRoute(builder: (_) => const TranslatorPage()),
+          ),
+        ),
+        FabAction(
+          label: 'Summarizer',
+          icon: CupertinoIcons.doc_text_search,
+          color: colorScheme.secondary,
+          onColor: colorScheme.onSecondary,
+          onTap: () => Navigator.push(
+            context,
+            MaterialPageRoute(builder: (_) => const SummarizerPage()),
+          ),
+        ),
+        FabAction(
+          label: 'Tone Editor',
+          icon: CupertinoIcons.waveform_path,
+          color: colorScheme.primaryContainer,
+          onColor: colorScheme.onPrimaryContainer,
+          onTap: () => Navigator.push(
+            context,
+            MaterialPageRoute(builder: (_) => const ToneEditorPage()),
+          ),
+        ),
+        FabAction(
+          label: 'AI Detector',
+          icon: CupertinoIcons.sparkles,
+          color: colorScheme.secondaryContainer,
+          onColor: colorScheme.onSecondaryContainer,
+          onTap: () => Navigator.push(
+            context,
+            MaterialPageRoute(builder: (_) => const AIDetectorPage()),
+          ),
+        ),
+        FabAction(
+          label: 'Jade AI',
+          icon: CupertinoIcons.chat_bubble_2_fill,
+          color: colorScheme.tertiaryContainer,
+          onColor: colorScheme.onTertiaryContainer,
+          onTap: () => Navigator.push(
+            context,
+            MaterialPageRoute(builder: (_) => const JadeChatScreen()),
+          ),
+        ),
+      ],
     );
   }
 
@@ -436,14 +517,7 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
         physics: const NeverScrollableScrollPhysics(),
         children: _pages,
       ),
-      floatingActionButton: FabM3E(
-        icon: const Icon(CupertinoIcons.square_grid_2x2),
-        onPressed: _showToolPopup,
-        kind: FabM3EKind.primary,
-        size: FabM3ESize.regular,
-        shapeFamily: FabM3EShapeFamily.round,
-        tooltip: 'Tools',
-      ),
+      floatingActionButton: _buildPhysicsFab(context),
       bottomNavigationBar: Container(
         margin: EdgeInsets.fromLTRB(r.w(12), 0, r.w(12), r.h(8)),
         decoration: BoxDecoration(

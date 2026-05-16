@@ -31,11 +31,12 @@ import kotlinx.coroutines.*
 import java.util.*
 
 /**
- * Custom gradient overlay view for RGB wave animation
+ * Custom gradient overlay view — Google-branded 4-color edge glow.
+ * Uses the Google brand palette (Blue #4285F4, Red #EA4335, Yellow #FBBC04, Green #34A853)
+ * with a very subtle, low-opacity edge sweep instead of a full rainbow.
  */
 class GradientOverlayView(context: Context) : View(context) {
     private val paint = android.graphics.Paint(android.graphics.Paint.ANTI_ALIAS_FLAG)
-    private val glowPaint = android.graphics.Paint(android.graphics.Paint.ANTI_ALIAS_FLAG)
     private var overlayHeight = 0f
     private var gradientOffset = 0f
     private var overlayAlpha = 0f
@@ -48,16 +49,17 @@ class GradientOverlayView(context: Context) : View(context) {
     private var lastOverlayAlpha = -1f
     private var lastOverlayHeight = -1f
 
-    private val colors = IntArray(16)
-    private val positions = floatArrayOf(
-        0f, 0.06f, 0.12f, 0.18f, 0.24f, 0.30f, 0.36f, 0.42f,
-        0.48f, 0.54f, 0.60f, 0.66f, 0.72f, 0.78f, 0.88f, 1f
-    )
-    private val glowColors = IntArray(5)
-    private val glowPositions = floatArrayOf(0f, 0.25f, 0.5f, 0.75f, 1f)
+    // Google brand colors — just 4 stops + transparent bookends
+    private val colors = IntArray(6)
+    private val positions = floatArrayOf(0f, 0.15f, 0.40f, 0.65f, 0.90f, 1f)
     
     companion object {
         private const val TAG = "GradientOverlayView"
+        // Google brand colors
+        private const val GOOGLE_BLUE  = 0x4285F4
+        private const val GOOGLE_RED   = 0xEA4335
+        private const val GOOGLE_YELLOW = 0xFBBC04
+        private const val GOOGLE_GREEN = 0x34A853
     }
     
     init {
@@ -69,8 +71,8 @@ class GradientOverlayView(context: Context) : View(context) {
         if (overlayHeight != height || gradientOffset != offset || overlayAlpha != alpha) {
             overlayHeight = height
             gradientOffset = offset
-            // Ensure alpha is fully resolved here
-            overlayAlpha = alpha.coerceIn(0f, 1f)
+            // Cap alpha much lower for a subtle, non-garish feel
+            overlayAlpha = (alpha * 0.45f).coerceIn(0f, 0.45f)
             invalidate()
         }
     }
@@ -87,48 +89,22 @@ class GradientOverlayView(context: Context) : View(context) {
         lastOverlayAlpha = overlayAlpha
         lastOverlayHeight = overlayHeight
 
-        val alpha = overlayAlpha
+        val a = (overlayAlpha * 255).toInt().coerceIn(0, 115)
         val startY = height - overlayHeight
-        val gradientHeight = overlayHeight + 200f
 
-        // Fill array for main gradient
-        colors[0] = android.graphics.Color.argb((alpha * 200).toInt(), 255, 20, 60)
-        colors[1] = android.graphics.Color.argb((alpha * 190).toInt(), 255, 65, 54)
-        colors[2] = android.graphics.Color.argb((alpha * 180).toInt(), 255, 87, 34)
-        colors[3] = android.graphics.Color.argb((alpha * 170).toInt(), 255, 111, 0)
-        colors[4] = android.graphics.Color.argb((alpha * 160).toInt(), 255, 152, 0)
-        colors[5] = android.graphics.Color.argb((alpha * 150).toInt(), 255, 193, 7)
-        colors[6] = android.graphics.Color.argb((alpha * 140).toInt(), 139, 195, 74)
-        colors[7] = android.graphics.Color.argb((alpha * 130).toInt(), 76, 175, 80)
-        colors[8] = android.graphics.Color.argb((alpha * 120).toInt(), 0, 188, 212)
-        colors[9] = android.graphics.Color.argb((alpha * 110).toInt(), 3, 169, 244)
-        colors[10] = android.graphics.Color.argb((alpha * 100).toInt(), 33, 150, 243)
-        colors[11] = android.graphics.Color.argb((alpha * 90).toInt(), 63, 81, 181)
-        colors[12] = android.graphics.Color.argb((alpha * 80).toInt(), 103, 58, 183)
-        colors[13] = android.graphics.Color.argb((alpha * 70).toInt(), 156, 39, 176)
-        colors[14] = android.graphics.Color.argb((alpha * 40).toInt(), 233, 30, 99)
-        colors[15] = android.graphics.Color.argb(0, 255, 255, 255)
+        // Transparent → Blue → Red → Yellow → Green → Transparent
+        colors[0] = android.graphics.Color.argb(0, 0x42, 0x85, 0xF4)
+        colors[1] = android.graphics.Color.argb(a, 0x42, 0x85, 0xF4)       // Blue
+        colors[2] = android.graphics.Color.argb((a * 0.85f).toInt(), 0xEA, 0x43, 0x35) // Red
+        colors[3] = android.graphics.Color.argb((a * 0.8f).toInt(), 0xFB, 0xBC, 0x04) // Yellow
+        colors[4] = android.graphics.Color.argb((a * 0.75f).toInt(), 0x34, 0xA8, 0x53) // Green
+        colors[5] = android.graphics.Color.argb(0, 0x34, 0xA8, 0x53)
 
         paint.shader = android.graphics.LinearGradient(
-            gradientOffset - screenWidth * 0.2f, startY,
-            width + gradientOffset + screenWidth * 0.2f, startY + gradientHeight,
+            gradientOffset - screenWidth * 0.1f, startY,
+            width + gradientOffset + screenWidth * 0.1f, startY + overlayHeight,
             colors,
             positions,
-            android.graphics.Shader.TileMode.CLAMP
-        )
-
-        // Fill array for glow gradient
-        glowColors[0] = android.graphics.Color.argb(0, 255, 255, 255)
-        glowColors[1] = android.graphics.Color.argb((alpha * 60).toInt(), 255, 255, 255)
-        glowColors[2] = android.graphics.Color.argb((alpha * 80).toInt(), 255, 255, 255)
-        glowColors[3] = android.graphics.Color.argb((alpha * 40).toInt(), 255, 255, 255)
-        glowColors[4] = android.graphics.Color.argb(0, 255, 255, 255)
-
-        glowPaint.shader = android.graphics.LinearGradient(
-            0f, startY - 120f,
-            0f, startY + 120f,
-            glowColors,
-            glowPositions,
             android.graphics.Shader.TileMode.CLAMP
         )
     }
@@ -146,10 +122,8 @@ class GradientOverlayView(context: Context) : View(context) {
         updateShaders(w, h)
         val startY = h - overlayHeight
 
-        // Draw the buttery smooth gradient overlay
+        // Draw the subtle edge gradient
         canvas.drawRect(0f, startY, w, h, paint)
-        // Ultra-soft glow effect for premium feel
-        canvas.drawRect(0f, startY - 120f, w, startY + 120f, glowPaint)
     }
 }
 
@@ -533,7 +507,16 @@ class MyAccessibilityService : AccessibilityService(), BubbleInteractionListener
 
     private fun showBottomSheet() {
         activeSourceNode = findFocusedNode()
-        val originalText = activeSourceNode?.text?.toString() ?: ""
+        // Extract text, but filter out hint/placeholder text (e.g. WhatsApp's "Message")
+        val rawText = activeSourceNode?.text?.toString() ?: ""
+        val hintText = activeSourceNode?.hintText?.toString()
+        val originalText = if (!hintText.isNullOrBlank() && rawText.equals(hintText, ignoreCase = true)) {
+            ""  // Field is empty — the 'text' was just the placeholder
+        } else if (rawText.lowercase().trim().let { it == "message" || it == "type a message" || it == "type a message..." || it == "type message" }) {
+            ""  // Hardcoded common placeholders for Meta apps
+        } else {
+            rawText
+        }
 
         val themedContext = ContextThemeWrapper(this, R.style.Theme_App_Translucent)
         val inflater = LayoutInflater.from(themedContext)
@@ -1261,7 +1244,9 @@ class MyAccessibilityService : AccessibilityService(), BubbleInteractionListener
                 }
                 
                 if (response.isSuccessful && response.body() != null) {
-                    val content = response.body()!!.choices.firstOrNull()?.message?.content ?: ""
+                    // Strip chain-of-thought <think>...</think> blocks from qwen3 responses
+                    val rawContent = response.body()!!.choices.firstOrNull()?.message?.content ?: ""
+                    val content = rawContent.replace(Regex("<think>[\\s\\S]*?</think>", RegexOption.IGNORE_CASE), "").trim()
 
                     // --- RESTORED SUGGESTION PARSING ---
                     val suggestions = if (isGenerationTask || selectedPersona == "Poetry" || selectedPersona == "Casual") {

@@ -44,10 +44,13 @@ import java.util.concurrent.TimeUnit
 class AIManager(private val context: Context) {
         /**
          * Post-process AI response to block identity/trivial answers.
+         * Also strips qwen3's chain-of-thought <think>...</think> blocks.
          * Returns null if the response should be suppressed.
          */
         private fun filterUnwantedResponses(response: String): String? {
-            val lower = response.trim().lowercase()
+            // Strip chain-of-thought <think>...</think> blocks first
+            val cleaned = response.replace(Regex("<think>[\\s\\S]*?</think>", RegexOption.IGNORE_CASE), "").trim()
+            val lower = cleaned.lowercase()
             val identityPatterns = listOf(
                 "i am an ai", "as an ai", "i am a language model", "i am artificial intelligence",
                 "i am an artificial intelligence", "i am a machine", "i am not human", "as a language model"
@@ -61,7 +64,7 @@ class AIManager(private val context: Context) {
             if (lower.startsWith("as an ai")) return null
             // Block empty or nonsense
             if (lower.isBlank() || lower == "null" || lower == "n/a") return null
-            return response.trim()
+            return cleaned
         }
     
     companion object {
@@ -106,7 +109,7 @@ class AIManager(private val context: Context) {
                 isAdvancedEnabled = false,
                 provider = AIConfigProvider.PROVIDER_GROQ,
                 apiKey = overrideApiKey!!,
-                model = "llama-3.3-70b-versatile",
+                model = "qwen/qwen3-32b",
                 maxTokens = 2048,
                 customEndpoint = ""
             )
@@ -348,7 +351,9 @@ class AIManager(private val context: Context) {
                         Message(role = "system", content = systemPrompt),
                         Message(role = "user", content = userPrompt)
                     ),
-                    temperature = 0.7,
+                    temperature = 0.9,
+                    topP = 0.95,
+                    presencePenalty = 0.3,
                     maxTokens = overrideMaxTokens ?: config.maxTokens
                 )
                 val jsonBody = gson.toJson(request)
@@ -500,6 +505,16 @@ class AIManager(private val context: Context) {
         }
 
         val config = getConfig()
+
+        // Route to fast model for quick actions, standard model for full rewrites
+        val routedConfig = if (!config.isAdvancedEnabled) {
+            val routedModel = when (action) {
+                AIAction.FIX_GRAMMAR -> "qwen/qwen3-32b"
+                AIAction.REWRITE, AIAction.MAKE_FORMAL, AIAction.MAKE_CASUAL -> "qwen/qwen3-32b"
+                else -> "qwen/qwen3-32b"
+            }
+            config.copy(model = routedModel)
+        } else config
         
         if (!config.hasValidApiKey()) {
             return Result.failure(AIException("No API key. Go to Settings → Advanced AI"))
@@ -511,8 +526,8 @@ class AIManager(private val context: Context) {
         
         val systemPrompt = buildSystemPrompt(action)
         val userPrompt = buildUserPrompt(text, action)
-        
-        return makeApiRequest(config, systemPrompt, userPrompt, overrideMaxTokens = 512)
+
+        return makeApiRequest(routedConfig, systemPrompt, userPrompt, overrideMaxTokens = 300)
     }
     
     /**
@@ -740,8 +755,8 @@ $actionInstruction
 1. Return ONLY the final text. No quotes, no "Here is...", no explanations, no commentary.
 2. NEVER reveal you are an AI, language model, or machine. NEVER answer questions about your identity.
 3. NEVER answer trivial math or fact queries (e.g., "2+2", "who are you").
-4. ALWAYS respond in ENGLISH - DO NOT translate to other languages.
-5. Sound authentically human - avoid robotic patterns or corporate-speak.
+4. Keep the same language as the input text — do NOT translate unless explicitly asked.
+5. Sound authentically human — avoid robotic patterns or corporate-speak.
 6. Preserve the original intent and any specific details mentioned.
 </constraints>"""
     }
@@ -875,7 +890,11 @@ class AIException(message: String) : Exception(message)
 data class GroqRequest(
     val model: String,
     val messages: List<Message>,
-    val temperature: Double = 0.7,
+    val temperature: Double = 0.9,
+    @SerializedName("top_p")
+    val topP: Double = 0.95,
+    @SerializedName("presence_penalty")
+    val presencePenalty: Double = 0.3,
     @SerializedName("max_tokens")
     val maxTokens: Int = 2048
 )
@@ -909,3 +928,4 @@ data class GeminiContent(
 data class GeminiPart(
     val text: String?
 )
+

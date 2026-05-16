@@ -98,9 +98,8 @@ dependencies:
   html: ^0.15.6
   beautiful_soup_dart: ^0.3.0
 
-  # Material 3 Expressive Design System
-  m3e_collection:
-    path: material_3_expressive-main/packages/m3e_collection
+  # Material 3 Expressive Design System (via pub.dev)
+  m3e_collection: ^0.3.7
   expressive_refresh: ^0.1.2
   dynamic_color: ^1.8.1
 
@@ -120,32 +119,6 @@ dependency_overrides:
   device_info_plus: 11.0.0
   connectivity_plus: 7.0.0
   archive: ^4.0.0
-  m3e_design:
-    path: material_3_expressive-main/packages/m3e_design
-  button_m3e:
-    path: material_3_expressive-main/packages/button_m3e
-  button_group_m3e:
-    path: material_3_expressive-main/packages/button_group_m3e
-  fab_m3e:
-    path: material_3_expressive-main/packages/fab_m3e
-  icon_button_m3e:
-    path: material_3_expressive-main/packages/icon_button_m3e
-  loading_indicator_m3e:
-    path: material_3_expressive-main/packages/loading_indicator_m3e
-  navigation_bar_m3e:
-    path: material_3_expressive-main/packages/navigation_bar_m3e
-  navigation_rail_m3e:
-    path: material_3_expressive-main/packages/navigation_rail_m3e
-  progress_indicator_m3e:
-    path: material_3_expressive-main/packages/progress_indicator_m3e
-  slider_m3e:
-    path: material_3_expressive-main/packages/slider_m3e
-  split_button_m3e:
-    path: material_3_expressive-main/packages/split_button_m3e
-  toolbar_m3e:
-    path: material_3_expressive-main/packages/toolbar_m3e
-  app_bar_m3e:
-    path: material_3_expressive-main/packages/app_bar_m3e
 
 # For information on the generic Dart part of this file, see the
 # following page: https://dart.dev/tools/pub/pubspec
