@@ -427,72 +427,11 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin, Widg
   }
 
 
-  void _openFabScreen(Widget screen) {
-    Navigator.of(context, rootNavigator: true).push(
-      MaterialPageRoute(builder: (_) => screen),
-    );
-  }
-
-  void _openFabTab(int index) {
-    _onItemTapped(index);
-  }
-
   Widget _buildPhysicsFab(BuildContext context) {
-    final colorScheme = Theme.of(context).colorScheme;
     return PhysicsFab(
+      onSelectHomeTab: _onItemTapped,
       tooltip: 'Tools',
       closedIcon: const Icon(CupertinoIcons.square_grid_2x2),
-      actions: [
-        FabAction(
-          label: 'Paraphraser',
-          icon: CupertinoIcons.text_badge_checkmark,
-          color: colorScheme.primary,
-          onColor: colorScheme.onPrimary,
-          onTap: () => _openFabTab(1),
-        ),
-        FabAction(
-          label: 'Grammar',
-          icon: CupertinoIcons.checkmark_seal_fill,
-          color: colorScheme.error,
-          onColor: colorScheme.onError,
-          onTap: () => _openFabTab(2),
-        ),
-        FabAction(
-          label: 'Translator',
-          icon: CupertinoIcons.globe,
-          color: colorScheme.tertiary,
-          onColor: colorScheme.onTertiary,
-          onTap: () => _openFabScreen(const TranslatorPage()),
-        ),
-        FabAction(
-          label: 'Summarizer',
-          icon: CupertinoIcons.doc_text_search,
-          color: colorScheme.secondary,
-          onColor: colorScheme.onSecondary,
-          onTap: () => _openFabScreen(const SummarizerPage()),
-        ),
-        FabAction(
-          label: 'Tone Editor',
-          icon: CupertinoIcons.waveform_path,
-          color: colorScheme.primaryContainer,
-          onColor: colorScheme.onPrimaryContainer,
-          onTap: () => _openFabScreen(const ToneEditorPage()),
-        ),
-        FabAction(
-          label: 'AI Detector',
-          icon: CupertinoIcons.sparkles,
-          color: colorScheme.secondaryContainer,
-          onColor: colorScheme.onSecondaryContainer,
-          onTap: () => _openFabScreen(const AIDetectorPage()),
-        ),
-        FabAction(
-          label: 'Jade AI',
-          icon: CupertinoIcons.chat_bubble_2_fill,
-          color: colorScheme.tertiaryContainer,
-          onColor: colorScheme.onTertiaryContainer,
-          onTap: () => _openFabScreen(const JadeChatScreen()),
-        ),
-      ],
     );
   }
 
