@@ -9,6 +9,7 @@ import '../screens/ai_detector_page.dart';
 import '../screens/translator_page.dart';
 import '../screens/summarizer_page.dart';
 import '../screens/tone_editor_page.dart';
+import '../screens/jade_chat_screen.dart';
 import '../screens/document_viewer_screen.dart';
 import '../services/document_service.dart';
 import '../utils/doc_gate.dart';
@@ -40,6 +41,10 @@ class _PhysicsFabState extends State<PhysicsFab>
   final OverlayPortalController _overlayController = OverlayPortalController();
   final LayerLink _layerLink = LayerLink();
 
+  // Capture the home-tree BuildContext so overlay callbacks can navigate correctly.
+  // This is set/refreshed inside build() which always runs in the correct tree.
+  late BuildContext _homeContext;
+
   static const _openSpring  = SpringDescription(mass: 1, stiffness: 180, damping: 14);
   static const _closeSpring = SpringDescription(mass: 1, stiffness: 380, damping: 26);
 
@@ -56,7 +61,7 @@ class _PhysicsFabState extends State<PhysicsFab>
       duration: const Duration(milliseconds: 600),
     );
     _controller.addStatusListener((status) {
-      if (status == AnimationStatus.dismissed) {
+      if (status == AnimationStatus.dismissed && mounted) {
         _overlayController.hide();
       }
     });
@@ -83,71 +88,78 @@ class _PhysicsFabState extends State<PhysicsFab>
     setState(() => _open = !_open);
   }
 
-  void _close() { if (_open) _toggle(); }
+  void _close() {
+    if (_open) _toggle();
+  }
 
+  /// Close the overlay, then run [action] in the home-tree context.
   void _closeAndRun(VoidCallback action) {
     if (_open) {
       setState(() => _open = false);
       _controller.animateWith(
           SpringSimulation(_closeSpring, _controller.value, 0, -4));
     }
+    // Use a post-frame callback so the overlay finishes collapsing before
+    // navigation occurs, preventing jank or hero-animation conflicts.
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
       action();
     });
   }
 
-  void _navigateToTool(BuildContext context, String toolName) {
-    if (!context.mounted) return;
-    final navigator = Navigator.of(context, rootNavigator: true);
+  // ─── Navigation ────────────────────────────────────────────────────────────
+  // Always uses _homeContext (set in build()) which has the correct Navigator.
+
+  void _navigateToTool(String toolName) {
+    final ctx = _homeContext;
+    if (!ctx.mounted) return;
+    final navigator = Navigator.of(ctx, rootNavigator: true);
+
     switch (toolName.toLowerCase()) {
       case 'ai detector':
-        navigator.push(
-            MaterialPageRoute(builder: (_) => const AIDetectorPage()));
+        navigator.push(MaterialPageRoute(builder: (_) => const AIDetectorPage()));
         break;
       case 'translator':
-        navigator.push(
-            MaterialPageRoute(builder: (_) => const TranslatorPage()));
+        navigator.push(MaterialPageRoute(builder: (_) => const TranslatorPage()));
         break;
       case 'paraphraser':
         if (widget.onSelectHomeTab != null) {
           widget.onSelectHomeTab!(1);
         } else {
-          navigator.push(
-              MaterialPageRoute(builder: (_) => const ParaphraserPage()));
+          navigator.push(MaterialPageRoute(builder: (_) => const ParaphraserPage()));
         }
         break;
       case 'grammar':
         if (widget.onSelectHomeTab != null) {
           widget.onSelectHomeTab!(2);
         } else {
-          navigator.push(
-              MaterialPageRoute(builder: (_) => const GrammarPage()));
+          navigator.push(MaterialPageRoute(builder: (_) => const GrammarPage()));
         }
         break;
       case 'summarizer':
-        navigator.push(
-            MaterialPageRoute(builder: (_) => const SummarizerPage()));
+        navigator.push(MaterialPageRoute(builder: (_) => const SummarizerPage()));
         break;
       case 'tone editor':
-        navigator.push(
-            MaterialPageRoute(builder: (_) => const ToneEditorPage()));
+        navigator.push(MaterialPageRoute(builder: (_) => const ToneEditorPage()));
+        break;
+      case 'jade ai':
+        navigator.push(MaterialPageRoute(builder: (_) => const JadeChatScreen()));
         break;
       case 'scan document':
-        _scanDocument(context);
+        _scanDocument(ctx, navigator);
         break;
       case 'import file':
-        _importFile(context);
+        _importFile(ctx, navigator);
         break;
     }
   }
 
-  void _scanDocument(BuildContext context) async {
-    if (!await DocGate.check(context)) return;
+  void _scanDocument(BuildContext ctx, NavigatorState navigator) async {
+    if (!await DocGate.check(ctx)) return;
     try {
       final result = await DocumentService.scanDocument();
-      if (result != null && result.text.isNotEmpty && context.mounted) {
-        Navigator.of(context, rootNavigator: true).push(
+      if (result != null && result.text.isNotEmpty && ctx.mounted) {
+        navigator.push(
           MaterialPageRoute(
             builder: (_) => DocumentViewerScreen(
               document: result,
@@ -161,12 +173,12 @@ class _PhysicsFabState extends State<PhysicsFab>
     }
   }
 
-  void _importFile(BuildContext context) async {
-    if (!await DocGate.check(context)) return;
+  void _importFile(BuildContext ctx, NavigatorState navigator) async {
+    if (!await DocGate.check(ctx)) return;
     try {
       final result = await DocumentService.pickFile();
-      if (result != null && result.text.isNotEmpty && context.mounted) {
-        Navigator.of(context, rootNavigator: true).push(
+      if (result != null && result.text.isNotEmpty && ctx.mounted) {
+        navigator.push(
           MaterialPageRoute(
             builder: (_) => DocumentViewerScreen(
               document: result,
@@ -180,74 +192,84 @@ class _PhysicsFabState extends State<PhysicsFab>
     }
   }
 
-  List<FabAction> _buildActions(BuildContext context) {
-    final cs = Theme.of(context).colorScheme;
-    final isDark = Theme.of(context).brightness == Brightness.dark;
+  // ─── Action list ───────────────────────────────────────────────────────────
 
+  List<_FabActionData> _buildActions(ColorScheme cs, bool isDark) {
     return [
-      FabAction(
+      _FabActionData(
+        label: 'Jade AI',
+        icon: CupertinoIcons.chat_bubble_2_fill,
+        color: isDark ? cs.tertiaryContainer : const Color(0xFFEDE9FE),
+        onColor: isDark ? cs.onTertiaryContainer : const Color(0xFF4C1D95),
+        toolName: 'jade ai',
+      ),
+      _FabActionData(
         label: 'AI Detector',
         icon: CupertinoIcons.sparkles,
         color: cs.primaryContainer,
         onColor: cs.onPrimaryContainer,
-        onTap: () => _navigateToTool(context, 'ai detector'),
+        toolName: 'ai detector',
       ),
-      FabAction(
+      _FabActionData(
         label: 'Translator',
         icon: CupertinoIcons.globe,
         color: cs.secondaryContainer,
         onColor: cs.onSecondaryContainer,
-        onTap: () => _navigateToTool(context, 'translator'),
+        toolName: 'translator',
       ),
-      FabAction(
+      _FabActionData(
         label: 'Paraphraser',
         icon: CupertinoIcons.text_badge_checkmark,
         color: cs.tertiaryContainer,
         onColor: cs.onTertiaryContainer,
-        onTap: () => _navigateToTool(context, 'paraphraser'),
+        toolName: 'paraphraser',
       ),
-      FabAction(
+      _FabActionData(
         label: 'Grammar',
         icon: CupertinoIcons.checkmark_seal_fill,
         color: cs.errorContainer,
         onColor: cs.onErrorContainer,
-        onTap: () => _navigateToTool(context, 'grammar'),
+        toolName: 'grammar',
       ),
-      FabAction(
+      _FabActionData(
         label: 'Summarizer',
         icon: CupertinoIcons.doc_text_search,
         color: isDark ? cs.primaryContainer : const Color(0xFFFEF3C7),
         onColor: isDark ? cs.onPrimaryContainer : const Color(0xFF92400E),
-        onTap: () => _navigateToTool(context, 'summarizer'),
+        toolName: 'summarizer',
       ),
-      FabAction(
+      _FabActionData(
         label: 'Tone Editor',
         icon: CupertinoIcons.waveform_path,
         color: isDark ? cs.secondaryContainer : const Color(0xFFCCFBF1),
         onColor: isDark ? cs.onSecondaryContainer : const Color(0xFF0F766E),
-        onTap: () => _navigateToTool(context, 'tone editor'),
+        toolName: 'tone editor',
       ),
-      FabAction(
+      _FabActionData(
         label: 'Scan Document',
         icon: CupertinoIcons.camera_viewfinder,
-        color: isDark ? cs.tertiaryContainer : const Color(0xFFEDE9FE),
-        onColor: isDark ? cs.onTertiaryContainer : const Color(0xFF4C1D95),
-        onTap: () => _navigateToTool(context, 'scan document'),
-      ),
-      FabAction(
-        label: 'Import File',
-        icon: CupertinoIcons.doc_on_doc,
         color: isDark ? cs.surfaceContainerHigh : const Color(0xFFDBEAFE),
         onColor: isDark ? cs.onSurface : const Color(0xFF1E3A8A),
-        onTap: () => _navigateToTool(context, 'import file'),
+        toolName: 'scan document',
+      ),
+      _FabActionData(
+        label: 'Import File',
+        icon: CupertinoIcons.doc_on_doc,
+        color: isDark ? cs.inverseSurface : const Color(0xFFDCFCE7),
+        onColor: isDark ? cs.onInverseSurface : const Color(0xFF14532D),
+        toolName: 'import file',
       ),
     ];
   }
 
   @override
   Widget build(BuildContext context) {
+    // Always refresh _homeContext from the real widget-tree context.
+    _homeContext = context;
+
     final cs = Theme.of(context).colorScheme;
-    final actions = _buildActions(context);
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final actions = _buildActions(cs, isDark);
     final n = actions.length;
 
     return CompositedTransformTarget(
@@ -258,16 +280,21 @@ class _PhysicsFabState extends State<PhysicsFab>
         children: [
           OverlayPortal(
             controller: _overlayController,
-            overlayChildBuilder: (context) {
+            overlayChildBuilder: (_) {
+              // NOTE: we intentionally do NOT use this overlay context for
+              // navigation – we use _homeContext captured above.
               return Stack(
                 children: [
+                  // Dismiss barrier
                   Positioned.fill(
                     child: GestureDetector(
                       behavior: HitTestBehavior.opaque,
                       onTap: _close,
-                      child: Container(color: Colors.transparent),
+                      child: const ColoredBox(color: Colors.transparent),
                     ),
                   ),
+
+                  // Action buttons anchored to FAB position
                   Positioned(
                     child: CompositedTransformFollower(
                       link: _layerLink,
@@ -281,35 +308,44 @@ class _PhysicsFabState extends State<PhysicsFab>
                           clipBehavior: Clip.none,
                           children: List.generate(n, (i) {
                             final slot  = n - 1 - i;
-                            final start = (slot * 0.13).clamp(0.0, 0.65);
+                            final start = (slot * 0.10).clamp(0.0, 0.70);
                             final anim  = CurvedAnimation(
                               parent: _controller,
                               curve: Interval(start, 1.0, curve: Curves.elasticOut),
                             );
-
-                            final bottomPos = _fabHeight + _gapAboveFab + (n - 1 - i) * _itemSpacing;
+                            final bottomPos =
+                                _fabHeight + _gapAboveFab + (n - 1 - i) * _itemSpacing;
+                            final action = actions[i];
 
                             return Positioned(
                               bottom: bottomPos,
-                              right: 5, // 5px offset to center the 46px circle in the 56px FAB
+                              right: 5,
                               child: AnimatedBuilder(
                                 animation: anim,
-                                builder: (context, child) {
+                                builder: (_, child) {
                                   final t = anim.value.clamp(0.0, 1.0);
-                                  return Opacity(
-                                    opacity: t,
-                                    child: Transform.translate(
-                                      offset: Offset(0, 20 * (1 - t)),
-                                      child: Transform.scale(
-                                        scale: 0.72 + 0.28 * t,
-                                        child: child,
+                                  return IgnorePointer(
+                                    ignoring: !_open,
+                                    child: Opacity(
+                                      opacity: t,
+                                      child: Transform.translate(
+                                        offset: Offset(0, 20 * (1 - t)),
+                                        child: Transform.scale(
+                                          scale: 0.72 + 0.28 * t,
+                                          child: child,
+                                        ),
                                       ),
                                     ),
                                   );
                                 },
                                 child: _ActionButton(
-                                  action: actions[i],
-                                  onTap: () => _closeAndRun(() => actions[i].onTap()),
+                                  label: action.label,
+                                  icon: action.icon,
+                                  color: action.color,
+                                  onColor: action.onColor,
+                                  onTap: () => _closeAndRun(
+                                    () => _navigateToTool(action.toolName),
+                                  ),
                                 ),
                               ),
                             );
@@ -323,6 +359,7 @@ class _PhysicsFabState extends State<PhysicsFab>
             },
           ),
 
+          // Main FAB
           FloatingActionButton(
             heroTag: 'physics_fab_main',
             tooltip: _open ? 'Close' : widget.tooltip,
@@ -348,10 +385,22 @@ class _PhysicsFabState extends State<PhysicsFab>
   }
 }
 
+// ─── Action button widget ─────────────────────────────────────────────────────
+
 class _ActionButton extends StatefulWidget {
-  final FabAction action;
+  final String label;
+  final IconData icon;
+  final Color color;
+  final Color onColor;
   final VoidCallback onTap;
-  const _ActionButton({required this.action, required this.onTap});
+
+  const _ActionButton({
+    required this.label,
+    required this.icon,
+    required this.color,
+    required this.onColor,
+    required this.onTap,
+  });
 
   @override
   State<_ActionButton> createState() => _ActionButtonState();
@@ -374,14 +423,15 @@ class _ActionButtonState extends State<_ActionButton>
   }
 
   @override
-  void dispose() { _press.dispose(); super.dispose(); }
+  void dispose() {
+    _press.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
     final tt = Theme.of(context).textTheme;
-    final color   = widget.action.color   ?? cs.secondaryContainer;
-    final onColor = widget.action.onColor ?? cs.onSecondaryContainer;
 
     return GestureDetector(
       behavior: HitTestBehavior.opaque,
@@ -395,6 +445,7 @@ class _ActionButtonState extends State<_ActionButton>
           child: Row(
             mainAxisSize: MainAxisSize.min,
             children: [
+              // Label pill
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
                 decoration: BoxDecoration(
@@ -403,7 +454,7 @@ class _ActionButtonState extends State<_ActionButton>
                   border: Border.all(color: cs.outlineVariant, width: 0.75),
                 ),
                 child: Text(
-                  widget.action.label,
+                  widget.label,
                   style: tt.labelLarge?.copyWith(
                     color: cs.onSurface,
                     fontWeight: FontWeight.w500,
@@ -411,14 +462,15 @@ class _ActionButtonState extends State<_ActionButton>
                 ),
               ),
               const SizedBox(width: 10),
+              // Icon chip
               Material(
-                color: color,
+                color: widget.color,
                 shape: const CircleBorder(),
                 elevation: 2,
                 child: SizedBox(
                   width: 46,
                   height: 46,
-                  child: Icon(widget.action.icon, color: onColor, size: 22),
+                  child: Icon(widget.icon, color: widget.onColor, size: 22),
                 ),
               ),
             ],
@@ -429,18 +481,20 @@ class _ActionButtonState extends State<_ActionButton>
   }
 }
 
-class FabAction {
+// ─── Internal data class ──────────────────────────────────────────────────────
+
+class _FabActionData {
   final String label;
   final IconData icon;
-  final VoidCallback onTap;
-  final Color? color;
-  final Color? onColor;
+  final Color color;
+  final Color onColor;
+  final String toolName;
 
-  const FabAction({
+  const _FabActionData({
     required this.label,
     required this.icon,
-    required this.onTap,
-    this.color,
-    this.onColor,
+    required this.color,
+    required this.onColor,
+    required this.toolName,
   });
 }

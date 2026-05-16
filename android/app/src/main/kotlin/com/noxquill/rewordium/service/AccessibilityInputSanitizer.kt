@@ -19,6 +19,8 @@ object AccessibilityInputSanitizer {
         "com.instagram.lite",
     )
 
+    private val INVISIBLE_CHARS = Regex("[\\u200B-\\u200D\\uFEFF\\u200E\\u200F\\u00A0]")
+
     private val KNOWN_PLACEHOLDER_PHRASES = listOf(
         "message",
         "messages",
@@ -62,7 +64,7 @@ object AccessibilityInputSanitizer {
     }
 
     fun sanitizeFieldText(node: AccessibilityNodeInfo?, rawText: String?): String {
-        val text = rawText?.trim().orEmpty()
+        val text = rawText?.replace(INVISIBLE_CHARS, "")?.trim().orEmpty()
         if (text.isEmpty()) return ""
 
         if (isPlaceholderText(node, text)) return ""
