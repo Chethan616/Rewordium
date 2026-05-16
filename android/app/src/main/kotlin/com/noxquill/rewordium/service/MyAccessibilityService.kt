@@ -31,103 +31,6 @@ import kotlinx.coroutines.*
 import java.util.*
 
 /**
- * Custom gradient overlay view — Google-branded 4-color edge glow.
- * Uses the Google brand palette (Blue #4285F4, Red #EA4335, Yellow #FBBC04, Green #34A853)
- * with a very subtle, low-opacity edge sweep instead of a full rainbow.
- */
-class GradientOverlayView(context: Context) : View(context) {
-    private val paint = android.graphics.Paint(android.graphics.Paint.ANTI_ALIAS_FLAG)
-    private var overlayHeight = 0f
-    private var gradientOffset = 0f
-    private var overlayAlpha = 0f
-    private val screenWidth = resources.displayMetrics.widthPixels.toFloat()
-
-    // Cache variables to prevent GC churn on 60FPS animation frames
-    private var lastWidth = 0f
-    private var lastHeight = 0f
-    private var lastGradientOffset = -1f
-    private var lastOverlayAlpha = -1f
-    private var lastOverlayHeight = -1f
-
-    // Google brand colors — just 4 stops + transparent bookends
-    private val colors = IntArray(6)
-    private val positions = floatArrayOf(0f, 0.15f, 0.40f, 0.65f, 0.90f, 1f)
-    
-    companion object {
-        private const val TAG = "GradientOverlayView"
-        // Google brand colors
-        private const val GOOGLE_BLUE  = 0x4285F4
-        private const val GOOGLE_RED   = 0xEA4335
-        private const val GOOGLE_YELLOW = 0xFBBC04
-        private const val GOOGLE_GREEN = 0x34A853
-    }
-    
-    init {
-        // Enable hardware acceleration for smooth performance
-        setLayerType(View.LAYER_TYPE_HARDWARE, null)
-    }
-    
-    fun updateGradientProperties(height: Float, offset: Float, alpha: Float) {
-        if (overlayHeight != height || gradientOffset != offset || overlayAlpha != alpha) {
-            overlayHeight = height
-            gradientOffset = offset
-            // Cap alpha much lower for a subtle, non-garish feel
-            overlayAlpha = (alpha * 0.45f).coerceIn(0f, 0.45f)
-            invalidate()
-        }
-    }
-    
-    private fun updateShaders(width: Float, height: Float) {
-        if (width == lastWidth && height == lastHeight && gradientOffset == lastGradientOffset && 
-            overlayAlpha == lastOverlayAlpha && overlayHeight == lastOverlayHeight) {
-            return
-        }
-
-        lastWidth = width
-        lastHeight = height
-        lastGradientOffset = gradientOffset
-        lastOverlayAlpha = overlayAlpha
-        lastOverlayHeight = overlayHeight
-
-        val a = (overlayAlpha * 255).toInt().coerceIn(0, 115)
-        val startY = height - overlayHeight
-
-        // Transparent → Blue → Red → Yellow → Green → Transparent
-        colors[0] = android.graphics.Color.argb(0, 0x42, 0x85, 0xF4)
-        colors[1] = android.graphics.Color.argb(a, 0x42, 0x85, 0xF4)       // Blue
-        colors[2] = android.graphics.Color.argb((a * 0.85f).toInt(), 0xEA, 0x43, 0x35) // Red
-        colors[3] = android.graphics.Color.argb((a * 0.8f).toInt(), 0xFB, 0xBC, 0x04) // Yellow
-        colors[4] = android.graphics.Color.argb((a * 0.75f).toInt(), 0x34, 0xA8, 0x53) // Green
-        colors[5] = android.graphics.Color.argb(0, 0x34, 0xA8, 0x53)
-
-        paint.shader = android.graphics.LinearGradient(
-            gradientOffset - screenWidth * 0.1f, startY,
-            width + gradientOffset + screenWidth * 0.1f, startY + overlayHeight,
-            colors,
-            positions,
-            android.graphics.Shader.TileMode.CLAMP
-        )
-    }
-    
-    override fun onDraw(canvas: android.graphics.Canvas) {
-        super.onDraw(canvas)
-        
-        val w = width.toFloat()
-        val h = height.toFloat()
-        
-        if (w <= 0 || h <= 0 || overlayAlpha <= 0 || overlayHeight <= 0) {
-            return
-        }
-
-        updateShaders(w, h)
-        val startY = h - overlayHeight
-
-        // Draw the subtle edge gradient
-        canvas.drawRect(0f, startY, w, h, paint)
-    }
-}
-
-/**
  * MyAccessibilityService provides an overlay interface for AI-powered text rewriting.
  * 
  * This accessibility service monitors allowed applications for keyboard input events
@@ -507,16 +410,10 @@ class MyAccessibilityService : AccessibilityService(), BubbleInteractionListener
 
     private fun showBottomSheet() {
         activeSourceNode = findFocusedNode()
-        // Extract text, but filter out hint/placeholder text (e.g. WhatsApp's "Message")
-        val rawText = activeSourceNode?.text?.toString() ?: ""
-        val hintText = activeSourceNode?.hintText?.toString()
-        val originalText = if (!hintText.isNullOrBlank() && rawText.equals(hintText, ignoreCase = true)) {
-            ""  // Field is empty — the 'text' was just the placeholder
-        } else if (rawText.lowercase().trim().let { it == "message" || it == "type a message" || it == "type a message..." || it == "type message" }) {
-            ""  // Hardcoded common placeholders for Meta apps
-        } else {
-            rawText
-        }
+        val originalText = AccessibilityInputSanitizer.sanitizeFieldText(
+            activeSourceNode,
+            activeSourceNode?.text?.toString(),
+        )
 
         val themedContext = ContextThemeWrapper(this, R.style.Theme_App_Translucent)
         val inflater = LayoutInflater.from(themedContext)
@@ -667,7 +564,12 @@ class MyAccessibilityService : AccessibilityService(), BubbleInteractionListener
 
         editTextContent.setOnClickListener {
             isPerformingManualTransition = true
-            showFocusedEditor(editTextContent.text.toString())
+            showFocusedEditor(
+                AccessibilityInputSanitizer.sanitizeFieldText(
+                    activeSourceNode,
+                    editTextContent.text.toString(),
+                ),
+            )
         }
         editTextContent.isFocusable = false
         editTextContent.setText(originalText)
@@ -688,7 +590,11 @@ class MyAccessibilityService : AccessibilityService(), BubbleInteractionListener
             if (isGenerating) return@setOnClickListener
             isPerformingManualTransition = true
             isGenerating = true
-            startGeneration(editTextContent.text.toString())
+            val input = AccessibilityInputSanitizer.sanitizeFieldText(
+                activeSourceNode,
+                editTextContent.text.toString(),
+            )
+            startGeneration(input)
         }
     }
 
@@ -885,6 +791,8 @@ class MyAccessibilityService : AccessibilityService(), BubbleInteractionListener
     }
 
     private fun startGeneration(textToRewrite: String) {
+        val effectiveText = AccessibilityInputSanitizer.sanitizeFieldText(activeSourceNode, textToRewrite)
+
         // --- The Login Check Gate ---
         if (BuildConfig.DEBUG) {
             Log.d(TAG, "startGeneration called - checking login status")
@@ -973,8 +881,8 @@ class MyAccessibilityService : AccessibilityService(), BubbleInteractionListener
 
         focusedEditorView = null
         
-        // Enhanced logic: If no text entered, read on-screen content with beautiful gradient wave
-        if (textToRewrite.isBlank()) {
+        // Empty field (or hint-only): read on-screen content and draft from context
+        if (effectiveText.isBlank()) {
             val screenContent = readOnScreenContent()
             if (screenContent.isBlank()) {
                 Toast.makeText(this, "No text to process and no screen content found", Toast.LENGTH_SHORT).show()
@@ -983,8 +891,7 @@ class MyAccessibilityService : AccessibilityService(), BubbleInteractionListener
                 return
             }
             
-            // Show beautiful RGB gradient wave animation
-            showRGBGradientWave()
+            showGoogleEdgeGlow()
             
             // Update the input field with screen content and continue processing
             bottomSheetView?.findViewById<EditText>(R.id.edit_text_content)?.setText(screenContent)
@@ -998,7 +905,7 @@ class MyAccessibilityService : AccessibilityService(), BubbleInteractionListener
         isStoppedByUser = false
 
         // --- PROMPT ENHANCEMENT LOGIC ---
-        val normalizedInput = textToRewrite.trim()
+        val normalizedInput = effectiveText.trim()
         val lowerInput = normalizedInput.lowercase()
 
         val generationTriggers = listOf(
@@ -1978,7 +1885,7 @@ class MyAccessibilityService : AccessibilityService(), BubbleInteractionListener
             activeSourceNode = null
             
             // Clean up gradient wave animation
-            hideRGBGradientWave()
+            hideGoogleEdgeGlow()
             
             floatingBubbleView?.resetIdleTimer()
             
@@ -2056,7 +1963,10 @@ class MyAccessibilityService : AccessibilityService(), BubbleInteractionListener
 
         focusedEditorView!!.findViewById<MaterialButton>(R.id.focused_button_generate).setOnClickListener {
             if (isGenerating || isTransitioningFromFocusedEditor) return@setOnClickListener
-            val newText = focusedEditText.text.toString()
+            val newText = AccessibilityInputSanitizer.sanitizeFieldText(
+                activeSourceNode,
+                focusedEditText.text.toString(),
+            )
 
             isPerformingManualTransition = true
             isTransitioningFromFocusedEditor = true
@@ -2749,217 +2659,86 @@ class MyAccessibilityService : AccessibilityService(), BubbleInteractionListener
         }
     }
     
-    /**
-     * Google Circle to Search Style Gradient Overlay
-     * Creates a beautiful gradient that slides up from bottom with flowing colors
-     */
-    private var gradientOverlayView: GradientOverlayView? = null
-    private var gradientAnimator: android.animation.ValueAnimator? = null
-    private var flowingGradientAnimator: android.animation.ValueAnimator? = null
-    private var isGradientActive = false
-    private var gradientHideHandler: Handler? = null
-    private var gradientHideRunnable: Runnable? = null
-    
-    private fun showRGBGradientWave() {
-        // Prevent multiple instances
-        if (isGradientActive) {
-            Log.d(TAG, "Gradient overlay already active, preventing duplicate")
-            return
-        }
-        
+    private var edgeGlowView: GoogleEdgeGlowView? = null
+    private var isEdgeGlowActive = false
+    private var edgeGlowHideHandler: Handler? = null
+    private var edgeGlowHideRunnable: Runnable? = null
+
+    private fun showGoogleEdgeGlow() {
+        if (isEdgeGlowActive) return
+
         try {
-            isGradientActive = true
-            
-            // Clean up any existing gradient view without affecting active state
-            gradientAnimator?.cancel()
-            gradientAnimator = null
-            flowingGradientAnimator?.cancel()
-            flowingGradientAnimator = null
-            
-            // Remove existing view if present
-            gradientOverlayView?.let { existingView ->
+            isEdgeGlowActive = true
+            edgeGlowView?.let { existing ->
+                existing.stopPulse()
                 try {
-                    windowManager.removeView(existingView)
-                } catch (e: Exception) {
-                    // View might already be removed, ignore
+                    windowManager.removeView(existing)
+                } catch (_: Exception) {
                 }
             }
-            
+
             val themedContext = ContextThemeWrapper(this, R.style.Theme_App_Translucent)
-            
-            // Create custom gradient view with direct property access
-            val customGradientView = GradientOverlayView(themedContext)
-            gradientOverlayView = customGradientView
-            
+            val glowView = GoogleEdgeGlowView(themedContext).also { it.startPulse() }
+            edgeGlowView = glowView
+
             val params = WindowManager.LayoutParams(
                 WindowManager.LayoutParams.MATCH_PARENT,
                 WindowManager.LayoutParams.MATCH_PARENT,
-                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) 
-                    WindowManager.LayoutParams.TYPE_ACCESSIBILITY_OVERLAY 
-                else 
-                    WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY,
-                WindowManager.LayoutParams.FLAG_NOT_TOUCHABLE or 
-                WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or
-                WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN or
-                WindowManager.LayoutParams.FLAG_HARDWARE_ACCELERATED,
-                PixelFormat.TRANSLUCENT
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                    WindowManager.LayoutParams.TYPE_ACCESSIBILITY_OVERLAY
+                } else {
+                    WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY
+                },
+                WindowManager.LayoutParams.FLAG_NOT_TOUCHABLE or
+                    WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or
+                    WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN or
+                    WindowManager.LayoutParams.FLAG_HARDWARE_ACCELERATED,
+                PixelFormat.TRANSLUCENT,
             )
-            
-            windowManager.addView(gradientOverlayView, params)
-            
-            // Start the Google-style gradient animation
-            startGoogleGradientAnimation()
-            
-            // Auto-hide after 3 seconds with proper cleanup
-            gradientHideHandler = Handler(Looper.getMainLooper())
-            gradientHideRunnable = Runnable {
-                hideRGBGradientWave()
-            }
-            gradientHideHandler?.postDelayed(gradientHideRunnable!!, 3000)
-            
+
+            windowManager.addView(glowView, params)
+
+            edgeGlowHideHandler = Handler(Looper.getMainLooper())
+            edgeGlowHideRunnable = Runnable { hideGoogleEdgeGlow() }
+            edgeGlowHideHandler?.postDelayed(edgeGlowHideRunnable!!, 2800)
         } catch (e: Exception) {
-            Log.e(TAG, "Error showing Google gradient overlay", e)
-            isGradientActive = false
+            Log.e(TAG, "Error showing edge glow overlay", e)
+            isEdgeGlowActive = false
         }
     }
-    
-    private fun startGoogleGradientAnimation() {
-        gradientOverlayView?.let { view ->
-            val displayMetrics = resources.displayMetrics
-            val screenHeight = displayMetrics.heightPixels.toFloat()
-            val screenWidth = displayMetrics.widthPixels.toFloat()
-            
-            // Ultra-smooth, fast slide-up with buttery easing curves
-            gradientAnimator = android.animation.ValueAnimator.ofFloat(0f, 1f).apply {
-                duration = 1400L // Much faster slide-up for instant gratification
-                interpolator = android.view.animation.PathInterpolator(0.25f, 0.1f, 0.25f, 1.0f) // Smooth ease-out curve
-                
-                addUpdateListener { animator ->
-                    if (!isGradientActive || gradientOverlayView == null) {
-                        cancel()
-                        return@addUpdateListener
-                    }
-                    
-                    val progress = animator.animatedValue as Float
-                    
-                    // Buttery smooth height animation with accelerated start, smooth finish
-                    val smoothInterpolator = android.view.animation.PathInterpolator(0.4f, 0.0f, 0.2f, 1.0f)
-                    val overlayHeight = smoothInterpolator.getInterpolation(progress) * screenHeight
-                    
-                    // Smooth alpha curve - fast fade in, sustained visibility
-                    val alpha = when {
-                        progress < 0.25f -> (progress * 4.0f).coerceAtMost(0.9f) // Super fast fade in
-                        progress > 0.8f -> 0.9f - ((progress - 0.8f) * 2.5f).coerceAtMost(0.4f) // Gentle fade at end
-                        else -> 0.9f // Maximum visibility
-                    }.coerceIn(0.1f, 0.9f)
-                    
-                    // Direct method call for smooth property updates
-                    gradientOverlayView?.updateGradientProperties(overlayHeight, 0f, alpha)
-                }
-                
-                addListener(object : android.animation.AnimatorListenerAdapter() {
-                    override fun onAnimationEnd(animation: android.animation.Animator) {
-                        // Start flowing RGB gradient when slide-up completes
-                        if (isGradientActive && gradientOverlayView != null) {
-                            startFlowingGradientAnimation()
-                        }
-                    }
-                    
-                    override fun onAnimationCancel(animation: android.animation.Animator) {
-                        gradientAnimator = null
-                    }
-                })
-                
-                start()
-            }
-        }
-    }
-    
-    private fun startFlowingGradientAnimation() {
-        gradientOverlayView?.let { view ->
-            val screenWidth = resources.displayMetrics.widthPixels.toFloat()
-            val screenHeight = resources.displayMetrics.heightPixels.toFloat()
-            
-            // Buttery smooth flowing RGB gradient with hypnotic wave patterns
-            flowingGradientAnimator = android.animation.ValueAnimator.ofFloat(0f, 1f).apply {
-                duration = 6000L // Smooth, not too fast, not too slow
-                repeatCount = android.animation.ValueAnimator.INFINITE
-                interpolator = android.view.animation.LinearInterpolator()
-                
-                addUpdateListener { animator ->
-                    if (!isGradientActive || gradientOverlayView == null) {
-                        cancel()
-                        return@addUpdateListener
-                    }
-                    
-                    val progress = animator.animatedValue as Float
-                    
-                    // Silky smooth multi-layered wave motion
-                    val primaryWave = (progress * screenWidth * 1.2f) % (screenWidth * 1.5f)
-                    val secondaryWave = kotlin.math.sin(progress * kotlin.math.PI * 2.5).toFloat() * screenWidth * 0.12f
-                    val tertiaryWave = kotlin.math.cos(progress * kotlin.math.PI * 1.8).toFloat() * screenWidth * 0.06f
-                    val flowingOffset = primaryWave + secondaryWave + tertiaryWave
-                    
-                    // Smooth breathing alpha - more organic feeling
-                    val breathingAlpha = 0.8f + (kotlin.math.sin(progress * kotlin.math.PI * 2.8).toFloat() * 0.15f)
-                    
-                    // Full screen height with buttery smooth flowing offset
-                    gradientOverlayView?.updateGradientProperties(screenHeight, flowingOffset, breathingAlpha.coerceIn(0.65f, 0.95f))
-                }
-                
-                addListener(object : android.animation.AnimatorListenerAdapter() {
-                    override fun onAnimationCancel(animation: android.animation.Animator) {
-                        flowingGradientAnimator = null
-                    }
-                })
-                
-                start()
-            }
-        }
-    }
-    
-    private fun hideRGBGradientWave() {
-        if (!isGradientActive && gradientOverlayView == null) return
-        
+
+    private fun hideGoogleEdgeGlow() {
+        if (!isEdgeGlowActive && edgeGlowView == null) return
+
         try {
-            // Cancel scheduled hide operation
-            gradientHideHandler?.removeCallbacks(gradientHideRunnable ?: return)
-            gradientHideHandler = null
-            gradientHideRunnable = null
-            
-            // Cancel all animations cleanly
-            gradientAnimator?.cancel()
-            gradientAnimator = null
-            flowingGradientAnimator?.cancel()
-            flowingGradientAnimator = null
-            
-            gradientOverlayView?.let { view ->
-                // Professional slide-down exit animation
+            edgeGlowHideHandler?.removeCallbacks(edgeGlowHideRunnable ?: return)
+            edgeGlowHideHandler = null
+            edgeGlowHideRunnable = null
+
+            edgeGlowView?.let { view ->
+                view.stopPulse()
                 view.animate()
                     .alpha(0f)
-                    .scaleY(0.95f)
-                    .translationY(30f)
-                    .setDuration(250)
-                    .setInterpolator(android.view.animation.AccelerateInterpolator(1.5f))
+                    .setDuration(220)
+                    .setInterpolator(android.view.animation.AccelerateInterpolator())
                     .withEndAction {
                         try {
                             windowManager.removeView(view)
                         } catch (e: Exception) {
-                            Log.w(TAG, "Gradient overlay already removed", e)
+                            Log.w(TAG, "Edge glow overlay already removed", e)
                         } finally {
-                            gradientOverlayView = null
-                            isGradientActive = false
+                            edgeGlowView = null
+                            isEdgeGlowActive = false
                         }
                     }
                     .start()
             } ?: run {
-                // Immediate cleanup if view is null
-                isGradientActive = false
+                isEdgeGlowActive = false
             }
         } catch (e: Exception) {
-            Log.w(TAG, "Error during gradient cleanup", e)
-            isGradientActive = false
-            gradientOverlayView = null
+            Log.w(TAG, "Error during edge glow cleanup", e)
+            isEdgeGlowActive = false
+            edgeGlowView = null
         }
     }
     
@@ -2999,79 +2778,41 @@ class MyAccessibilityService : AccessibilityService(), BubbleInteractionListener
     
     private fun extractTextFromNode(node: AccessibilityNodeInfo?, contentBuilder: StringBuilder) {
         if (node == null) return
-        
+
         try {
-            // ULTRA-AGGRESSIVE pre-filtering - check node properties first
-            val className = node.className?.toString() ?: ""
-            val packageName = node.packageName?.toString() ?: ""
-            val isInputField = className.contains("EditText") || 
-                             className.contains("TextInputEditText") ||
-                             className.contains("AutoCompleteTextView") ||
-                             node.isEditable
-            
-            // Get text from current node if it's visible and has meaningful content
-            val nodeText = node.text?.toString()
-            if (!nodeText.isNullOrBlank() && 
-                node.isVisibleToUser && 
-                isRelevantContent(nodeText)) {
-                
-                // TRIPLE-CHECK placeholder filtering for input fields
-                if (isInputField) {
-                    // First check: Ultra-aggressive WhatsApp filtering
-                    val lowerText = nodeText.lowercase().trim()
-                    if (lowerText == "message" || lowerText == "type a message" || 
-                        lowerText.contains("message") && lowerText.length <= 20) {
-                        Log.d(TAG, "🚫 PRE-BLOCKED input field text: '$nodeText' (WhatsApp-style)")
-                        return // Don't even process children if this is WhatsApp placeholder
+            val skipNodeText = AccessibilityInputSanitizer.shouldSkipTextForScreenCapture(node)
+
+            if (!skipNodeText) {
+                val nodeText = node.text?.toString()
+                if (!nodeText.isNullOrBlank() &&
+                    node.isVisibleToUser &&
+                    isRelevantContent(nodeText) &&
+                    !AccessibilityInputSanitizer.isPlaceholderText(node, nodeText)
+                ) {
+                    if (contentBuilder.isNotEmpty()) {
+                        contentBuilder.append(" ")
                     }
-                    
-                    // Second check: Check against hint attribute
-                    val hint = node.hintText?.toString()
-                    if (!hint.isNullOrBlank() && nodeText.equals(hint, ignoreCase = true)) {
-                        Log.d(TAG, "🚫 PRE-BLOCKED hint match: '$nodeText' = hint '$hint'")
-                        return
-                    }
-                    
-                    // Third check: Standard placeholder filtering
-                    if (isPlaceholderOrHintText(node, nodeText)) {
-                        Log.d(TAG, "🚫 PRE-BLOCKED placeholder: '$nodeText'")
-                        return
-                    }
-                } else {
-                    // For non-input fields, still check but less aggressively
-                    if (isPlaceholderOrHintText(node, nodeText)) {
-                        Log.d(TAG, "🚫 PRE-BLOCKED non-input placeholder: '$nodeText'")
-                        return
-                    }
+                    contentBuilder.append(nodeText.trim())
                 }
-                
-                // Only add if it passes all filters
-                if (contentBuilder.isNotEmpty()) {
-                    contentBuilder.append(" ")
+
+                val contentDesc = node.contentDescription?.toString()
+                if (!contentDesc.isNullOrBlank() &&
+                    isRelevantContent(contentDesc) &&
+                    !AccessibilityInputSanitizer.isPlaceholderText(node, contentDesc) &&
+                    !contentBuilder.toString().contains(contentDesc)
+                ) {
+                    if (contentBuilder.isNotEmpty()) {
+                        contentBuilder.append(" ")
+                    }
+                    contentBuilder.append(contentDesc.trim())
                 }
-                contentBuilder.append(nodeText.trim())
             }
-            
-            // Also check contentDescription for additional context (with filtering)
-            val contentDesc = node.contentDescription?.toString()
-            if (!contentDesc.isNullOrBlank() && 
-                isRelevantContent(contentDesc) &&
-                !isPlaceholderOrHintText(node, contentDesc) &&
-                !contentBuilder.toString().contains(contentDesc)) {
-                
-                if (contentBuilder.isNotEmpty()) {
-                    contentBuilder.append(" ")
-                }
-                contentBuilder.append(contentDesc.trim())
-            }
-            
-            // Recursively extract from child nodes
+
             for (i in 0 until node.childCount) {
                 val child = node.getChild(i)
                 extractTextFromNode(child, contentBuilder)
-                child?.recycle() // Properly recycle child nodes
+                child?.recycle()
             }
-            
         } catch (e: Exception) {
             Log.w(TAG, "Error extracting text from node", e)
         }
@@ -3304,7 +3045,8 @@ class MyAccessibilityService : AccessibilityService(), BubbleInteractionListener
     
     private fun isRelevantContent(text: String): Boolean {
         if (text.length < 2) return false
-        
+        if (AccessibilityInputSanitizer.isPlaceholderText(null, text)) return false
+
         // Filter out common UI elements, system text, and irrelevant content
         val irrelevantPatterns = listOf(
             "button", "tab", "menu", "navigation", "toolbar", "status bar",
@@ -3377,10 +3119,15 @@ class MyAccessibilityService : AccessibilityService(), BubbleInteractionListener
         
         // Final sanity check - if the entire content is just placeholder-like, return empty
         val finalCheck = cleaned.lowercase().trim()
-        if (finalCheck == "message" || finalCheck == "type a message" || 
-            finalCheck == "enter message" || finalCheck.length <= 15 && 
-            (finalCheck.contains("message") || finalCheck.contains("type") || finalCheck.contains("enter"))) {
-            Log.d(TAG, "🚫 FINAL SANITY CHECK blocked entire content: '$cleaned'")
+        if (AccessibilityInputSanitizer.isPlaceholderText(null, finalCheck) ||
+            finalCheck == "message" ||
+            finalCheck == "type a message" ||
+            finalCheck == "enter message" ||
+            finalCheck.contains("ask meta ai") ||
+            (finalCheck.length <= 20 &&
+                (finalCheck.contains("message") || finalCheck.contains("type") || finalCheck.contains("enter")))
+        ) {
+            Log.d(TAG, "Final sanity check blocked placeholder-only content: '$cleaned'")
             return ""
         }
         
@@ -3418,7 +3165,7 @@ class MyAccessibilityService : AccessibilityService(), BubbleInteractionListener
         customPersonaDialog = null
         
         // Clean up gradient wave
-        hideRGBGradientWave()
+        hideGoogleEdgeGlow()
         
         try {
             unregisterReceiver(screenStateReceiver)
