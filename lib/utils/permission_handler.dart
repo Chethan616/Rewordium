@@ -47,11 +47,6 @@ class PermissionHandler {
     return result.isGranted || result.isLimited;
   }
 
-  // Request photos permission (only once)
-  Future<bool> requestPhotosPermission() async {
-    return _requestPermissionOnce(Permission.photos, 'photos');
-  }
-
   // Request notification permission (only once)
   Future<bool> requestNotificationPermission() async {
     return _requestPermissionOnce(Permission.notification, 'notification');

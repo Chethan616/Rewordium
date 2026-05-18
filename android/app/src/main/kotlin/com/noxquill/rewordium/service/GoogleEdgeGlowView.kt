@@ -76,14 +76,18 @@ class GoogleEdgeGlowView @JvmOverloads constructor(
      * The pulse keeps running through the fade so there is zero flicker.
      * [onDone] is invoked on the main thread once the view reaches alpha 0.
      */
-    fun scheduleHide(delayMs: Long = 1500L, onDone: (() -> Unit)? = null) {
+    fun scheduleHide(
+        delayMs: Long = 1500L,
+        fadeDurationMs: Long = 700L,
+        onDone: (() -> Unit)? = null,
+    ) {
         cancelHide()
         hideRunnable = Runnable {
             hideRunnable = null
             animate().cancel()
             animate()
                 .alpha(0f)
-                .setDuration(700)
+                .setDuration(fadeDurationMs)
                 .setInterpolator(DecelerateInterpolator(1.5f))
                 .withEndAction {
                     stopPulse()
