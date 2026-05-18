@@ -38,7 +38,7 @@ import 'services/billing_service.dart';
 import 'services/deep_link_service.dart';
 import 'services/usage_analytics_service.dart';
 import 'widgets/tool_popup.dart';
-import 'widgets/physics_fab.dart';
+import 'widgets/tools_fab.dart';
 import 'widgets/whats_new_sheet.dart';
 
 // Global navigator key for app-wide navigation
@@ -388,7 +388,6 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin, Widg
   }
 
   Future<void> _requestPermissions() async {
-    await _permissionHandler.requestPhotosPermission();
     await _permissionHandler.requestNotificationPermission();
   }
 
@@ -427,11 +426,10 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin, Widg
   }
 
 
-  Widget _buildPhysicsFab(BuildContext context) {
-    return PhysicsFab(
+  Widget _buildToolsFab(BuildContext context) {
+    return ToolsFab(
       onSelectHomeTab: _onItemTapped,
       tooltip: 'Tools',
-      closedIcon: const Icon(CupertinoIcons.square_grid_2x2),
     );
   }
 
@@ -451,7 +449,7 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin, Widg
         physics: const NeverScrollableScrollPhysics(),
         children: _pages,
       ),
-      floatingActionButton: _buildPhysicsFab(context),
+      floatingActionButton: _buildToolsFab(context),
       bottomNavigationBar: Container(
         margin: EdgeInsets.fromLTRB(r.w(12), 0, r.w(12), r.h(8)),
         decoration: BoxDecoration(

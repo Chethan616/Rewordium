@@ -47,8 +47,6 @@
 		<true/>
 		<key>FLTEnableImpeller</key>
 		<true/>
-		<key>NSPhotoLibraryUsageDescription</key>
-	<string>Rewordium needs photo library access to import documents.</string>
 		<key>UIBackgroundModes</key>
 		<array>
 			<string>fetch</string>

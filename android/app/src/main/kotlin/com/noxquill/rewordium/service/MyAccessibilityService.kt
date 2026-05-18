@@ -212,6 +212,10 @@ class MyAccessibilityService : AccessibilityService(), BubbleInteractionListener
             "com.discord",
             "com.google.android.gm",
             "com.yahoo.mobile.client.android.mail",
+            "com.Slack",
+            "com.microsoft.office.outlook",
+            "com.microsoft.teams",
+            "com.microsoft.office.word",
             "com.facebook.katana",
             "com.instagram.android",
             packageName,
@@ -219,6 +223,15 @@ class MyAccessibilityService : AccessibilityService(), BubbleInteractionListener
             "com.reddit.frontpage",
             "com.indeed.android.jobsearch",
             "com.linkedin.android",
+            // Productivity, publishing, social
+            "com.medium.reader",
+            "notion.id",
+            "com.behance.behance",
+            "com.zhiliaoapp.musically",
+            "com.snapchat.android",
+            "com.twitter.android",
+            "com.tinder",
+            "com.asana.app",
             // Keyboard packages - prevent dialog dismissal when keyboard appears
             "com.noxquill.rewordium.keyboard",
             "com.google.android.inputmethod.latin",
@@ -1075,6 +1088,7 @@ class MyAccessibilityService : AccessibilityService(), BubbleInteractionListener
             isPerformingManualTransition = true
             isStoppedByUser = true
             generationJob?.cancel()
+            hideGoogleEdgeGlow(delayMs = 0L, fadeDurationMs = 1000L)
 
             // Enhanced stop animation with scale and fade
             thinkingLayout.animate()
@@ -2725,13 +2739,16 @@ class MyAccessibilityService : AccessibilityService(), BubbleInteractionListener
      * [delayMs] = how long to keep the glow visible after calling this.
      * Defaults to 1500 ms (1.5 s) so the user can appreciate the finish.
      */
-    private fun hideGoogleEdgeGlow(delayMs: Long = 1500L) {
+    private fun hideGoogleEdgeGlow(
+        delayMs: Long = 1500L,
+        fadeDurationMs: Long = 700L,
+    ) {
         val view = edgeGlowView ?: run {
             isEdgeGlowActive = false
             return
         }
 
-        view.scheduleHide(delayMs) {
+        view.scheduleHide(delayMs, fadeDurationMs) {
             try {
                 view.visibility = View.GONE
                 if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.HONEYCOMB) {

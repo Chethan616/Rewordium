@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -612,72 +613,94 @@ class _OnboardingPageState extends State<OnboardingPage>
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final cs = theme.colorScheme;
-    final progress = (_step + 1) / _stepTitles.length;
+    final baseTheme = Theme.of(context);
+    final themedData = baseTheme.copyWith(
+      textTheme: GoogleFonts.ibmPlexSansTextTheme(baseTheme.textTheme).apply(
+        bodyColor: baseTheme.colorScheme.onSurface,
+        displayColor: baseTheme.colorScheme.onSurface,
+      ),
+    );
 
-    return Scaffold(
-      body: Stack(
-        children: [
-          _buildBackground(cs),
-          SafeArea(
-            child: Padding(
-              padding: const EdgeInsets.fromLTRB(20, 12, 20, 20),
-              child: Column(
-                children: [
-                  Row(
-                    children: [
-                      Text(
-                        'Step ${_step + 1} of ${_stepTitles.length}',
-                        style: theme.textTheme.labelLarge?.copyWith(
-                          color: cs.onSurfaceVariant,
-                          fontWeight: FontWeight.w700,
+    return Theme(
+      data: themedData,
+      child: Builder(
+        builder: (context) {
+          final theme = Theme.of(context);
+          final cs = theme.colorScheme;
+          final progress = (_step + 1) / _stepTitles.length;
+
+          return Scaffold(
+            body: Stack(
+              children: [
+                _buildBackground(cs),
+                SafeArea(
+                  child: Padding(
+                    padding: const EdgeInsets.fromLTRB(20, 12, 20, 20),
+                    child: Column(
+                      children: [
+                        Row(
+                          children: [
+                            Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  'Rewordium Setup',
+                                  style: _navTitleStyle(context),
+                                ),
+                                const SizedBox(height: 2),
+                                Text(
+                                  'STEP ${_step + 1} OF ${_stepTitles.length}',
+                                  style: _stepLabelStyle(context),
+                                ),
+                              ],
+                            ),
+                            const Spacer(),
+                            TextButton(
+                              onPressed: _isSaving ? null : _onSkipPressed,
+                              style: TextButton.styleFrom(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 12,
+                                  vertical: 6,
+                                ),
+                                foregroundColor: cs.onSurface,
+                                textStyle: _stepLabelStyle(context),
+                              ),
+                              child: const Text('Skip'),
+                            ),
+                          ],
                         ),
-                      ),
-                      const Spacer(),
-                      TextButton(
-                        onPressed: _isSaving ? null : _onSkipPressed,
-                        child: const Text('Skip'),
-                      ),
-                    ],
-                  ),
-                  ClipRRect(
-                    borderRadius: BorderRadius.circular(999),
-                    child: LinearProgressIndicator(
-                      value: progress,
-                      minHeight: 8,
-                      backgroundColor: cs.surfaceContainerHighest,
+                        const SizedBox(height: 10),
+                        _buildProgressBar(progress, cs),
+                        const SizedBox(height: 14),
+                        Align(
+                          alignment: Alignment.centerLeft,
+                          child: Text(
+                            _stepTitles[_step],
+                            style: _headlineStyle(context),
+                          ),
+                        ),
+                        const SizedBox(height: 12),
+                        Expanded(
+                          child: AnimatedSwitcher(
+                            duration: const Duration(milliseconds: 240),
+                            switchInCurve: Curves.easeOutCubic,
+                            switchOutCurve: Curves.easeInCubic,
+                            child: SingleChildScrollView(
+                              key: ValueKey<int>(_step),
+                              child: _buildStepBody(context),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(height: 12),
+                        _buildBottomBar(),
+                      ],
                     ),
                   ),
-                  const SizedBox(height: 10),
-                  Align(
-                    alignment: Alignment.centerLeft,
-                    child: Text(
-                      _stepTitles[_step],
-                      style: theme.textTheme.headlineSmall?.copyWith(
-                        fontWeight: FontWeight.w800,
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: 12),
-                  Expanded(
-                    child: AnimatedSwitcher(
-                      duration: const Duration(milliseconds: 280),
-                      switchInCurve: Curves.easeOutCubic,
-                      switchOutCurve: Curves.easeInCubic,
-                      child: SingleChildScrollView(
-                        key: ValueKey<int>(_step),
-                        child: _buildStepBody(context),
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: 12),
-                  _buildBottomBar(),
-                ],
-              ),
+                ),
+              ],
             ),
-          ),
-        ],
+          );
+        },
       ),
     );
   }
@@ -693,38 +716,191 @@ class _OnboardingPageState extends State<OnboardingPage>
                 end: Alignment.bottomRight,
                 colors: [
                   cs.surface,
-                  cs.surfaceContainerLowest,
+                  cs.surfaceContainerLow,
                   cs.surface,
                 ],
               ),
             ),
           ),
         ),
-        Positioned(
-          top: -90,
-          right: -40,
-          child: Container(
-            width: 220,
-            height: 220,
+        Positioned.fill(
+          child: Transform.rotate(
+            angle: -0.12,
+            child: DecoratedBox(
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  colors: [
+                    Colors.transparent,
+                    cs.primaryContainer.withValues(alpha: 0.14),
+                    Colors.transparent,
+                  ],
+                  stops: const [0.2, 0.5, 0.8],
+                ),
+              ),
+            ),
+          ),
+        ),
+        Positioned.fill(
+          child: DecoratedBox(
             decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              color: cs.primaryContainer.withValues(alpha: 0.52),
+              gradient: RadialGradient(
+                center: const Alignment(0.85, -0.9),
+                radius: 1.05,
+                colors: [
+                  cs.secondaryContainer.withValues(alpha: 0.32),
+                  Colors.transparent,
+                ],
+              ),
             ),
           ),
         ),
         Positioned(
-          bottom: -70,
-          left: -30,
+          bottom: -120,
+          left: -60,
           child: Container(
-            width: 190,
-            height: 190,
+            width: 240,
+            height: 240,
             decoration: BoxDecoration(
               shape: BoxShape.circle,
-              color: cs.tertiaryContainer.withValues(alpha: 0.44),
+              color: cs.tertiaryContainer.withValues(alpha: 0.22),
             ),
           ),
         ),
       ],
+    );
+  }
+
+  Widget _buildProgressBar(double progress, ColorScheme cs) {
+    final safeProgress = progress.clamp(0.0, 1.0) as double;
+    return Container(
+      height: 6,
+      decoration: BoxDecoration(
+        color: cs.surfaceContainerHighest,
+        borderRadius: BorderRadius.circular(999),
+        border: Border.all(color: cs.outlineVariant.withValues(alpha: 0.6)),
+        boxShadow: [
+          BoxShadow(
+            color: cs.shadow.withValues(alpha: 0.06),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(999),
+        child: Stack(
+          children: [
+            Positioned.fill(
+              child: DecoratedBox(
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    colors: [
+                      cs.primary.withValues(alpha: 0.12),
+                      cs.secondary.withValues(alpha: 0.12),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+            FractionallySizedBox(
+              widthFactor: safeProgress,
+              child: DecoratedBox(
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    begin: Alignment.centerLeft,
+                    end: Alignment.centerRight,
+                    colors: [
+                      cs.primary,
+                      cs.secondary,
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  TextStyle _navTitleStyle(BuildContext context) {
+    final theme = Theme.of(context);
+    final cs = theme.colorScheme;
+    return GoogleFonts.spaceGrotesk(
+      textStyle: theme.textTheme.titleMedium?.copyWith(
+        color: cs.onSurface,
+        fontWeight: FontWeight.w700,
+        letterSpacing: -0.2,
+      ),
+    );
+  }
+
+  TextStyle _stepLabelStyle(BuildContext context) {
+    final theme = Theme.of(context);
+    final cs = theme.colorScheme;
+    return GoogleFonts.ibmPlexSans(
+      textStyle: theme.textTheme.labelSmall?.copyWith(
+        color: cs.onSurfaceVariant,
+        fontWeight: FontWeight.w600,
+        letterSpacing: 1.1,
+      ),
+    );
+  }
+
+  TextStyle _headlineStyle(BuildContext context) {
+    final theme = Theme.of(context);
+    final cs = theme.colorScheme;
+    return GoogleFonts.spaceGrotesk(
+      textStyle: theme.textTheme.headlineSmall?.copyWith(
+        color: cs.onSurface,
+        fontWeight: FontWeight.w700,
+        letterSpacing: -0.3,
+      ),
+    );
+  }
+
+  TextStyle _heroTitleStyle(BuildContext context) {
+    final theme = Theme.of(context);
+    final cs = theme.colorScheme;
+    return GoogleFonts.spaceGrotesk(
+      textStyle: theme.textTheme.titleLarge?.copyWith(
+        color: cs.onSurface,
+        fontWeight: FontWeight.w700,
+        letterSpacing: -0.2,
+      ),
+    );
+  }
+
+  TextStyle _cardTitleStyle(BuildContext context) {
+    final theme = Theme.of(context);
+    final cs = theme.colorScheme;
+    return GoogleFonts.spaceGrotesk(
+      textStyle: theme.textTheme.titleSmall?.copyWith(
+        color: cs.onSurface,
+        fontWeight: FontWeight.w600,
+      ),
+    );
+  }
+
+  TextStyle _bodyStyle(BuildContext context) {
+    final theme = Theme.of(context);
+    final cs = theme.colorScheme;
+    return GoogleFonts.ibmPlexSans(
+      textStyle: theme.textTheme.bodyMedium?.copyWith(
+        color: cs.onSurface,
+        height: 1.45,
+      ),
+    );
+  }
+
+  TextStyle _bodySubtleStyle(BuildContext context) {
+    final theme = Theme.of(context);
+    final cs = theme.colorScheme;
+    return GoogleFonts.ibmPlexSans(
+      textStyle: theme.textTheme.bodySmall?.copyWith(
+        color: cs.onSurfaceVariant,
+        height: 1.4,
+      ),
     );
   }
 
@@ -748,11 +924,22 @@ class _OnboardingPageState extends State<OnboardingPage>
   }
 
   Widget _buildBottomBar() {
+    final cs = Theme.of(context).colorScheme;
     return Row(
       children: [
         if (_step > 0)
           OutlinedButton.icon(
             onPressed: _isSaving ? null : () => setState(() => _step -= 1),
+            style: OutlinedButton.styleFrom(
+              padding: const EdgeInsets.symmetric(
+                horizontal: 16,
+                vertical: 10,
+              ),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
+              side: BorderSide(color: cs.outlineVariant),
+            ),
             icon: const Icon(Icons.arrow_back),
             label: const Text('Back'),
           )
@@ -761,6 +948,15 @@ class _OnboardingPageState extends State<OnboardingPage>
         const Spacer(),
         FilledButton.icon(
           onPressed: _isSaving ? null : _onContinuePressed,
+          style: FilledButton.styleFrom(
+            padding: const EdgeInsets.symmetric(
+              horizontal: 18,
+              vertical: 10,
+            ),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(12),
+            ),
+          ),
           icon: _isSaving
               ? const SizedBox(
                   width: 16,
@@ -775,8 +971,7 @@ class _OnboardingPageState extends State<OnboardingPage>
   }
 
   Widget _buildWelcomeStep(BuildContext context) {
-    final theme = Theme.of(context);
-    final cs = theme.colorScheme;
+    final cs = Theme.of(context).colorScheme;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -785,40 +980,64 @@ class _OnboardingPageState extends State<OnboardingPage>
           width: double.infinity,
           padding: const EdgeInsets.all(20),
           decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(24),
-            gradient: LinearGradient(
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-              colors: [
-                cs.primaryContainer,
-                cs.secondaryContainer,
-              ],
-            ),
+            borderRadius: BorderRadius.circular(20),
+            color: cs.surfaceContainerHigh,
+            border: Border.all(color: cs.outlineVariant),
             boxShadow: [
               BoxShadow(
-                color: cs.primary.withValues(alpha: 0.18),
-                blurRadius: 24,
-                offset: const Offset(0, 12),
+                color: cs.shadow.withValues(alpha: 0.08),
+                blurRadius: 18,
+                offset: const Offset(0, 10),
               ),
             ],
           ),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(
-                'Set up Rewordium your way in under a minute.',
-                style: theme.textTheme.headlineSmall?.copyWith(
-                  color: cs.onPrimaryContainer,
-                  fontWeight: FontWeight.w800,
-                ),
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Container(
+                    width: 4,
+                    height: 46,
+                    decoration: BoxDecoration(
+                      borderRadius: BorderRadius.circular(6),
+                      color: cs.primary,
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Welcome to Rewordium',
+                          style: _heroTitleStyle(context),
+                        ),
+                        const SizedBox(height: 2),
+                        Text(
+                          'Set up your assistant in about a minute.',
+                          style: _bodySubtleStyle(context),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
               ),
-              const SizedBox(height: 10),
+              const SizedBox(height: 12),
               Text(
-                'Choose your assistant mode, review clear permission prompts, and start with keyboard defaults tuned for everyday writing.',
-                style: theme.textTheme.bodyLarge?.copyWith(
-                  color: cs.onPrimaryContainer.withValues(alpha: 0.88),
-                  height: 1.45,
-                ),
+                'Choose how Rewordium assists you, confirm accessibility usage, and set keyboard defaults tailored to your workflow.',
+                style: _bodyStyle(context),
+              ),
+              const SizedBox(height: 14),
+              Wrap(
+                spacing: 8,
+                runSpacing: 8,
+                children: [
+                  _metaTag(context, 'Setup ~60s'),
+                  _metaTag(context, 'Change anytime'),
+                  _metaTag(context, 'Privacy-first'),
+                ],
               ),
             ],
           ),
@@ -827,26 +1046,26 @@ class _OnboardingPageState extends State<OnboardingPage>
         _featureBullet(
           context,
           icon: Icons.accessibility_new,
-          title: 'Overlay or keyboard flow',
-          subtitle: 'Pick accessibility assistant, keyboard-first, or both.',
+          title: 'Assistant modes',
+          subtitle: 'Choose keyboard, overlay, or both based on your workflow.',
         ),
         _featureBullet(
           context,
           icon: Icons.security,
-          title: 'Prominent disclosure',
-          subtitle: 'Clear permission purpose and security safeguards.',
+          title: 'Permission clarity',
+          subtitle: 'Disclosure is shown before accessibility setup.',
         ),
         _featureBullet(
           context,
           icon: Icons.palette_outlined,
           title: 'Theme preference',
-          subtitle: 'Normal colors by default, dynamic colors optional.',
+          subtitle: 'Select standard colors or enable dynamic theming.',
         ),
         _featureBullet(
           context,
           icon: Icons.memory,
-          title: 'LLM setup',
-          subtitle: 'Use managed Groq default or bring your own provider.',
+          title: 'AI provider',
+          subtitle: 'Use managed Groq or connect your own provider.',
         ),
       ],
     );
@@ -866,6 +1085,13 @@ class _OnboardingPageState extends State<OnboardingPage>
         borderRadius: BorderRadius.circular(16),
         color: cs.surfaceContainerLow,
         border: Border.all(color: cs.outlineVariant),
+        boxShadow: [
+          BoxShadow(
+            color: cs.shadow.withValues(alpha: 0.06),
+            blurRadius: 14,
+            offset: const Offset(0, 6),
+          ),
+        ],
       ),
       child: Row(
         children: [
@@ -874,7 +1100,12 @@ class _OnboardingPageState extends State<OnboardingPage>
             height: 36,
             decoration: BoxDecoration(
               borderRadius: BorderRadius.circular(10),
-              color: cs.primaryContainer,
+              gradient: LinearGradient(
+                colors: [
+                  cs.primaryContainer,
+                  cs.secondaryContainer,
+                ],
+              ),
             ),
             child: Icon(icon, size: 20, color: cs.onPrimaryContainer),
           ),
@@ -900,6 +1131,25 @@ class _OnboardingPageState extends State<OnboardingPage>
             ),
           ),
         ],
+      ),
+    );
+  }
+
+  Widget _metaTag(BuildContext context, String label) {
+    final cs = Theme.of(context).colorScheme;
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(999),
+        color: cs.surfaceContainerHighest,
+        border: Border.all(color: cs.outlineVariant),
+      ),
+      child: Text(
+        label,
+        style: _stepLabelStyle(context).copyWith(
+          color: cs.onSurfaceVariant,
+          letterSpacing: 0.2,
+        ),
       ),
     );
   }
@@ -1080,27 +1330,44 @@ class _OnboardingPageState extends State<OnboardingPage>
           padding: const EdgeInsets.all(14),
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(16),
-            color: selected ? cs.primaryContainer : cs.surfaceContainerLow,
+            color: selected ? cs.surface : cs.surfaceContainerLow,
             border: Border.all(
               color: selected ? cs.primary : cs.outlineVariant,
               width: selected ? 1.6 : 1,
             ),
+            boxShadow: selected
+                ? [
+                    BoxShadow(
+                      color: cs.shadow.withValues(alpha: 0.1),
+                      blurRadius: 16,
+                      offset: const Offset(0, 8),
+                    ),
+                  ]
+                : [],
           ),
           child: Row(
             children: [
+              AnimatedContainer(
+                duration: const Duration(milliseconds: 180),
+                width: 3,
+                height: 46,
+                decoration: BoxDecoration(
+                  color: selected ? cs.primary : cs.surfaceContainerHighest,
+                  borderRadius: BorderRadius.circular(8),
+                ),
+              ),
+              const SizedBox(width: 10),
               Container(
                 width: 38,
                 height: 38,
                 decoration: BoxDecoration(
                   borderRadius: BorderRadius.circular(10),
-                  color: selected
-                      ? cs.onPrimaryContainer.withValues(alpha: 0.15)
-                      : cs.primaryContainer,
+                  color: cs.surfaceContainerHighest,
+                  border: Border.all(color: cs.outlineVariant),
                 ),
                 child: Icon(
                   icon,
-                  color:
-                      selected ? cs.onPrimaryContainer : cs.onPrimaryContainer,
+                  color: selected ? cs.primary : cs.onSurfaceVariant,
                 ),
               ),
               const SizedBox(width: 12),
@@ -1185,14 +1452,33 @@ class _OnboardingPageState extends State<OnboardingPage>
           padding: const EdgeInsets.all(14),
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(16),
-            color: selected ? cs.secondaryContainer : cs.surfaceContainerLow,
+            color: selected ? cs.surface : cs.surfaceContainerLow,
             border: Border.all(
               color: selected ? cs.secondary : cs.outlineVariant,
               width: selected ? 1.6 : 1,
             ),
+            boxShadow: selected
+                ? [
+                    BoxShadow(
+                      color: cs.shadow.withValues(alpha: 0.1),
+                      blurRadius: 16,
+                      offset: const Offset(0, 8),
+                    ),
+                  ]
+                : [],
           ),
           child: Row(
             children: [
+              AnimatedContainer(
+                duration: const Duration(milliseconds: 180),
+                width: 3,
+                height: 48,
+                decoration: BoxDecoration(
+                  color: selected ? cs.secondary : cs.surfaceContainerHighest,
+                  borderRadius: BorderRadius.circular(8),
+                ),
+              ),
+              const SizedBox(width: 10),
               Container(
                 width: 40,
                 height: 40,
@@ -1204,6 +1490,7 @@ class _OnboardingPageState extends State<OnboardingPage>
                       swatchColor.withValues(alpha: 0.55),
                     ],
                   ),
+                  border: Border.all(color: cs.outlineVariant),
                 ),
               ),
               const SizedBox(width: 12),
