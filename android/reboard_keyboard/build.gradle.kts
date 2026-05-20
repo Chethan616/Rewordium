@@ -121,6 +121,11 @@ android {
         buildConfigField("boolean", "ENABLE_STREAMING_AI", "false")
         buildConfigField("boolean", "ENABLE_INLINE_COMPLETIONS", "false")
         buildConfigField("boolean", "ENABLE_SMART_REPLIES", "false")
+        // Gesture polish cycle (cycle 2)
+        buildConfigField("boolean", "ENABLE_VELOCITY_AWARE_GESTURE", "true")
+        buildConfigField("boolean", "ENABLE_PARTIAL_GESTURE_PREDICTIONS", "true")
+        buildConfigField("boolean", "ENABLE_BEAM_SEARCH_GESTURES", "false")
+        buildConfigField("boolean", "ENABLE_ADAPTIVE_RESAMPLE", "false")
 
         sourceSets {
             maybeCreate("main").apply {

@@ -55,6 +55,18 @@ class StatisticalGlideTypingClassifier(context: Context) : GlideTypingClassifier
     // Snapshot of word frequencies loaded once per subtype change so the inner scoring loop
     // can do O(1) map lookups instead of a runBlocking JNI call per candidate.
     private var wordFrequencies: Map<String, Double> = emptyMap()
+
+    /**
+     * Per-gesture beam of best-seen-so-far candidates across mid-gesture preview calls.
+     * Maps word → best (lowest) confidence value observed. Lower confidence = higher rank.
+     * When [BuildConfig.ENABLE_BEAM_SEARCH_GESTURES] is on, [getSuggestions] returns a
+     * stabilised ranking from this beam instead of the latest single-pass scoring, which
+     * reduces flapping of the top candidate as the user's swipe progresses.
+     *
+     * Cleared on [clear] (gesture end). Acceptance gate before flipping the flag on by
+     * default: beam-ranked top-1 must match current top-1 on >95% of a curated corpus.
+     */
+    private val beam = HashMap<String, Float>(16)
     private var keys: ArrayList<TextKey> = arrayListOf()
     private lateinit var pruner: Pruner
     private var wordDataSubtype: Subtype? = null
@@ -100,6 +112,19 @@ class StatisticalGlideTypingClassifier(context: Context) : GlideTypingClassifier
         private const val LOCATION_STD = 0.46f
 
         /**
+         * Reference "fast" gesture velocity in px / ms. Used to normalise a gesture's measured
+         * 95th-percentile velocity into [0,1] for velocity-aware LOCATION_STD widening.
+         * 8 px/ms ≈ a typical fast-but-deliberate Gboard-style swipe on a 1080p phone.
+         */
+        private const val V_MAX_REFERENCE_PX_PER_MS = 8.0f
+
+        /**
+         * Maximum amount by which a fast gesture widens LOCATION_STD (0.5 = +50%). Faster gestures
+         * have lower per-point positional certainty, so we score them more leniently.
+         */
+        private const val VELOCITY_STD_GAIN = 0.5f
+
+        /**
          * Suggestion LRU cache size. Raised from 48 → 128 for a higher hit rate during rapid
          * multi-word glide sessions; modern devices have ample memory.
          */
@@ -112,15 +137,17 @@ class StatisticalGlideTypingClassifier(context: Context) : GlideTypingClassifier
     }
 
     override fun addGesturePoint(position: GlideTypingGesture.Detector.Position) {
+        // Fall back to system clock when the position carries no event time (legacy callers).
+        val t = if (position.t != 0L) position.t else System.currentTimeMillis()
         if (!gesture.isEmpty) {
             val dx = gesture.getLastX() - position.x
             val dy = gesture.getLastY() - position.y
 
             if (dx * dx + dy * dy > distanceThresholdSquared) {
-                gesture.addPoint(position.x, position.y)
+                gesture.addPoint(position.x, position.y, t)
             }
         } else {
-            gesture.addPoint(position.x, position.y)
+            gesture.addPoint(position.x, position.y, t)
         }
     }
 
@@ -231,6 +258,17 @@ class StatisticalGlideTypingClassifier(context: Context) : GlideTypingClassifier
             extremityCandidates
         }
 
+        // Velocity-aware LOCATION_STD: widen the location distribution for fast gestures
+        // so that high-velocity swipes (lower positional certainty) score more leniently.
+        // Computed from the raw gesture's 95th-percentile per-segment velocity.
+        val effectiveLocationStd = if (BuildConfig.ENABLE_VELOCITY_AWARE_GESTURE) {
+            val v = gesture.peakVelocity()
+            val velocityFactor = (v / V_MAX_REFERENCE_PX_PER_MS).coerceIn(0f, 1f)
+            LOCATION_STD * (1f + velocityFactor * VELOCITY_STD_GAIN)
+        } else {
+            LOCATION_STD
+        }
+
         for (i in remainingWords.indices) {
             val word = remainingWords[i]
             val idealGestures = Gesture.generateIdealGestures(word, keysByCharacter)
@@ -241,7 +279,7 @@ class StatisticalGlideTypingClassifier(context: Context) : GlideTypingClassifier
                 val shapeDistance = calcShapeDistance(normalizedGesture, normalizedUserGesture)
                 val locationDistance = calcLocationDistance(wordGesture, userGesture)
                 val shapeProbability = max(0.000001f, calcGaussianProbability(shapeDistance, 0.0f, SHAPE_STD))
-                val locationProbability = max(0.000001f, calcGaussianProbability(locationDistance, 0.0f, LOCATION_STD * radius))
+                val locationProbability = max(0.000001f, calcGaussianProbability(locationDistance, 0.0f, effectiveLocationStd * radius))
                 val frequency = max(1f, 255f * wordFrequencies.getOrDefault(word, 0.0).toFloat())
                 val confidence = 1.0f / (shapeProbability * locationProbability * frequency)
 
@@ -270,11 +308,30 @@ class StatisticalGlideTypingClassifier(context: Context) : GlideTypingClassifier
             }
         }
 
+        if (BuildConfig.ENABLE_BEAM_SEARCH_GESTURES) {
+            // Merge this scoring pass into the per-gesture beam (keep best/lowest confidence per word),
+            // then return a stabilised ranking. Smooths candidate flapping across mid-gesture previews.
+            for (j in candidates.indices) {
+                val w = candidates[j]
+                val c = candidateWeights[j]
+                val existing = beam[w]
+                if (existing == null || c < existing) beam[w] = c
+            }
+            // Cap beam size to avoid unbounded growth on long sessions; keep top-K by confidence.
+            if (beam.size > 32) {
+                val keepers = beam.entries.sortedBy { it.value }.take(16).map { it.key }.toHashSet()
+                val it = beam.entries.iterator()
+                while (it.hasNext()) if (!keepers.contains(it.next().key)) it.remove()
+            }
+            return beam.entries.sortedBy { it.value }.take(maxSuggestionCount).map { it.key }
+        }
+
         return candidates
     }
 
     override fun clear() {
         gesture.clear()
+        beam.clear()
     }
 
     private fun calcLocationDistance(gesture1: Gesture, gesture2: Gesture): Float {
@@ -462,6 +519,7 @@ class StatisticalGlideTypingClassifier(context: Context) : GlideTypingClassifier
     class Gesture(
         private val xs: FloatArray = FloatArray(MAX_SIZE),
         private val ys: FloatArray = FloatArray(MAX_SIZE),
+        private val ts: LongArray = LongArray(MAX_SIZE),
         private var size: Int = 0,
     ) {
         companion object {
@@ -547,12 +605,43 @@ class StatisticalGlideTypingClassifier(context: Context) : GlideTypingClassifier
             get() = size
 
         fun addPoint(x: Float, y: Float) {
+            addPoint(x, y, System.currentTimeMillis())
+        }
+
+        fun addPoint(x: Float, y: Float, t: Long) {
             if (size >= MAX_SIZE) {
                 return
             }
             xs[size] = x
             ys[size] = y
+            ts[size] = t
             size += 1
+        }
+
+        fun getT(i: Int): Long = if (i in 0 until size) ts[i] else 0L
+
+        /**
+         * Velocity (px / ms) at point [i], computed from the segment [i-1, i].
+         * Returns 0 for the first point or invalid indices.
+         */
+        fun velocityAt(i: Int): Float {
+            if (i <= 0 || i >= size) return 0f
+            val dt = (ts[i] - ts[i - 1]).coerceAtLeast(1L).toFloat()
+            val dx = xs[i] - xs[i - 1]
+            val dy = ys[i] - ys[i - 1]
+            return sqrt(dx * dx + dy * dy) / dt
+        }
+
+        /**
+         * 95th-percentile per-segment velocity, used to self-normalise V_MAX for
+         * velocity-aware location uncertainty scoring. Returns 0 when fewer than 2 points.
+         */
+        fun peakVelocity(): Float {
+            if (size < 2) return 0f
+            val vs = FloatArray(size - 1)
+            for (i in 1 until size) vs[i - 1] = velocityAt(i)
+            vs.sort()
+            return vs[(vs.size * 0.95f).toInt().coerceAtMost(vs.size - 1)]
         }
 
         /**
@@ -566,7 +655,7 @@ class StatisticalGlideTypingClassifier(context: Context) : GlideTypingClassifier
         fun resample(numPoints: Int): Gesture {
             val interpointDistance = (getLength() / numPoints)
             val resampledGesture = Gesture()
-            resampledGesture.addPoint(xs[0], ys[0])
+            resampledGesture.addPoint(xs[0], ys[0], ts[0])
             var lastX = xs[0]
             var lastY = ys[0]
             var newX: Float
@@ -576,7 +665,7 @@ class StatisticalGlideTypingClassifier(context: Context) : GlideTypingClassifier
             // otherwise nothing happens if size is only 1:
             if (this.size == 1) {
                 for (i in 0 until SAMPLING_POINTS) {
-                    resampledGesture.addPoint(xs[0], ys[0])
+                    resampledGesture.addPoint(xs[0], ys[0], ts[0])
                 }
             }
 
@@ -601,12 +690,17 @@ class StatisticalGlideTypingClassifier(context: Context) : GlideTypingClassifier
                     numNewPoints = (numNewPoints.toInt() + cumulativeError.toInt()).toFloat()
                     cumulativeError %= 1
                 }
-                for (j in 0 until numNewPoints.toInt()) {
+                val segStartT = ts[i]
+                val segDurationMs = (ts[i + 1] - ts[i]).coerceAtLeast(0L)
+                val totalNew = numNewPoints.toInt()
+                for (j in 0 until totalNew) {
                     newX = lastX + dx * interpointDistance
                     newY = lastY + dy * interpointDistance
                     lastX = newX
                     lastY = newY
-                    resampledGesture.addPoint(newX, newY)
+                    val fraction = (j + 1).toFloat() / max(1, totalNew)
+                    val newT = segStartT + (segDurationMs * fraction).toLong()
+                    resampledGesture.addPoint(newX, newY, newT)
                 }
             }
             return resampledGesture
@@ -637,7 +731,7 @@ class StatisticalGlideTypingClassifier(context: Context) : GlideTypingClassifier
             for (i in 0 until size) {
                 val x = xs[i] / longestSide - centroidX
                 val y = ys[i] / longestSide - centroidY
-                normalizedGesture.addPoint(x, y)
+                normalizedGesture.addPoint(x, y, ts[i])
             }
 
             return normalizedGesture
@@ -669,7 +763,7 @@ class StatisticalGlideTypingClassifier(context: Context) : GlideTypingClassifier
         fun getY(i: Int): Float = ys.getOrElse(i) { 0f }
 
         fun clone(): Gesture {
-            return Gesture(xs.clone(), ys.clone(), size)
+            return Gesture(xs.clone(), ys.clone(), ts.clone(), size)
         }
 
         override fun equals(other: Any?): Boolean {
