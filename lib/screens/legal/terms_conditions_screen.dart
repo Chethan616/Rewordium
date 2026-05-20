@@ -41,101 +41,109 @@ class TermsConditionsScreen extends StatelessWidget {
             ),
             const SizedBox(height: 8),
             Text(
-              'Last updated: ${DateTime.now().toString().split(' ')[0]}',
+              'Last updated: May 18, 2026',
               style: Theme.of(context).textTheme.bodySmall?.copyWith(
                     color: Theme.of(context).colorScheme.onSurfaceVariant,
                   ),
             ),
             const SizedBox(height: 24),
+            
             _buildSection(
               context: context,
               title: '1. Acceptance of Terms',
               content:
-                  '''By downloading, installing, or using Rewordium ("the App"), you agree to be bound by these Terms and Conditions. If you do not agree to these terms, please do not use the App.
+                  '''Welcome to Rewordium. These Terms and Conditions ("Terms" or "Agreement") constitute a legally binding contract between you ("User," "you," or "your") and Noxquill Tech ("we," "our," "us," or "Developers") governing your access to and use of the Rewordium mobile application, custom keyboard, floating AI Assistant Bubble, and all associated services, websites, and APIs.
 
-Rewordium is an AI-powered writing assistant that helps users rewrite, enhance, and improve their text content through artificial intelligence and natural language processing.''',
+By downloading, installing, registering an account, enabling keyboard or accessibility permissions, or interacting with the Service, you explicitly acknowledge that you have read, understood, and agree to be bound by these Terms and Conditions and our Privacy Policy. If you do not agree to these Terms, you must immediately deactivate, uninstall, and cease all use of our Service.''',
             ),
+            
             _buildSection(
               context: context,
-              title: '2. Description of Service',
-              content: '''Rewordium provides the following services:
-• AI-powered text rewriting and enhancement
-• Grammar and style suggestions
-• Text paraphrasing and rephrasing
-• Writing tone adjustment (Casual, Academic, Poetry, Custom personas)
-• Real-time accessibility service for text improvement
-• Keyboard integration for seamless writing assistance
+              title: '2. Bring Your Own Key (BYOK) Agreement',
+              content:
+                  '''To accommodate advanced writing loads and developers, Rewordium provides a Bring Your Own Key (BYOK) feature inside the settings drawer. By inputting your personal API keys (Google Gemini, OpenAI, Anthropic Claude, or custom OpenAI-compatible endpoints):
 
-The App uses advanced AI models to analyze and improve your text while maintaining the original meaning and intent.''',
-            ),
-            _buildSection(
-              context: context,
-              title: '3. User Accounts and Registration',
-              content:
-                  '''To access certain features of Rewordium, you may need to create an account. You agree to:
-• Provide accurate and complete information during registration
-• Maintain the security of your account credentials
-• Notify us immediately of any unauthorized use of your account
-• Accept responsibility for all activities that occur under your account
+2.1 Billing and Charge Waiver:
+• Credit Exemption: Active BYOK connections bypass all standard daily credit refill limitations. You will not be charged credits by Rewordium for writing processing.
+• Direct Developer Billing: All generations under BYOK are billed directly and exclusively by the third-party providers (e.g. OpenAI, Google, or Anthropic) to your private developer account.
+• Absolute Financial Exemption: You acknowledge that you are solely and fully responsible for any charges, fees, rate caps, API costs, or financial transactions incurred on your third-party provider accounts. Noxquill Tech is completely exempt from all financial liabilities and will not reimburse, credit, or offset any third-party developer bills.
 
-You may register using your email address or through Google Sign-In integration.''',
-            ),
-            _buildSection(
-              context: context,
-              title: '4. Acceptable Use Policy',
-              content:
-                  '''You agree to use Rewordium only for lawful purposes and in accordance with these Terms. You shall not:
-• Use the App to create harmful, offensive, or illegal content
-• Attempt to reverse engineer, modify, or distribute the App
-• Use the service to violate any applicable laws or regulations
-• Submit content that infringes on intellectual property rights
-• Use the App to generate spam, malware, or malicious content
-• Attempt to bypass any usage limits or restrictions''',
-            ),
-            _buildSection(
-              context: context,
-              title: '5. Accessibility Service',
-              content:
-                  '''Rewordium includes an accessibility service that helps improve text across various applications on your device. By enabling this service:
-• You grant permission for the App to read and modify text in supported applications
-• The service operates locally on your device for privacy protection
-• You can disable the accessibility service at any time through device settings
-• The service only processes text when explicitly requested by you''',
-            ),
-            _buildSection(
-              context: context,
-              title: '6. Subscription and Payments',
-              content:
-                  '''Rewordium offers both free and premium subscription tiers:
-• Free users receive limited daily credits for text processing
-• Premium subscribers enjoy advanced features and higher limits
+2.2 Provider Terms Compliance & Liability:
+• You represent and warrant that your inputted API keys are lawfully obtained and belong exclusively to you.
+• You agree to comply strictly with all third-party developer terms (including OpenAI Service Terms, Google Gemini terms of service, and Anthropic Developer Agreements).
+• Service Suspensions: We hold zero control over your third-party accounts. We are not liable for any API key suspensions, billing freezes, account terminations, or rate-limiting enforced on your profiles by those providers.
 
-Payments and subscriptions are processed securely through Google Play Billing:
-• Subscriptions are managed by Google Play, including payments, renewals, cancellations, and refunds
-• We do not collect or store any payment information
-• Subscriptions automatically renew unless cancelled via Google Play settings
-• Pricing may change for future billing periods, with advance notice where required
-• Refunds are subject to Google Play’s refund policies''',
+2.3 Secure Local Key Storage:
+• Your API keys are saved strictly locally on your device's secure hardware partition. We use hardware-backed local keystores (Android Keystore / iOS Keychain) with AES-256 encryption via FlutterSecureStorage.''',
             ),
+            
             _buildSection(
               context: context,
-              title: 'Feature Availability Disclaimer',
+              title: '3. Data Sovereignty & Infrastructure Disclosures (Qwen via Groq)',
               content:
-                  '''Features described in the App, including premium or experimental features, may change, be modified, limited, or discontinued at any time without prior notice.
-
-We do not guarantee uninterrupted access, specific feature availability, or permanent inclusion of any feature.''',
+                  '''To guarantee text data protection compliance and sovereignty:
+• US Infrastructure (Groq): The default cloud language model utilized by Rewordium is the open-source Qwen 3 (32B). You agree and acknowledge that 100% of these default completions are routed exclusively through Groq’s secure, US-based server networks.
+• No Chinese Endpoints: We guarantee that standard writing requests never transit through or contact Chinese domestic networks, servers, or Chinese government-governed API endpoints. Your data remains fully protected under secure Western frameworks.
+• Stateless Transit: You acknowledge and agree that default completions are processed statelessly inside secure, volatile RAM and deleted immediately upon output. No permanent logging or database archives are maintained.''',
             ),
+            
             _buildSection(
               context: context,
-              title: '7. Intellectual Property',
+              title: '4. Android Permissions & Virtual Inputs',
               content:
-                  '''The Rewordium App, including its design, functionality, and underlying technology, is owned by us and protected by intellectual property laws. While you retain rights to your original content, our AI-generated suggestions and improvements are provided as a service.
-
-You grant us a limited license to process your text for the purpose of providing our services.''',
+                  '''By activating Rewordium's custom keyboard or floating Accessibility Bubble:
+• System Warning Acknowledgment: You acknowledge that Android displays standard security warnings when activating any third-party keyboard. You explicitly waive all liability in connection with these boilerplate operating system prompts.
+• Keystroke Log Protection: We represent that the keyboard typing loop runs strictly offline in local RAM and does not log, track, or stream your keystrokes or private conversations.
+• Accessibility Limits: The Accessibility Service only reads and modifies text inside the active focused text input field (or contextually reads surrounding visual text if the active field is blank, to suggest replies) when you actively tap our bubble. The Service automatically suspends suggestions whenever a secure password or pin entry input field is active.''',
             ),
+            
             _buildSection(
               context: context,
-              title: '8. Open Source Components',
+              title: '5. Tampering, Reverse Engineering, & Signature Locks',
+              content:
+                  '''To protect users against modified copies of Rewordium which could be repackaged with spyware or keylogger payloads:
+• Anti-Tampering Integrity: Rewordium contains cryptographic signature verification modules that automatically lock and disable the application if it detects a modified, cracked, or unauthorized APK package.
+• Prohibited Actions: You are strictly prohibited from:
+  1. Reverse engineering, decompiling, disassembling, or attempting to extract the source code of the Application.
+  2. Modifying, bypassing, cracking, or disabling the cryptographic signature integrity check modules.
+  3. Distributing modified, cracked, or unauthorized copies of the Application.
+• Liability Exemption: You assume full and exclusive liability for any data breaches, keylogger exposures, or malware installations resulting from your installation of modified or unauthorized APK copies of Rewordium.''',
+            ),
+            
+            _buildSection(
+              context: context,
+              title: '6. AI Output & No Professional Advice Disclaimer',
+              content:
+                  '''You acknowledge and agree that:
+• AI Content Nature: AI-generated text suggestions, translation edits, or summarizations may occasionally be inaccurate, structurally flawed, contextually inappropriate, or outdated.
+• No Professional Advice: AI suggestions do not constitute professional, legal, academic, medical, or financial advice.
+• User Validation Mandatory: You are solely and fully responsible for reviewing, validating, and verifying the accuracy and legality of all AI-generated content before sending, publishing, or utilizing it. You assume all professional and legal liability for the content you generate and distribute.''',
+            ),
+            
+            _buildSection(
+              context: context,
+              title: '7. Limitation of Liability',
+              content:
+                  '''TO THE MAXIMUM EXTENT PERMITTED BY APPLICABLE JURISDICTIONAL LAWS:
+• Disclaimer of Warranties: THE SERVICE IS PROVIDED "AS IS" AND "AS AVAILABLE" WITHOUT WARRANTIES OF ANY KIND, EXPRESS OR IMPLIED.
+• Liability Cap: IN NO EVENT SHALL NOXQUILL TECH, ITS OFFICERS, DIRECTORS, DEVELOPERS, EMPLOYEES, OR AGENTS BE LIABLE FOR ANY INDIRECT, INCIDENTAL, SPECIAL, CONSEQUENTIAL, OR EXEMPLARY DAMAGES (INCLUDING LOSS OF PROFITS, DATA, SYSTEM DOWNTIME, OR BUSINESS INTERRUPTION) ARISING OUT OF OR IN CONNECTION WITH YOUR USE OR INABILITY TO USE THE SERVICE.
+• Sole Remedy: YOUR SOLE AND EXCLUSIVE REMEDY FOR DISSATISFACTION WITH THE SERVICE IS TO DEACTIVATE YOUR ACCOUNT AND UNINSTALL THE APPLICATION. OUR AGGREGATE LIABILITY FOR ALL CLAIMS SHALL NOT EXCEED THE TOTAL FEES PAID BY YOU TO US FOR THE ACTIVE SUBSCRIPTION SERVICE IN THE THREE (3) MONTHS IMMEDIATELY PRECEDING THE EVENT GIVING RISE TO LIABILITY.''',
+            ),
+            
+            _buildSection(
+              context: context,
+              title: '8. Acceptable Use Policy',
+              content:
+                  '''You agree not to use the Service to:
+• Generate harmful, offensive, hateful, defamatory, or highly illegal text content.
+• Submit content that infringes upon the copyright, trademark, or intellectual property rights of any third party.
+• Generate high-speed automated spam, bulk phishing campaigns, or malicious scripting text.
+• Attempt to overload, flood, or bypass standard cloud daily credit limits.''',
+            ),
+            
+            _buildSection(
+              context: context,
+              title: '9. Open Source Components',
               content:
                   '''Rewordium incorporates open source software components, which are used in accordance with their respective licenses:
 
@@ -143,78 +151,54 @@ You grant us a limited license to process your text for the purpose of providing
 
 • Apache License 2.0: You may obtain a copy of this license at https://www.apache.org/licenses/LICENSE-2.0
 
-We acknowledge and thank the open source community for their contributions. A full list of open source licenses is available within the App under Settings > Open Source Licenses.
-
-The use of open source components does not affect your rights or obligations under these Terms regarding the proprietary portions of Rewordium.''',
+We acknowledge and thank the open source community for their contributions. A full list of open source licenses is available within the App under Settings > Open Source Licenses.''',
             ),
-            _buildSection(
-              context: context,
-              title: '9. Data Privacy and Security',
-              content:
-                  '''We are committed to protecting your privacy and data security:
-• Text processing occurs locally when possible to minimize data transmission
-• We implement industry-standard security measures
-• Your personal information is handled according to our Privacy Policy
-• You can delete your account and associated data at any time
-• We do not store your text content longer than necessary to provide the service''',
-            ),
+            
             _buildSection(
               context: context,
               title: '10. Service Availability',
               content:
-                  '''We strive to maintain high service availability, but cannot guarantee uninterrupted access. The service may be temporarily unavailable due to:
-• Scheduled maintenance and updates
-• Technical difficulties or server issues
-• Third-party service dependencies
-• Force majeure events beyond our control
+                  '''We strive to maintain high service availability, but cannot guarantee uninterrupted access. The service may be temporarily unavailable due to scheduled maintenance, server updates, technical difficulties, or third-party service dependencies.''',
+            ),
+            
+            _buildSection(
+              context: context,
+              title: '11. Subscription, Credits, & Google Play Billing',
+              content:
+                  '''Rewordium offers both free and premium subscription tiers:
+• Free users receive limited daily credits for text processing.
+• Premium subscribers enjoy advanced features and higher limits.
 
-We will make reasonable efforts to notify users of planned maintenance.''',
+Payments and subscriptions are processed securely through Google Play Billing:
+• Subscriptions are managed by Google Play, including payments, renewals, cancellations, and refunds.
+• We do not collect or store any payment information.
+• Subscriptions automatically renew unless cancelled via Google Play settings.
+• Pricing may change for future billing periods, with advance notice.
+• Refunds are subject to Google Play’s refund policies.''',
             ),
+            
             _buildSection(
               context: context,
-              title: '11. Limitation of Liability',
+              title: '12. Governing Law & Dispute Resolution',
               content:
-                  '''To the maximum extent permitted by law, Rewordium and its developers shall not be liable for:
-• Any indirect, incidental, or consequential damages
-• Loss of data, profits, or business opportunities
-• Damages resulting from use or inability to use the service
-• Any content generated by the AI that may be inaccurate or inappropriate
+                  '''This Agreement and any dispute arising out of or in connection with the Service shall be governed by, construed, and enforced in accordance with the laws of the jurisdiction in which Noxquill Tech is registered and operated.
 
-Your sole remedy for dissatisfaction with the service is to stop using the App.''',
+You explicitly agree that any legal action or proceeding arising under this Agreement shall be brought exclusively in the courts of such jurisdiction, and you waive any objection to such venues on the grounds of inconvenient forum.''',
             ),
+            
             _buildSection(
               context: context,
-              title: '12. AI Content Disclaimer',
+              title: '13. Termination',
               content:
-                  '''Rewordium uses artificial intelligence to generate text suggestions and improvements. Please note:
-• AI-generated content may not always be accurate or appropriate
-• Users are responsible for reviewing and validating all AI suggestions
-• The AI may occasionally produce unexpected or unintended results
-• We do not guarantee the accuracy, completeness, or reliability of AI-generated content
-• Users should exercise judgment when using AI suggestions in professional or academic contexts''',
+                  '''Either party may terminate this agreement at any time:
+• You may stop using the App and delete your account.
+• We may suspend or terminate accounts for violations of these terms immediately, without prior notice.
+• Upon termination, your right to use the App ceases immediately.''',
             ),
+            
             _buildSection(
               context: context,
-              title: '13. Updates and Modifications',
-              content:
-                  '''We reserve the right to modify these Terms and Conditions at any time. When we make changes:
-• Updated terms will be posted in the App
-• Users will be notified of significant changes
-• Continued use of the App constitutes acceptance of new terms
-• If you disagree with changes, you may discontinue using the service''',
-            ),
-            _buildSection(
-              context: context,
-              title: '14. Termination',
-              content: '''Either party may terminate this agreement at any time:
-• You may stop using the App and delete your account
-• We may suspend or terminate accounts for violations of these terms
-• Upon termination, your right to use the App ceases immediately
-• Certain provisions of these terms will survive termination''',
-            ),
-            _buildSection(
-              context: context,
-              title: '15. Contact Information',
+              title: '14. Contact Information',
               content:
                   '''If you have questions about these Terms and Conditions, please contact us at:
 
@@ -223,6 +207,7 @@ Website: rewordium.tech
 
 We will respond to inquiries within 48 hours during business days.''',
             ),
+            
             const SizedBox(height: 32),
             Container(
               padding: const EdgeInsets.all(16),
@@ -230,13 +215,13 @@ We will respond to inquiries within 48 hours during business days.''',
                 color: Theme.of(context)
                     .colorScheme
                     .primary
-                    .withValues(alpha: 0.1),
+                    .withAlpha(25),
                 borderRadius: BorderRadius.circular(12),
                 border: Border.all(
                   color: Theme.of(context)
                       .colorScheme
                       .primary
-                      .withValues(alpha: 0.2),
+                      .withAlpha(51),
                 ),
               ),
               child: Text(

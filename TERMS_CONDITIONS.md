@@ -1,241 +1,129 @@
 # Terms and Conditions
 
-**Last updated: July 14, 2025**
+**Last updated: May 18, 2026**
 
-## 1. Introduction and Acceptance
+Welcome to Rewordium. These Terms and Conditions ("Terms" or "Agreement") constitute a legally binding contract between you ("User," "you," or "your") and Noxquill Tech ("we," "our," "us," or "Developers") governing your access to and use of the Rewordium mobile application, custom keyboard, floating AI Assistant Bubble, and all associated services, websites, and APIs (collectively, the "Service" or "Application").
 
-Welcome to Rewordium, an AI-powered writing assistant application designed to enhance your writing through intelligent text rewriting, grammar correction, and style improvement.
-
-By using Rewordium ("the App," "our Service," or "the Application"), you agree to be bound by these Terms and Conditions ("Terms"). If you do not agree to these Terms, please do not use our Service.
-
-These Terms apply to all users of Rewordium, including free and premium subscribers.
-
-## 2. Service Description
-
-### 2.1 Core Features:
-• AI-powered text rewriting and enhancement
-• Grammar and style correction
-• Multiple writing personas and tone adjustments
-• Real-time writing assistance through accessibility service
-• Cross-platform compatibility
-• Subscription-based premium features
-
-### 2.2 Accessibility Service:
-• Optional system-level writing assistance
-• Requires explicit user permission and setup
-• Operates on supported applications with user consent
-• Can be disabled at any time through device settings
-
-### 2.3 AI Technology:
-• Utilizes advanced language models for text processing
-• Combines local and cloud-based processing for optimal performance
-• Continuous improvements through machine learning
-• Privacy-focused processing with minimal data retention
-
-## 3. User Accounts and Registration
-
-### 3.1 Account Creation:
-• Users must provide accurate and complete information
-• Email verification may be required
-• Google Sign-In integration available for convenience
-• Users are responsible for maintaining account security
-
-### 3.2 Account Responsibilities:
-• Keep login credentials secure and confidential
-• Notify us immediately of any unauthorized access
-• Maintain accurate contact information
-• Comply with all applicable laws and regulations
-
-### 3.3 Account Termination:
-• Users may delete their accounts at any time
-• We reserve the right to suspend or terminate accounts for Terms violations
-• Account data will be deleted according to our Privacy Policy
-
-## 4. Subscription and Billing
-
-### 4.1 Premium Features:
-• Enhanced AI capabilities and advanced features
-• Priority customer support
-• Increased usage limits and processing speeds
-• Early access to new features and improvements
-
-### 4.2 Billing Terms:
-• Subscriptions are billed in advance on a recurring basis
-• All fees are non-refundable except as required by law
-• Price changes will be communicated 30 days in advance
-• Subscriptions auto-renew unless cancelled
-
-### 4.3 Cancellation:
-• Users may cancel subscriptions at any time through account settings
-• Cancellation takes effect at the end of the current billing period
-• Access to premium features continues until the end of the paid period
-• No partial refunds for unused subscription time
-
-## 5. Acceptable Use Policy
-
-### 5.1 Permitted Uses:
-• Personal and professional writing assistance
-• Educational and creative content improvement
-• Business communication enhancement
-• Research and academic writing support
-
-### 5.2 Prohibited Uses:
-• Generating harmful, illegal, or offensive content
-• Creating content that violates intellectual property rights
-• Attempting to reverse engineer or copy our AI models
-• Using the service for automated content generation at scale
-• Sharing accounts or subscription access with unauthorized users
-• Interfering with the service's security or functionality
-
-### 5.3 Content Responsibility:
-• Users are solely responsible for content they process through Rewordium
-• We do not claim ownership of user-generated content
-• Users retain all rights to their original text and ideas
-• AI-generated suggestions are provided as assistance, not replacements for human judgment
-
-## 6. Intellectual Property Rights
-
-### 6.1 Rewordium Property:
-• The App, its technology, and underlying AI models are our intellectual property
-• All trademarks, logos, and branding materials are protected
-• Users receive a limited license to use the service, not ownership
-• Reverse engineering or copying our technology is prohibited
-
-### 6.2 User Content:
-• Users retain ownership of their original content
-• We do not claim rights to text processed through our service
-• Users grant us a limited license to process their content for service delivery
-• User content is not used to train our AI models without explicit consent
-
-### 6.3 Third-Party Content:
-• Respect copyright and intellectual property rights
-• Do not process content you do not have rights to modify
-• Cite sources appropriately when using our suggestions
-• Report any copyright infringement concerns to noxquilltech@gmail.com
-
-## 7. Privacy and Data Protection
-
-### 7.1 Data Collection:
-• We collect minimal data necessary for service operation
-• Text processing data is temporary and deleted after use
-• Account information is protected according to our Privacy Policy
-• Users control what text content is processed
-
-### 7.2 Data Usage:
-• Personal information is used solely for service delivery
-• Usage analytics help improve our service quality
-• We do not sell or share personal data with third parties
-• AI processing complies with enterprise privacy standards
-
-### 7.3 User Control:
-• Users can access, modify, or delete their account data
-• Accessibility service can be disabled at any time
-• Data export options are available upon request
-• Privacy settings can be customized in the app
-
-## 8. Disclaimers and Limitations
-
-### 8.1 Service Availability:
-• We strive for 99.9% uptime but cannot guarantee uninterrupted service
-• Scheduled maintenance may temporarily limit functionality
-• Service availability may vary by region or device type
-• We are not liable for third-party service disruptions
-
-### 8.2 AI Accuracy:
-• AI suggestions are provided for assistance, not as definitive corrections
-• Users should review and verify all AI-generated content
-• We do not guarantee accuracy, completeness, or appropriateness of suggestions
-• AI technology continuously improves but may have limitations
-
-### 8.3 Limitation of Liability:
-• Our liability is limited to the amount paid for the service
-• We are not liable for indirect, incidental, or consequential damages
-• Users assume responsibility for how they use AI suggestions
-• Service is provided "as is" without warranties beyond legal requirements
-
-## 9. Indemnification
-
-Users agree to indemnify and hold harmless Rewordium, its officers, directors, employees, and agents from any claims, damages, or expenses arising from:
-• Violation of these Terms and Conditions
-• Misuse of the service or AI-generated content
-• Infringement of third-party rights
-• Illegal or harmful use of the application
-
-## 10. Dispute Resolution
-
-### 10.1 Governing Law:
-• These Terms are governed by the laws of the jurisdiction where Rewordium is operated
-• Disputes will be resolved in the appropriate courts of that jurisdiction
-• International users consent to this jurisdiction for legal matters
-
-### 10.2 Alternative Resolution:
-• We encourage users to contact us directly to resolve issues
-• Mediation may be pursued before formal legal proceedings
-• Class action waivers may apply where legally permissible
-• Users retain rights under applicable consumer protection laws
-
-## 11. Updates and Modifications
-
-### 11.1 Terms Updates:
-• We may update these Terms periodically to reflect service changes
-• Users will be notified of significant changes through the app
-• Continued use of the service constitutes acceptance of updated Terms
-• Users may terminate their accounts if they disagree with changes
-
-### 11.2 Service Updates:
-• We regularly update the app to improve functionality and security
-• New features may be added to enhance user experience
-• Some updates may require user action or re-consent
-• Legacy features may be discontinued with appropriate notice
-
-## 12. Termination
-
-### 12.1 User Termination:
-• Users may terminate their accounts at any time through app settings
-• Account data will be deleted according to our data retention policy
-• Subscription refunds follow our billing terms
-• Users remain responsible for any outstanding obligations
-
-### 12.2 Service Termination:
-• We may suspend or terminate accounts for Terms violations
-• Termination may be immediate for serious violations
-• Users will be notified of termination and reasons when possible
-• Appeal processes are available for disputed terminations
-
-## 13. Contact Information
-
-For questions about these Terms and Conditions:
-
-**General Inquiries:** noxquilltech@gmail.com
-**Legal Matters:** noxquilltech@gmail.com
-**Technical Support:** noxquilltech@gmail.com
-**Website:** rewordium.tech
-
-We aim to respond to all inquiries within 48 hours during business days.
-
-## 14. Additional Provisions
-
-### 14.1 Severability:
-• If any provision of these Terms is deemed invalid, the remaining provisions remain in effect
-• Invalid provisions will be modified to be enforceable while preserving intent
-• These Terms represent the complete agreement between users and Rewordium
-
-### 14.2 Force Majeure:
-• We are not liable for service interruptions due to circumstances beyond our control
-• This includes natural disasters, government actions, or technical infrastructure failures
-• Users will be notified of significant service disruptions when possible
-
-### 14.3 Assignment:
-• These Terms and user accounts are not transferable without our consent
-• We may assign these Terms in connection with business transfers or acquisitions
-• Users will be notified of any assignment that affects their rights
+By downloading, installing, registering an account, enabling keyboard or accessibility permissions, or interacting with the Service, you explicitly acknowledge that you have read, understood, and agree to be bound by these Terms and Conditions and our Privacy Policy. If you do not agree to these Terms, you must immediately deactivate, uninstall, and cease all use of our Service.
 
 ---
 
-## Acknowledgment
+## 1. Description of Service
 
-By using Rewordium, you acknowledge that you have read, understood, and agree to be bound by these Terms and Conditions and our Privacy Policy.
+Rewordium is an AI-powered writing companion that enhances text composition through intelligent editing features, including:
+- **Tone Shift (Paraphraser)**: Adjusts text drafts into Casual, Concise, Creative, or Professional tones.
+- **Smart Grammar Check**: Scans, lists, and fixes grammar mistakes and typos inline.
+- **Summarizer**: Condenses articles or uploaded document files (PDFs, TXT, DOCX) into structured summary nodes.
+- **Contextual Translator**: Contextual translation across 30+ major global languages.
+- **Jade AI Companion**: Interactive conversational writing and drafting assistant.
+- **Custom Keyboard & Accessibility Overlay**: Seamless inline integration using standard Android system virtual input mechanisms and AccessibilityService APIs.
 
 ---
 
-*These Terms and Conditions are designed to protect both users and our service while enabling the best possible AI writing assistance experience.*
+## 2. Bring Your Own Key (BYOK) & Third-Party API Agreement
+
+To accommodate advanced writing loads and developers, Rewordium provides a **Bring Your Own Key (BYOK)** feature inside the settings drawer. By inputting your personal API keys (Google Gemini, OpenAI, Anthropic Claude, or custom OpenAI-compatible endpoints):
+
+### 2.1 Billing and Charge Waiver
+- **Credit Exemption**: Active BYOK connections bypass all standard daily daily credit refill limitations. You will not be charged credits by Rewordium for writing processing.
+- **Direct Developer Billing**: All generations under BYOK are billed directly and exclusively by the third-party providers (e.g. OpenAI, Google, or Anthropic) to your private developer account.
+- **Absolute Financial Exemption**: You acknowledge that you are solely and fully responsible for any charges, fees, rate caps, API costs, or financial transactions incurred on your third-party provider accounts. **Noxquill Tech is completely exempt from all financial liabilities and will not reimburse, credit, or offset any third-party developer bills.**
+
+### 2.2 Provider Terms Compliance & Liability
+- You represent and warrant that your inputted API keys are lawfully obtained and belong exclusively to you.
+- You agree to comply strictly with all third-party developer terms (including OpenAI Service Terms, Google Gemini terms of service, and Anthropic Developer Agreements).
+- **Service Suspensions**: We hold zero control over your third-party accounts. We are not liable for any API key suspensions, billing freezes, account terminations, or rate-limiting enforced on your profiles by those providers.
+
+### 2.3 Secure Local Key Storage
+- Your API keys are saved strictly locally on your device's secure hardware partition. We use hardware-backed local keystores (Android Keystore / iOS Keychain) with AES-256 encryption via `FlutterSecureStorage`.
+- You acknowledge that if you root your device, install custom insecure ROMs, or compromise device-level security, your local encrypted keys may become vulnerable. You assume all security risks in relation to your local device security.
+
+---
+
+## 3. Data Sovereignty & Infrastructure Disclosures (Qwen via Groq)
+
+To guarantee text data protection compliance and sovereignty:
+- **US Infrastructure (Groq)**: The default cloud language model utilized by Rewordium is the open-source **Qwen 3 (32B)**. You agree and acknowledge that 100% of these default completions are routed exclusively through **Groq’s secure, US-based server networks**.
+- **No Chinese Endpoints**: We guarantee that standard writing requests never transit through or contact Chinese domestic networks, servers, or Chinese government-governed API endpoints. Your data remains fully protected under secure Western frameworks.
+- **Stateless Transit**: You acknowledge and agree that default completions are processed statelessly inside secure, volatile RAM and deleted immediately upon output. No permanent logging or database archives are maintained.
+
+---
+
+## 4. Android Permissions & Virtual Inputs
+
+By activating Rewordium's custom keyboard or floating Accessibility Bubble:
+- **System Warning Acknowledgment**: You acknowledge that Android displays standard security warnings when activating any third-party keyboard. You explicitly waive all liability in connection with these boilerplate operating system prompts.
+- **Keystroke Log Protection**: We represent that the keyboard typing loop runs strictly offline in local RAM and does **not** log, track, or stream your keystrokes or private conversations.
+- **Accessibility Limits**: The Accessibility Service only reads and modifies text inside the active focused text input field (or contextually reads surrounding visual text if the active field is blank, to suggest replies) when you actively tap our bubble. The Service automatically suspends suggestions whenever a secure password or pin entry input field is active.
+
+---
+
+## 5. Tampering, Reverse Engineering, & Signature Locks
+
+To protect users against modified copies of Rewordium which could be repackaged with spyware or keylogger payloads:
+- **Anti-Tampering Integrity**: Rewordium contains cryptographic signature verification modules that automatically lock and disable the application if it detects a modified, cracked, or unauthorized APK package.
+- **Prohibited Actions**: You are strictly prohibited from:
+  1. Reverse engineering, decompiling, disassembling, or attempting to extract the source code of the Application.
+  2. Modifying, bypassing, cracking, or disabling the cryptographic signature integrity check modules.
+  3. Distributing modified, cracked, or unauthorized copies of the Application.
+- **Liability Exemption**: You assume full and exclusive liability for any data breaches, keylogger exposures, or malware installations resulting from your installation of modified or unauthorized APK copies of Rewordium.
+
+---
+
+## 6. AI Output & No Professional Advice Disclaimer
+
+You acknowledge and agree that:
+- **AI Content Nature**: AI-generated text suggestions, translation edits, or summarizations may occasionally be inaccurate, structurally flawed, contextually inappropriate, or outdated.
+- **No Professional Advice**: AI suggestions do **not** constitute professional, legal, academic, medical, or financial advice.
+- **User Validation Mandatory**: **You are solely and fully responsible for reviewing, validating, and verifying the accuracy and legality of all AI-generated content before sending, publishing, or utilizing it.** You assume all professional and legal liability for the content you generate and distribute.
+
+---
+
+## 7. Limitation of Liability
+
+TO THE MAXIMUM EXTENT PERMITTED BY APPLICABLE JURISDICTIONAL LAWS:
+- **Disclaimer of Warranties**: THE SERVICE IS PROVIDED "AS IS" AND "AS AVAILABLE" WITHOUT WARRANTIES OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE, OR NON-INFRINGEMENT.
+- **Liability Cap**: IN NO EVENT SHALL NOXQUILL TECH, ITS OFFICERS, DIRECTORS, DEVELOPERS, EMPLOYEES, OR AGENTS BE LIABLE FOR ANY INDIRECT, INCIDENTAL, SPECIAL, CONSEQUENTIAL, OR EXEMPLARY DAMAGES (INCLUDING LOSS OF PROFITS, DATA, SYSTEM DOWNTIME, OR BUSINESS INTERRUPTION) ARISING OUT OF OR IN CONNECTION WITH YOUR USE OR INABILITY TO USE THE SERVICE.
+- **Sole Remedy**: YOUR SOLE AND EXCLUSIVE REMEDY FOR DISSATISFACTION WITH THE SERVICE IS TO DEACTIVATE YOUR ACCOUNT AND UNINSTALL THE APPLICATION. OUR AGGREGATE LIABILITY FOR ALL CLAIMS SHALL NOT EXCEED THE TOTAL FEES PAID BY YOU TO US FOR THE ACTIVE SUBSCRIPTION SERVICE IN THE THREE (3) MONTHS IMMEDIATELY PRECEDING THE EVENT GIVING RISE TO LIABILITY.
+
+---
+
+## 8. Acceptable Use Policy
+
+You agree not to use the Service to:
+- Generate harmful, offensive, hateful, defamatory, or highly illegal text content.
+- Submit content that infringes upon the copyright, trademark, or intellectual property rights of any third party.
+- Generate high-speed automated spam, bulk phishing campaigns, or malicious scripting text.
+- Attempt to overload, flood, or bypass standard cloud daily credit limits.
+
+---
+
+## 9. Governing Law & Dispute Resolution
+
+This Agreement and any dispute arising out of or in connection with the Service shall be governed by, construed, and enforced in accordance with the laws of the jurisdiction in which Noxquill Tech is registered and operated. 
+
+You explicitly agree that any legal action or proceeding arising under this Agreement shall be brought exclusively in the courts of such jurisdiction, and you waive any objection to such venues on the grounds of inconvenient forum.
+
+---
+
+## 10. Subscription, Credits, & Google Play Billing
+
+- **Subscription Management**: Free daily credits are allocated daily. Premium subscriptions are processed securely and exclusively through **Google Play Billing**.
+- **Auto-Renewal**: Subscriptions automatically renew at the designated fee unless cancelled via your Google Play account settings at least 24 hours prior to the billing cycle end.
+- **Refund Policy**: All fees are non-refundable. Any refund requests must be routed through and processed according to the Google Play Billing refund rules.
+
+---
+
+## 11. Termination
+
+- **User Termination**: You can terminate this Agreement at any time by deleting your account and completely uninstalling the Application.
+- **Developer Termination**: We reserve the right to suspend or permanently terminate your account and block your device identifier from accessing our Service immediately, without prior notice, if we determine that you have violated these Terms or engaged in unauthorized tampering.
+
+---
+
+## 12. Contact Information
+
+If you have questions, disputes, or legal notices concerning these Terms and Conditions, please contact us at:
+
+**Email**: noxquilltech@gmail.com  
+**Website**: rewordium.tech  

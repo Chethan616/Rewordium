@@ -198,6 +198,16 @@ interface SuggestionProvider : NlpProvider {
     suspend fun getFrequencyForWord(subtype: Subtype, word: String): Double
 
     /**
+     * Bulk variant of [getFrequencyForWord]. Returns a map of all known words to their [0.0, 1.0]
+     * frequency. Callers that need frequencies for many words (e.g. the glide typing classifier)
+     * should prefer this over calling [getFrequencyForWord] in a loop to avoid repeated suspensions.
+     * The default implementation delegates to [getListOfWords] + [getFrequencyForWord].
+     */
+    suspend fun getFrequencyMap(subtype: Subtype): Map<String, Double> {
+        return getListOfWords(subtype).associateWith { getFrequencyForWord(subtype, it) }
+    }
+
+    /**
      * When initializing composing text given a new context, the suggestion engine determines the composing range.
      * The default behavior gets the last word according to the current subtype's primaryLocale.
      * @param subtype The current subtype used to determine word or character boundary.

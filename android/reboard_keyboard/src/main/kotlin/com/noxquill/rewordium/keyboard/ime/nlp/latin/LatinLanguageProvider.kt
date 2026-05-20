@@ -19,6 +19,11 @@ package com.noxquill.rewordium.keyboard.ime.nlp.latin
 import android.content.Context
 import android.content.SharedPreferences
 import com.noxquill.rewordium.keyboard.appContext
+import java.io.BufferedInputStream
+import java.io.BufferedOutputStream
+import java.io.DataInputStream
+import java.io.DataOutputStream
+import java.io.File
 import com.noxquill.rewordium.keyboard.ime.core.Subtype
 import com.noxquill.rewordium.keyboard.ime.editor.EditorContent
 import com.noxquill.rewordium.keyboard.ime.nlp.SpellingProvider
@@ -43,6 +48,11 @@ class LatinLanguageProvider(context: Context) : SpellingProvider, SuggestionProv
         private const val BIGRAM_BOOST_FACTOR = 2.0
         private const val RECENCY_BOOST = 30
         private const val MAX_RECENCY_WORDS = 20
+
+        // Binary cache magic header — bump when format changes.
+        private const val CACHE_MAGIC = 0x52420002.toInt() // 'RB' + version 2
+        private const val WORD_CACHE_NAME = "dict_words.bin"
+        private const val BIGRAM_CACHE_NAME = "dict_bigrams.bin"
     }
 
     override val providerId = ProviderId
@@ -75,18 +85,27 @@ class LatinLanguageProvider(context: Context) : SpellingProvider, SuggestionProv
     override suspend fun preload(subtype: Subtype) = withContext(Dispatchers.IO) {
         wordData.withLock { data ->
             if (data.isEmpty()) {
-                val rawData = appContext.assets.readText("ime/dict/data.json")
-                val jsonData = Json.decodeFromString(wordDataSerializer, rawData)
-                data.putAll(jsonData)
+                val loaded = loadWordCache(appContext) ?: run {
+                    // Cache miss: parse JSON and write cache for next time.
+                    val rawData = appContext.assets.readText("ime/dict/data.json")
+                    val parsed = Json.decodeFromString(wordDataSerializer, rawData)
+                    saveWordCache(appContext, parsed)
+                    parsed
+                }
+                data.putAll(loaded)
             }
         }
         // Load bigram dictionary
         bigramData.withLock { data ->
             if (data.isEmpty()) {
                 try {
-                    val rawBigrams = appContext.assets.readText("ime/dict/bigrams.json")
-                    val jsonBigrams = Json.decodeFromString(bigramDataSerializer, rawBigrams)
-                    data.putAll(jsonBigrams)
+                    val loaded = loadBigramCache(appContext) ?: run {
+                        val rawBigrams = appContext.assets.readText("ime/dict/bigrams.json")
+                        val parsed = Json.decodeFromString(bigramDataSerializer, rawBigrams)
+                        saveBigramCache(appContext, parsed)
+                        parsed
+                    }
+                    data.putAll(loaded)
                 } catch (e: Exception) {
                     flogDebug { "Failed to load bigrams: ${e.message}" }
                 }
@@ -97,6 +116,114 @@ class LatinLanguageProvider(context: Context) : SpellingProvider, SuggestionProv
             learnedBigramsPrefs = appContext.getSharedPreferences(LEARNED_BIGRAMS_PREFS, Context.MODE_PRIVATE)
         }
         loadLearnedBigrams()
+    }
+
+    // ── Binary dictionary cache helpers ─────────────────────────────────────
+
+    private fun cacheDir(ctx: Context): File = ctx.cacheDir.also { it.mkdirs() }
+
+    @Suppress("DEPRECATION")
+    private fun appVersionCode(ctx: Context): Long = try {
+        val info = ctx.packageManager.getPackageInfo(ctx.packageName, 0)
+        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.P) {
+            info.longVersionCode
+        } else {
+            info.versionCode.toLong()
+        }
+    } catch (_: Exception) { 0L }
+
+    /**
+     * Try loading word frequencies from the binary cache.
+     * Returns null on cache miss, version mismatch, corrupt data, or I/O failure.
+     * Format: magic(Int) + appVersionCode(Long) + count(Int) + [word(UTF) + score(Int)]*
+     */
+    private fun loadWordCache(ctx: Context): Map<String, Int>? {
+        val file = File(cacheDir(ctx), WORD_CACHE_NAME)
+        if (!file.exists()) return null
+        return try {
+            DataInputStream(BufferedInputStream(file.inputStream(), 65_536)).use { dis ->
+                if (dis.readInt() != CACHE_MAGIC) return null
+                if (dis.readLong() != appVersionCode(ctx)) return null // stale — will rebuild
+                val count = dis.readInt()
+                val map = HashMap<String, Int>(count * 2)
+                repeat(count) {
+                    val word = dis.readUTF()
+                    val score = dis.readInt()
+                    map[word] = score
+                }
+                map
+            }
+        } catch (_: Exception) {
+            file.delete() // corrupt cache — recreate next time
+            null
+        }
+    }
+
+    private fun saveWordCache(ctx: Context, data: Map<String, Int>) {
+        try {
+            val file = File(cacheDir(ctx), WORD_CACHE_NAME)
+            DataOutputStream(BufferedOutputStream(file.outputStream(), 65_536)).use { dos ->
+                dos.writeInt(CACHE_MAGIC)
+                dos.writeLong(appVersionCode(ctx))
+                dos.writeInt(data.size)
+                for ((word, score) in data) {
+                    dos.writeUTF(word)
+                    dos.writeInt(score)
+                }
+            }
+        } catch (_: Exception) { /* non-fatal — next start will retry */ }
+    }
+
+    /**
+     * Try loading bigram frequencies from the binary cache.
+     * Format: magic(Int) + appVersionCode(Long) + outerCount(Int) +
+     *         [prevWord(UTF) + innerCount(Int) + [nextWord(UTF) + score(Int)]*]*
+     */
+    private fun loadBigramCache(ctx: Context): Map<String, Map<String, Int>>? {
+        val file = File(cacheDir(ctx), BIGRAM_CACHE_NAME)
+        if (!file.exists()) return null
+        return try {
+            DataInputStream(BufferedInputStream(file.inputStream(), 65_536)).use { dis ->
+                if (dis.readInt() != CACHE_MAGIC) return null
+                if (dis.readLong() != appVersionCode(ctx)) return null
+                val outerCount = dis.readInt()
+                val map = HashMap<String, Map<String, Int>>(outerCount * 2)
+                repeat(outerCount) {
+                    val prev = dis.readUTF()
+                    val innerCount = dis.readInt()
+                    val inner = HashMap<String, Int>(innerCount * 2)
+                    repeat(innerCount) {
+                        val next = dis.readUTF()
+                        val score = dis.readInt()
+                        inner[next] = score
+                    }
+                    map[prev] = inner
+                }
+                map
+            }
+        } catch (_: Exception) {
+            file.delete()
+            null
+        }
+    }
+
+    private fun saveBigramCache(ctx: Context, data: Map<String, Map<String, Int>>) {
+        try {
+            val file = File(cacheDir(ctx), BIGRAM_CACHE_NAME)
+            DataOutputStream(BufferedOutputStream(file.outputStream(), 65_536)).use { dos ->
+                dos.writeInt(CACHE_MAGIC)
+                dos.writeLong(appVersionCode(ctx))
+                dos.writeInt(data.size)
+                for ((prev, inner) in data) {
+                    dos.writeUTF(prev)
+                    dos.writeInt(inner.size)
+                    for ((next, score) in inner) {
+                        dos.writeUTF(next)
+                        dos.writeInt(score)
+                    }
+                }
+            }
+        } catch (_: Exception) { /* non-fatal */ }
     }
 
     /**
@@ -164,25 +291,77 @@ class LatinLanguageProvider(context: Context) : SpellingProvider, SuggestionProv
         val query = word.trim().lowercase()
         if (query.isBlank()) return SpellingResult.unspecified()
 
-        val suggestions = wordData.withLock { data ->
-            if (data.containsKey(query)) {
-                return@withLock emptyList()
-            }
+        val isKnown = wordData.withLock { it.containsKey(query) }
+        if (isKnown) return SpellingResult.validWord()
+
+        // Phase 1: fast prefix + edit-distance 1 candidates.
+        val editCandidates = wordData.withLock { data ->
             data.asSequence()
-                .filter { (candidate, _) -> candidate.startsWith(query.take(2)) && candidate != query }
+                .filter { (candidate, _) ->
+                    candidate != query &&
+                    (candidate.startsWith(query.take(2)) || isEditDistance1(query, candidate))
+                }
                 .sortedByDescending { (_, score) -> score }
-                .map { (candidate, _) -> candidate }
+                .map { it.key }
                 .take(maxSuggestionCount)
                 .toList()
         }
 
-        return if (suggestions.isEmpty() && wordData.withLock { it.containsKey(query) }) {
-            SpellingResult.validWord()
-        } else if (suggestions.isNotEmpty()) {
-            SpellingResult.typo(suggestions.toTypedArray())
+        if (editCandidates.isNotEmpty()) {
+            return SpellingResult.typo(editCandidates.toTypedArray())
+        }
+
+        // Phase 2: phonetic (Soundex) fallback — catches phonetically plausible misspellings
+        // that differ by more than 1 edit (e.g. "freind" → "friend", "nite" → "night").
+        val querySoundex = soundex(query)
+        val phoneticCandidates = wordData.withLock { data ->
+            data.asSequence()
+                .filter { (candidate, _) ->
+                    candidate != query && soundex(candidate) == querySoundex
+                }
+                .sortedByDescending { (_, score) -> score }
+                .map { it.key }
+                .take(maxSuggestionCount)
+                .toList()
+        }
+
+        return if (phoneticCandidates.isNotEmpty()) {
+            SpellingResult.typo(phoneticCandidates.toTypedArray())
         } else {
             SpellingResult.typo(emptyArray())
         }
+    }
+
+    /**
+     * Soundex phonetic encoding. Returns a 4-character code (letter + 3 digits) that groups
+     * words with similar consonant patterns, enabling phonetic spell correction.
+     * Example: "color" and "colour" both encode to "C460".
+     */
+    private fun soundex(word: String): String {
+        if (word.isEmpty()) return "0000"
+        val table = mapOf(
+            'b' to '1', 'f' to '1', 'p' to '1', 'v' to '1',
+            'c' to '2', 'g' to '2', 'j' to '2', 'k' to '2',
+            'q' to '2', 's' to '2', 'x' to '2', 'z' to '2',
+            'd' to '3', 't' to '3',
+            'l' to '4',
+            'm' to '5', 'n' to '5',
+            'r' to '6',
+        )
+        val upper = word.lowercase()
+        val code = StringBuilder()
+        code.append(upper[0].uppercaseChar())
+        var prev = table[upper[0]] ?: '0'
+        for (i in 1 until upper.length) {
+            val curr = table[upper[i]] ?: '0'
+            if (curr != '0' && curr != prev) {
+                code.append(curr)
+                if (code.length == 4) break
+            }
+            prev = curr
+        }
+        while (code.length < 4) code.append('0')
+        return code.toString()
     }
 
     override suspend fun suggest(
@@ -384,6 +563,10 @@ class LatinLanguageProvider(context: Context) : SpellingProvider, SuggestionProv
 
     override suspend fun getFrequencyForWord(subtype: Subtype, word: String): Double {
         return wordData.withLock { it.getOrDefault(word.lowercase(), 0) / 255.0 }
+    }
+
+    override suspend fun getFrequencyMap(subtype: Subtype): Map<String, Double> {
+        return wordData.withLock { data -> data.mapValues { it.value / 255.0 } }
     }
 
     override suspend fun destroy() {

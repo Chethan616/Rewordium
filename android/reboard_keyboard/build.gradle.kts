@@ -114,6 +114,14 @@ android {
         buildConfigField("String", "FLADDONS_STORE_URL", "\"www.rewordium.tech/extensions\"")
         buildConfigField("String", "GROQ_API_KEY", "\"${getGroqApiKey()}\"")
 
+        // Feature flags — toggle here for gradual rollout; true = enabled in all builds.
+        buildConfigField("boolean", "ENABLE_PATH_SMOOTHER", "true")
+        buildConfigField("boolean", "ENABLE_TRIGRAM_MODEL", "false")
+        buildConfigField("boolean", "ENABLE_TFLITE_RERANKER", "false")
+        buildConfigField("boolean", "ENABLE_STREAMING_AI", "false")
+        buildConfigField("boolean", "ENABLE_INLINE_COMPLETIONS", "false")
+        buildConfigField("boolean", "ENABLE_SMART_REPLIES", "false")
+
         sourceSets {
             maybeCreate("main").apply {
                 assets {
