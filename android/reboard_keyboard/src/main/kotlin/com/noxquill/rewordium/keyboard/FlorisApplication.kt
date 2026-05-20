@@ -28,6 +28,7 @@ import androidx.core.os.UserManagerCompat
 import com.noxquill.rewordium.keyboard.app.FlorisPreferenceModel
 import com.noxquill.rewordium.keyboard.app.FlorisPreferenceStore
 import com.noxquill.rewordium.keyboard.ime.ai.AIManager
+import com.noxquill.rewordium.keyboard.ime.ai.SmartReplyEngine
 import com.noxquill.rewordium.keyboard.ime.clipboard.ClipboardManager
 import com.noxquill.rewordium.keyboard.ime.core.SubtypeManager
 import com.noxquill.rewordium.keyboard.ime.dictionary.DictionaryManager
@@ -116,6 +117,7 @@ class FlorisApplication private constructor(context: Context) : ContextWrapper(c
     val subtypeManager = lazy { SubtypeManager(this) }
     val themeManager = lazy { ThemeManager(this) }
     val aiManager = lazy { AIManager(this) }
+    val smartReplyEngine = lazy { SmartReplyEngine(this) }
 
     private fun onCreate() {
         try {
@@ -203,3 +205,4 @@ fun Context.subtypeManager() = this.florisApplication().subtypeManager
 fun Context.themeManager() = this.florisApplication().themeManager
 
 fun Context.aiManager() = this.florisApplication().aiManager
+fun Context.smartReplyEngine() = this.florisApplication().smartReplyEngine

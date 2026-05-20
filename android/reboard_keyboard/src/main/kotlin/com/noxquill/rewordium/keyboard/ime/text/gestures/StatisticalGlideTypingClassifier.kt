@@ -20,6 +20,7 @@ import android.content.Context
 import androidx.collection.LruCache
 import androidx.collection.SparseArrayCompat
 import androidx.collection.set
+import com.noxquill.rewordium.keyboard.BuildConfig
 import com.noxquill.rewordium.keyboard.ime.core.Subtype
 import com.noxquill.rewordium.keyboard.ime.keyboard.KeyData
 import com.noxquill.rewordium.keyboard.ime.text.key.KeyCode
@@ -51,6 +52,9 @@ class StatisticalGlideTypingClassifier(context: Context) : GlideTypingClassifier
     private val gesture = Gesture()
     private var keysByCharacter: SparseArrayCompat<TextKey> = SparseArrayCompat()
     private var words: List<String> = emptyList()
+    // Snapshot of word frequencies loaded once per subtype change so the inner scoring loop
+    // can do O(1) map lookups instead of a runBlocking JNI call per candidate.
+    private var wordFrequencies: Map<String, Double> = emptyMap()
     private var keys: ArrayList<TextKey> = arrayListOf()
     private lateinit var pruner: Pruner
     private var wordDataSubtype: Subtype? = null
@@ -73,9 +77,11 @@ class StatisticalGlideTypingClassifier(context: Context) : GlideTypingClassifier
         private const val PRUNING_LENGTH_THRESHOLD = 8.42
 
         /**
-         * describes the number of points to sample a gesture at, i.e the resolution.
+         * Number of evenly-spaced points to resample a gesture into before comparison.
+         * Reduced from 240 → 120 for a 2× speedup in inner-loop distance calculations
+         * with negligible accuracy loss at typical Android key sizes (~40 dp).
          */
-        private const val SAMPLING_POINTS: Int = 240
+        private const val SAMPLING_POINTS: Int = 120
 
         /**
          * Standard deviation of the distribution of distances between the shapes of two gestures
@@ -94,11 +100,10 @@ class StatisticalGlideTypingClassifier(context: Context) : GlideTypingClassifier
         private const val LOCATION_STD = 0.46f
 
         /**
-         * This is a very small cache that caches suggestions, so that they aren't recalculated e.g when releasing
-         * a pointer when the suggestions were already calculated. Avoids a lot of micro pauses.
-         * Raised from 24 to 48 for better hit rate during fast glide sessions.
+         * Suggestion LRU cache size. Raised from 48 → 128 for a higher hit rate during rapid
+         * multi-word glide sessions; modern devices have ample memory.
          */
-        private const val SUGGESTION_CACHE_SIZE = 48
+        private const val SUGGESTION_CACHE_SIZE = 128
 
         /**
          * For multiple subtypes, the pruner is cached.
@@ -154,6 +159,9 @@ class StatisticalGlideTypingClassifier(context: Context) : GlideTypingClassifier
         }
 
         this.words = nlpManager.getListOfWords(subtype)
+        // Load all frequencies up-front so unCachedGetSuggestions can use a local map lookup
+        // instead of calling nlpManager.getFrequencyForWord() (a runBlocking call) per candidate.
+        this.wordFrequencies = nlpManager.getFrequencyMap(subtype)
 
         this.wordDataSubtype = subtype
         if (wordDataSubtype == layoutSubtype) {
@@ -207,7 +215,14 @@ class StatisticalGlideTypingClassifier(context: Context) : GlideTypingClassifier
         val key = keys.firstOrNull() ?: return listOf()
         val radius = min(key.visibleBounds.height, key.visibleBounds.width)
         val extremityCandidates = pruner.pruneByExtremities(gesture, this.keys)
-        val userGesture = gesture.resample(SAMPLING_POINTS)
+        // Optionally simplify the raw gesture with Douglas-Peucker before resampling.
+        // Removes micro-jitter while preserving directional corners.
+        val smoothedGesture = if (BuildConfig.ENABLE_PATH_SMOOTHER) {
+            GesturePathSmoother.simplify(gesture, epsilon = 2.0f)
+        } else {
+            gesture
+        }
+        val userGesture = smoothedGesture.resample(SAMPLING_POINTS)
         val normalizedUserGesture: Gesture = userGesture.normalizeByBoxSide()
         val lengthCandidates = pruner.pruneByLength(gesture, extremityCandidates, keysByCharacter, keys)
         val remainingWords = if (lengthCandidates.isNotEmpty()) {
@@ -227,7 +242,7 @@ class StatisticalGlideTypingClassifier(context: Context) : GlideTypingClassifier
                 val locationDistance = calcLocationDistance(wordGesture, userGesture)
                 val shapeProbability = max(0.000001f, calcGaussianProbability(shapeDistance, 0.0f, SHAPE_STD))
                 val locationProbability = max(0.000001f, calcGaussianProbability(locationDistance, 0.0f, LOCATION_STD * radius))
-                val frequency = max(1f, 255f * nlpManager.getFrequencyForWord(currentSubtype!!, word).toFloat())
+                val frequency = max(1f, 255f * wordFrequencies.getOrDefault(word, 0.0).toFloat())
                 val confidence = 1.0f / (shapeProbability * locationProbability * frequency)
 
                 var candidateDistanceSortedIndex = 0
@@ -527,6 +542,9 @@ class StatisticalGlideTypingClassifier(context: Context) : GlideTypingClassifier
 
         val isEmpty: Boolean
             get() = size == 0
+
+        val pointCount: Int
+            get() = size
 
         fun addPoint(x: Float, y: Float) {
             if (size >= MAX_SIZE) {

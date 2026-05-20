@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart';
+import 'package:flutter/services.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:convert';
 import 'dart:async';
@@ -108,8 +109,13 @@ class KeyboardProvider extends ChangeNotifier {
   bool _isSystemKeyboardEnabled = false;
   bool _isParaphraserEnabled = false;
 
-  // Timer for periodic keyboard status check
+  // Timer for periodic keyboard status check (fallback heartbeat)
   Timer? _keyboardStatusCheckTimer;
+
+  // EventChannel for push-based keyboard status updates from native
+  static const _keyboardEventsChannel =
+      EventChannel('com.noxquill.rewordium/keyboard_events');
+  StreamSubscription? _keyboardEventsSubscription;
 
   // Method to check keyboard status
   Future<void> checkKeyboardStatus() async {
@@ -200,6 +206,7 @@ class KeyboardProvider extends ChangeNotifier {
 
   @override
   void dispose() {
+    _keyboardEventsSubscription?.cancel();
     stopKeyboardStatusCheck();
     _performanceTimer?.cancel();
     _applyDebounce?.cancel();
@@ -292,22 +299,39 @@ class KeyboardProvider extends ChangeNotifier {
     notifyListeners();
   }
 
-  // Start periodic keyboard status check
+  // Start keyboard status monitoring.
+  // Primary signal: EventChannel push from native (IME change broadcast).
+  // Fallback: 60s timer to catch any missed events.
   void _startKeyboardStatusCheck() {
-    // Cancel any existing timer
     _keyboardStatusCheckTimer?.cancel();
+    _keyboardEventsSubscription?.cancel();
 
-    // Poll every 5s — the event-driven path (keyboard just enabled) handles
-    // the fast-path case; 5s is sufficient for background status sync.
-    _keyboardStatusCheckTimer =
-        Timer.periodic(const Duration(seconds: 5), (_) async {
-      await _checkKeyboardStatus();
+    // Subscribe to native push events — fires immediately with current state
+    // and again whenever the default IME changes.
+    _keyboardEventsSubscription = _keyboardEventsChannel
+        .receiveBroadcastStream()
+        .listen((dynamic event) async {
+      if (event is Map) {
+        final isEnabled = event['isEnabled'] as bool? ?? false;
+        if (isEnabled != _isSystemKeyboardEnabled) {
+          await _checkKeyboardStatus();
+        }
+      }
+    }, onError: (_) {
+      // EventChannel unavailable (e.g. older native build) — fall through to timer.
     });
 
-    // Check immediately
+    // 60s fallback heartbeat: EventChannel covers the fast path; this catches
+    // edge cases (app returned from settings without IME change broadcast).
+    _keyboardStatusCheckTimer =
+        Timer.periodic(const Duration(seconds: 60), (_) async {
+      if (_isInForeground) await _checkKeyboardStatus();
+    });
+
+    // Check immediately on start.
     _checkKeyboardStatus();
 
-    // Force another check after 500ms to catch any race at startup
+    // Second check after 500ms to catch startup races.
     Future.delayed(const Duration(milliseconds: 500), () {
       _checkKeyboardStatus();
     });
@@ -672,17 +696,67 @@ class KeyboardProvider extends ChangeNotifier {
   bool get isSystemKeyboardOverlayVisible =>
       _isSystemKeyboardEnabled && _keyboardService.isOverlayVisible;
 
-  // Update suggestions based on current text
+  // Update suggestions based on current text using prefix matching against common words.
   void updateSuggestions(String text) {
     if (text.isEmpty) {
       _suggestions = [];
-    } else {
-      // Simple suggestion algorithm - in a real app, this would be more sophisticated
-      _suggestions = ['${text}ing', '${text}ed', '${text}s'];
+      notifyListeners();
+      return;
     }
 
+    final prefix = text.toLowerCase().trim();
+    if (prefix.isEmpty) {
+      _suggestions = [];
+      notifyListeners();
+      return;
+    }
+
+    final matches = _commonEnglishWords
+        .where((w) => w.startsWith(prefix) && w.length > prefix.length)
+        .take(5)
+        .toList();
+    _suggestions = matches;
     notifyListeners();
   }
+
+  // Top ~350 English words by frequency, used for suggestion prefix matching.
+  static const _commonEnglishWords = [
+    'the', 'be', 'to', 'of', 'and', 'a', 'in', 'that', 'have', 'it',
+    'for', 'not', 'on', 'with', 'he', 'as', 'you', 'do', 'at', 'this',
+    'but', 'his', 'by', 'from', 'they', 'we', 'say', 'her', 'she', 'or',
+    'an', 'will', 'my', 'one', 'all', 'would', 'there', 'their', 'what',
+    'so', 'up', 'out', 'if', 'about', 'who', 'get', 'which', 'go', 'me',
+    'when', 'make', 'can', 'like', 'time', 'no', 'just', 'him', 'know',
+    'take', 'people', 'into', 'year', 'your', 'good', 'some', 'could',
+    'them', 'see', 'other', 'than', 'then', 'now', 'look', 'only', 'come',
+    'its', 'over', 'think', 'also', 'back', 'after', 'use', 'two', 'how',
+    'our', 'work', 'first', 'well', 'way', 'even', 'new', 'want', 'because',
+    'any', 'these', 'give', 'day', 'most', 'able', 'above', 'actually',
+    'again', 'against', 'always', 'another', 'anything', 'around',
+    'away', 'bad', 'before', 'being', 'between', 'big', 'both', 'better',
+    'call', 'came', 'change', 'child', 'children', 'come', 'coming',
+    'different', 'does', 'done', 'down', 'during', 'early', 'easy',
+    'end', 'enough', 'even', 'every', 'everyone', 'everything', 'example',
+    'face', 'fact', 'family', 'feel', 'few', 'find', 'follow', 'found',
+    'free', 'friend', 'from', 'full', 'further', 'general', 'given',
+    'going', 'great', 'group', 'hand', 'happen', 'hard', 'help', 'here',
+    'high', 'himself', 'home', 'hope', 'however', 'human', 'idea',
+    'important', 'instead', 'interest', 'issue', 'just', 'keep', 'kind',
+    'large', 'last', 'later', 'learn', 'leave', 'less', 'level', 'life',
+    'light', 'little', 'live', 'long', 'love', 'made', 'many', 'maybe',
+    'mean', 'might', 'mind', 'money', 'more', 'morning', 'move', 'much',
+    'must', 'name', 'need', 'never', 'next', 'night', 'nothing', 'number',
+    'often', 'once', 'order', 'other', 'others', 'outside', 'own', 'part',
+    'person', 'place', 'plan', 'play', 'point', 'possible', 'power',
+    'problem', 'process', 'provide', 'public', 'question', 'quite',
+    'really', 'reason', 'right', 'same', 'school', 'second', 'seem',
+    'should', 'show', 'since', 'small', 'something', 'sometimes', 'start',
+    'state', 'still', 'story', 'such', 'sure', 'system', 'table', 'talk',
+    'tell', 'thing', 'think', 'those', 'though', 'through', 'today',
+    'together', 'told', 'too', 'tried', 'true', 'turn', 'under', 'until',
+    'upon', 'used', 'very', 'want', 'water', 'while', 'whole', 'within',
+    'without', 'world', 'write', 'years', 'yet', 'young',
+  ];
 
   // Clear suggestions
   void clearSuggestions() {
@@ -1035,13 +1109,24 @@ class KeyboardProvider extends ChangeNotifier {
   }
 
   /// Called by the app lifecycle observer (e.g. from main.dart) to pause/resume
-  /// background timers for battery efficiency.
+  /// background timers for battery efficiency, and to re-check keyboard status
+  /// whenever the app comes back to foreground (the moment when the user might
+  /// have just enabled the keyboard in system settings).
   void onAppLifecycleChange(AppLifecycleState state) {
+    final wasInForeground = _isInForeground;
     _isInForeground = state == AppLifecycleState.resumed;
     if (!_isInForeground) {
       _performanceTimer?.cancel();
-    } else if (_swipeGesturesEnabled) {
-      _startPerformanceMonitoring();
+    } else {
+      // App just came to foreground — check keyboard status immediately.
+      // This is the key event: the user may have just returned from the system
+      // keyboard settings screen where they enabled ReBoard.
+      if (!wasInForeground) {
+        _checkKeyboardStatus();
+      }
+      if (_swipeGesturesEnabled) {
+        _startPerformanceMonitoring();
+      }
     }
   }
 }

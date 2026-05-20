@@ -128,17 +128,32 @@ abstract class KeyboardBase extends StatelessWidget {
     }
   }
 
-  // Build suggestion bar
+  // Build suggestion bar with animated transitions when candidates change.
   Widget buildSuggestionBar(BuildContext context) {
     final keyboardProvider = Provider.of<KeyboardProvider>(context);
     final suggestions = keyboardProvider.suggestions;
 
-    if (!showSuggestions || suggestions.isEmpty) {
-      return const SizedBox(height: 0);
-    }
+    // Wrap in AnimatedSwitcher so the bar fades in/out and chips cross-fade on update.
+    return AnimatedSwitcher(
+      duration: const Duration(milliseconds: 200),
+      transitionBuilder: (child, animation) =>
+          FadeTransition(opacity: animation, child: child),
+      child: (!showSuggestions || suggestions.isEmpty)
+          ? const SizedBox(key: ValueKey<String>('empty'), height: 0)
+          : _buildSuggestionList(context, suggestions, keyboardProvider),
+    );
+  }
 
+  Widget _buildSuggestionList(
+    BuildContext context,
+    List<String> suggestions,
+    KeyboardProvider keyboardProvider,
+  ) {
+    // Use joined suggestions as key so AnimatedSwitcher detects content changes.
+    final cacheKey = ValueKey<String>(suggestions.join('|'));
     return Container(
-      height: 40,
+      key: cacheKey,
+      height: 44,
       decoration: BoxDecoration(
         color: Theme.of(context).cardColor,
         border: Border(
@@ -154,43 +169,35 @@ abstract class KeyboardBase extends StatelessWidget {
         itemCount: suggestions.length,
         separatorBuilder: (context, index) => const SizedBox(width: 8),
         itemBuilder: (context, index) {
+          final isPrimary = index == 0;
           return InkWell(
             onTap: () {
-              // Replace current word with suggestion
-              final currentText = controller.text;
-              final textSelection = controller.selection;
-              final cursorPosition = textSelection.start;
-              final beforeCursor = currentText.substring(0, cursorPosition);
-              final afterCursor = currentText.substring(cursorPosition);
-
-              final lastSpaceIndex = beforeCursor.lastIndexOf(' ');
-              final prefix = lastSpaceIndex == -1
-                  ? ''
-                  : beforeCursor.substring(0, lastSpaceIndex + 1);
-
-              final newText = prefix + suggestions[index] + afterCursor;
-              controller.text = newText;
-              controller.selection = TextSelection.collapsed(
-                offset: prefix.length + suggestions[index].length,
-              );
-
-              keyboardProvider.clearSuggestions();
+              _acceptSuggestion(suggestions[index], keyboardProvider);
             },
+            borderRadius: BorderRadius.circular(16),
             child: Container(
               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
               margin: const EdgeInsets.symmetric(vertical: 6),
               decoration: BoxDecoration(
-                color: Theme.of(context).colorScheme.surface,
+                // First chip gets a subtle primary tint to signal it is the top prediction.
+                color: isPrimary
+                    ? Theme.of(context).colorScheme.primaryContainer.withValues(alpha: 0.35)
+                    : Theme.of(context).colorScheme.surface,
                 borderRadius: BorderRadius.circular(16),
                 border: Border.all(
-                  color: Colors.grey.withValues(alpha: 0.3),
+                  color: isPrimary
+                      ? Theme.of(context).colorScheme.primary.withValues(alpha: 0.4)
+                      : Colors.grey.withValues(alpha: 0.3),
                 ),
               ),
               child: Text(
                 suggestions[index],
                 style: TextStyle(
-                  color: Theme.of(context).colorScheme.onSurface,
+                  color: isPrimary
+                      ? Theme.of(context).colorScheme.onPrimaryContainer
+                      : Theme.of(context).colorScheme.onSurface,
                   fontSize: 14,
+                  fontWeight: isPrimary ? FontWeight.w500 : FontWeight.normal,
                 ),
               ),
             ),
@@ -198,6 +205,26 @@ abstract class KeyboardBase extends StatelessWidget {
         },
       ),
     );
+  }
+
+  void _acceptSuggestion(String suggestion, KeyboardProvider keyboardProvider) {
+    final currentText = controller.text;
+    final textSelection = controller.selection;
+    final cursorPosition = textSelection.start;
+    final beforeCursor = currentText.substring(0, cursorPosition);
+    final afterCursor = currentText.substring(cursorPosition);
+
+    final lastSpaceIndex = beforeCursor.lastIndexOf(' ');
+    final prefix = lastSpaceIndex == -1
+        ? ''
+        : beforeCursor.substring(0, lastSpaceIndex + 1);
+
+    final newText = prefix + suggestion + afterCursor;
+    controller.text = newText;
+    controller.selection = TextSelection.collapsed(
+      offset: prefix.length + suggestion.length,
+    );
+    keyboardProvider.clearSuggestions();
   }
 
   // Build keyboard key

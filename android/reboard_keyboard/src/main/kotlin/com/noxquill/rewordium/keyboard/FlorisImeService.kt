@@ -272,6 +272,7 @@ class FlorisImeService : LifecycleInputMethodService() {
     private val nlpManager by lazy { this.nlpManager().value }
     private val subtypeManager by lazy { this.subtypeManager().value }
     private val themeManager by lazy { this.themeManager().value }
+    private val smartReplyEngine by lazy { this.smartReplyEngine().value }
 
     private val activeState get() = keyboardManager.activeState
     private var inputWindowView by mutableStateOf<View?>(null)
@@ -373,6 +374,10 @@ class FlorisImeService : LifecycleInputMethodService() {
         syncOnboardingKeyboardPreferences()
         if (info == null) return
         val editorInfo = FlorisEditorInfo.wrap(info)
+        if (!restarting) {
+            // App switch: stale smart-reply cache is no longer relevant.
+            smartReplyEngine.clearCache()
+        }
         activeState.batchEdit {
             if (activeState.imeUiMode != ImeUiMode.CLIPBOARD || prefs.clipboard.historyHideOnNextTextField.get()) {
                 activeState.imeUiMode = ImeUiMode.TEXT

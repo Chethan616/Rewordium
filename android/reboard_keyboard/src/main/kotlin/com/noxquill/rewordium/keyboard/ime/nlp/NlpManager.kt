@@ -37,6 +37,7 @@ import com.noxquill.rewordium.keyboard.subtypeManager
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
@@ -191,6 +192,10 @@ class NlpManager(context: Context) {
         // Cancel any in-flight suggestion request — latest keystroke wins.
         suggestJob?.cancel()
         suggestJob = scope.launch {
+            // 50 ms debounce: if a newer suggest() call arrives and cancels this job before the
+            // delay elapses, no NLP work is done — eliminating redundant dictionary lookups
+            // during rapid typing bursts.
+            delay(50)
             val emojiSuggestions = when {
                 prefs.emoji.suggestionEnabled.get() -> {
                     emojiSuggestionProvider.suggest(
@@ -266,29 +271,35 @@ class NlpManager(context: Context) {
         return runBlocking { getSuggestionProvider(subtype).getFrequencyForWord(subtype, word) }
     }
 
-    private fun assembleCandidates() {
-        runBlocking {
-            val candidates = when {
-                isSuggestionOn() -> {
-                    clipboardSuggestionProvider.suggest(
-                        subtype = Subtype.DEFAULT,
-                        content = editorInstance.activeContent,
-                        maxCandidateCount = 8,
-                        allowPossiblyOffensive = !prefs.suggestion.blockPossiblyOffensive.get(),
-                        isPrivateSession = keyboardManager.activeState.isIncognitoMode,
-                    ).ifEmpty {
-                        buildList {
-                            internalSuggestionsGuard.withLock {
-                                addAll(internalSuggestions.second)
-                            }
+    /**
+     * Returns a snapshot of all word frequencies as a single map. Prefer this over repeated
+     * [getFrequencyForWord] calls when many words need scoring (e.g. glide typing classifier).
+     */
+    fun getFrequencyMap(subtype: Subtype): Map<String, Double> {
+        return runBlocking { getSuggestionProvider(subtype).getFrequencyMap(subtype) }
+    }
+
+    private suspend fun assembleCandidates() {
+        val candidates = when {
+            isSuggestionOn() -> {
+                clipboardSuggestionProvider.suggest(
+                    subtype = Subtype.DEFAULT,
+                    content = editorInstance.activeContent,
+                    maxCandidateCount = 8,
+                    allowPossiblyOffensive = !prefs.suggestion.blockPossiblyOffensive.get(),
+                    isPrivateSession = keyboardManager.activeState.isIncognitoMode,
+                ).ifEmpty {
+                    buildList {
+                        internalSuggestionsGuard.withLock {
+                            addAll(internalSuggestions.second)
                         }
                     }
                 }
-                else -> emptyList()
             }
-            activeCandidates = candidates
-            autoExpandCollapseSmartbarActions(candidates, NlpInlineAutofill.suggestions.value)
+            else -> emptyList()
         }
+        activeCandidates = candidates
+        autoExpandCollapseSmartbarActions(candidates, NlpInlineAutofill.suggestions.value)
     }
 
     fun autoExpandCollapseSmartbarActions(list1: List<*>?, list2: List<*>?) {

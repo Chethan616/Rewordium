@@ -22,6 +22,7 @@ import com.noxquill.rewordium.review.InAppReviewHelper
 import com.noxquill.rewordium.update.InAppUpdateHelper
 import io.flutter.embedding.android.FlutterActivity
 import io.flutter.embedding.engine.FlutterEngine
+import io.flutter.plugin.common.EventChannel
 import io.flutter.plugin.common.MethodChannel
 import android.accessibilityservice.AccessibilityServiceInfo
 import java.util.ArrayDeque
@@ -47,12 +48,21 @@ class MainActivity : FlutterActivity() {
         private const val USER_STATUS_CHANNEL = "com.noxquill.rewordium/user_status"
         private const val REVIEW_CHANNEL = "com.noxquill.rewordium/review"
         private const val UPDATE_CHANNEL = "com.noxquill.rewordium/update"
+        private const val KEYBOARD_EVENTS_CHANNEL = "com.noxquill.rewordium/keyboard_events"
     }
 
     private var deepLinkChannel: MethodChannel? = null
     private val pendingDeepLinks: ArrayDeque<String> = ArrayDeque()
     private var isDeepLinkChannelReady: Boolean = false
     private var userStatusMethodChannel: MethodChannel? = null
+    private var keyboardEventSink: EventChannel.EventSink? = null
+    private val keyboardStatusReceiver = object : BroadcastReceiver() {
+        override fun onReceive(context: Context?, intent: Intent?) {
+            val isEnabled = isKeyboardEnabled()
+            val isDefault = isKeyboardSelectedAsDefault()
+            keyboardEventSink?.success(mapOf("isEnabled" to isEnabled, "isDefault" to isDefault))
+        }
+    }
     private var lastReboardSettingsLaunchAt: Long = 0L
     private val keyboardReturnHandler = Handler(Looper.getMainLooper())
     private var keyboardReturnRunnable: Runnable? = null
@@ -111,6 +121,12 @@ class MainActivity : FlutterActivity() {
         } catch (e: Exception) {
             Log.w(TAG, "Error unregistering keyboard settings broadcast receiver", e)
         }
+
+        // Cleanup keyboard events EventChannel receiver (may already be gone if stream was cancelled)
+        try {
+            unregisterReceiver(keyboardStatusReceiver)
+        } catch (_: Exception) {}
+        keyboardEventSink = null
     }
 
     override fun onNewIntent(intent: Intent) {
@@ -827,6 +843,30 @@ class MainActivity : FlutterActivity() {
             updateChannel.invokeMethod("onUpdateDownloaded", null)
         }
         Log.d(TAG, "In-App Update channel configured")
+
+        // --- KEYBOARD EVENTS CHANNEL (EventChannel for push-based status) ---
+        EventChannel(flutterEngine.dartExecutor.binaryMessenger, KEYBOARD_EVENTS_CHANNEL)
+            .setStreamHandler(object : EventChannel.StreamHandler {
+                override fun onListen(arguments: Any?, sink: EventChannel.EventSink) {
+                    keyboardEventSink = sink
+                    // Register for system IME change broadcasts.
+                    val filter = IntentFilter(Intent.ACTION_INPUT_METHOD_CHANGED)
+                    registerReceiver(keyboardStatusReceiver, filter)
+                    // Push current status immediately so Flutter syncs on subscribe.
+                    sink.success(mapOf(
+                        "isEnabled" to isKeyboardEnabled(),
+                        "isDefault" to isKeyboardSelectedAsDefault(),
+                    ))
+                    Log.d(TAG, "Keyboard events stream started")
+                }
+
+                override fun onCancel(arguments: Any?) {
+                    keyboardEventSink = null
+                    try { unregisterReceiver(keyboardStatusReceiver) } catch (_: Exception) {}
+                    Log.d(TAG, "Keyboard events stream cancelled")
+                }
+            })
+        Log.d(TAG, "Keyboard events EventChannel configured")
     }
     
     // ========================================================================

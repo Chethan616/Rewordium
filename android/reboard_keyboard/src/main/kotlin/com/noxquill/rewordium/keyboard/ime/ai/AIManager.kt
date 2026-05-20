@@ -26,6 +26,9 @@ import com.google.gson.Gson
 import com.google.gson.annotations.SerializedName
 import com.noxquill.rewordium.keyboard.BuildConfig
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.channelFlow
+import kotlinx.coroutines.flow.onCompletion
 import kotlinx.coroutines.tasks.await
 import kotlinx.coroutines.withContext
 import okhttp3.MediaType.Companion.toMediaType
@@ -827,6 +830,150 @@ ENHANCEMENT STRATEGIES:
     }
 
     /**
+     * Stream a rewrite via SSE. Emits tokens one at a time as they arrive.
+     * Falls back to the non-streaming path when ENABLE_STREAMING_AI is off.
+     */
+    suspend fun rewriteStreaming(
+        text: String,
+        action: AIAction = AIAction.REWRITE,
+    ): Flow<String> {
+        if (!isUserLoggedIn()) throw AIException("Please log in to use AI features")
+        val config = getConfig()
+        if (!config.hasValidApiKey()) throw AIException("No API key. Go to Settings → Advanced AI")
+        if (text.isBlank()) throw AIException("No text to rewrite")
+
+        verifyCreditAvailabilityForRequest(config).getOrElse { throw it }
+
+        return if (BuildConfig.ENABLE_STREAMING_AI && !config.isGemini()) {
+            val systemPrompt = buildSystemPrompt(action)
+            val userPrompt = buildUserPrompt(text, action)
+            makeApiRequestStreaming(config, systemPrompt, userPrompt, overrideMaxTokens = 300)
+                .onCompletion { cause -> if (cause == null) consumeCreditAfterSuccess(config) }
+        } else {
+            // Fallback: emit the full response as a single token
+            val result = makeApiRequest(config, buildSystemPrompt(action), buildUserPrompt(text, action), overrideMaxTokens = 300)
+            channelFlow { send(result.getOrElse { throw it }) }
+        }
+    }
+
+    /**
+     * Stream a rewrite-with-prompt via SSE (used by 3-row AI panel).
+     */
+    suspend fun rewriteTextWithPromptStreaming(
+        fullPrompt: String,
+        action: AIAction = AIAction.REWRITE,
+    ): Flow<String> {
+        if (!isUserLoggedIn()) throw AIException("Please log in to use AI features")
+        val config = getConfig()
+        if (!config.hasValidApiKey()) throw AIException("No API key. Go to Settings → Advanced AI")
+        if (fullPrompt.isBlank()) throw AIException("No text to rewrite")
+
+        verifyCreditAvailabilityForRequest(config).getOrElse { throw it }
+
+        val actionGuidance = when (action) {
+            AIAction.REWRITE -> "Rewrite for clarity while preserving meaning."
+            AIAction.EXPAND -> "Expand with useful detail, context, or examples without changing core intent."
+            AIAction.SUMMARIZE -> "Summarize to the essential points while preserving key facts."
+            AIAction.FIX_GRAMMAR -> "Fix grammar, spelling, and punctuation with minimal voice changes."
+            AIAction.MAKE_FORMAL -> "Make the output professional and formal without sounding stiff."
+            AIAction.MAKE_CASUAL -> "Make the output natural and conversational while staying respectful."
+        }
+        val systemPrompt = """<system_instructions>
+You are an expert mobile writing assistant.
+Apply all relevant instructions to SOURCE_TEXT and return the final transformed text.
+</system_instructions>
+<action_priority>$actionGuidance</action_priority>
+<constraints>
+1. Return ONLY the final transformed text. No labels, no quotes, no markdown, no commentary.
+2. Keep the same language as SOURCE_TEXT.
+</constraints>"""
+
+        return if (BuildConfig.ENABLE_STREAMING_AI && !config.isGemini()) {
+            makeApiRequestStreaming(config, systemPrompt, fullPrompt, overrideMaxTokens = 700)
+                .onCompletion { cause -> if (cause == null) consumeCreditAfterSuccess(config) }
+        } else {
+            val result = makeApiRequest(config, systemPrompt, fullPrompt, overrideMaxTokens = 700)
+            channelFlow { send(result.getOrElse { throw it }) }
+        }
+    }
+
+    /**
+     * Core SSE streaming implementation. Reads chunked `data:` lines from an
+     * OpenAI-compatible streaming endpoint and emits content tokens via channelFlow.
+     */
+    private fun makeApiRequestStreaming(
+        config: AIConfigProvider.AIConfig,
+        systemPrompt: String,
+        userPrompt: String,
+        overrideMaxTokens: Int? = null,
+    ): Flow<String> = channelFlow {
+        val ch = this // capture ProducerScope before switching dispatcher
+        val request = GroqRequest(
+            model = config.model,
+            messages = listOf(
+                Message(role = "system", content = systemPrompt),
+                Message(role = "user", content = userPrompt),
+            ),
+            temperature = 0.9,
+            topP = 0.95,
+            presencePenalty = 0.3,
+            maxTokens = overrideMaxTokens ?: config.maxTokens,
+            stream = true,
+        )
+        val jsonBody = gson.toJson(request)
+        val requestBody = jsonBody.toRequestBody("application/json".toMediaType())
+        val httpRequestBuilder = Request.Builder()
+            .url(config.getBaseUrl())
+            .addHeader("Content-Type", "application/json")
+            .post(requestBody)
+
+        if (config.isClaude()) {
+            httpRequestBuilder.addHeader("x-api-key", config.apiKey)
+            httpRequestBuilder.addHeader("anthropic-version", "2023-06-01")
+        } else {
+            httpRequestBuilder.addHeader("Authorization", config.getAuthHeader())
+        }
+
+        withContext(Dispatchers.IO) {
+            val response = client.newCall(httpRequestBuilder.build()).execute()
+            if (!response.isSuccessful) {
+                val code = response.code
+                val body = response.body?.string() ?: ""
+                Log.e(TAG, "Streaming request failed: $code body=$body")
+                val msg = when (code) {
+                    401 -> "Invalid API key"
+                    429 -> "Rate limit — try again later"
+                    403 -> "API access forbidden"
+                    500, 502, 503, 504 -> "AI service unavailable"
+                    else -> "Streaming error $code"
+                }
+                throw AIException(msg)
+            }
+
+            val source = response.body?.source() ?: throw AIException("Empty streaming body")
+            try {
+                while (!source.exhausted()) {
+                    val line = source.readUtf8Line() ?: break
+                    if (!line.startsWith("data: ")) continue
+                    val data = line.removePrefix("data: ").trim()
+                    if (data == "[DONE]") break
+                    try {
+                        val chunk = gson.fromJson(data, GroqStreamChunk::class.java)
+                        val token = chunk?.choices?.firstOrNull()?.delta?.content
+                        if (!token.isNullOrEmpty()) {
+                            ch.send(token)
+                        }
+                    } catch (_: Exception) {
+                        // malformed SSE chunk — skip silently
+                    }
+                }
+            } finally {
+                source.close()
+            }
+        }
+    }
+
+    /**
      * Get a random creative persona for inspiration
      */
     fun getRandomCreativePersona(): String {
@@ -896,7 +1043,8 @@ data class GroqRequest(
     @SerializedName("presence_penalty")
     val presencePenalty: Double = 0.3,
     @SerializedName("max_tokens")
-    val maxTokens: Int = 2048
+    val maxTokens: Int = 2048,
+    val stream: Boolean = false,
 )
 
 data class Message(
@@ -927,5 +1075,19 @@ data class GeminiContent(
 
 data class GeminiPart(
     val text: String?
+)
+
+// Streaming SSE response data classes (OpenAI-compatible chunked format)
+data class GroqStreamChunk(
+    val choices: List<GroqStreamChoice>?
+)
+
+data class GroqStreamChoice(
+    val delta: GroqStreamDelta?,
+    @SerializedName("finish_reason") val finishReason: String?,
+)
+
+data class GroqStreamDelta(
+    val content: String?,
 )
 
