@@ -18,37 +18,33 @@ package com.noxquill.rewordium.keyboard.ime.keyboard
 
 import android.content.Context
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowRightAlt
 import androidx.compose.material.icons.automirrored.filled.Backspace
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowLeft
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
-import androidx.compose.material.icons.automirrored.filled.KeyboardReturn
-import androidx.compose.material.icons.automirrored.filled.Redo
-import androidx.compose.material.icons.automirrored.filled.Send
-import androidx.compose.material.icons.automirrored.filled.Undo
-import androidx.compose.material.icons.automirrored.outlined.Assignment
-import androidx.compose.material.icons.filled.ArrowUpward
-import androidx.compose.material.icons.filled.AutoAwesome
-import androidx.compose.material.icons.filled.Close
-import androidx.compose.material.icons.filled.ContentCopy
-import androidx.compose.material.icons.filled.ContentCut
-import androidx.compose.material.icons.filled.ContentPasteGo
-import androidx.compose.material.icons.filled.DeleteSweep
-import androidx.compose.material.icons.filled.Done
-import androidx.compose.material.icons.filled.FontDownload
+import androidx.compose.material.icons.automirrored.outlined.ArrowRightAlt
+import androidx.compose.material.icons.automirrored.outlined.KeyboardReturn
+import androidx.compose.material.icons.automirrored.outlined.Redo
+import androidx.compose.material.icons.automirrored.outlined.Send
+import androidx.compose.material.icons.automirrored.outlined.Undo
 import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.KeyboardArrowUp
-import androidx.compose.material.icons.filled.KeyboardCapslock
-import androidx.compose.material.icons.filled.KeyboardHide
-import androidx.compose.material.icons.filled.KeyboardVoice
-import androidx.compose.material.icons.filled.Language
-import androidx.compose.material.icons.filled.MoreHoriz
-import androidx.compose.material.icons.filled.Search
-import androidx.compose.material.icons.filled.SelectAll
-import androidx.compose.material.icons.filled.SentimentSatisfiedAlt
-import androidx.compose.material.icons.filled.Settings
-import androidx.compose.material.icons.filled.SpaceBar
-import androidx.compose.material.icons.filled.Stars
+import androidx.compose.material.icons.outlined.Close
+import androidx.compose.material.icons.outlined.ContentCopy
+import androidx.compose.material.icons.outlined.ContentCut
+import androidx.compose.material.icons.outlined.ContentPaste
+import androidx.compose.material.icons.outlined.DeleteOutline
+import androidx.compose.material.icons.outlined.Done
+import androidx.compose.material.icons.outlined.KeyboardHide
+import androidx.compose.material.icons.outlined.Language
+import androidx.compose.material.icons.outlined.Mic
+import androidx.compose.material.icons.outlined.MoreHoriz
+import androidx.compose.material.icons.outlined.Mood
+import androidx.compose.material.icons.outlined.Notes
+import androidx.compose.material.icons.outlined.Search
+import androidx.compose.material.icons.outlined.SelectAll
+import androidx.compose.material.icons.outlined.Settings
+import androidx.compose.material.icons.outlined.SpaceBar
+import androidx.compose.material.icons.outlined.Spellcheck
 import androidx.compose.ui.graphics.vector.ImageVector
 import com.noxquill.rewordium.keyboard.R
 import com.noxquill.rewordium.keyboard.ime.core.DisplayLanguageNamesIn
@@ -208,19 +204,19 @@ fun ComputingEvaluator.computeImageVector(data: KeyData): ImageVector? {
             Icons.Default.KeyboardArrowDown
         }
         KeyCode.CLIPBOARD_COPY -> {
-            Icons.Default.ContentCopy
+            Icons.Outlined.ContentCopy
         }
         KeyCode.CLIPBOARD_CUT -> {
-            Icons.Default.ContentCut
+            Icons.Outlined.ContentCut
         }
         KeyCode.CLIPBOARD_PASTE -> {
-            Icons.Default.ContentPasteGo
+            Icons.Outlined.ContentPaste
         }
         KeyCode.CLIPBOARD_SELECT_ALL -> {
-            Icons.Default.SelectAll
+            Icons.Outlined.SelectAll
         }
         KeyCode.CLIPBOARD_CLEAR_PRIMARY_CLIP -> {
-            Icons.Default.DeleteSweep
+            Icons.Outlined.DeleteOutline
         }
         KeyCode.COMPACT_LAYOUT_TO_LEFT,
         KeyCode.COMPACT_LAYOUT_TO_RIGHT,
@@ -228,14 +224,16 @@ fun ComputingEvaluator.computeImageVector(data: KeyData): ImageVector? {
             context()?.vectorResource(id = R.drawable.ic_accessibility_one_handed)
         }
         KeyCode.VOICE_INPUT -> {
-            Icons.Default.KeyboardVoice
+            Icons.Outlined.Mic
         }
-        KeyCode.AI_REWRITE,
+        KeyCode.AI_REWRITE -> {
+            context()?.vectorResource(id = R.drawable.ic_quick_ai_rewrite)
+        }
         KeyCode.AI_PANEL_TOGGLE -> {
-            Icons.Default.AutoAwesome
+            context()?.vectorResource(id = R.drawable.ic_quick_ai_panel)
         }
         KeyCode.IME_HIDE_UI -> {
-            Icons.Default.KeyboardHide
+            Icons.Outlined.KeyboardHide
         }
         KeyCode.DELETE -> {
             Icons.AutoMirrored.Filled.Backspace
@@ -244,17 +242,17 @@ fun ComputingEvaluator.computeImageVector(data: KeyData): ImageVector? {
             val imeOptions = evaluator.editorInfo.imeOptions
             val inputAttributes = evaluator.editorInfo.inputAttributes
             if (imeOptions.flagNoEnterAction || inputAttributes.flagTextMultiLine) {
-                Icons.AutoMirrored.Filled.KeyboardReturn
+                Icons.AutoMirrored.Outlined.KeyboardReturn
             } else {
                 when (imeOptions.action) {
-                    ImeOptions.Action.DONE -> Icons.Default.Done
-                    ImeOptions.Action.GO -> if (isBrowserApp) Icons.Default.Search else Icons.AutoMirrored.Filled.ArrowRightAlt
-                    ImeOptions.Action.NEXT -> if (isBrowserApp) Icons.Default.Search else Icons.AutoMirrored.Filled.ArrowRightAlt
-                    ImeOptions.Action.NONE -> Icons.AutoMirrored.Filled.KeyboardReturn
-                    ImeOptions.Action.PREVIOUS -> if (isBrowserApp) Icons.Default.Search else Icons.AutoMirrored.Filled.ArrowRightAlt
-                    ImeOptions.Action.SEARCH -> Icons.Default.Search
-                    ImeOptions.Action.SEND -> Icons.AutoMirrored.Filled.Send
-                    ImeOptions.Action.UNSPECIFIED -> Icons.AutoMirrored.Filled.KeyboardReturn
+                    ImeOptions.Action.DONE -> Icons.Outlined.Done
+                    ImeOptions.Action.GO -> if (isBrowserApp) Icons.Outlined.Search else Icons.AutoMirrored.Outlined.ArrowRightAlt
+                    ImeOptions.Action.NEXT -> if (isBrowserApp) Icons.Outlined.Search else Icons.AutoMirrored.Outlined.ArrowRightAlt
+                    ImeOptions.Action.NONE -> Icons.AutoMirrored.Outlined.KeyboardReturn
+                    ImeOptions.Action.PREVIOUS -> if (isBrowserApp) Icons.Outlined.Search else Icons.AutoMirrored.Outlined.ArrowRightAlt
+                    ImeOptions.Action.SEARCH -> Icons.Outlined.Search
+                    ImeOptions.Action.SEND -> Icons.AutoMirrored.Outlined.Send
+                    ImeOptions.Action.UNSPECIFIED -> Icons.AutoMirrored.Outlined.KeyboardReturn
                 }
             }
         }
@@ -262,16 +260,16 @@ fun ComputingEvaluator.computeImageVector(data: KeyData): ImageVector? {
             Icons.AutoMirrored.Default.ForwardDelete
         }
         KeyCode.IME_UI_MODE_MEDIA -> {
-            Icons.Default.SentimentSatisfiedAlt
+            Icons.Outlined.Mood
         }
         KeyCode.IME_UI_MODE_CLIPBOARD -> {
-            Icons.AutoMirrored.Outlined.Assignment
+            Icons.Outlined.Notes
         }
         KeyCode.LANGUAGE_SWITCH -> {
-            Icons.Default.Language
+            Icons.Outlined.Language
         }
         KeyCode.SETTINGS -> {
-            Icons.Default.Settings
+            Icons.Outlined.Settings
         }
         KeyCode.SHIFT -> {
             when (evaluator.state.inputShiftState) {
@@ -287,19 +285,19 @@ fun ComputingEvaluator.computeImageVector(data: KeyData): ImageVector? {
                 KeyboardMode.NUMERIC_ADVANCED,
                 KeyboardMode.PHONE,
                 KeyboardMode.PHONE2 -> {
-                    Icons.Default.SpaceBar
+                    Icons.Outlined.SpaceBar
                 }
                 else -> null
             }
         }
         KeyCode.UNDO -> {
-            Icons.AutoMirrored.Filled.Undo
+            Icons.AutoMirrored.Outlined.Undo
         }
         KeyCode.REDO -> {
-            Icons.AutoMirrored.Filled.Redo
+            Icons.AutoMirrored.Outlined.Redo
         }
         KeyCode.TOGGLE_ACTIONS_OVERFLOW -> {
-            Icons.Default.MoreHoriz
+            Icons.Outlined.MoreHoriz
         }
         KeyCode.TOGGLE_INCOGNITO_MODE -> {
             if (evaluator.state.isIncognitoMode) {
@@ -309,7 +307,7 @@ fun ComputingEvaluator.computeImageVector(data: KeyData): ImageVector? {
             }
         }
         KeyCode.TOGGLE_AUTOCORRECT -> {
-            Icons.Default.FontDownload
+            Icons.Outlined.Spellcheck
         }
         KeyCode.KANA_SWITCHER -> {
             if (evaluator.state.isKanaKata) {
@@ -332,10 +330,10 @@ fun ComputingEvaluator.computeImageVector(data: KeyData): ImageVector? {
             this.context()?.vectorResource(R.drawable.ic_keyboard_char_width_switcher_half)
         }
         KeyCode.DRAG_MARKER -> {
-            if (evaluator.state.debugShowDragAndDropHelpers) Icons.Default.Close else null
+            if (evaluator.state.debugShowDragAndDropHelpers) Icons.Outlined.Close else null
         }
         KeyCode.NOOP -> {
-            Icons.Default.Close
+            Icons.Outlined.Close
         }
         else -> null
     }

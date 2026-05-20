@@ -5,6 +5,7 @@ import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
+import android.database.ContentObserver
 import android.net.Uri
 import android.os.Build
 import android.os.Bundle
@@ -67,6 +68,7 @@ class MainActivity : FlutterActivity() {
     private val keyboardReturnHandler = Handler(Looper.getMainLooper())
     private var keyboardReturnRunnable: Runnable? = null
     private var keyboardReturnPollCount: Int = 0
+    private var keyboardSettingsObserver: ContentObserver? = null
     private val creditConsumptionReceiver = object : BroadcastReceiver() {
         override fun onReceive(context: Context?, intent: Intent?) {
             if (intent?.action == "com.noxquill.rewordium.CONSUME_CREDIT_REQUEST") {
@@ -127,6 +129,8 @@ class MainActivity : FlutterActivity() {
             unregisterReceiver(keyboardStatusReceiver)
         } catch (_: Exception) {}
         keyboardEventSink = null
+
+        unregisterKeyboardSettingsObserver()
     }
 
     override fun onNewIntent(intent: Intent) {
@@ -925,9 +929,73 @@ class MainActivity : FlutterActivity() {
 
         if (autoReturnToApp) {
             scheduleKeyboardReturnPolling()
+            registerKeyboardSettingsObserver()
         } else {
             stopKeyboardReturnPolling()
+            unregisterKeyboardSettingsObserver()
         }
+    }
+
+    private fun registerKeyboardSettingsObserver() {
+        unregisterKeyboardSettingsObserver()
+        val observer = object : ContentObserver(Handler(Looper.getMainLooper())) {
+            override fun onChange(selfChange: Boolean, uri: Uri?) {
+                onKeyboardSettingChanged()
+            }
+        }
+        keyboardSettingsObserver = observer
+        try {
+            contentResolver.registerContentObserver(
+                Settings.Secure.getUriFor(Settings.Secure.ENABLED_INPUT_METHODS),
+                false,
+                observer,
+            )
+            contentResolver.registerContentObserver(
+                Settings.Secure.getUriFor(Settings.Secure.DEFAULT_INPUT_METHOD),
+                false,
+                observer,
+            )
+        } catch (e: Exception) {
+            Log.w(TAG, "Could not register keyboard settings observer", e)
+            keyboardSettingsObserver = null
+        }
+    }
+
+    private fun unregisterKeyboardSettingsObserver() {
+        keyboardSettingsObserver?.let { observer ->
+            try {
+                contentResolver.unregisterContentObserver(observer)
+            } catch (_: Exception) {
+            }
+        }
+        keyboardSettingsObserver = null
+    }
+
+    private fun onKeyboardSettingChanged() {
+        val runtimePrefs = getSharedPreferences(ONBOARDING_RUNTIME_PREFS, Context.MODE_PRIVATE)
+        val shouldReturn = runtimePrefs.getBoolean(KEY_RETURN_TO_APP_AFTER_KEYBOARD_ENABLED, false)
+        if (!shouldReturn) {
+            unregisterKeyboardSettingsObserver()
+            return
+        }
+        if (!isReboardEnabled()) return
+
+        runtimePrefs.edit().putBoolean(KEY_RETURN_TO_APP_AFTER_KEYBOARD_ENABLED, false).apply()
+        val launchIntent = packageManager.getLaunchIntentForPackage(packageName)?.apply {
+            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+            addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP)
+            addFlags(Intent.FLAG_ACTIVITY_SINGLE_TOP)
+        }
+        if (launchIntent != null) {
+            try {
+                startActivity(launchIntent)
+                Log.d(TAG, "Returned to app via ContentObserver after keyboard enablement")
+            } catch (e: Exception) {
+                Log.w(TAG, "ContentObserver-driven app return failed", e)
+            }
+        }
+        stopKeyboardReturnPolling()
+        unregisterKeyboardSettingsObserver()
     }
 
     private fun scheduleKeyboardReturnPolling() {

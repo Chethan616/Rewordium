@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:m3e_collection/m3e_collection.dart' hide Cubic;
 import 'package:package_info_plus/package_info_plus.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -13,6 +14,11 @@ import '../services/news_subscription_service.dart';
 import '../services/rewordium_keyboard_service.dart';
 import '../screens/accessibility_disclosure_screen.dart';
 import '../theme/theme_provider.dart';
+
+// Strong custom easing curves (from easings.co / Emil Kowalski's design eng notes).
+// Built-in Flutter curves are weaker than these — these have the punch that makes
+// transitions feel intentional rather than mushy.
+const Cubic _easeOut = Cubic(0.23, 1.0, 0.32, 1.0);
 
 class OnboardingPage extends StatefulWidget {
   const OnboardingPage({super.key});
@@ -64,13 +70,14 @@ class _OnboardingPageState extends State<OnboardingPage>
   final TextEditingController _modelController = TextEditingController();
   final TextEditingController _endpointController = TextEditingController();
 
+  // Sentence-case throughout — feels less SaaS-formal.
   static const List<String> _stepTitles = [
     'Welcome',
-    'Assistant Mode',
-    'Theme Preference',
-    'AI Provider',
-    'News Updates',
-    'Keyboard Preferences',
+    'Assistant mode',
+    'Theme',
+    'AI provider',
+    'News updates',
+    'Keyboard',
   ];
 
   int _step = 0;
@@ -228,13 +235,19 @@ class _OnboardingPageState extends State<OnboardingPage>
                 'This will finish onboarding with safe defaults. You can change everything later in settings.',
               ),
               actions: [
-                TextButton(
+                ButtonM3E(
                   onPressed: () => Navigator.of(context).pop(false),
-                  child: const Text('Cancel'),
+                  label: const Text('Cancel'),
+                  style: ButtonM3EStyle.outlined,
+                  shape: ButtonM3EShape.round,
+                  size: ButtonM3ESize.sm,
                 ),
-                FilledButton(
+                ButtonM3E(
                   onPressed: () => Navigator.of(context).pop(true),
-                  child: const Text('Skip'),
+                  label: const Text('Skip'),
+                  style: ButtonM3EStyle.filled,
+                  shape: ButtonM3EShape.round,
+                  size: ButtonM3ESize.sm,
                 ),
               ],
             );
@@ -611,9 +624,15 @@ class _OnboardingPageState extends State<OnboardingPage>
     await context.read<ThemeProvider>().setDynamicColorsEnabled(dynamicEnabled);
   }
 
+  // ─────────────────────────────────────────────────────────────────────────
+  // BUILD — surface starts here
+  // ─────────────────────────────────────────────────────────────────────────
+
   @override
   Widget build(BuildContext context) {
     final baseTheme = Theme.of(context);
+    // Single typeface across the entire flow. Variable weight does what a
+    // second display face was doing.
     final themedData = baseTheme.copyWith(
       textTheme: GoogleFonts.ibmPlexSansTextTheme(baseTheme.textTheme).apply(
         bodyColor: baseTheme.colorScheme.onSurface,
@@ -628,76 +647,62 @@ class _OnboardingPageState extends State<OnboardingPage>
           final theme = Theme.of(context);
           final cs = theme.colorScheme;
           final progress = (_step + 1) / _stepTitles.length;
+          final reduceMotion = MediaQuery.of(context).disableAnimations;
 
           return Scaffold(
-            body: Stack(
-              children: [
-                _buildBackground(cs),
-                SafeArea(
-                  child: Padding(
-                    padding: const EdgeInsets.fromLTRB(20, 12, 20, 20),
-                    child: Column(
-                      children: [
-                        Row(
-                          children: [
-                            Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  'Rewordium Setup',
-                                  style: _navTitleStyle(context),
-                                ),
-                                const SizedBox(height: 2),
-                                Text(
-                                  'STEP ${_step + 1} OF ${_stepTitles.length}',
-                                  style: _stepLabelStyle(context),
-                                ),
-                              ],
-                            ),
-                            const Spacer(),
-                            TextButton(
-                              onPressed: _isSaving ? null : _onSkipPressed,
-                              style: TextButton.styleFrom(
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 12,
-                                  vertical: 6,
-                                ),
-                                foregroundColor: cs.onSurface,
-                                textStyle: _stepLabelStyle(context),
-                              ),
-                              child: const Text('Skip'),
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: 10),
-                        _buildProgressBar(progress, cs),
-                        const SizedBox(height: 14),
-                        Align(
-                          alignment: Alignment.centerLeft,
-                          child: Text(
-                            _stepTitles[_step],
-                            style: _headlineStyle(context),
-                          ),
-                        ),
-                        const SizedBox(height: 12),
-                        Expanded(
-                          child: AnimatedSwitcher(
-                            duration: const Duration(milliseconds: 240),
-                            switchInCurve: Curves.easeOutCubic,
-                            switchOutCurve: Curves.easeInCubic,
-                            child: SingleChildScrollView(
-                              key: ValueKey<int>(_step),
-                              child: _buildStepBody(context),
-                            ),
-                          ),
-                        ),
-                        const SizedBox(height: 12),
-                        _buildBottomBar(),
-                      ],
+            backgroundColor: cs.surface,
+            body: SafeArea(
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(24, 14, 24, 18),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    _buildHeader(context, cs),
+                    const SizedBox(height: 18),
+                    _buildProgressBar(progress, cs),
+                    const SizedBox(height: 22),
+                    _buildStepCounter(context, cs),
+                    const SizedBox(height: 8),
+                    Text(
+                      _stepTitles[_step],
+                      style: _headlineStyle(context),
                     ),
-                  ),
+                    const SizedBox(height: 22),
+                    Expanded(
+                      child: AnimatedSwitcher(
+                        duration: const Duration(milliseconds: 240),
+                        reverseDuration: const Duration(milliseconds: 160),
+                        switchInCurve: _easeOut,
+                        switchOutCurve: Curves.easeIn,
+                        transitionBuilder: (child, anim) {
+                          if (reduceMotion) {
+                            return FadeTransition(opacity: anim, child: child);
+                          }
+                          // Asymmetric: in slides up 6px while fading, out fades only.
+                          // Never scale(0) — start from near-identity.
+                          return FadeTransition(
+                            opacity: anim,
+                            child: SlideTransition(
+                              position: Tween<Offset>(
+                                begin: const Offset(0, 0.02),
+                                end: Offset.zero,
+                              ).animate(anim),
+                              child: child,
+                            ),
+                          );
+                        },
+                        child: SingleChildScrollView(
+                          key: ValueKey<int>(_step),
+                          physics: const BouncingScrollPhysics(),
+                          child: _buildStepBody(context),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 14),
+                    _buildBottomBar(context, cs),
+                  ],
                 ),
-              ],
+              ),
             ),
           );
         },
@@ -705,64 +710,31 @@ class _OnboardingPageState extends State<OnboardingPage>
     );
   }
 
-  Widget _buildBackground(ColorScheme cs) {
-    return Stack(
+  Widget _buildHeader(BuildContext context, ColorScheme cs) {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.center,
       children: [
-        Positioned.fill(
-          child: DecoratedBox(
-            decoration: BoxDecoration(
-              gradient: LinearGradient(
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-                colors: [
-                  cs.surface,
-                  cs.surfaceContainerLow,
-                  cs.surface,
-                ],
-              ),
-            ),
+        Text(
+          'rewordium',
+          style: GoogleFonts.ibmPlexSans(
+            fontSize: 15,
+            fontWeight: FontWeight.w500,
+            letterSpacing: -0.1,
+            color: cs.onSurface,
           ),
         ),
-        Positioned.fill(
-          child: Transform.rotate(
-            angle: -0.12,
-            child: DecoratedBox(
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  colors: [
-                    Colors.transparent,
-                    cs.primaryContainer.withValues(alpha: 0.14),
-                    Colors.transparent,
-                  ],
-                  stops: const [0.2, 0.5, 0.8],
-                ),
+        const Spacer(),
+        _PressableScale(
+          onPressed: _isSaving ? null : _onSkipPressed,
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 6),
+            child: Text(
+              'Skip',
+              style: GoogleFonts.ibmPlexSans(
+                fontSize: 13,
+                fontWeight: FontWeight.w500,
+                color: cs.onSurfaceVariant,
               ),
-            ),
-          ),
-        ),
-        Positioned.fill(
-          child: DecoratedBox(
-            decoration: BoxDecoration(
-              gradient: RadialGradient(
-                center: const Alignment(0.85, -0.9),
-                radius: 1.05,
-                colors: [
-                  cs.secondaryContainer.withValues(alpha: 0.32),
-                  Colors.transparent,
-                ],
-              ),
-            ),
-          ),
-        ),
-        Positioned(
-          bottom: -120,
-          left: -60,
-          child: Container(
-            width: 240,
-            height: 240,
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              color: cs.tertiaryContainer.withValues(alpha: 0.22),
             ),
           ),
         ),
@@ -770,137 +742,99 @@ class _OnboardingPageState extends State<OnboardingPage>
     );
   }
 
+  // Solid 2px fill on a hairline track. No gradient. Animated width on step change.
   Widget _buildProgressBar(double progress, ColorScheme cs) {
-    final safeProgress = progress.clamp(0.0, 1.0) as double;
-    return Container(
-      height: 6,
-      decoration: BoxDecoration(
-        color: cs.surfaceContainerHighest,
-        borderRadius: BorderRadius.circular(999),
-        border: Border.all(color: cs.outlineVariant.withValues(alpha: 0.6)),
-        boxShadow: [
-          BoxShadow(
-            color: cs.shadow.withValues(alpha: 0.06),
-            blurRadius: 10,
-            offset: const Offset(0, 4),
-          ),
-        ],
-      ),
-      child: ClipRRect(
-        borderRadius: BorderRadius.circular(999),
-        child: Stack(
-          children: [
-            Positioned.fill(
-              child: DecoratedBox(
-                decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    colors: [
-                      cs.primary.withValues(alpha: 0.12),
-                      cs.secondary.withValues(alpha: 0.12),
-                    ],
-                  ),
-                ),
+    final safeProgress = progress.clamp(0.0, 1.0);
+    return SizedBox(
+      height: 2,
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          return Stack(
+            children: [
+              Container(
+                color: cs.outlineVariant.withValues(alpha: 0.6),
               ),
-            ),
-            FractionallySizedBox(
-              widthFactor: safeProgress,
-              child: DecoratedBox(
-                decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    begin: Alignment.centerLeft,
-                    end: Alignment.centerRight,
-                    colors: [
-                      cs.primary,
-                      cs.secondary,
-                    ],
-                  ),
-                ),
+              TweenAnimationBuilder<double>(
+                tween: Tween(begin: 0, end: safeProgress),
+                duration: const Duration(milliseconds: 280),
+                curve: _easeOut,
+                builder: (context, value, _) {
+                  return Container(
+                    width: constraints.maxWidth * value,
+                    color: cs.onSurface,
+                  );
+                },
               ),
-            ),
-          ],
-        ),
+            ],
+          );
+        },
       ),
     );
   }
 
-  TextStyle _navTitleStyle(BuildContext context) {
-    final theme = Theme.of(context);
-    final cs = theme.colorScheme;
-    return GoogleFonts.spaceGrotesk(
-      textStyle: theme.textTheme.titleMedium?.copyWith(
-        color: cs.onSurface,
-        fontWeight: FontWeight.w700,
-        letterSpacing: -0.2,
-      ),
-    );
-  }
-
-  TextStyle _stepLabelStyle(BuildContext context) {
-    final theme = Theme.of(context);
-    final cs = theme.colorScheme;
-    return GoogleFonts.ibmPlexSans(
-      textStyle: theme.textTheme.labelSmall?.copyWith(
+  Widget _buildStepCounter(BuildContext context, ColorScheme cs) {
+    final total = _stepTitles.length.toString().padLeft(2, '0');
+    final current = (_step + 1).toString().padLeft(2, '0');
+    return Text(
+      'Step $current · $total',
+      style: GoogleFonts.ibmPlexSans(
+        fontSize: 12,
+        fontWeight: FontWeight.w500,
+        letterSpacing: 0.4,
         color: cs.onSurfaceVariant,
-        fontWeight: FontWeight.w600,
-        letterSpacing: 1.1,
+        fontFeatures: const [FontFeature.tabularFigures()],
       ),
     );
   }
 
   TextStyle _headlineStyle(BuildContext context) {
-    final theme = Theme.of(context);
-    final cs = theme.colorScheme;
-    return GoogleFonts.spaceGrotesk(
-      textStyle: theme.textTheme.headlineSmall?.copyWith(
-        color: cs.onSurface,
-        fontWeight: FontWeight.w700,
-        letterSpacing: -0.3,
-      ),
-    );
-  }
-
-  TextStyle _heroTitleStyle(BuildContext context) {
-    final theme = Theme.of(context);
-    final cs = theme.colorScheme;
-    return GoogleFonts.spaceGrotesk(
-      textStyle: theme.textTheme.titleLarge?.copyWith(
-        color: cs.onSurface,
-        fontWeight: FontWeight.w700,
-        letterSpacing: -0.2,
-      ),
+    final cs = Theme.of(context).colorScheme;
+    return GoogleFonts.ibmPlexSans(
+      fontSize: 30,
+      fontWeight: FontWeight.w700,
+      letterSpacing: -0.6,
+      height: 1.1,
+      color: cs.onSurface,
     );
   }
 
   TextStyle _cardTitleStyle(BuildContext context) {
-    final theme = Theme.of(context);
-    final cs = theme.colorScheme;
-    return GoogleFonts.spaceGrotesk(
-      textStyle: theme.textTheme.titleSmall?.copyWith(
-        color: cs.onSurface,
-        fontWeight: FontWeight.w600,
-      ),
+    final cs = Theme.of(context).colorScheme;
+    return GoogleFonts.ibmPlexSans(
+      fontSize: 15,
+      fontWeight: FontWeight.w600,
+      letterSpacing: -0.1,
+      color: cs.onSurface,
     );
   }
 
   TextStyle _bodyStyle(BuildContext context) {
-    final theme = Theme.of(context);
-    final cs = theme.colorScheme;
+    final cs = Theme.of(context).colorScheme;
     return GoogleFonts.ibmPlexSans(
-      textStyle: theme.textTheme.bodyMedium?.copyWith(
-        color: cs.onSurface,
-        height: 1.45,
-      ),
+      fontSize: 14,
+      fontWeight: FontWeight.w400,
+      height: 1.5,
+      color: cs.onSurface,
     );
   }
 
   TextStyle _bodySubtleStyle(BuildContext context) {
-    final theme = Theme.of(context);
-    final cs = theme.colorScheme;
+    final cs = Theme.of(context).colorScheme;
     return GoogleFonts.ibmPlexSans(
-      textStyle: theme.textTheme.bodySmall?.copyWith(
-        color: cs.onSurfaceVariant,
-        height: 1.4,
-      ),
+      fontSize: 13,
+      fontWeight: FontWeight.w400,
+      height: 1.45,
+      color: cs.onSurfaceVariant,
+    );
+  }
+
+  TextStyle _sectionLabelStyle(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+    return GoogleFonts.ibmPlexSans(
+      fontSize: 11,
+      fontWeight: FontWeight.w600,
+      letterSpacing: 0.8,
+      color: cs.onSurfaceVariant,
     );
   }
 
@@ -923,236 +857,111 @@ class _OnboardingPageState extends State<OnboardingPage>
     }
   }
 
-  Widget _buildBottomBar() {
-    final cs = Theme.of(context).colorScheme;
+  Widget _buildBottomBar(BuildContext context, ColorScheme cs) {
     return Row(
       children: [
+        // Back: text-only, no icon. The progress bar already tells direction.
         if (_step > 0)
-          OutlinedButton.icon(
+          _PressableScale(
             onPressed: _isSaving ? null : () => setState(() => _step -= 1),
-            style: OutlinedButton.styleFrom(
-              padding: const EdgeInsets.symmetric(
-                horizontal: 16,
-                vertical: 10,
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 10),
+              child: Text(
+                'Back',
+                style: _cardTitleStyle(context).copyWith(
+                  color: cs.onSurfaceVariant,
+                  fontWeight: FontWeight.w500,
+                ),
               ),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(12),
-              ),
-              side: BorderSide(color: cs.outlineVariant),
             ),
-            icon: const Icon(Icons.arrow_back),
-            label: const Text('Back'),
           )
         else
           const SizedBox.shrink(),
         const Spacer(),
-        FilledButton.icon(
+        ButtonM3E(
           onPressed: _isSaving ? null : _onContinuePressed,
-          style: FilledButton.styleFrom(
-            padding: const EdgeInsets.symmetric(
-              horizontal: 18,
-              vertical: 10,
-            ),
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(12),
-            ),
-          ),
-          icon: _isSaving
-              ? const SizedBox(
-                  width: 16,
-                  height: 16,
-                  child: CircularProgressIndicator(strokeWidth: 2),
+          style: ButtonM3EStyle.filled,
+          shape: ButtonM3EShape.round,
+          size: ButtonM3ESize.md,
+          label: _isSaving
+              ? SizedBox(
+                  width: 22,
+                  height: 22,
+                  child: LoadingIndicatorM3E(
+                    color: cs.onPrimary,
+                    constraints:
+                        const BoxConstraints(maxWidth: 22, maxHeight: 22),
+                  ),
                 )
-              : Icon(_isFinalStep ? Icons.check : Icons.arrow_forward),
-          label: Text(_isFinalStep ? 'Finish Setup' : 'Continue'),
+              : Text(_isFinalStep ? 'Finish setup' : 'Continue'),
         ),
       ],
     );
   }
 
+  // ─────────────────────────────────────────────────────────────────────────
+  // STEP 0 — Welcome
+  // Plain intro + numbered list of what's next. No card chrome, no meta pills,
+  // no feature bullets that redundantly describe the next 5 steps.
+  // ─────────────────────────────────────────────────────────────────────────
+
   Widget _buildWelcomeStep(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
+    final upcoming = _stepTitles.sublist(1);
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Container(
-          width: double.infinity,
-          padding: const EdgeInsets.all(20),
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(20),
-            color: cs.surfaceContainerHigh,
-            border: Border.all(color: cs.outlineVariant),
-            boxShadow: [
-              BoxShadow(
-                color: cs.shadow.withValues(alpha: 0.08),
-                blurRadius: 18,
-                offset: const Offset(0, 10),
-              ),
-            ],
-          ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
+        Text(
+          'A short setup. About a minute.',
+          style: _bodyStyle(context),
+        ),
+        const SizedBox(height: 32),
+        Text(
+          "WHAT YOU'LL SET UP",
+          style: _sectionLabelStyle(context),
+        ),
+        const SizedBox(height: 4),
+        for (int i = 0; i < upcoming.length; i++) ...[
+          _StaggeredFadeIn(
+            delayMs: 40 + i * 45,
+            child: Padding(
+              padding: const EdgeInsets.symmetric(vertical: 14),
+              child: Row(
                 children: [
-                  Container(
-                    width: 4,
-                    height: 46,
-                    decoration: BoxDecoration(
-                      borderRadius: BorderRadius.circular(6),
-                      color: cs.primary,
+                  SizedBox(
+                    width: 32,
+                    child: Text(
+                      (i + 1).toString().padLeft(2, '0'),
+                      style: GoogleFonts.ibmPlexSans(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w500,
+                        color: cs.onSurfaceVariant,
+                        fontFeatures: const [FontFeature.tabularFigures()],
+                      ),
                     ),
                   ),
-                  const SizedBox(width: 12),
                   Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          'Welcome to Rewordium',
-                          style: _heroTitleStyle(context),
-                        ),
-                        const SizedBox(height: 2),
-                        Text(
-                          'Set up your assistant in about a minute.',
-                          style: _bodySubtleStyle(context),
-                        ),
-                      ],
-                    ),
+                    child: Text(upcoming[i], style: _cardTitleStyle(context)),
                   ),
                 ],
               ),
-              const SizedBox(height: 12),
-              Text(
-                'Choose how Rewordium assists you, confirm accessibility usage, and set keyboard defaults tailored to your workflow.',
-                style: _bodyStyle(context),
-              ),
-              const SizedBox(height: 14),
-              Wrap(
-                spacing: 8,
-                runSpacing: 8,
-                children: [
-                  _metaTag(context, 'Setup ~60s'),
-                  _metaTag(context, 'Change anytime'),
-                  _metaTag(context, 'Privacy-first'),
-                ],
-              ),
-            ],
+            ),
           ),
-        ),
-        const SizedBox(height: 16),
-        _featureBullet(
-          context,
-          icon: Icons.accessibility_new,
-          title: 'Assistant modes',
-          subtitle: 'Choose keyboard, overlay, or both based on your workflow.',
-        ),
-        _featureBullet(
-          context,
-          icon: Icons.security,
-          title: 'Permission clarity',
-          subtitle: 'Disclosure is shown before accessibility setup.',
-        ),
-        _featureBullet(
-          context,
-          icon: Icons.palette_outlined,
-          title: 'Theme preference',
-          subtitle: 'Select standard colors or enable dynamic theming.',
-        ),
-        _featureBullet(
-          context,
-          icon: Icons.memory,
-          title: 'AI provider',
-          subtitle: 'Use managed Groq or connect your own provider.',
-        ),
+          if (i < upcoming.length - 1)
+            Divider(
+              height: 1,
+              thickness: 1,
+              color: cs.outlineVariant.withValues(alpha: 0.5),
+            ),
+        ],
       ],
     );
   }
 
-  Widget _featureBullet(
-    BuildContext context, {
-    required IconData icon,
-    required String title,
-    required String subtitle,
-  }) {
-    final cs = Theme.of(context).colorScheme;
-    return Container(
-      margin: const EdgeInsets.only(bottom: 10),
-      padding: const EdgeInsets.all(14),
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(16),
-        color: cs.surfaceContainerLow,
-        border: Border.all(color: cs.outlineVariant),
-        boxShadow: [
-          BoxShadow(
-            color: cs.shadow.withValues(alpha: 0.06),
-            blurRadius: 14,
-            offset: const Offset(0, 6),
-          ),
-        ],
-      ),
-      child: Row(
-        children: [
-          Container(
-            width: 36,
-            height: 36,
-            decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(10),
-              gradient: LinearGradient(
-                colors: [
-                  cs.primaryContainer,
-                  cs.secondaryContainer,
-                ],
-              ),
-            ),
-            child: Icon(icon, size: 20, color: cs.onPrimaryContainer),
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  title,
-                  style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                        fontWeight: FontWeight.w700,
-                      ),
-                ),
-                const SizedBox(height: 2),
-                Text(
-                  subtitle,
-                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                        color: cs.onSurfaceVariant,
-                      ),
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _metaTag(BuildContext context, String label) {
-    final cs = Theme.of(context).colorScheme;
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(999),
-        color: cs.surfaceContainerHighest,
-        border: Border.all(color: cs.outlineVariant),
-      ),
-      child: Text(
-        label,
-        style: _stepLabelStyle(context).copyWith(
-          color: cs.onSurfaceVariant,
-          letterSpacing: 0.2,
-        ),
-      ),
-    );
-  }
+  // ─────────────────────────────────────────────────────────────────────────
+  // STEP 1 — Assistant mode
+  // ─────────────────────────────────────────────────────────────────────────
 
   Widget _buildAssistantModeStep(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
@@ -1160,103 +969,94 @@ class _OnboardingPageState extends State<OnboardingPage>
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        _modeCard(
-          context,
-          icon: Icons.keyboard,
-          title: 'Keyboard First',
-          subtitle:
-              'Use ReBoard keyboard features without accessibility overlay.',
+        _selectionCard(
+          context: context,
+          icon: Icons.keyboard_outlined,
+          title: 'Keyboard first',
+          subtitle: 'ReBoard keyboard features without the accessibility overlay.',
           selected: _assistantMode == _AssistantMode.keyboardOnly,
           onTap: () =>
               setState(() => _assistantMode = _AssistantMode.keyboardOnly),
         ),
-        _modeCard(
-          context,
-          icon: Icons.layers,
-          title: 'Accessibility Overlay',
-          subtitle:
-              'Assistant bubble over supported apps for fast rewrite actions.',
+        _selectionCard(
+          context: context,
+          icon: Icons.layers_outlined,
+          title: 'Accessibility overlay',
+          subtitle: 'A bubble over supported apps for fast rewrite actions.',
           selected: _assistantMode == _AssistantMode.accessibilityOverlay,
           onTap: () => setState(
               () => _assistantMode = _AssistantMode.accessibilityOverlay),
         ),
-        _modeCard(
-          context,
-          icon: Icons.hub,
+        _selectionCard(
+          context: context,
+          icon: Icons.hub_outlined,
           title: 'Both',
-          subtitle: 'Enable keyboard and overlay paths together.',
+          subtitle: 'Keyboard and overlay together.',
           selected: _assistantMode == _AssistantMode.both,
           onTap: () => setState(() => _assistantMode = _AssistantMode.both),
         ),
-        const SizedBox(height: 12),
-        if (_usesAccessibility)
+        if (_usesAccessibility) ...[
+          const SizedBox(height: 18),
           Container(
             width: double.infinity,
             padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(18),
-              color: cs.surfaceContainerLow,
+              borderRadius: BorderRadius.circular(12),
+              color: cs.surface,
               border: Border.all(color: cs.outlineVariant),
             ),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Row(
-                  children: [
-                    Icon(Icons.policy_outlined, color: cs.primary),
-                    const SizedBox(width: 8),
-                    Text(
-                      'Accessibility Prompt',
-                      style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                            fontWeight: FontWeight.w700,
-                          ),
-                    ),
-                  ],
+                Text(
+                  'Accessibility prompt',
+                  style: _cardTitleStyle(context),
                 ),
-                const SizedBox(height: 10),
+                const SizedBox(height: 6),
                 Text(
                   'When you continue, you will see a required consent prompt before Android Accessibility settings open.',
-                  style: Theme.of(context).textTheme.bodyMedium,
+                  style: _bodySubtleStyle(context),
                 ),
-                const SizedBox(height: 8),
+                const SizedBox(height: 14),
                 _disclosureLine(context,
                     'Uses visible text context to provide rewrite and drafting actions.'),
                 _disclosureLine(context,
                     'Processes content only when you trigger assistant actions.'),
                 _disclosureLine(context,
                     'You can revoke permission anytime in Android settings.'),
-                const SizedBox(height: 8),
-                Container(
+                const SizedBox(height: 14),
+                AnimatedContainer(
+                  duration: const Duration(milliseconds: 160),
+                  curve: _easeOut,
                   width: double.infinity,
-                  padding: const EdgeInsets.all(12),
+                  padding: const EdgeInsets.symmetric(
+                      horizontal: 12, vertical: 10),
                   decoration: BoxDecoration(
-                    borderRadius: BorderRadius.circular(12),
-                    color: _accessibilityDisclosureAccepted
-                        ? cs.tertiaryContainer
-                        : cs.surfaceContainerHighest,
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(
+                      color: _accessibilityDisclosureAccepted
+                          ? cs.primary
+                          : cs.outlineVariant,
+                    ),
                   ),
                   child: Row(
                     children: [
                       Icon(
                         _accessibilityDisclosureAccepted
-                            ? Icons.check_circle
+                            ? Icons.check
                             : Icons.info_outline,
+                        size: 16,
                         color: _accessibilityDisclosureAccepted
-                            ? cs.onTertiaryContainer
+                            ? cs.primary
                             : cs.onSurfaceVariant,
                       ),
                       const SizedBox(width: 10),
                       Expanded(
                         child: Text(
                           _accessibilityDisclosureAccepted
-                              ? 'Disclosure accepted. Continue to open accessibility settings now.'
+                              ? 'Disclosure accepted. Continue to open accessibility settings.'
                               : 'Consent will be requested when you tap Continue.',
-                          style:
-                              Theme.of(context).textTheme.bodySmall?.copyWith(
-                                    color: _accessibilityDisclosureAccepted
-                                        ? cs.onTertiaryContainer
-                                        : cs.onSurfaceVariant,
-                                  ),
+                          style: _bodySubtleStyle(context),
                         ),
                       ),
                     ],
@@ -1265,20 +1065,21 @@ class _OnboardingPageState extends State<OnboardingPage>
               ],
             ),
           ),
-        const SizedBox(height: 10),
+        ],
+        const SizedBox(height: 14),
         if (_usesAccessibility)
-          SwitchListTile.adaptive(
-            contentPadding: EdgeInsets.zero,
-            title: const Text('Open accessibility settings when continuing'),
+          _quietSwitch(
+            context: context,
+            label: 'Open accessibility settings when continuing',
             value: _openAccessibilitySettingsAfterFinish,
             onChanged: (value) {
               setState(() => _openAccessibilitySettingsAfterFinish = value);
             },
           ),
         if (_usesKeyboard)
-          SwitchListTile.adaptive(
-            contentPadding: EdgeInsets.zero,
-            title: const Text('Open keyboard settings after setup'),
+          _quietSwitch(
+            context: context,
+            label: 'Open keyboard settings after setup',
             value: _openKeyboardSettingsAfterFinish,
             onChanged: (value) {
               setState(() => _openKeyboardSettingsAfterFinish = value);
@@ -1291,150 +1092,67 @@ class _OnboardingPageState extends State<OnboardingPage>
   Widget _disclosureLine(BuildContext context, String text) {
     final cs = Theme.of(context).colorScheme;
     return Padding(
-      padding: const EdgeInsets.only(bottom: 5),
+      padding: const EdgeInsets.only(bottom: 6),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Padding(
-            padding: const EdgeInsets.only(top: 6),
-            child: Icon(Icons.circle, size: 8, color: cs.primary),
-          ),
-          const SizedBox(width: 8),
-          Expanded(
-            child: Text(
-              text,
-              style: Theme.of(context).textTheme.bodySmall,
+            padding: const EdgeInsets.only(top: 7),
+            child: Container(
+              width: 3,
+              height: 3,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: cs.onSurfaceVariant,
+              ),
             ),
+          ),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Text(text, style: _bodySubtleStyle(context)),
           ),
         ],
       ),
     );
   }
 
-  Widget _modeCard(
-    BuildContext context, {
-    required IconData icon,
-    required String title,
-    required String subtitle,
-    required bool selected,
-    required VoidCallback onTap,
-  }) {
-    final cs = Theme.of(context).colorScheme;
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 10),
-      child: InkWell(
-        borderRadius: BorderRadius.circular(16),
-        onTap: onTap,
-        child: AnimatedContainer(
-          duration: const Duration(milliseconds: 180),
-          padding: const EdgeInsets.all(14),
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(16),
-            color: selected ? cs.surface : cs.surfaceContainerLow,
-            border: Border.all(
-              color: selected ? cs.primary : cs.outlineVariant,
-              width: selected ? 1.6 : 1,
-            ),
-            boxShadow: selected
-                ? [
-                    BoxShadow(
-                      color: cs.shadow.withValues(alpha: 0.1),
-                      blurRadius: 16,
-                      offset: const Offset(0, 8),
-                    ),
-                  ]
-                : [],
-          ),
-          child: Row(
-            children: [
-              AnimatedContainer(
-                duration: const Duration(milliseconds: 180),
-                width: 3,
-                height: 46,
-                decoration: BoxDecoration(
-                  color: selected ? cs.primary : cs.surfaceContainerHighest,
-                  borderRadius: BorderRadius.circular(8),
-                ),
-              ),
-              const SizedBox(width: 10),
-              Container(
-                width: 38,
-                height: 38,
-                decoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(10),
-                  color: cs.surfaceContainerHighest,
-                  border: Border.all(color: cs.outlineVariant),
-                ),
-                child: Icon(
-                  icon,
-                  color: selected ? cs.primary : cs.onSurfaceVariant,
-                ),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      title,
-                      style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                            fontWeight: FontWeight.w700,
-                          ),
-                    ),
-                    const SizedBox(height: 2),
-                    Text(
-                      subtitle,
-                      style: Theme.of(context).textTheme.bodySmall,
-                    ),
-                  ],
-                ),
-              ),
-              Icon(
-                selected ? Icons.check_circle : Icons.circle_outlined,
-                color: selected ? cs.primary : cs.outline,
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
+  // ─────────────────────────────────────────────────────────────────────────
+  // STEP 2 — Theme
+  // ─────────────────────────────────────────────────────────────────────────
 
   Widget _buildThemeStep(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         _themeChoiceCard(
-          context,
-          title: 'Normal Theme (Recommended first install)',
+          context: context,
+          title: 'Normal theme',
           subtitle:
-              'Stable app colors with predictable contrast. This is the default for first launch.',
+              'Stable app colors with predictable contrast. Recommended for first launch.',
           selected: !_dynamicColorsEnabled,
-          swatchColor: Colors.blueGrey,
+          swatchColor: const Color(0xFF455A64), // blueGrey 700
           onTap: () => _applyThemeSelection(false),
         ),
         _themeChoiceCard(
-          context,
-          title: 'Dynamic Colors',
-          subtitle:
-              'Use device-derived colors for a personalized Material 3 style.',
+          context: context,
+          title: 'Dynamic colors',
+          subtitle: 'Device-derived colors. Material 3 style.',
           selected: _dynamicColorsEnabled,
-          swatchColor: Colors.teal,
+          swatchColor: const Color(0xFF00897B), // teal 600
           onTap: () => _applyThemeSelection(true),
         ),
-        const SizedBox(height: 8),
+        const SizedBox(height: 14),
         Text(
-          'This preference affects the Flutter app theme only and does not modify ReBoard theme internals.',
-          style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                color: Theme.of(context).colorScheme.onSurfaceVariant,
-              ),
+          'This affects the Flutter app theme only. It does not modify ReBoard keyboard theming.',
+          style: _bodySubtleStyle(context),
         ),
       ],
     );
   }
 
-  Widget _themeChoiceCard(
-    BuildContext context, {
+  Widget _themeChoiceCard({
+    required BuildContext context,
     required String title,
     required String subtitle,
     required bool selected,
@@ -1444,77 +1162,54 @@ class _OnboardingPageState extends State<OnboardingPage>
     final cs = Theme.of(context).colorScheme;
     return Padding(
       padding: const EdgeInsets.only(bottom: 10),
-      child: InkWell(
-        borderRadius: BorderRadius.circular(16),
-        onTap: onTap,
+      child: _PressableScale(
+        onPressed: onTap,
         child: AnimatedContainer(
-          duration: const Duration(milliseconds: 180),
+          duration: const Duration(milliseconds: 160),
+          curve: _easeOut,
           padding: const EdgeInsets.all(14),
           decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(16),
-            color: selected ? cs.surface : cs.surfaceContainerLow,
+            borderRadius: BorderRadius.circular(12),
+            color: selected
+                ? cs.primary.withValues(alpha: 0.04)
+                : cs.surface,
             border: Border.all(
-              color: selected ? cs.secondary : cs.outlineVariant,
-              width: selected ? 1.6 : 1,
+              color: selected ? cs.primary : cs.outlineVariant,
+              width: selected ? 1.5 : 1,
             ),
-            boxShadow: selected
-                ? [
-                    BoxShadow(
-                      color: cs.shadow.withValues(alpha: 0.1),
-                      blurRadius: 16,
-                      offset: const Offset(0, 8),
-                    ),
-                  ]
-                : [],
           ),
           child: Row(
             children: [
-              AnimatedContainer(
-                duration: const Duration(milliseconds: 180),
-                width: 3,
-                height: 48,
-                decoration: BoxDecoration(
-                  color: selected ? cs.secondary : cs.surfaceContainerHighest,
-                  borderRadius: BorderRadius.circular(8),
-                ),
-              ),
-              const SizedBox(width: 10),
+              // Solid color circle. No gradient.
               Container(
-                width: 40,
-                height: 40,
+                width: 28,
+                height: 28,
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
-                  gradient: LinearGradient(
-                    colors: [
-                      swatchColor.withValues(alpha: 0.9),
-                      swatchColor.withValues(alpha: 0.55),
-                    ],
+                  color: swatchColor,
+                  border: Border.all(
+                    color: cs.outlineVariant,
+                    width: 1,
                   ),
-                  border: Border.all(color: cs.outlineVariant),
                 ),
               ),
-              const SizedBox(width: 12),
+              const SizedBox(width: 14),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(
-                      title,
-                      style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                            fontWeight: FontWeight.w700,
-                          ),
-                    ),
+                    Text(title, style: _cardTitleStyle(context)),
                     const SizedBox(height: 2),
-                    Text(
-                      subtitle,
-                      style: Theme.of(context).textTheme.bodySmall,
-                    ),
+                    Text(subtitle, style: _bodySubtleStyle(context)),
                   ],
                 ),
               ),
-              Icon(
-                selected ? Icons.check_circle : Icons.circle_outlined,
-                color: selected ? cs.secondary : cs.outline,
+              const SizedBox(width: 12),
+              AnimatedOpacity(
+                duration: const Duration(milliseconds: 160),
+                curve: _easeOut,
+                opacity: selected ? 1 : 0,
+                child: Icon(Icons.check, size: 18, color: cs.primary),
               ),
             ],
           ),
@@ -1523,269 +1218,490 @@ class _OnboardingPageState extends State<OnboardingPage>
     );
   }
 
+  // ─────────────────────────────────────────────────────────────────────────
+  // STEP 3 — AI provider
+  // Drops Icons.auto_awesome (the literal sparkle).
+  // ─────────────────────────────────────────────────────────────────────────
+
   Widget _buildLlmStep(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
     final llmError = _step == 3 ? _currentStepError() : null;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        _modeCard(
-          context,
-          icon: Icons.auto_awesome,
-          title: 'Use Rewordium managed default (Groq)',
-          subtitle: 'Best for quick start. No custom API key needed.',
+        _selectionCard(
+          context: context,
+          icon: Icons.cloud_outlined,
+          title: 'Managed default',
+          subtitle: 'Use the Rewordium-hosted Groq provider. No API key needed.',
           selected: _llmMode == _LlmMode.managedDefault,
           onTap: () => setState(() => _llmMode = _LlmMode.managedDefault),
         ),
-        _modeCard(
-          context,
+        _selectionCard(
+          context: context,
           icon: Icons.tune,
-          title: 'Bring your own provider',
-          subtitle: 'Choose endpoint/provider and use your own API key.',
+          title: 'Bring your own',
+          subtitle: 'Choose a provider and use your own API key.',
           selected: _llmMode == _LlmMode.bringYourOwn,
           onTap: () => setState(() => _llmMode = _LlmMode.bringYourOwn),
         ),
-        if (_llmMode == _LlmMode.bringYourOwn)
-          Container(
-            width: double.infinity,
-            margin: const EdgeInsets.only(top: 6),
-            padding: const EdgeInsets.all(14),
-            decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(16),
-              border: Border.all(
-                color: Theme.of(context).colorScheme.outlineVariant,
-              ),
-              color: Theme.of(context).colorScheme.surfaceContainerLow,
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                DropdownButtonFormField<AIProvider>(
-                  initialValue: _selectedProvider,
-                  decoration: const InputDecoration(
-                    labelText: 'Provider',
+        AnimatedSize(
+          duration: const Duration(milliseconds: 200),
+          curve: _easeOut,
+          alignment: Alignment.topCenter,
+          child: _llmMode == _LlmMode.bringYourOwn
+              ? Container(
+                  width: double.infinity,
+                  margin: const EdgeInsets.only(top: 8),
+                  padding: const EdgeInsets.all(14),
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: cs.outlineVariant),
+                    color: cs.surface,
                   ),
-                  items: AIProvider.values
-                      .map(
-                        (provider) => DropdownMenuItem<AIProvider>(
-                          value: provider,
-                          child: Text(provider.displayName),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      DropdownButtonFormField<AIProvider>(
+                        initialValue: _selectedProvider,
+                        decoration: const InputDecoration(
+                          labelText: 'Provider',
+                          border: OutlineInputBorder(),
+                          isDense: true,
                         ),
-                      )
-                      .toList(),
-                  onChanged: (provider) {
-                    if (provider == null) return;
-                    setState(() {
-                      _selectedProvider = provider;
-                      if (_modelController.text.trim().isEmpty) {
-                        _modelController.text =
-                            AdvancedAISettings(provider: provider)
-                                .getDefaultModelName();
-                      }
-                    });
-                  },
-                ),
-                const SizedBox(height: 12),
-                TextField(
-                  controller: _apiKeyController,
-                  obscureText: true,
-                  decoration: const InputDecoration(
-                    labelText: 'API key',
-                    hintText: 'Enter your provider API key',
+                        items: AIProvider.values
+                            .map(
+                              (provider) => DropdownMenuItem<AIProvider>(
+                                value: provider,
+                                child: Text(provider.displayName),
+                              ),
+                            )
+                            .toList(),
+                        onChanged: (provider) {
+                          if (provider == null) return;
+                          setState(() {
+                            _selectedProvider = provider;
+                            if (_modelController.text.trim().isEmpty) {
+                              _modelController.text =
+                                  AdvancedAISettings(provider: provider)
+                                      .getDefaultModelName();
+                            }
+                          });
+                        },
+                      ),
+                      const SizedBox(height: 12),
+                      TextField(
+                        controller: _apiKeyController,
+                        obscureText: true,
+                        decoration: const InputDecoration(
+                          labelText: 'API key',
+                          hintText: 'Your provider API key',
+                          border: OutlineInputBorder(),
+                          isDense: true,
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+                      TextField(
+                        controller: _modelController,
+                        decoration: const InputDecoration(
+                          labelText: 'Model (optional)',
+                          hintText: 'Leave empty for provider default',
+                          border: OutlineInputBorder(),
+                          isDense: true,
+                        ),
+                      ),
+                      if (_selectedProvider == AIProvider.custom) ...[
+                        const SizedBox(height: 12),
+                        TextField(
+                          controller: _endpointController,
+                          decoration: const InputDecoration(
+                            labelText: 'Custom endpoint URL',
+                            hintText:
+                                'https://api.example.com/v1/chat/completions',
+                            border: OutlineInputBorder(),
+                            isDense: true,
+                          ),
+                        ),
+                      ],
+                      const SizedBox(height: 12),
+                      Text(
+                        _selectedProvider.description,
+                        style: _bodySubtleStyle(context),
+                      ),
+                    ],
                   ),
-                ),
-                const SizedBox(height: 12),
-                TextField(
-                  controller: _modelController,
-                  decoration: const InputDecoration(
-                    labelText: 'Model (optional)',
-                    hintText: 'Leave empty to use provider default',
-                  ),
-                ),
-                if (_selectedProvider == AIProvider.custom) ...[
-                  const SizedBox(height: 12),
-                  TextField(
-                    controller: _endpointController,
-                    decoration: const InputDecoration(
-                      labelText: 'Custom endpoint URL',
-                      hintText: 'https://api.example.com/v1/chat/completions',
-                    ),
-                  ),
-                ],
-                const SizedBox(height: 10),
-                Text(
-                  _selectedProvider.description,
-                  style: Theme.of(context).textTheme.bodySmall,
-                ),
-              ],
-            ),
-          ),
+                )
+              : const SizedBox.shrink(),
+        ),
         if (llmError != null)
           Padding(
-            padding: const EdgeInsets.only(top: 8),
+            padding: const EdgeInsets.only(top: 10),
             child: Text(
               llmError,
-              style: TextStyle(
-                color: Theme.of(context).colorScheme.error,
-              ),
+              style: _bodySubtleStyle(context).copyWith(color: cs.error),
             ),
           ),
       ],
     );
   }
 
-  Widget _buildNewsStep(BuildContext context) {
-    final cs = Theme.of(context).colorScheme;
+  // ─────────────────────────────────────────────────────────────────────────
+  // STEP 4 — News updates
+  // ─────────────────────────────────────────────────────────────────────────
 
+  Widget _buildNewsStep(BuildContext context) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Container(
-          width: double.infinity,
-          padding: const EdgeInsets.all(16),
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(16),
-            color: cs.surfaceContainerLow,
-            border: Border.all(color: cs.outlineVariant),
-          ),
-          child: SwitchListTile.adaptive(
-            contentPadding: EdgeInsets.zero,
-            title: const Text('Subscribe to product news and updates'),
-            subtitle: const Text(
-              'Get feature launches, release notes, and improvement highlights.',
-            ),
-            value: _subscribeToNews,
-            onChanged: (value) {
-              setState(() => _subscribeToNews = value);
-            },
-          ),
+        _quietSwitch(
+          context: context,
+          label: 'Subscribe to product news',
+          sublabel:
+              'Feature launches, release notes, and improvement highlights.',
+          value: _subscribeToNews,
+          onChanged: (value) => setState(() => _subscribeToNews = value),
         ),
-        const SizedBox(height: 10),
+        const SizedBox(height: 8),
         Text(
-          'You can change this anytime in Settings > News & Updates.',
-          style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                color: cs.onSurfaceVariant,
-              ),
+          'Change anytime in Settings → News & Updates.',
+          style: _bodySubtleStyle(context),
         ),
       ],
     );
   }
+
+  // ─────────────────────────────────────────────────────────────────────────
+  // STEP 5 — Keyboard
+  // ─────────────────────────────────────────────────────────────────────────
 
   Widget _buildKeyboardStep(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
-
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Container(
-          width: double.infinity,
-          padding: const EdgeInsets.all(16),
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(16),
-            color: cs.surfaceContainerLow,
-            border: Border.all(color: cs.outlineVariant),
-          ),
-          child: Column(
-            children: [
-              SwitchListTile.adaptive(
-                contentPadding: EdgeInsets.zero,
-                title: const Text('Show number row'),
-                subtitle: const Text(
-                    'Prefer visible number keys above the alphabet.'),
-                value: _numberRowEnabled,
-                onChanged: (value) {
-                  setState(() => _numberRowEnabled = value);
-                },
-              ),
-              SwitchListTile.adaptive(
-                contentPadding: EdgeInsets.zero,
-                title: const Text('Enable clipboard suggestions'),
-                subtitle: const Text(
-                    'Suggest recently copied text inside candidate row.'),
-                value: _clipboardSuggestionsEnabled,
-                onChanged: (value) {
-                  setState(() => _clipboardSuggestionsEnabled = value);
-                },
-              ),
-              SwitchListTile.adaptive(
-                contentPadding: EdgeInsets.zero,
-                title: const Text('Enable AI on homescreen'),
-                subtitle: const Text(
-                  'Maps to the app home AI toggle and keyboard AI quick actions.',
-                ),
-                value: _keyboardAiDefaultEnabled,
-                onChanged: (value) {
-                  setState(() => _keyboardAiDefaultEnabled = value);
-                },
-              ),
-              SwitchListTile.adaptive(
-                contentPadding: EdgeInsets.zero,
-                title: const Text('Enable key haptics'),
-                subtitle: const Text('Vibrate feedback while typing.'),
-                value: _keyboardHapticsEnabled,
-                onChanged: (value) {
-                  setState(() => _keyboardHapticsEnabled = value);
-                },
-              ),
-            ],
-          ),
+        _quietSwitch(
+          context: context,
+          label: 'Show number row',
+          sublabel: 'Visible number keys above the alphabet.',
+          value: _numberRowEnabled,
+          onChanged: (value) => setState(() => _numberRowEnabled = value),
         ),
-        if (_keyboardHapticsEnabled) ...[
-          const SizedBox(height: 10),
-          Text(
-            'Haptics output mode',
-            style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                  fontWeight: FontWeight.w700,
-                ),
-          ),
-          const SizedBox(height: 8),
-          Wrap(
-            spacing: 8,
-            runSpacing: 8,
-            children: [
-              ChoiceChip(
-                label: const Text('System haptic interface'),
-                selected:
-                    _keyboardHapticsMode == _KeyboardHapticsMode.followSystem,
-                onSelected: (_) {
-                  setState(() {
-                    _keyboardHapticsMode = _KeyboardHapticsMode.followSystem;
-                  });
-                },
-              ),
-              ChoiceChip(
-                label: const Text('Vibrator mode'),
-                selected:
-                    _keyboardHapticsMode == _KeyboardHapticsMode.alwaysVibrate,
-                onSelected: (_) {
-                  setState(() {
-                    _keyboardHapticsMode = _KeyboardHapticsMode.alwaysVibrate;
-                  });
-                },
-              ),
-            ],
-          ),
-        ],
-        const SizedBox(height: 8),
-        SwitchListTile.adaptive(
-          contentPadding: EdgeInsets.zero,
-          title: const Text('Open ReBoard settings after finish'),
-          subtitle: const Text(
-            'Apply advanced keyboard preferences immediately after onboarding.',
-          ),
+        _quietSwitch(
+          context: context,
+          label: 'Clipboard suggestions',
+          sublabel: 'Suggest recently copied text in the candidate row.',
+          value: _clipboardSuggestionsEnabled,
+          onChanged: (value) =>
+              setState(() => _clipboardSuggestionsEnabled = value),
+        ),
+        _quietSwitch(
+          context: context,
+          label: 'Enable AI on home screen',
+          sublabel: 'Maps to the home AI toggle and keyboard AI quick actions.',
+          value: _keyboardAiDefaultEnabled,
+          onChanged: (value) =>
+              setState(() => _keyboardAiDefaultEnabled = value),
+        ),
+        _quietSwitch(
+          context: context,
+          label: 'Key haptics',
+          sublabel: 'Vibration feedback while typing.',
+          value: _keyboardHapticsEnabled,
+          onChanged: (value) => setState(() => _keyboardHapticsEnabled = value),
+        ),
+        AnimatedSize(
+          duration: const Duration(milliseconds: 200),
+          curve: _easeOut,
+          alignment: Alignment.topCenter,
+          child: _keyboardHapticsEnabled
+              ? Padding(
+                  padding: const EdgeInsets.only(top: 14),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text('HAPTICS MODE',
+                          style: _sectionLabelStyle(context)),
+                      const SizedBox(height: 10),
+                      Wrap(
+                        spacing: 8,
+                        runSpacing: 8,
+                        children: [
+                          _quietChip(
+                            context: context,
+                            label: 'Follow system',
+                            selected: _keyboardHapticsMode ==
+                                _KeyboardHapticsMode.followSystem,
+                            onTap: () => setState(() => _keyboardHapticsMode =
+                                _KeyboardHapticsMode.followSystem),
+                          ),
+                          _quietChip(
+                            context: context,
+                            label: 'Always vibrate',
+                            selected: _keyboardHapticsMode ==
+                                _KeyboardHapticsMode.alwaysVibrate,
+                            onTap: () => setState(() => _keyboardHapticsMode =
+                                _KeyboardHapticsMode.alwaysVibrate),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                )
+              : const SizedBox.shrink(),
+        ),
+        const SizedBox(height: 14),
+        _quietSwitch(
+          context: context,
+          label: 'Open ReBoard settings after finish',
+          sublabel:
+              'Apply advanced keyboard preferences immediately after onboarding.',
           value: _openReboardSettingsAfterFinish,
-          onChanged: (value) {
-            setState(() => _openReboardSettingsAfterFinish = value);
-          },
+          onChanged: (value) =>
+              setState(() => _openReboardSettingsAfterFinish = value),
         ),
-        const SizedBox(height: 8),
+        const SizedBox(height: 10),
         Text(
-          'Your keyboard preferences are saved during onboarding and can always be adjusted later.',
-          style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                color: cs.onSurfaceVariant,
-              ),
+          'Your keyboard preferences are saved during onboarding and can be adjusted later.',
+          style: _bodySubtleStyle(context),
         ),
       ],
+    );
+  }
+
+  // ─────────────────────────────────────────────────────────────────────────
+  // Selection card — used by step 1 (assistant mode) and step 3 (LLM mode).
+  // 1px outlineVariant idle, 1.5px primary selected, 4% primary tint selected,
+  // no shadow, no inner accent bar, no gradient icon container, no Ink ripple.
+  // ─────────────────────────────────────────────────────────────────────────
+
+  Widget _selectionCard({
+    required BuildContext context,
+    required IconData icon,
+    required String title,
+    required String subtitle,
+    required bool selected,
+    required VoidCallback onTap,
+  }) {
+    final cs = Theme.of(context).colorScheme;
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 10),
+      child: _PressableScale(
+        onPressed: onTap,
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 160),
+          curve: _easeOut,
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(12),
+            color:
+                selected ? cs.primary.withValues(alpha: 0.04) : cs.surface,
+            border: Border.all(
+              color: selected ? cs.primary : cs.outlineVariant,
+              width: selected ? 1.5 : 1,
+            ),
+          ),
+          child: Row(
+            children: [
+              Icon(
+                icon,
+                size: 20,
+                color: selected ? cs.primary : cs.onSurfaceVariant,
+              ),
+              const SizedBox(width: 14),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(title, style: _cardTitleStyle(context)),
+                    const SizedBox(height: 2),
+                    Text(subtitle, style: _bodySubtleStyle(context)),
+                  ],
+                ),
+              ),
+              const SizedBox(width: 12),
+              AnimatedOpacity(
+                duration: const Duration(milliseconds: 160),
+                curve: _easeOut,
+                opacity: selected ? 1 : 0,
+                child: Icon(Icons.check, size: 18, color: cs.primary),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  // Quiet inline switch row — no card chrome, just a hairline separator above.
+  Widget _quietSwitch({
+    required BuildContext context,
+    required String label,
+    String? sublabel,
+    required bool value,
+    required ValueChanged<bool> onChanged,
+  }) {
+    final cs = Theme.of(context).colorScheme;
+    return Container(
+      decoration: BoxDecoration(
+        border: Border(
+          top: BorderSide(color: cs.outlineVariant.withValues(alpha: 0.5)),
+        ),
+      ),
+      padding: const EdgeInsets.symmetric(vertical: 4),
+      child: SwitchListTile.adaptive(
+        contentPadding: EdgeInsets.zero,
+        title: Text(label, style: _cardTitleStyle(context)),
+        subtitle: sublabel == null
+            ? null
+            : Padding(
+                padding: const EdgeInsets.only(top: 2),
+                child: Text(sublabel, style: _bodySubtleStyle(context)),
+              ),
+        value: value,
+        onChanged: onChanged,
+        activeColor: cs.primary,
+      ),
+    );
+  }
+
+  // Chip alternative to ChoiceChip — flatter, with primary border on select.
+  Widget _quietChip({
+    required BuildContext context,
+    required String label,
+    required bool selected,
+    required VoidCallback onTap,
+  }) {
+    final cs = Theme.of(context).colorScheme;
+    return _PressableScale(
+      onPressed: onTap,
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 160),
+        curve: _easeOut,
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(999),
+          color:
+              selected ? cs.primary.withValues(alpha: 0.06) : cs.surface,
+          border: Border.all(
+            color: selected ? cs.primary : cs.outlineVariant,
+            width: selected ? 1.5 : 1,
+          ),
+        ),
+        child: Text(
+          label,
+          style: GoogleFonts.ibmPlexSans(
+            fontSize: 13,
+            fontWeight: FontWeight.w500,
+            color: selected ? cs.primary : cs.onSurface,
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+// ───────────────────────────────────────────────────────────────────────────
+// Pressable scale wrapper — gives tap targets the tactile feedback that
+// Material 3's color state-layer alone doesn't convey. Scale 0.97 on press,
+// 100ms ease-out. Respects reduced-motion (scale stays at 1, no transform).
+// ───────────────────────────────────────────────────────────────────────────
+
+class _PressableScale extends StatefulWidget {
+  final VoidCallback? onPressed;
+  final Widget child;
+  final double scale;
+
+  const _PressableScale({
+    required this.onPressed,
+    required this.child,
+    this.scale = 0.97,
+  });
+
+  @override
+  State<_PressableScale> createState() => _PressableScaleState();
+}
+
+class _PressableScaleState extends State<_PressableScale> {
+  bool _pressed = false;
+
+  @override
+  Widget build(BuildContext context) {
+    final reduceMotion = MediaQuery.of(context).disableAnimations;
+    final enabled = widget.onPressed != null;
+    return GestureDetector(
+      behavior: HitTestBehavior.opaque,
+      onTapDown:
+          enabled ? (_) => setState(() => _pressed = true) : null,
+      onTapUp:
+          enabled ? (_) => setState(() => _pressed = false) : null,
+      onTapCancel:
+          enabled ? () => setState(() => _pressed = false) : null,
+      onTap: enabled ? widget.onPressed : null,
+      child: AnimatedScale(
+        duration: const Duration(milliseconds: 100),
+        curve: _easeOut,
+        scale: (_pressed && !reduceMotion) ? widget.scale : 1.0,
+        child: AnimatedOpacity(
+          duration: const Duration(milliseconds: 150),
+          opacity: enabled ? 1.0 : 0.45,
+          child: widget.child,
+        ),
+      ),
+    );
+  }
+}
+
+// Stagger helper for welcome list rows. Each row delays its fade-in by
+// `delayMs` to create a soft cascade. Keep delays short (30-80ms between
+// items) so the interface never feels held up.
+class _StaggeredFadeIn extends StatefulWidget {
+  final int delayMs;
+  final Widget child;
+  const _StaggeredFadeIn({required this.delayMs, required this.child});
+
+  @override
+  State<_StaggeredFadeIn> createState() => _StaggeredFadeInState();
+}
+
+class _StaggeredFadeInState extends State<_StaggeredFadeIn>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _ctl;
+  late final Animation<double> _opacity;
+  late final Animation<Offset> _offset;
+
+  @override
+  void initState() {
+    super.initState();
+    _ctl = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 280),
+    );
+    _opacity = CurvedAnimation(parent: _ctl, curve: _easeOut);
+    _offset = Tween<Offset>(
+      begin: const Offset(0, 0.15),
+      end: Offset.zero,
+    ).animate(CurvedAnimation(parent: _ctl, curve: _easeOut));
+
+    Future.delayed(Duration(milliseconds: widget.delayMs), () {
+      if (mounted) _ctl.forward();
+    });
+  }
+
+  @override
+  void dispose() {
+    _ctl.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final reduceMotion = MediaQuery.of(context).disableAnimations;
+    return FadeTransition(
+      opacity: _opacity,
+      child: reduceMotion
+          ? widget.child
+          : SlideTransition(position: _offset, child: widget.child),
     );
   }
 }
