@@ -17,6 +17,7 @@
 package com.noxquill.rewordium.keyboard.ime.text.gestures
 
 import android.content.Context
+import com.noxquill.rewordium.keyboard.BuildConfig
 import com.noxquill.rewordium.keyboard.app.FlorisPreferenceStore
 import com.noxquill.rewordium.keyboard.ime.nlp.WordSuggestionCandidate
 import com.noxquill.rewordium.keyboard.ime.text.keyboard.TextKey
@@ -37,6 +38,9 @@ import kotlin.math.min
 class GlideTypingManager(context: Context) : GlideTypingGesture.Listener {
     companion object {
         private const val MAX_SUGGESTION_COUNT = 6
+        // Number of mid-gesture preview candidates shown while the user is still swiping.
+        // Top-3 lets the user see live where the gesture is converging.
+        private const val PARTIAL_PREVIEW_COUNT = 3
     }
 
     private val prefs by FlorisPreferenceStore
@@ -59,13 +63,13 @@ class GlideTypingManager(context: Context) : GlideTypingGesture.Listener {
     }
 
     override fun onGlideAddPoint(point: GlideTypingGesture.Detector.Position) {
-        val normalized = GlideTypingGesture.Detector.Position(point.x, point.y)
-
-        this.glideTypingClassifier.addGesturePoint(normalized)
+        // Forward the point along with its eventTime so the classifier can do velocity-aware scoring.
+        this.glideTypingClassifier.addGesturePoint(point)
 
         val time = System.currentTimeMillis()
         if (prefs.glide.showPreview.get() && time - lastTime > prefs.glide.previewRefreshDelay.get()) {
-            updateSuggestionsAsync(1, false) {}
+            val n = if (BuildConfig.ENABLE_PARTIAL_GESTURE_PREDICTIONS) PARTIAL_PREVIEW_COUNT else 1
+            updateSuggestionsAsync(n, false) {}
             lastTime = time
         }
     }

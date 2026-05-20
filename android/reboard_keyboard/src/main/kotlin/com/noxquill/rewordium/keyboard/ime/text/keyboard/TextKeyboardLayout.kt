@@ -47,7 +47,11 @@ import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Path
+import androidx.compose.ui.graphics.StrokeCap
+import androidx.compose.ui.graphics.StrokeJoin
 import androidx.compose.ui.graphics.drawscope.ContentDrawScope
+import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.input.pointer.pointerInteropFilter
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.platform.LocalConfiguration
@@ -97,6 +101,7 @@ import org.florisboard.lib.snygg.ui.SnyggIcon
 import org.florisboard.lib.snygg.ui.SnyggText
 import org.florisboard.lib.snygg.ui.rememberSnyggThemeQuery
 import kotlin.math.abs
+import kotlin.math.pow
 import kotlin.math.sqrt
 
 @SuppressLint("UnusedBoxWithConstraintsScope")
@@ -990,31 +995,56 @@ private class TextKeyboardLayoutController(
         radiusReductionFactor: Float,
         color: Color,
     ) {
-        var radius = initialRadius
-        var drawnPoints = 0
-        var prevX = gestureData.lastOrNull()?.first?.x ?: 0.0f
-        var prevY = gestureData.lastOrNull()?.first?.y ?: 0.0f
-        val time = System.currentTimeMillis()
+        if (gestureData.size < 2) return
 
-        outer@ for (i in gestureData.size - 1 downTo 1) {
-            if (time - gestureData[i - 1].second > prefs.glide.trailDuration.get()) break
+        val now = System.currentTimeMillis()
+        val maxAgeMs = prefs.glide.trailDuration.get().toLong()
 
-            val dx = prevX - gestureData[i - 1].first.x
-            val dy = prevY - gestureData[i - 1].first.y
-            val dist = sqrt(dx * dx + dy * dy)
+        // Collect points that are still within the trail-duration window, in chronological order.
+        val visible = ArrayList<GlideTypingGesture.Detector.Position>(gestureData.size)
+        for ((pos, t) in gestureData) {
+            if (now - t <= maxAgeMs) visible.add(pos)
+        }
+        if (visible.size < 2) return
 
-            val numPoints = (dist / targetDist).toInt()
-            for (j in 0 until numPoints) {
-                radius *= radiusReductionFactor
-                val intermediateX =
-                    gestureData[i].first.x * (1 - j.toFloat() / numPoints) + gestureData[i - 1].first.x * (j.toFloat() / numPoints)
-                val intermediateY =
-                    gestureData[i].first.y * (1 - j.toFloat() / numPoints) + gestureData[i - 1].first.y * (j.toFloat() / numPoints)
-                drawScope.drawCircle(color, radius, center = Offset(intermediateX, intermediateY))
-                drawnPoints += 1
-                prevX = intermediateX
-                prevY = intermediateY
+        // Build a smooth Path using Catmull-Rom → cubic Bezier conversion.
+        // For each interior segment p_i → p_{i+1}, the Bezier control points are derived from
+        // the surrounding tangents: c1 = p_i + (p_{i+1} - p_{i-1}) / 6, c2 = p_{i+1} - (p_{i+2} - p_i) / 6.
+        // This produces a C1-continuous curve passing through every input point.
+        val fullPath = Path().apply {
+            moveTo(visible[0].x, visible[0].y)
+            for (i in 0 until visible.size - 1) {
+                val p0 = if (i == 0) visible[i] else visible[i - 1]
+                val p1 = visible[i]
+                val p2 = visible[i + 1]
+                val p3 = if (i + 2 < visible.size) visible[i + 2] else visible[i + 1]
+                val c1x = p1.x + (p2.x - p0.x) / 6f
+                val c1y = p1.y + (p2.y - p0.y) / 6f
+                val c2x = p2.x - (p3.x - p1.x) / 6f
+                val c2y = p2.y - (p3.y - p1.y) / 6f
+                cubicTo(c1x, c1y, c2x, c2y, p2.x, p2.y)
             }
+        }
+
+        // Alpha-taper effect via layered strokes — older layers are wider+fainter, newer layers
+        // tighter+brighter. Visually approximates a head→tail gradient without per-vertex alpha.
+        val widthHead = initialRadius * 2f
+        val widthTail = initialRadius * 2f * radiusReductionFactor.coerceIn(0.3f, 1f).pow(8)
+        val baseColor = color
+        val layers = 4
+        for (layer in 0 until layers) {
+            val t = layer.toFloat() / (layers - 1) // 0 (outermost/oldest) → 1 (innermost/newest)
+            val alpha = 0.18f + 0.82f * t // 0.18 → 1.0
+            val width = widthHead * (1f - t) + widthTail * t
+            drawScope.drawPath(
+                path = fullPath,
+                color = baseColor.copy(alpha = baseColor.alpha * alpha),
+                style = Stroke(
+                    width = width.coerceAtLeast(1f),
+                    cap = StrokeCap.Round,
+                    join = StrokeJoin.Round,
+                ),
+            )
         }
     }
 

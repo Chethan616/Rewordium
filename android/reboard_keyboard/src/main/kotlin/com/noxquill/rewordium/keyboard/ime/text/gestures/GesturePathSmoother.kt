@@ -50,6 +50,7 @@ object GesturePathSmoother {
         // Extract point list from the gesture's public API.
         val xs = FloatArray(n) { i -> gesture.getX(i) }
         val ys = FloatArray(n) { i -> gesture.getY(i) }
+        val ts = LongArray(n) { i -> gesture.getT(i) }
 
         // Run RDP on the raw index array.
         val keepFlags = BooleanArray(n) { false }
@@ -57,11 +58,11 @@ object GesturePathSmoother {
         keepFlags[n - 1] = true
         rdp(xs, ys, 0, n - 1, epsilon, keepFlags)
 
-        // Build a new Gesture from the kept points.
+        // Build a new Gesture from the kept points, preserving original timestamps.
         val result = StatisticalGlideTypingClassifier.Gesture()
         for (i in 0 until n) {
             if (keepFlags[i]) {
-                result.addPoint(xs[i], ys[i])
+                result.addPoint(xs[i], ys[i], ts[i])
             }
         }
 

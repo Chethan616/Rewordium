@@ -5,7 +5,8 @@
       "Bash(Select-Object Name)",
       "Bash(Get-ChildItem -Path \"C:\\\\Users\\\\cheth\\\\OneDrive\\\\Desktop\\\\PC2\\\\YC_startup-main\\\\rewordium\\\\rewordium\\\\android\" -Force)",
       "Bash(Select-Object Name, PSIsContainer)",
-      "Bash(xargs cat)"
+      "Bash(xargs cat)",
+      "Bash(xargs grep -l \"Canvas\\\\|DrawScope\\\\|Compose\")"
     ]
   }
 }
