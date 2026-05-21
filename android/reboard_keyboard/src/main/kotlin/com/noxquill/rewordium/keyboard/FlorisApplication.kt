@@ -118,6 +118,7 @@ class FlorisApplication private constructor(context: Context) : ContextWrapper(c
     val themeManager = lazy { ThemeManager(this) }
     val aiManager = lazy { AIManager(this) }
     val smartReplyEngine = lazy { SmartReplyEngine(this) }
+    val ghostTextManager = lazy { com.noxquill.rewordium.keyboard.ime.editor.GhostTextManager(this) }
 
     private fun onCreate() {
         try {
@@ -206,3 +207,4 @@ fun Context.themeManager() = this.florisApplication().themeManager
 
 fun Context.aiManager() = this.florisApplication().aiManager
 fun Context.smartReplyEngine() = this.florisApplication().smartReplyEngine
+fun Context.ghostTextManager() = this.florisApplication().ghostTextManager

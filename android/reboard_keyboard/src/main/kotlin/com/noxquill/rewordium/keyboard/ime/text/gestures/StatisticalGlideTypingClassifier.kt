@@ -125,6 +125,40 @@ class StatisticalGlideTypingClassifier(context: Context) : GlideTypingClassifier
         private const val VELOCITY_STD_GAIN = 0.5f
 
         /**
+         * Fraction of the resampled gesture's length after which sample points are down-weighted
+         * in shape/location distance. 0.88 = the last 12% of points are softened. Only applied
+         * when terminal velocity is HIGH (see [V_FAST_FINISH_PX_PER_MS]); a deliberate slow
+         * lift gets full-weight tails so that "tomorrow" beats "tomorrow's".
+         */
+        private const val TAIL_FRACTION_START = 0.88f
+
+        /** Weight applied to sample points after [TAIL_FRACTION_START] when tail-softening is active. */
+        private const val TAIL_WEIGHT = 0.35f
+
+        /**
+         * Terminal-velocity threshold (px / ms) above which the gesture is considered to have
+         * been "lifted mid-flight" — i.e., the user did not decelerate before lifting, so the
+         * path was likely truncated. Endpoint tolerance only kicks in above this threshold.
+         * Calibrated for ~1080p phones; typical deliberate lifts decelerate well below this.
+         */
+        private const val V_FAST_FINISH_PX_PER_MS = 1.5f
+
+        /**
+         * Length-match bonus: candidates whose ideal path length matches the user's gesture
+         * length within [LENGTH_MATCH_FALLOFF_KEYS] key-widths get up to this multiplicative
+         * confidence advantage. Direct fix for "tomorrow's" being preferred over "tomorrow":
+         * the user's gesture length matches "tomorrow" much more closely.
+         */
+        private const val LENGTH_MATCH_MAX_BONUS = 1.6f
+        private const val LENGTH_MATCH_FALLOFF_KEYS = 1.5f
+
+        /**
+         * Prefix-extension multiplier — kept for the disabled experimental promotion path.
+         * Length-match bonus + velocity-gated tail-softening replace this in normal operation.
+         */
+        private const val PREFIX_TIE_MULT = 1.4f
+
+        /**
          * Suggestion LRU cache size. Raised from 48 → 128 for a higher hit rate during rapid
          * multi-word glide sessions; modern devices have ample memory.
          */
@@ -269,6 +303,15 @@ class StatisticalGlideTypingClassifier(context: Context) : GlideTypingClassifier
             LOCATION_STD
         }
 
+        // Tail-softening is conditional on terminal velocity: only kicks in when the user
+        // lifted mid-flight (high velocity at the end), i.e., the path was truncated.
+        // For deliberate decelerated lifts, we score the full path so that exact-length
+        // candidates like "tomorrow" aren't beaten by their extensions like "tomorrow's".
+        val softenTail = BuildConfig.ENABLE_GESTURE_ENDPOINT_TOLERANCE &&
+            gesture.terminalVelocity() > V_FAST_FINISH_PX_PER_MS
+
+        val userPathLength = gesture.getLength()
+
         for (i in remainingWords.indices) {
             val word = remainingWords[i]
             val idealGestures = Gesture.generateIdealGestures(word, keysByCharacter)
@@ -276,11 +319,24 @@ class StatisticalGlideTypingClassifier(context: Context) : GlideTypingClassifier
             for (idealGesture in idealGestures) {
                 val wordGesture = idealGesture.resample(SAMPLING_POINTS)
                 val normalizedGesture: Gesture = wordGesture.normalizeByBoxSide()
-                val shapeDistance = calcShapeDistance(normalizedGesture, normalizedUserGesture)
-                val locationDistance = calcLocationDistance(wordGesture, userGesture)
+                val shapeDistance = calcShapeDistance(normalizedGesture, normalizedUserGesture, softenTail)
+                val locationDistance = calcLocationDistance(wordGesture, userGesture, softenTail)
                 val shapeProbability = max(0.000001f, calcGaussianProbability(shapeDistance, 0.0f, SHAPE_STD))
                 val locationProbability = max(0.000001f, calcGaussianProbability(locationDistance, 0.0f, effectiveLocationStd * radius))
-                val frequency = max(1f, 255f * wordFrequencies.getOrDefault(word, 0.0).toFloat())
+                // Length-aware frequency: when candidates saturate the unigram cap (e.g., "hello"
+                // and "hell" are both very common), bias toward the longer one. The dictionary file
+                // tops out at byte-range 255, so common words tie on raw frequency — this gentle
+                // length factor breaks ties in favor of complete words over their short prefixes.
+                val rawFreq = 255f * wordFrequencies.getOrDefault(word, 0.0).toFloat()
+                val lengthBonus = if (word.length >= 5) 1f + ((word.length - 4).coerceAtMost(6)) * 0.10f else 1f
+                // Length-match bonus: reward candidates whose ideal path length matches the
+                // user's actual gesture length. Direct fix for "tomorrow → tomorrow's": the
+                // longer extension's ideal path is too long for the user's actual swipe.
+                val idealPathLength = idealGesture.getLength()
+                val lengthMismatchKeys = abs(idealPathLength - userPathLength) / radius
+                val lengthMatchBonus = 1f + (LENGTH_MATCH_MAX_BONUS - 1f) *
+                    exp(-lengthMismatchKeys / LENGTH_MATCH_FALLOFF_KEYS)
+                val frequency = max(1f, rawFreq * lengthBonus * lengthMatchBonus)
                 val confidence = 1.0f / (shapeProbability * locationProbability * frequency)
 
                 var candidateDistanceSortedIndex = 0
@@ -308,6 +364,14 @@ class StatisticalGlideTypingClassifier(context: Context) : GlideTypingClassifier
             }
         }
 
+        if (BuildConfig.ENABLE_GESTURE_PREFIX_BIAS && candidates.size >= 2) {
+            // Prefix-extension preference: when the #1 candidate is a strict prefix of another
+            // candidate in the top-K, and the longer one's confidence is within PREFIX_TIE_MULT
+            // of #1, promote the longer one. This is the fix for "hello" being beaten by "hell"
+            // when both saturate the unigram frequency cap and the geometric difference is small.
+            promotePrefixExtensions(candidates, candidateWeights)
+        }
+
         if (BuildConfig.ENABLE_BEAM_SEARCH_GESTURES) {
             // Merge this scoring pass into the per-gesture beam (keep best/lowest confidence per word),
             // then return a stabilised ranking. Smooths candidate flapping across mid-gesture previews.
@@ -329,22 +393,64 @@ class StatisticalGlideTypingClassifier(context: Context) : GlideTypingClassifier
         return candidates
     }
 
+    /**
+     * Walks the scored candidate list and promotes any longer candidate B that strictly extends
+     * candidate A (i.e., B starts with A and is longer), provided B's confidence is within
+     * [PREFIX_TIE_MULT] of A's. Operates in-place on the parallel lists.
+     */
+    private fun promotePrefixExtensions(
+        candidates: ArrayList<String>,
+        weights: ArrayList<Float>,
+    ) {
+        var i = 0
+        while (i < candidates.size - 1) {
+            val shorter = candidates[i]
+            var bestJ = -1
+            var bestJWeight = Float.MAX_VALUE
+            for (j in i + 1 until candidates.size) {
+                val longer = candidates[j]
+                if (longer.length > shorter.length && longer.startsWith(shorter)) {
+                    val w = weights[j]
+                    if (w <= weights[i] * PREFIX_TIE_MULT && w < bestJWeight) {
+                        bestJ = j
+                        bestJWeight = w
+                    }
+                }
+            }
+            if (bestJ >= 0) {
+                val tmpW = weights[i]; weights[i] = weights[bestJ]; weights[bestJ] = tmpW
+                val tmpC = candidates[i]; candidates[i] = candidates[bestJ]; candidates[bestJ] = tmpC
+            }
+            i++
+        }
+    }
+
     override fun clear() {
         gesture.clear()
         beam.clear()
     }
 
-    private fun calcLocationDistance(gesture1: Gesture, gesture2: Gesture): Float {
-        var totalDistance = 0.0f
-        for (i in 0 until SAMPLING_POINTS) {
-            val x1 = gesture1.getX(i)
-            val x2 = gesture2.getX(i)
-            val y1 = gesture1.getY(i)
-            val y2 = gesture2.getY(i)
-            val distance = abs(x1 - x2) + abs(y1 - y2)
-            totalDistance += distance
+    private fun calcLocationDistance(gesture1: Gesture, gesture2: Gesture, softenTail: Boolean): Float {
+        if (!softenTail) {
+            var totalDistance = 0.0f
+            for (i in 0 until SAMPLING_POINTS) {
+                val distance = abs(gesture1.getX(i) - gesture2.getX(i)) +
+                    abs(gesture1.getY(i) - gesture2.getY(i))
+                totalDistance += distance
+            }
+            return totalDistance / SAMPLING_POINTS / 2
         }
-        return totalDistance / SAMPLING_POINTS / 2
+        var weightedSum = 0.0f
+        var weightTotal = 0.0f
+        val tailStart = (SAMPLING_POINTS * TAIL_FRACTION_START).toInt()
+        for (i in 0 until SAMPLING_POINTS) {
+            val w = if (i < tailStart) 1.0f else TAIL_WEIGHT
+            val distance = abs(gesture1.getX(i) - gesture2.getX(i)) +
+                abs(gesture1.getY(i) - gesture2.getY(i))
+            weightedSum += distance * w
+            weightTotal += w
+        }
+        return (weightedSum / weightTotal) / 2f
     }
 
     private fun calcGaussianProbability(value: Float, mean: Float, standardDeviation: Float): Float {
@@ -354,18 +460,30 @@ class StatisticalGlideTypingClassifier(context: Context) : GlideTypingClassifier
         return probability.toFloat()
     }
 
-    private fun calcShapeDistance(gesture1: Gesture, gesture2: Gesture): Float {
-        var distance: Float
-        var totalDistance = 0.0f
-        for (i in 0 until SAMPLING_POINTS) {
-            val x1 = gesture1.getX(i)
-            val x2 = gesture2.getX(i)
-            val y1 = gesture1.getY(i)
-            val y2 = gesture2.getY(i)
-            distance = Gesture.distance(x1, y1, x2, y2)
-            totalDistance += distance
+    private fun calcShapeDistance(gesture1: Gesture, gesture2: Gesture, softenTail: Boolean): Float {
+        if (!softenTail) {
+            var totalDistance = 0.0f
+            for (i in 0 until SAMPLING_POINTS) {
+                totalDistance += Gesture.distance(
+                    gesture1.getX(i), gesture1.getY(i),
+                    gesture2.getX(i), gesture2.getY(i),
+                )
+            }
+            return totalDistance
         }
-        return totalDistance
+        var weightedSum = 0.0f
+        var weightTotal = 0.0f
+        val tailStart = (SAMPLING_POINTS * TAIL_FRACTION_START).toInt()
+        for (i in 0 until SAMPLING_POINTS) {
+            val w = if (i < tailStart) 1.0f else TAIL_WEIGHT
+            val d = Gesture.distance(
+                gesture1.getX(i), gesture1.getY(i),
+                gesture2.getX(i), gesture2.getY(i),
+            )
+            weightedSum += d * w
+            weightTotal += w
+        }
+        return weightedSum * (SAMPLING_POINTS / weightTotal)
     }
 
     class Pruner(
@@ -433,11 +551,21 @@ class StatisticalGlideTypingClassifier(context: Context) : GlideTypingClassifier
             val key = keys.firstOrNull() ?: return arrayListOf()
             val radius = min(key.visibleBounds.height, key.visibleBounds.width)
             val userLength = userGesture.getLength()
+            // Asymmetric tolerance: when the word's ideal path is LONGER than the user gesture
+            // (i.e., they under-shot), allow up to 1.8x the standard threshold. When the word
+            // is SHORTER than the user gesture, keep the original threshold. This admits
+            // "hello" / "tomorrow" / "because" into candidate scoring even when the user's
+            // fast swipe under-shot the final letters.
+            val longerTolerance =
+                if (BuildConfig.ENABLE_GESTURE_LENGTH_ASYMMETRY) lengthThreshold * 1.8 else lengthThreshold
+            val shorterTolerance = lengthThreshold
             for (word in words) {
                 val idealGestures = Gesture.generateIdealGestures(word, keysByCharacter)
                 for (idealGesture in idealGestures) {
                     val wordIdealLength = getCachedIdealLength(word, idealGesture)
-                    if (abs(userLength - wordIdealLength) < lengthThreshold * radius) {
+                    val diff = wordIdealLength - userLength
+                    val tolerance = if (diff >= 0) longerTolerance else shorterTolerance
+                    if (abs(diff) < tolerance * radius) {
                         remainingWords.add(word)
                     }
                 }
@@ -642,6 +770,20 @@ class StatisticalGlideTypingClassifier(context: Context) : GlideTypingClassifier
             for (i in 1 until size) vs[i - 1] = velocityAt(i)
             vs.sort()
             return vs[(vs.size * 0.95f).toInt().coerceAtMost(vs.size - 1)]
+        }
+
+        /**
+         * Average velocity (px / ms) over the trailing [tailPoints] segments — the user's speed
+         * at the moment of lift. High terminal velocity ⇒ lifted mid-flight (path truncated).
+         * Low terminal velocity ⇒ decelerated to a deliberate stop. Returns 0 when fewer
+         * than 2 points or when timestamps are unset.
+         */
+        fun terminalVelocity(tailPoints: Int = 5): Float {
+            if (size < 2) return 0f
+            val n = tailPoints.coerceAtMost(size - 1).coerceAtLeast(1)
+            var sum = 0f
+            for (i in (size - n) until size) sum += velocityAt(i)
+            return sum / n
         }
 
         /**
