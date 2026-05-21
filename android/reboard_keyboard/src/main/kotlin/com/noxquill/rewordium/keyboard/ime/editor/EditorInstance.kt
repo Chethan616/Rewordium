@@ -26,6 +26,7 @@ import com.noxquill.rewordium.keyboard.FlorisImeService
 import com.noxquill.rewordium.keyboard.app.FlorisPreferenceStore
 import com.noxquill.rewordium.keyboard.appContext
 import com.noxquill.rewordium.keyboard.clipboardManager
+import com.noxquill.rewordium.keyboard.ghostTextManager
 import com.noxquill.rewordium.keyboard.ime.ImeUiMode
 import com.noxquill.rewordium.keyboard.ime.clipboard.provider.ClipboardFileStorage
 import com.noxquill.rewordium.keyboard.ime.clipboard.provider.ClipboardItem
@@ -56,6 +57,7 @@ class EditorInstance(context: Context) : AbstractEditorInstance(context) {
     private val keyboardManager by context.keyboardManager()
     private val subtypeManager by context.subtypeManager()
     private val nlpManager by context.nlpManager()
+    private val ghostTextManager by context.ghostTextManager()
 
     private val activeState get() = keyboardManager.activeState
     val autoSpace = AutoSpaceState()
@@ -214,6 +216,7 @@ class EditorInstance(context: Context) : AbstractEditorInstance(context) {
     }
 
     override fun commitChar(char: String): Boolean {
+        ghostTextManager.cancelGhostText(clearComposing = true)
         // Smart Quotes: transform straight quotes to curly quotes
         val effectiveChar = if (prefs.correction.smartQuotes.get()) transformSmartQuote(char) else char
         val isInsertAutoSpaceBeforeChar = shouldInsertAutoSpaceBefore(effectiveChar)
@@ -226,12 +229,16 @@ class EditorInstance(context: Context) : AbstractEditorInstance(context) {
         }
         val isPhantomSpaceActive = phantomSpace.determine(effectiveChar)
         phantomSpace.setInactive()
-        return super.commitChar(
+        val result = super.commitChar(
             char = effectiveChar,
             deletePreviousSpace = isDeletePreviousSpace,
             insertSpaceBeforeChar = isInsertAutoSpaceBeforeChar || isPhantomSpaceActive,
             insertSpaceAfterChar = isInsertAutoSpaceAfterChar,
         )
+        if (result && effectiveChar == SPACE) {
+            ghostTextManager.requestGhostText()
+        }
+        return result
     }
 
     /**

@@ -126,6 +126,12 @@ android {
         buildConfigField("boolean", "ENABLE_PARTIAL_GESTURE_PREDICTIONS", "true")
         buildConfigField("boolean", "ENABLE_BEAM_SEARCH_GESTURES", "false")
         buildConfigField("boolean", "ENABLE_ADAPTIVE_RESAMPLE", "false")
+        // Gesture polish cycle (cycle 3) — fix "hello → hell" and long-word matching
+        buildConfigField("boolean", "ENABLE_GESTURE_ENDPOINT_TOLERANCE", "true")
+        // Prefix-bias retired in cycle 4: it caused "tomorrow → tomorrow's". The new
+        // length-match bonus (LENGTH_MATCH_MAX_BONUS) is the principled replacement.
+        buildConfigField("boolean", "ENABLE_GESTURE_PREFIX_BIAS", "false")
+        buildConfigField("boolean", "ENABLE_GESTURE_LENGTH_ASYMMETRY", "true")
 
         sourceSets {
             maybeCreate("main").apply {
