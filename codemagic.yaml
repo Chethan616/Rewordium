@@ -1,19 +1,23 @@
 workflows:
   ios_sideloadly:
-    name: iOS Sideloadly Build
+    name: iOS Simulator Build
     instance_type: mac_mini_m2
     max_build_duration: 90
+
     environment:
       flutter: stable
       xcode: latest
       cocoapods: default
+
       vars:
         BUNDLE_ID: com.noxquill.rewordium
         KEYBOARD_BUNDLE_ID: com.noxquill.rewordium.keyboard
         XCODE_WORKSPACE: "ios/Runner.xcworkspace"
         XCODE_SCHEME: "Runner"
+
       groups:
         - ios_secrets
+
     cache:
       cache_paths:
         - $HOME/Library/Caches/CocoaPods
@@ -21,6 +25,7 @@ workflows:
         - $HOME/Library/Developer/Xcode/DerivedData/SourcePackages
         - $HOME/.pub-cache
         - $CM_BUILD_DIR/ios/Pods
+
     scripts:
       - name: Install dependencies
         script: |
@@ -46,12 +51,15 @@ workflows:
               sys.exit(1)
 
           pathlib.Path("ios/Runner").mkdir(parents=True, exist_ok=True)
+
           with open("ios/Runner/GoogleService-Info.plist", "wb") as f:
               f.write(base64.b64decode(gs))
 
           app_id = os.environ.get("IOS_FIREBASE_APP_ID_FILE_BASE64", "")
+
           if app_id:
               pathlib.Path("ios").mkdir(parents=True, exist_ok=True)
+
               with open("ios/firebase_app_id_file.json", "wb") as f:
                   f.write(base64.b64decode(app_id))
           PY
@@ -63,58 +71,29 @@ workflows:
 
       - name: Wire RewordiumKeyboard extension target
         script: |
-          # Idempotent — adds the keyboard extension target to Runner.xcodeproj.
-          # `xcodeproj` gem ships with the Codemagic mac image (CocoaPods uses it).
           gem list xcodeproj -i >/dev/null 2>&1 || sudo gem install xcodeproj --no-document
           cd ios
           ruby scripts/setup_keyboard_target.rb
 
       - name: Resolve SwiftPM packages
         script: |
-          # Pre-fetch KeyboardKit so the cache populates before the build.
-          # Idempotent — re-runs hit $HOME/Library/Caches/org.swift.swiftpm.
           xcodebuild -resolvePackageDependencies \
             -workspace "$XCODE_WORKSPACE" \
             -scheme "$XCODE_SCHEME" \
             -clonedSourcePackagesDirPath build/ios/SourcePackages
 
-      - name: Build iOS app (no codesign)
+      - name: Build iOS Simulator App
         script: |
-          # Two-stage build:
-          #  1. `flutter build ios` runs to generate Flutter's iOS scaffolding
-          #     (Generated.xcconfig, pod install, Flutter framework). On
-          #     Xcode 26 / iOS 26 SDK, flutter_tools added a strict
-          #     post-build validation that demands DEVELOPMENT_TEAM be set
-          #     even when --no-codesign is passed. The actual Xcode build
-          #     inside the command succeeds — only the trailing validation
-          #     step trips. We tolerate that failure with `|| true` because:
-          #  2. Our own explicit xcodebuild below re-runs the build into a
-          #     directory we control with CODE_SIGNING_ALLOWED=NO etc. forced
-          #     at the command line — those override anything in pbxproj.
           flutter build ios --simulator \
             --build-name="${FCI_BUILD_NAME:-2.9.1}" \
-            --build-number="${CM_BUILD_NUMBER:-75}" \
-            || echo "(flutter post-build validation failed — continuing with our own xcodebuild, see codemagic.yaml comment)"
+            --build-number="${CM_BUILD_NUMBER:-75}"
 
-          xcodebuild -workspace "$XCODE_WORKSPACE" -scheme "$XCODE_SCHEME" \
-            -configuration Release -sdk iphoneos \
-            -destination 'generic/platform=iOS' \
-            -derivedDataPath build/ios/DerivedData \
-            -clonedSourcePackagesDirPath build/ios/SourcePackages \
-            -quiet clean build \
-            CODE_SIGNING_ALLOWED=NO CODE_SIGN_IDENTITY="" \
-            CODE_SIGNING_REQUIRED=NO DEVELOPMENT_TEAM=""
-
-      - name: Package unsigned IPA for Sideloadly
+      - name: Zip Simulator App
         script: |
-          rm -rf Payload rewordium-unsigned.ipa
-          mkdir -p Payload
-          mv build/ios/DerivedData/Build/Products/Release-iphoneos/Runner.app Payload/
-          # The .appex is already nested inside Runner.app/PlugIns/ from the
-          # Embed Foundation Extensions phase — nothing else to copy.
-          zip -r -q rewordium-unsigned.ipa Payload
+          cd build/ios/iphonesimulator
+          zip -r Runner.zip Runner.app
 
     artifacts:
-      - rewordium-unsigned.ipa
+      - build/ios/iphonesimulator/Runner.zip
       - /tmp/xcodebuild_logs/*.log
       - flutter_drive.log
