@@ -80,11 +80,22 @@ workflows:
 
       - name: Build iOS app (no codesign)
         script: |
-          # flutter build ios generates ios/Podfile (if absent) and runs
-          # `pod install`. We commit a Podfile so the deployment target is 17.0.
+          # Two-stage build:
+          #  1. `flutter build ios` runs to generate Flutter's iOS scaffolding
+          #     (Generated.xcconfig, pod install, Flutter framework). On
+          #     Xcode 26 / iOS 26 SDK, flutter_tools added a strict
+          #     post-build validation that demands DEVELOPMENT_TEAM be set
+          #     even when --no-codesign is passed. The actual Xcode build
+          #     inside the command succeeds — only the trailing validation
+          #     step trips. We tolerate that failure with `|| true` because:
+          #  2. Our own explicit xcodebuild below re-runs the build into a
+          #     directory we control with CODE_SIGNING_ALLOWED=NO etc. forced
+          #     at the command line — those override anything in pbxproj.
           flutter build ios --release --no-codesign \
             --build-name="${FCI_BUILD_NAME:-2.9.1}" \
-            --build-number="${CM_BUILD_NUMBER:-75}"
+            --build-number="${CM_BUILD_NUMBER:-75}" \
+            || echo "(flutter post-build validation failed — continuing with our own xcodebuild, see codemagic.yaml comment)"
+
           xcodebuild -workspace "$XCODE_WORKSPACE" -scheme "$XCODE_SCHEME" \
             -configuration Release -sdk iphoneos \
             -destination 'generic/platform=iOS' \

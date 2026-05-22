@@ -107,6 +107,49 @@ Call `IosKeyboardBridge.writeSettings(...)`:
 * Light/dark/dynamic-type inherited from KeyboardKit's stock keyboard view.
 * Haptics on chip taps and apply.
 
+## What KeyboardKit Free includes (v10.5)
+
+Source-verified from `KeyboardKit-main/`:
+
+| Free | Pro (paid) |
+|---|---|
+| `KeyboardInputViewController` base + lifecycle hooks | 50+ localized keyboards (free has ~10) |
+| `KeyboardApp` config + `setupKeyboardKit(for:)` | Real autocomplete provider |
+| **`KeyboardView`** SwiftUI QWERTY component | Emoji keyboard panel |
+| `Keyboard.Services` (action handler, layout, callouts) | Themes + `KeyboardTheme.SettingsScreen` |
+| `Keyboard.State` (keyboardContext, calloutContext, …) | Dictation |
+| Long-press callouts (a → á à â …) | AI / next-word prediction |
+| Light/dark + dynamic type + dark/light keyboards | `Keyboard.ToggleToolbar` (we built our own) |
+| Haptic & audio feedback infrastructure | iPad Pro Magic Keyboard layout |
+| Long-press space → cursor move + spacebar locale menu | Pre-built `*.SettingsScreen` views |
+| iPhone + iPad layouts | Calligraphy fonts |
+| `services.actionHandler.handle(...)` API | …and more |
+
+Pro pricing: ~$99–$499/yr depending on tier (one developer, business, indie+).
+
+What the user still gets *despite* free tier:
+* iOS's own next-word suggestions appear in the system QuickType bar above our toolbar — that's the host app's `textDocumentProxy` doing its job, unrelated to KeyboardKit.
+* Long-press globe → iOS emoji keyboard.
+
+## Codemagic build pattern (two-stage, why)
+
+`codemagic.yaml`'s "Build iOS app" step looks like:
+
+```bash
+flutter build ios --release --no-codesign … || echo "(continuing)"
+xcodebuild -workspace … CODE_SIGNING_ALLOWED=NO … build
+```
+
+On **Xcode 26 / iOS 26 SDK**, `flutter build ios --no-codesign` started enforcing a `DEVELOPMENT_TEAM` setting in post-build validation, even though the actual Xcode build inside completes successfully. Flutter prints:
+
+> Building a deployable iOS app requires a selected Development Team with a Provisioning Profile.
+
+The artifact is already produced at that point; only Flutter's wrapper validation fails. We tolerate that with `|| echo` and re-run `xcodebuild` ourselves with explicit `CODE_SIGNING_ALLOWED=NO`, which Xcode honors and produces the unsigned `.app`.
+
+This is **not** masking real compile errors — if Swift code fails to build, our explicit `xcodebuild` also fails (non-zero exit) and Codemagic stops there. The only thing the `|| echo` swallows is Flutter's wrapper-level "needs dev team" check.
+
+When you have a paid Apple Developer account: drop the `|| echo`, drop the explicit `CODE_SIGNING_ALLOWED=NO`, and configure the provisioning profile per the standard Codemagic signing docs.
+
 ## What's deferred (with reasons)
 
 | Item | Why deferred | When to revisit |
