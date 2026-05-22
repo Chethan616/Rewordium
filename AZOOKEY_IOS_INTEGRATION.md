@@ -1,195 +1,309 @@
 # AzooKey iOS Integration Plan
 
-Status: planning only. No code in this repo touches AzooKey yet.
+**Status:** Phases 0 → 2 implemented file-wise. Awaiting first CI build with the extension target wired.
 
-This document is the iOS counterpart to the FlorisBoard-derived `reboard_keyboard` / `reboard_lib:*` Gradle modules wired into `android/settings.gradle.kts`. The goal is the same architecture on iOS: a single forked keyboard codebase, vendored as a module of the Flutter project, that the main Runner target embeds as a Keyboard Extension and configures over a platform channel.
+Source lives at `ios/Packages/azooKey/` (vendored, read-only). Wired into Runner via `ios/scripts/setup_keyboard_target.rb`. Phases 3 → 5 are not started.
+
+The guiding rule: *get it building first, then customize.* Each phase compiles, runs, and ships. We do not translate, strip, or refactor AzooKey internals until after the first successful TestFlight build that embeds it.
 
 ---
 
-## 1. Why AzooKey
+## 0. What's already on disk
 
-| | FlorisBoard (Android) | AzooKey (iOS) |
+```
+rewordium/
+├─ ios/                                     ← Flutter iOS host
+└─ azooKey-main/azooKey-main/                ← upstream snapshot (preserve)
+   ├─ azooKey.xcodeproj                      ← original Xcode project
+   ├─ AzooKeyCore/                           ← local SPM package (5 libraries)
+   │   └─ Sources/
+   │       ├─ KeyboardViews/                 ← the actual SwiftUI keyboard
+   │       ├─ KeyboardThemes/
+   │       ├─ KeyboardExtensionUtils/
+   │       ├─ AzooKeyUtils/
+   │       └─ SwiftUIUtils/
+   ├─ Keyboard/                              ← Custom Keyboard extension sources
+   │   ├─ KeyboardViewController.swift       ← UIInputViewController entry
+   │   ├─ Info.plist
+   │   └─ Keyboard.entitlements
+   ├─ MainApp/                               ← AzooKey's own host app (we WON'T ship this)
+   ├─ Resources/                             ← icon font, designs, strings
+   ├─ azooKey_dictionary_storage/            ← Japanese dictionary
+   └─ azooKey_emoji_dictionary_storage/      ← emoji dictionary
+```
+
+Upstream remote dependencies (declared in `AzooKeyCore/Package.swift`):
+* `https://github.com/azooKey/AzooKeyKanaKanjiConverter` — the Japanese engine
+* `https://github.com/azooKey/CustardKit`
+
+Both are fetched by SwiftPM at build time. We don't vendor them.
+
+---
+
+## 1. Constraints we have to accept
+
+| Concern | Constraint | Why it matters |
 |---|---|---|
-| License | Apache-2.0 | Apache-2.0 |
-| Native lang | Kotlin + Rust (NLP) | Swift + SwiftUI (+ Swift kana converter) |
-| Architecture | IME service in app process | App Extension (KeyboardExtension target) |
-| Glide / swipe | yes | yes |
-| Theming | snygg / json | Swift theme structs |
-| Status | mature, active | mature, active (Japanese-first; English & extensibility shipping) |
+| Swift tools | 6.2 (Xcode 16+) | `AzooKeyCore/Package.swift` declares `swift-tools-version: 6.2`. Codemagic must run with `xcode: latest`. |
+| iOS minimum | 17.0 | `AzooKeyCore` declares `platforms: [.iOS(.v17)]`. Rewordium currently targets 15.5 — must bump. |
+| C++ interop | `.interoperabilityMode(.Cxx)` | The package builds against `KanaKanjiConverter` which uses C++. Don't add Obj-C bridging headers to the extension target without testing. |
+| Dictionary size | ~20–30 MB | Bundled as resources; counts against the 200 MB compressed app limit but is fine. |
+| Extension RAM | iOS hard-kills custom keyboards at ~48–60 MB resident | AzooKey's Zenzai (neural converter) is heavy; we keep its default Japanese-only activation. Don't add a second engine. |
 
-AzooKey is the closest iOS analogue: open source, App Store-shipped, no UIKit-only legacy, and the input-engine layer is already decoupled from the UI. The Swift module structure makes it embeddable without rewriting it.
-
-Repo to fork (you said you already did): `azooKey/azooKey`. Keep your fork on a long-lived branch (e.g. `rewordium-main`) so you can rebase from upstream without touching `main`.
+Mismatched constraints we'll resolve in Phase 0.
 
 ---
 
-## 2. Target Architecture
+## 2. Phase plan (matches user spec)
 
-Mirror the Android module split. On iOS the unit is an Xcode target inside `ios/Runner.xcworkspace`, not a Gradle subproject, but the mental model is identical.
+### Phase 0 — Stabilize current iOS app + Codemagic builds (where we are now)
 
-```
-ios/
-├─ Runner/                        ← existing Flutter container (app, lives in iOS_secrets group)
-├─ RewordiumKeyboard/             ← NEW. Custom Keyboard App Extension target.
-│   ├─ Info.plist                 ← NSExtension declaration (see §5)
-│   ├─ KeyboardViewController.swift  ← thin shim, inherits AzooKey's KeyboardViewController
-│   └─ KeyboardEntry.swift        ← imports the AzooKey package(s), boots the UI
-├─ RewordiumKeyboardCore/         ← optional internal Swift package (see §3.2)
-└─ Packages/
-    └─ azooKey/                   ← submodule pointing at your AzooKey fork
-```
+**Goal:** iOS build is green on Codemagic without any AzooKey code.
 
-Why this layout:
+Already done in earlier commits:
+* `codemagic.yaml` configured for iOS Sideloadly build
+* Camera / photo library / non-exempt encryption descriptions in `ios/Runner/Info.plist`
+* App icon set populated with the Rewordium logo
+* Onboarding flow adapted for iOS (no assistant mode, no keyboard step)
+* Settings screen hides Android-only IME row on iOS
 
-* `Packages/azooKey/` is the vendored source — `Packages/` is the conventional Xcode path for local SPM packages and stays out of CocoaPods' way.
-* `RewordiumKeyboard/` is the App Extension target that the App Store accepts as a "Custom Keyboard". It is *thin*: it imports types from the AzooKey package and instantiates the controller. All logic lives in the package, not the target.
-* `RewordiumKeyboardCore/` is optional. Use it if you want a place for Rewordium-specific glue (telemetry, persona injection, paraphraser button wiring) that isn't part of AzooKey upstream — keeps the fork lean and rebase-able.
+Outstanding before Phase 1:
+* Get one successful Codemagic IPA build that installs via Sideloadly on a real device
+* Confirm Firebase iOS push notifications work end-to-end
+* Bump iOS deployment target → 17.0 in `ios/Podfile` and Xcode project (required for AzooKey)
 
-Equivalent on Android (today):
-
-| Android module                       | iOS counterpart                       |
-|---                                   |---                                    |
-| `:reboard_keyboard` (the IME app)    | `RewordiumKeyboard/` (App Extension)  |
-| `:reboard_lib:compose` / `:snygg` UI | AzooKey UI Swift package products     |
-| `:reboard_lib:native` (Rust)         | AzooKey's Swift `KanaKanjiConverter` etc. (no Rust on iOS) |
-| `:reboard_libnative` (Rust prebuilt) | n/a (AzooKey is pure Swift)           |
+**Exit criterion:** Rewordium iOS app launches on a physical iPhone, signs in, paraphrases a sentence, and shuts down without crashing. No AzooKey involvement yet.
 
 ---
 
-## 3. Vendoring AzooKey
+### Phase 1 — Import AzooKey source into `ios/Packages/` ✅ DONE
 
-### 3.1 Submodule (recommended)
+**Goal:** AzooKey source lives inside the iOS project as a local SPM package. Runner still builds without referencing it. No extension target yet.
+
+Mechanical steps:
+
+1. Move (don't copy) the unpacked tree from `rewordium/azooKey-main/azooKey-main/` to `rewordium/ios/Packages/azooKey/`. Keep the *exact* internal layout — `Package.swift` paths are relative.
+   ```
+   ios/Packages/azooKey/
+     ├─ AzooKeyCore/Package.swift     ← the one Xcode will resolve
+     ├─ Keyboard/...                  ← extension sources (used in Phase 2)
+     ├─ Resources/...
+     ├─ azooKey_dictionary_storage/
+     └─ azooKey_emoji_dictionary_storage/
+   ```
+
+2. Add the local package to `Runner.xcworkspace`:
+   * In Xcode: **File → Add Package Dependencies → Add Local…** → pick `ios/Packages/azooKey/AzooKeyCore`.
+   * Do **not** add any package products to a target yet. We just want Xcode to resolve it and SwiftPM to download `AzooKeyKanaKanjiConverter` + `CustardKit`.
+
+3. Update `ios/Podfile`:
+   ```ruby
+   platform :ios, '17.0'   # was 15.5
+   ```
+   Then in the Runner Xcode project settings, set `IPHONEOS_DEPLOYMENT_TARGET = 17.0` for Debug / Release / Profile.
+
+4. In `codemagic.yaml`, add a pre-build step to resolve SwiftPM dependencies so the first build doesn't time out:
+   ```yaml
+   - name: Resolve SwiftPM packages
+     script: |
+       xcodebuild -resolvePackageDependencies \
+         -workspace ios/Runner.xcworkspace \
+         -scheme Runner
+   ```
+
+5. Run `flutter build ios --release --no-codesign` locally and on Codemagic. Both must succeed.
+
+**Exit criterion:** Same IPA as Phase 0 (no behavior change), but `ios/Packages/azooKey/` is checked in and SwiftPM resolves cleanly on a fresh clone.
+
+**Do not touch:** any `.swift` file inside `ios/Packages/azooKey/`. Treat it as read-only.
+
+---
+
+### Phase 2 — Lightweight `RewordiumKeyboard` extension target, AzooKey UI unchanged 🟡 SCAFFOLDED (awaiting first CI build)
+
+**Goal:** A Custom Keyboard extension that the user can enable in iOS Settings and that renders the original AzooKey keyboard — Japanese candidates, conversion bar, kana/romaji, all of it. No Rewordium UI added. No English-only behavior.
+
+Mechanical steps:
+
+1. Create a new target in `ios/Runner.xcodeproj`:
+   * Template: **iOS → Application Extension → Custom Keyboard Extension**
+   * Name: `RewordiumKeyboard`
+   * Bundle identifier: `com.noxquill.rewordium.keyboard`
+   * Embed in: `Runner`
+   * iOS deployment target: 17.0
+
+2. Replace the generated `RewordiumKeyboard/KeyboardViewController.swift` with a one-line shim that delegates to AzooKey's controller:
+   ```swift
+   import UIKit
+   import KeyboardViews
+   import AzooKeyUtils
+
+   @MainActor
+   final class KeyboardViewController: UIInputViewController {
+       private var hosted: UIViewController?
+
+       override func viewDidLoad() {
+           super.viewDidLoad()
+           // Instantiate AzooKey's controller via its public API. Copy the
+           // initializer call from azooKey-main/Keyboard/KeyboardViewController.swift
+           // exactly — that file remains the source of truth.
+           // …
+       }
+   }
+   ```
+   In practice, the cleanest move is to **add `azooKey-main/Keyboard/*.swift` to the `RewordiumKeyboard` target's Compile Sources** (Build Phases → Compile Sources → add the files from `ios/Packages/azooKey/Keyboard/`), then point the target's `Info.plist` and `.entitlements` at the AzooKey originals or copy them verbatim. The principal class stays `KeyboardViewController` from the AzooKey package.
+
+3. Link the extension target against these AzooKey package products (Target → General → Frameworks, Libraries, and Embedded Content):
+   * `KeyboardViews`
+   * `KeyboardThemes`
+   * `KeyboardExtensionUtils`
+   * `AzooKeyUtils`
+   * `SwiftUIUtils`
+   * (transitively) `KanaKanjiConverterModule` from the remote package
+
+4. Copy dictionary resources into the extension bundle:
+   * Drag `ios/Packages/azooKey/azooKey_dictionary_storage/` and `azooKey_emoji_dictionary_storage/` into the target's **Copy Bundle Resources** phase. AzooKey's runtime looks for them at the bundle root.
+
+5. Entitlements: create `ios/RewordiumKeyboard/RewordiumKeyboard.entitlements` based on `Keyboard.entitlements` from AzooKey. Add the App Group identifier we'll need in Phase 3 even if we don't use it yet:
+   ```xml
+   <key>com.apple.security.application-groups</key>
+   <array>
+     <string>group.com.noxquill.rewordium</string>
+   </array>
+   ```
+
+6. Set `RequestsOpenAccess = true` in `RewordiumKeyboard/Info.plist`. Required to read the App Group from the extension (and later to talk to Groq). This triggers a one-time iOS warning when the user enables full access — disclose it in onboarding.
+
+7. Build for device. Install, open Settings → General → Keyboard → Keyboards → Add New Keyboard → **Rewordium**. Enable "Allow Full Access". Long-press the globe in any text field and switch to Rewordium. **You should see the AzooKey keyboard, in Japanese, exactly as upstream ships it.**
+
+**Exit criterion:** Original AzooKey keyboard renders inside Rewordium. Conversion, candidates, themes, settings (managed from AzooKey's own `MainApp` UI — we don't ship it, so users get defaults) all behave like the upstream app. No crashes when switching keyboards.
+
+**Do not touch:** the keyboard UI, layouts, candidate engine, or themes. If something doesn't look right, the fix is upstream in AzooKey, not in our fork.
+
+---
+
+### Phase 3 — App Group + Flutter ↔ Extension settings bridge
+
+**Goal:** The Flutter app can read and write a small, well-defined set of settings that the extension respects, without modifying AzooKey internals.
+
+Architecture:
 
 ```
-git submodule add https://github.com/<your-user>/azooKey ios/Packages/azooKey
+Flutter app (Runner)            Extension (RewordiumKeyboard)
+    │                                │
+    │  write to UserDefaults          │  read on viewWillAppear
+    │  suiteName: "group.com.noxquill.rewordium"
+    ▼                                ▼
+            shared App Group container
+```
+
+Mechanical steps:
+
+1. Add the App Group capability to **both** `Runner` and `RewordiumKeyboard` targets (must match exactly: `group.com.noxquill.rewordium`).
+
+2. On the Runner side, add a tiny Swift bridge file `ios/Runner/KeyboardSettingsBridge.swift` exposing a `FlutterMethodChannel` named `com.noxquill.rewordium/keyboard_settings` with one method `write(Map<String, dynamic>)`. The Flutter side calls it from `RewordiumKeyboardService` (already exists for Android — add an iOS-aware path).
+
+3. On the extension side, add `ios/Packages/azooKey/...` — **no**, do not edit AzooKey. Instead, in the `RewordiumKeyboard` target (our shim layer), add a `SharedSettings.swift` that reads from `UserDefaults(suiteName: "group.com.noxquill.rewordium")` and applies values to AzooKey via its existing public settings APIs (`KeyboardViews.KeyboardLayoutType`, `KeyboardThemes` selection, etc.). If AzooKey doesn't expose a public setter for something we need, that's a flag to either (a) skip the setting for now or (b) upstream a PR — never a local fork edit.
+
+4. Settings to bridge in v1 (parity with Android `getKeyboardSettings`):
+   | Key | Type | Notes |
+   |---|---|---|
+   | `darkMode` | Bool | maps to AzooKey theme |
+   | `hapticFeedback` | Bool | AzooKey already supports this |
+   | `themeColor` | String (hex) | mapped to a custom AzooKey theme |
+   | `aiSuggestions` | Bool | gates Phase 4 toolbar |
+
+   Skip until Phase 4 or 5: `autoCapitalize`, `doubleSpacePeriod`, `personas`. They need deeper AzooKey integration than the public API offers today.
+
+5. Live reload: post a Darwin notification (`CFNotificationCenterPostNotification`) from the app when settings change; the extension listens and re-reads. Avoids waiting for the user to dismiss and re-open the keyboard.
+
+**Exit criterion:** Toggling dark mode from Rewordium app changes the keyboard appearance on the next character typed. No restart of the extension required.
+
+**Do not touch:** AzooKey source. All glue lives in `RewordiumKeyboard/` target files we wrote.
+
+---
+
+### Phase 4 — Rewordium AI actions (paraphraser) inside the extension
+
+**Goal:** A single Rewordium-branded button in the keyboard toolbar that takes the current text-field content, sends it to Groq, and replaces the selection with the result. Memory-safe and App Store-safe.
+
+Constraints:
+
+* **Memory.** Custom keyboards die at ~48–60 MB resident. Do not initialize Firebase, do not load image scanners, do not import `cunning_document_scanner` or `syncfusion_pdf` here. The extension does one thing: HTTPS POST to Groq.
+* **Auth.** The extension cannot use Firebase Auth. Instead, the host app writes a short-lived (1 hour) Groq proxy token into the App Group; the extension uses it. Token refresh happens app-side; extension treats expiry as a soft error and prompts the user to "open the Rewordium app to refresh."
+* **No long secrets.** Do not embed the Groq API key in the extension binary. App Store binary scans flag this and reject the build. The proxy token pattern above is the only safe path.
+* **UI placement.** Add a slim row above AzooKey's candidate bar — implement as a SwiftUI overlay in our shim layer, not by patching AzooKey. AzooKey already supports custom tabs via `CustardKit`; investigate using that mechanism so the integration stays upstream-clean.
+
+Build order inside this phase:
+1. Toolbar row UI (static button, no logic). Verify AzooKey still works underneath.
+2. Read selected text via `textDocumentProxy.documentContextBeforeInput` / `selectedText`.
+3. Call Groq through the existing `UnifiedAIService.paraphraseText`-equivalent Swift code (port the minimum API call — no shared code with Flutter).
+4. Replace text via `textDocumentProxy.deleteBackward()` × N + `insertText(...)`.
+5. Error states: rate-limited, no token, network error → inline toast above the keyboard. No alerts.
+
+**Exit criterion:** User types a sentence in any app, taps the Rewordium button on the keyboard toolbar, sees the paraphrase replace the original within ~2 seconds.
+
+**Do not touch:** AzooKey's input pipeline, candidate engine, conversion logic, or theme system. The paraphraser is additive only.
+
+---
+
+### Phase 5 — Gradual customization (English UX, persona injection)
+
+**Goal (deferred):** Optional English-first UX on top of the Japanese-default keyboard, persona-aware paraphrasing, telemetry, FlorisBoard-style number row toggle. **Japanese support stays on.** Anything that disables AzooKey's default language must be a user-controlled toggle, never a code-level removal.
+
+Out of scope for this document. Open as a separate plan once Phase 4 is in TestFlight.
+
+---
+
+## 3. Upstream compatibility rule
+
+All Rewordium-specific code lives in:
+* `ios/RewordiumKeyboard/` — the extension target's own files (controller shim, SharedSettings, paraphraser UI/logic)
+* `ios/Runner/KeyboardSettingsBridge.swift` — the Flutter method channel
+
+The vendored `ios/Packages/azooKey/` tree is **read-only**. To upgrade AzooKey:
+```
 cd ios/Packages/azooKey
-git checkout rewordium-main      # your long-lived branch
+rm -rf *
+unzip <newer azooKey-main.zip>
+git diff      # should be additive only, with the rest of the tree replaced
 ```
-
-Add `ios/Packages/azooKey` to the workspace by dropping the folder onto `Runner.xcworkspace` in Xcode — Xcode resolves it as a local SPM package. The package products you'll consume:
-
-* `KeyboardViews` (the SwiftUI keyboard UI)
-* `KanaKanjiConverterModule` (the IME engine; you may not need this for English-only — see §6)
-* `SwiftUtils`, `KeyboardThemes`, etc., as transitive deps
-
-Avoid `pod`-ing AzooKey. CocoaPods is already used by Flutter plugins; piling a second source-of-truth on top causes Pod/SPM cache fights on Codemagic.
-
-### 3.2 Rewordium-side glue package
-
-Create `ios/RewordiumKeyboardCore/Package.swift` (one library product) and depend on it from the App Extension target. Keep upstream AzooKey as the only thing your fork modifies; everything Rewordium-specific (paraphraser channel, persona config decoder, FCM-driven settings reload) lives here and consumes AzooKey via its public API. This is the same separation as `:reboard_keyboard` vs. `:reboard_lib:*` on Android — you can rebase AzooKey from upstream without touching Rewordium code.
+If a phase ever requires editing an AzooKey file, stop and ask whether it can be done from the shim layer instead. If not, the change should land upstream first; only after rejection do we consider a fork branch (and we document the diff explicitly in this file).
 
 ---
 
-## 4. Talking to Flutter — Platform Channel + App Group
+## 4. Codemagic notes — current state
 
-The Android `MethodChannel("com.noxquill.rewordium/rewordium_keyboard")` does two jobs: live RPC (open settings, refresh) and settings push (theme, haptics, AI on/off). iOS extensions cannot receive `MethodChannel` calls directly because they run in a separate process from the Flutter engine, so split those:
+`codemagic.yaml` now runs three new steps before `flutter build ios`:
 
-1. **Settings push → App Group `UserDefaults` (`group.com.noxquill.rewordium`)**
-   * Add the App Groups entitlement to *both* `Runner` and `RewordiumKeyboard` targets.
-   * Flutter writes via a tiny Swift bridge method on the existing `com.noxquill.rewordium/rewordium_keyboard` channel; the extension reads via `UserDefaults(suiteName:)`.
-   * Settings to mirror today: `themeColor`, `darkMode`, `hapticFeedback`, `aiSuggestions`, `autoCapitalize`, `doubleSpacePeriod`, `personas` (list).
-   * AzooKey already has a settings reload mechanism; trigger it from `viewWillAppear` or via `Darwin notify_post` from the app side for instant-apply.
+1. **Wire RewordiumKeyboard extension target** — `ruby ios/scripts/setup_keyboard_target.rb`. Idempotent. Adds the extension target, links the seven SPM products (5 local + 2 remote: `KanaKanjiConverterModule`, `SwiftUtils`), embeds the `.appex` into Runner. Re-running on a project that already has the target is safe.
+2. **Resolve SwiftPM packages** — fetches `AzooKeyKanaKanjiConverter` (revision pinned to match upstream) and `CustardKit` into `build/ios/SourcePackages`. Cached across builds via `$HOME/Library/Caches/org.swift.swiftpm`.
+3. **Build iOS app (no codesign)** — unchanged structurally, just consumes the wired extension target.
 
-2. **Live RPC from Flutter → Runner side only**
-   * `isKeyboardEnabled` / `isKeyboardSelectedAsDefault`: there is no public iOS API for either. Best you can do is "has the user ever launched the extension?" — store a flag from the extension into the App Group on first `viewDidLoad`, and read it from Flutter. Treat the answer as advisory, not authoritative.
-   * `openKeyboardSettings`: open `UIApplication.openSettingsURLString`. iOS does not deep-link to the Keyboards pane; the user lands on the Rewordium app settings page and taps **Keyboards** themselves. Show a one-shot coachmark in onboarding explaining the two taps.
-   * `showInputMethodPicker`: no iOS equivalent. Long-press the globe key is the user gesture. Replace the call with a tooltip in onboarding.
+Until you have a paid Apple Developer account:
 
-3. **Reverse channel (extension → Flutter)**
-   * Use `URL(string: "rewordium://...")` and `extensionContext?.open(_:completionHandler:)`. You already have the `rewordium://` scheme registered in `Info.plist`.
-   * Wire it through the existing `DeepLinkService` on the Flutter side.
+* The build still **succeeds** because `CODE_SIGNING_ALLOWED=NO` is passed everywhere. The output IPA contains `Runner.app` with `PlugIns/RewordiumKeyboard.appex` nested inside it.
+* Sideloadly using a **free** Apple ID can install the app but **cannot enable** `RequestsOpenAccess=true` on the keyboard extension. The user can still add the keyboard from Settings, but Japanese candidates that rely on App Group I/O may fail silently. This is an iOS limitation, not a code bug.
+* Once the paid account is in place: connect it to Codemagic, add `IOS_PROVISIONING_PROFILE_*` env vars for both bundle IDs (`com.noxquill.rewordium` and `com.noxquill.rewordium.keyboard`), flip the build flags to sign, and re-run.
 
 ---
 
-## 5. App Extension Plist (sketch — do not commit yet)
+## 5. Verification checklist for the next CI run
 
-```xml
-<key>NSExtension</key>
-<dict>
-  <key>NSExtensionAttributes</key>
-  <dict>
-    <key>IsASCIICapable</key>           <false/>
-    <key>PrefersRightToLeft</key>       <false/>
-    <key>PrimaryLanguage</key>          <string>en-US</string>
-    <key>RequestsOpenAccess</key>       <true/>   <!-- needed for App Group + network -->
-  </dict>
-  <key>NSExtensionPointIdentifier</key> <string>com.apple.keyboard-service</string>
-  <key>NSExtensionPrincipalClass</key>  <string>$(PRODUCT_MODULE_NAME).KeyboardViewController</string>
-</dict>
-```
+After Codemagic kicks off with the new pipeline, check the build log in this order. Any failure points at a fixable wiring problem, not a code bug.
 
-`RequestsOpenAccess=true` is the price of letting the keyboard read App Group settings, talk to Firebase, or call Groq. It triggers a one-time iOS warning; the App Store reviews this — be ready to explain in the privacy nutrition label (see §8).
+1. **`flutter pub get`** — green.
+2. **Wire RewordiumKeyboard extension target** — should print "Created target: RewordiumKeyboard", added sources count, linked SPM products. If it crashes with "uninitialized constant XCLocalSwiftPackageReference", the `xcodeproj` gem is too old — add `sudo gem install xcodeproj --no-document` explicitly.
+3. **Resolve SwiftPM packages** — fetches ~500 MB on the first run, mostly the converter dictionary blobs. Subsequent runs hit the cache.
+4. **flutter build ios** — generates Podfile + runs `pod install`. Should not touch the extension target.
+5. **xcodebuild …Runner** — compiles AzooKey sources into `RewordiumKeyboard.appex`, then embeds it into `Runner.app/PlugIns/`. The first build is slow (~10 min) because of the Zenzai C++ neural converter; subsequent builds are ~2 min.
+6. **Artifact** — `rewordium-unsigned.ipa` should contain `Payload/Runner.app/PlugIns/RewordiumKeyboard.appex`. Use `unzip -l rewordium-unsigned.ipa | grep PlugIns` to verify.
 
----
+## 6. Resolved + outstanding questions
 
-## 6. Engine + Language Scope
+* **iOS 17 minimum** — confirmed, project bumped from 15.5 → 17.0.
+* **Apple Developer paid account** — user will purchase once app is otherwise ready. Until then: unsigned builds via Sideloadly; extension installs but can't enable Full Access. Acceptable for the integration-stability phase.
+* **App Review for Custom Keyboard** — keyboards get extra scrutiny; plan ~2 weeks lead time before any deadline.
+* **Privacy nutrition label** — needs an "Other User Content" or "Diagnostic" entry once Phase 4 (network calls in the extension) ships. Draft before submission.
 
-AzooKey ships the Japanese kana-kanji converter by default. For Rewordium's English-first audience you have two choices:
-
-* **Embed but disable.** Ship `KanaKanjiConverterModule`, but only run it when the user picks Japanese. Negligible binary cost (~few MB after stripping), zero risk. Recommended for v1.
-* **Strip it.** Modify the SPM `Package.swift` in your fork to make the converter a separate product and exclude it from the keyboard target. Saves binary but creates a rebase pain point with upstream forever.
-
-Either way, the *English* path uses AzooKey's predictive layer (`SwiftUtils` n-gram + system text replacements). You do **not** need a separate engine; the Rust `:reboard_libnative` on Android exists because FlorisBoard's English engine wasn't good enough — AzooKey's is.
-
-Glide typing: AzooKey has it. Keep it on by default; mirror the Android `setGlideTypingEnabled` flag through the App Group.
-
----
-
-## 7. Build Wiring (Codemagic)
-
-Add to `codemagic.yaml` *only when the extension exists*:
-
-```yaml
-- name: Resolve SPM packages
-  script: xcodebuild -resolvePackageDependencies -workspace ios/Runner.xcworkspace -scheme Runner
-
-- name: Build extension target as part of Runner
-  # The Runner scheme should already depend on the RewordiumKeyboard target via "Embed Foundation Extensions"
-  # If not, add it under: Runner target → General → Frameworks, Libraries, and Embedded Content
-```
-
-CocoaPods does not own the extension target, so `pod install` does not need changes — but the Podfile should explicitly target only Runner:
-
-```ruby
-target 'Runner' do
-  use_frameworks!
-  flutter_install_all_ios_pods File.dirname(File.realpath(__FILE__))
-end
-# do NOT add a target 'RewordiumKeyboard' do … end block — Flutter plugins aren't extension-safe.
-```
-
-Memory ceiling: Custom Keyboard extensions are killed at ~48–60 MB resident. Anything heavy (Firebase init, AI model downloads, image scanning) must stay in the app, not the extension. The extension speaks to Groq directly over HTTPS with a short-lived token written to the App Group by the app — never embed long-lived secrets in the extension binary, App Store scans for them.
-
----
-
-## 8. App Store Submission Notes
-
-* **Open Access prompt.** Required disclosure in App Store description: "The Rewordium Keyboard requests Allow Full Access to provide AI suggestions; text is sent to Groq only when you tap Paraphrase." Mirror in onboarding.
-* **Privacy Nutrition Label.** Add a "Other Diagnostic Data" or "User Content" entry under "Data Linked to You" if you log paraphrases. If you don't log, declare nothing for the extension.
-* **Encryption.** Already set: `ITSAppUsesNonExemptEncryption=false` in `ios/Runner/Info.plist`. The extension inherits.
-* **Background.** Extensions cannot run in background. All Android background flows (FCM-driven persona sync, force-update prompts) stay in the host app.
-
----
-
-## 9. Phasing
-
-| Phase | Scope | Deliverable |
-|---|---|---|
-| 0 (today) | Plan only | This doc. No targets created. |
-| 1 | Skeleton extension | Empty `RewordiumKeyboard` target that bridges App Group settings and shows a blank keyboard. Verifies entitlements + Codemagic build. |
-| 2 | Vendor AzooKey | Submodule, SPM resolution green, AzooKey UI renders inside the extension. No Rewordium customisation yet. |
-| 3 | Settings bridge | Mirror the Android `setHapticFeedback` / `setAiSuggestions` / `updateThemeColor` flow through App Group; verify live-apply works without restarting the extension. |
-| 4 | Paraphraser button | Custom toolbar row from `RewordiumKeyboardCore` that calls Groq and inserts a replacement; matches the Android paraphraser UX. |
-| 5 | Persona + AI settings | Personas array in App Group; paraphraser uses active persona prompt. Mirror Android `updateKeyboardPersonas`. |
-| 6 | Submit | TestFlight → App Store with Open Access disclosure. |
-
-Hard rule: do **not** start phase 1 until the iOS app ships to TestFlight without the extension. The current build pipeline is fragile enough; don't bundle a custom keyboard into the first iOS release.
-
----
-
-## 10. Open Questions
-
-* Do you want Glide on by default on iOS, or behind the same toggle as Android? (Default: on, parity with Android.)
-* Should the iOS keyboard support all current personas, or start with one (Default) for v1?
-* Telemetry: do you want extension-side `usage_analytics_service` events, or only app-side? (App-only avoids the memory + privacy surface area.)
-* Onboarding copy: the iOS "enable keyboard" flow has two taps (Settings → Keyboard → Keyboards → Add Rewordium → enable Allow Full Access). Worth a dedicated illustration step.
+None of these block the current Phase 2 work.

@@ -2,13 +2,14 @@ workflows:
   ios_sideloadly:
     name: iOS Sideloadly Build
     instance_type: mac_mini_m2
-    max_build_duration: 60
+    max_build_duration: 90
     environment:
       flutter: stable
       xcode: latest
       cocoapods: default
       vars:
         BUNDLE_ID: com.noxquill.rewordium
+        KEYBOARD_BUNDLE_ID: com.noxquill.rewordium.keyboard
         XCODE_WORKSPACE: "ios/Runner.xcworkspace"
         XCODE_SCHEME: "Runner"
       groups:
@@ -16,6 +17,8 @@ workflows:
     cache:
       cache_paths:
         - $HOME/Library/Caches/CocoaPods
+        - $HOME/Library/Caches/org.swift.swiftpm
+        - $HOME/Library/Developer/Xcode/DerivedData/SourcePackages
         - $HOME/.pub-cache
         - $CM_BUILD_DIR/ios/Pods
     scripts:
@@ -58,10 +61,27 @@ workflows:
           /usr/libexec/PlistBuddy -c "Set :CFBundleIdentifier $BUNDLE_ID" ios/Runner/Info.plist || \
           /usr/libexec/PlistBuddy -c "Add :CFBundleIdentifier string $BUNDLE_ID" ios/Runner/Info.plist
 
+      - name: Wire RewordiumKeyboard extension target
+        script: |
+          # Idempotent — adds the keyboard extension target to Runner.xcodeproj.
+          # `xcodeproj` gem ships with the Codemagic mac image (CocoaPods uses it).
+          gem list xcodeproj -i >/dev/null 2>&1 || sudo gem install xcodeproj --no-document
+          cd ios
+          ruby scripts/setup_keyboard_target.rb
+
+      - name: Resolve SwiftPM packages
+        script: |
+          # Pull AzooKeyKanaKanjiConverter + CustardKit before the build proper
+          # so the cache key for the Pods step lines up.
+          xcodebuild -resolvePackageDependencies \
+            -workspace "$XCODE_WORKSPACE" \
+            -scheme "$XCODE_SCHEME" \
+            -clonedSourcePackagesDirPath build/ios/SourcePackages
+
       - name: Build iOS app (no codesign)
         script: |
           # flutter build ios generates ios/Podfile (if absent) and runs
-          # `pod install` automatically — no separate CocoaPods step needed.
+          # `pod install`. We commit a Podfile so the deployment target is 17.0.
           flutter build ios --release --no-codesign \
             --build-name="${FCI_BUILD_NAME:-2.9.1}" \
             --build-number="${CM_BUILD_NUMBER:-75}"
@@ -69,6 +89,7 @@ workflows:
             -configuration Release -sdk iphoneos \
             -destination 'generic/platform=iOS' \
             -derivedDataPath build/ios/DerivedData \
+            -clonedSourcePackagesDirPath build/ios/SourcePackages \
             -quiet clean build \
             CODE_SIGNING_ALLOWED=NO CODE_SIGN_IDENTITY="" \
             CODE_SIGNING_REQUIRED=NO DEVELOPMENT_TEAM=""
@@ -78,6 +99,8 @@ workflows:
           rm -rf Payload rewordium-unsigned.ipa
           mkdir -p Payload
           mv build/ios/DerivedData/Build/Products/Release-iphoneos/Runner.app Payload/
+          # The .appex is already nested inside Runner.app/PlugIns/ from the
+          # Embed Foundation Extensions phase — nothing else to copy.
           zip -r -q rewordium-unsigned.ipa Payload
 
     artifacts:

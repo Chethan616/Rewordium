@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 import 'package:firebase_auth/firebase_auth.dart';
 
@@ -11,12 +12,63 @@ import 'usage_analytics_service.dart';
 /// Unified AI Service that supports multiple LLM providers
 /// Falls back to Groq + Qwen when no custom API key is configured
 class UnifiedAIService {
-  /// Strips qwen3's chain-of-thought `<think>...</think>` blocks from responses.
+  /// Hard cap on user-provided text to keep requests within model context and
+  /// avoid runaway token spend. Anything longer is truncated client-side.
+  static const int _maxUserChars = 8000;
+
+  /// Strips qwen3's chain-of-thought `<think>...</think>` blocks. Keeps the
+  /// regex DOTALL-style so multiline thought blocks are removed cleanly.
   static String _stripThinkTags(String text) {
     return text
         .replaceAll(RegExp(r'<think>[\s\S]*?</think>', caseSensitive: false), '')
+        // Strip a leading `<think>` left orphaned by a max_tokens cutoff.
+        .replaceFirst(RegExp(r'^\s*<think>[\s\S]*$'), '')
         .trim();
   }
+
+  /// Trim and bound user input before it crosses the wire. Strips control
+  /// chars that Groq rejects (NUL, lone surrogates) without touching the
+  /// visible text.
+  static String _sanitizeUserText(String text) {
+    final cleaned = text
+        // strip C0 control chars except \t \n \r — they break OpenAI-style JSON validators
+        .replaceAll(RegExp(r'[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]'), '')
+        .trim();
+    if (cleaned.length <= _maxUserChars) return cleaned;
+    return '${cleaned.substring(0, _maxUserChars)}\n\n[truncated]';
+  }
+
+  /// Extract the first JSON object from a string, tolerating leading/trailing
+  /// noise (whitespace, stray `<think>` debris, markdown fences) that some
+  /// models emit even with response_format=json_object. Returns null if no
+  /// `{...}` block is found.
+  static Map<String, dynamic>? _extractJson(String raw) {
+    if (raw.isEmpty) return null;
+    final trimmed = _stripThinkTags(raw)
+        // strip ```json fences if the model wrapped output despite json mode
+        .replaceAll(RegExp(r'```(?:json)?\s*', caseSensitive: false), '')
+        .replaceAll('```', '')
+        .trim();
+    try {
+      final decoded = jsonDecode(trimmed);
+      if (decoded is Map<String, dynamic>) return decoded;
+    } catch (_) {/* fall through */}
+
+    final start = trimmed.indexOf('{');
+    final end = trimmed.lastIndexOf('}');
+    if (start < 0 || end <= start) return null;
+    try {
+      final decoded = jsonDecode(trimmed.substring(start, end + 1));
+      if (decoded is Map<String, dynamic>) return decoded;
+    } catch (_) {/* fall through */}
+    return null;
+  }
+
+  /// Redact Bearer tokens before logging. Keeps the first 5 chars so the
+  /// developer can sanity-check which key was used.
+  static String _redact(String s) =>
+      s.replaceAllMapped(RegExp(r'(gsk_)[A-Za-z0-9_-]+'),
+          (m) => '${m[1]}***');
 
   static Map<String, dynamic> _outOfCreditsResponse() {
     return {
@@ -217,7 +269,17 @@ class UnifiedAIService {
     }
   }
 
-  /// Make request to Groq (default)
+  /// Make request to Groq (default).
+  ///
+  /// Reliability notes for qwen3-32b on Groq:
+  ///   * qwen3 emits `<think>...</think>` chain-of-thought BEFORE the answer.
+  ///     With `response_format=json_object`, Groq validates the model output
+  ///     as JSON and rejects anything that has reasoning prefixed — that
+  ///     surfaces as `400 Failed to validate JSON`. We send
+  ///     `reasoning_effort: "none"` and append `/no_think` to the system
+  ///     prompt to disable it at both API and model level.
+  ///   * Default `max_tokens` is 1024. Short caps (300) used to truncate JSON
+  ///     strings mid-value, which surfaces as the same 400.
   static Future<Map<String, dynamic>> _makeGroqRequest({
     required String systemPrompt,
     required String userMessage,
@@ -234,31 +296,50 @@ class UnifiedAIService {
         throw Exception('Groq API key is not configured');
       }
 
+      final sanitizedUser = _sanitizeUserText(userMessage);
+      final isQwen3 = model.startsWith('qwen/qwen3');
+      // Belt-and-suspenders: API-level + model-level disable of thinking.
+      final effectiveSystemPrompt = isQwen3
+          ? (requireJson
+              ? '$systemPrompt
+
+Return ONLY valid JSON. /no_think'
+              : '$systemPrompt
+
+/no_think')
+          : systemPrompt;
+
+      final body = <String, dynamic>{
+        'model': model,
+        'messages': [
+          {'role': 'system', 'content': effectiveSystemPrompt},
+          {'role': 'user', 'content': sanitizedUser},
+        ],
+        'temperature': temperature,
+        'top_p': 0.95,
+        'presence_penalty': 0.3,
+        'max_tokens': maxTokens ?? 1024,
+        if (requireJson) 'response_format': {'type': 'json_object'},
+        if (isQwen3) 'reasoning_effort': 'none',
+      };
+
       final response = await http
           .post(
             Uri.parse('https://api.groq.com/openai/v1/chat/completions'),
             headers: {
-              'Content-Type': 'application/json',
+              'Content-Type': 'application/json; charset=utf-8',
               'Authorization': 'Bearer $apiKey',
             },
-            body: jsonEncode({
-              'model': model,
-              'messages': [
-                {'role': 'system', 'content': systemPrompt},
-                {'role': 'user', 'content': userMessage},
-              ],
-              'temperature': temperature,
-              'top_p': 0.95,
-              'presence_penalty': 0.3,
-              if (maxTokens != null) 'max_tokens': maxTokens,
-              if (requireJson) 'response_format': {'type': 'json_object'},
-            }),
+            body: jsonEncode(body),
           )
           .timeout(const Duration(seconds: 30));
 
       if (response.statusCode == 200) {
-        final data = jsonDecode(response.body);
-        final content = _stripThinkTags(data['choices'][0]['message']['content']);
+        // Decode as UTF-8 so emojis/em-dashes round-trip correctly.
+        final data = jsonDecode(utf8.decode(response.bodyBytes));
+        final rawContent =
+            (data['choices'][0]['message']['content'] as String?) ?? '';
+        final content = _stripThinkTags(rawContent);
 
         return {
           'success': true,
@@ -266,31 +347,61 @@ class UnifiedAIService {
           'provider': 'groq',
         };
       } else if (response.statusCode == 429) {
-        // Rate limit exceeded
+        if (kDebugMode) _logGroqFailure(response, 'rate_limit');
         return {
           'error': 'RATE_LIMIT',
           'errorType': 'RATE_LIMIT',
           'content':
-              'âš ï¸ Groq API rate limit exceeded. Please wait a moment and try again.',
+              '⚠️ Groq API rate limit exceeded. Please wait a moment and try again.',
         };
       } else if (response.statusCode == 401) {
+        if (kDebugMode) _logGroqFailure(response, 'auth');
         return {
           'error': 'INVALID_API_KEY',
           'errorType': 'INVALID_API_KEY',
           'content':
-              'âš ï¸ Invalid Groq API key. Please check your configuration.',
+              '⚠️ Invalid Groq API key. Please check your configuration.',
         };
+      } else if (response.statusCode == 400 &&
+          response.body.contains('Failed to validate JSON') &&
+          requireJson) {
+        // Groq's strict JSON validator rejected the model output. Retry once
+        // without response_format and rely on _extractJson at the call site
+        // to recover. Avoids hard-failing on transient model quirks.
+        if (kDebugMode) _logGroqFailure(response, 'json_validation_retry');
+        return _makeGroqRequest(
+          systemPrompt:
+              '$systemPrompt
+
+Return only a single JSON object. No prose, no markdown.',
+          userMessage: userMessage,
+          temperature: temperature,
+          requireJson: false,
+          model: model,
+          maxTokens: maxTokens,
+        );
       } else {
+        if (kDebugMode) _logGroqFailure(response, 'http_${response.statusCode}');
         throw Exception(
-            'Groq API error: ${response.statusCode} - ${response.body}');
+            'Groq API error: ${response.statusCode} - ${_truncate(response.body, 240)}');
       }
     } catch (e) {
-      print('Groq request error: $e');
+      if (kDebugMode) {
+        debugPrint('Groq request error: ${_redact(e.toString())}');
+      }
       return {
         'error': e.toString(),
         'content': 'Error connecting to Groq. Please check your connection.',
       };
     }
+  }
+
+  static String _truncate(String s, int max) =>
+      s.length <= max ? s : '${s.substring(0, max)}…';
+
+  static void _logGroqFailure(http.Response response, String reason) {
+    debugPrint(
+        '[Groq] $reason status=${response.statusCode} body=${_truncate(response.body, 400)}');
   }
 
   /// Make request to Google Gemini
@@ -539,7 +650,7 @@ class UnifiedAIService {
             temperature: 0.9,
             requireJson: true,
             model: 'qwen/qwen3-32b',
-            maxTokens: 300,
+            maxTokens: 1024,
           )
         : await makeRequest(
             systemPrompt: systemPrompt,
@@ -552,19 +663,17 @@ class UnifiedAIService {
       return result;
     }
 
-    try {
-      final content = result['content'] as String;
-      final parsed = jsonDecode(content);
+    final parsed = _extractJson(result['content'] as String? ?? '');
+    if (parsed != null && parsed['paraphrased_text'] is String) {
       return {
         'success': true,
-        'paraphrased_text': parsed['paraphrased_text'] ?? text,
-      };
-    } catch (e) {
-      return {
-        'success': true,
-        'paraphrased_text': result['content'],
+        'paraphrased_text': parsed['paraphrased_text'] as String,
       };
     }
+    return {
+      'success': true,
+      'paraphrased_text': (result['content'] as String?)?.trim() ?? text,
+    };
   }
 
   /// Get grammar check using configured provider
@@ -582,7 +691,7 @@ class UnifiedAIService {
             temperature: 0.3,
             requireJson: true,
             model: 'qwen/qwen3-32b',
-            maxTokens: 300,
+            maxTokens: 1024,
           )
         : await makeRequest(
             systemPrompt: systemPrompt,
@@ -595,16 +704,13 @@ class UnifiedAIService {
       return result;
     }
 
-    try {
-      final content = result['content'] as String;
-      return jsonDecode(content);
-    } catch (e) {
-      return {
-        'corrected_text': text,
-        'error_count': 0,
-        'errors': [],
-      };
-    }
+    final parsed = _extractJson(result['content'] as String? ?? '');
+    if (parsed != null) return parsed;
+    return {
+      'corrected_text': text,
+      'error_count': 0,
+      'errors': [],
+    };
   }
 
   /// Chat with custom prompt using configured provider
@@ -639,7 +745,7 @@ class UnifiedAIService {
             temperature: 0.3,
             requireJson: true,
             model: 'qwen/qwen3-32b',
-            maxTokens: 300,
+            maxTokens: 1024,
           )
         : await makeRequest(
             systemPrompt: systemPrompt,
@@ -657,17 +763,14 @@ class UnifiedAIService {
       };
     }
 
-    try {
-      final content = result['content'] as String;
-      return jsonDecode(content);
-    } catch (e) {
-      return {
+    final parsed = _extractJson(result['content'] as String? ?? '');
+    if (parsed != null) return parsed;
+    return {
         'translated_text': text,
         'source_language': 'unknown',
         'confidence': 0,
         'error': e.toString(),
       };
-    }
   }
 
   /// Detect AI-generated text using configured provider
@@ -696,18 +799,15 @@ class UnifiedAIService {
       };
     }
 
-    try {
-      final content = result['content'] as String;
-      return jsonDecode(content);
-    } catch (e) {
-      return {
+    final parsed = _extractJson(result['content'] as String? ?? '');
+    if (parsed != null) return parsed;
+    return {
         'is_ai_generated': false,
         'confidence': 0,
         'indicators': [],
         'explanation': 'Error analyzing text',
         'error': e.toString(),
       };
-    }
   }
 
   /// Summarize text using configured provider
@@ -735,18 +835,15 @@ class UnifiedAIService {
       };
     }
 
-    try {
-      final content = result['content'] as String;
-      return jsonDecode(content);
-    } catch (e) {
-      return {
+    final parsed = _extractJson(result['content'] as String? ?? '');
+    if (parsed != null) return parsed;
+    return {
         'summary': text,
         'key_points': [],
         'word_count_original': text.split(' ').length,
         'word_count_summary': text.split(' ').length,
         'error': e.toString(),
       };
-    }
   }
 
   /// Edit tone of text using configured provider
@@ -768,7 +865,7 @@ class UnifiedAIService {
             temperature: 0.9,
             requireJson: true,
             model: 'qwen/qwen3-32b',
-            maxTokens: 300,
+            maxTokens: 1024,
           )
         : await makeRequest(
             systemPrompt: systemPrompt,
@@ -786,17 +883,14 @@ class UnifiedAIService {
       };
     }
 
-    try {
-      final content = result['content'] as String;
-      return jsonDecode(content);
-    } catch (e) {
-      return {
+    final parsed = _extractJson(result['content'] as String? ?? '');
+    if (parsed != null) return parsed;
+    return {
         'edited_text': text,
         'original_tone': 'unknown',
         'changes_made': [],
         'error': e.toString(),
       };
-    }
   }
 
   /// Paraphrase with persona using configured provider
@@ -817,7 +911,7 @@ class UnifiedAIService {
             temperature: 0.9,
             requireJson: true,
             model: 'qwen/qwen3-32b',
-            maxTokens: 300,
+            maxTokens: 1024,
           )
         : await makeRequest(
             systemPrompt: systemPrompt,
@@ -834,21 +928,19 @@ class UnifiedAIService {
       };
     }
 
-    try {
-      final content = result['content'] as String;
-      final parsed = jsonDecode(content);
+    final parsed = _extractJson(result['content'] as String? ?? '');
+    if (parsed != null) {
       return {
         'success': true,
         'paraphrased_text': parsed['paraphrased_text'] ?? text,
         'alternatives': parsed['alternatives'] ?? [],
       };
-    } catch (e) {
-      return {
+    }
+    return {
         'success': true,
         'paraphrased_text': result['content'],
         'alternatives': [],
       };
-    }
   }
 
   /// Paraphrase with custom prompt using configured provider
