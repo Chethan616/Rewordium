@@ -67,7 +67,14 @@ def read_pubspec_version(ios_dir)
   ['1.0.0', '1']
 end
 
-MARKETING_VERSION, BUILD_NUMBER = read_pubspec_version(IOS_DIR)
+pubspec_marketing, pubspec_build = read_pubspec_version(IOS_DIR)
+
+# CI overrides take priority — Codemagic exposes CM_BUILD_NUMBER and we read
+# FCI_BUILD_NAME from codemagic.yaml's `flutter build ios --build-name=...`.
+# This keeps the extension's CFBundleVersion in lockstep with whatever Flutter
+# wrote into the host Runner's Info.plist on the same build.
+MARKETING_VERSION = ENV['FCI_BUILD_NAME'] || ENV['FLUTTER_BUILD_NAME'] || pubspec_marketing
+BUILD_NUMBER      = ENV['CM_BUILD_NUMBER'] || ENV['FLUTTER_BUILD_NUMBER'] || pubspec_build
 
 # ----------------------------------------------------------------------------
 
