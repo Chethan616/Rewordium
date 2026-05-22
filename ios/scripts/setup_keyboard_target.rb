@@ -155,6 +155,16 @@ else
   resources_group = keyboard_group.find_subpath('Resources', true)
   resources_group.set_source_tree('<group>')
 
+  # Directories that AzooKey expects copied verbatim as folder references
+  # (the runtime reads files inside them with bundle-relative paths). Asset
+  # catalogs and .xcstrings already have correct types via auto-detection.
+  opaque_folders = %w[
+    Keyboard/Dictionary
+    azooKey_dictionary_storage
+    azooKey_emoji_dictionary_storage
+  ]
+
+  added = 0
   RESOURCE_PATHS.each do |rel_path|
     abs = File.join(IOS_DIR, rel_path)
     unless File.exist?(abs)
@@ -162,10 +172,16 @@ else
       next
     end
     ref = resources_group.new_reference(rel_path)
-    ref.last_known_file_type = 'folder' if File.directory?(abs)
+    if File.directory?(abs) && opaque_folders.any? { |suffix| rel_path.end_with?(suffix) }
+      ref.last_known_file_type = 'folder'
+    end
     target.resources_build_phase.add_file_reference(ref, true)
+    added += 1
   end
-  log "Added #{RESOURCE_PATHS.size} resource entries"
+  log "Added #{added}/#{RESOURCE_PATHS.size} resource entries"
+  if added < RESOURCE_PATHS.size
+    log "  ⚠️  Some resources were missing. AzooKey requires dictionary submodules — make sure the 'Fetch AzooKey dictionary submodules' step ran first."
+  end
 end
 
 # ----------------------------------------------------------------------------
@@ -173,16 +189,29 @@ end
 # and pre-existing targets so the script is self-healing.
 
 existing_products = target.package_product_dependencies.map(&:product_name)
+existing_build_file_products = target.frameworks_build_phase.files.map do |bf|
+  bf.respond_to?(:product_ref) ? bf.product_ref&.product_name : nil
+end.compact
+
 PRODUCT_PACKAGES.each do |product_name, owner|
-  next if existing_products.include?(product_name)
   package_ref = (owner == :local) ? local_pkg : remote_pkgs[owner]
   next unless package_ref
 
-  dep = project.new(Xcodeproj::Project::Object::XCSwiftPackageProductDependency)
-  dep.product_name = product_name
-  dep.package      = package_ref
-  target.package_product_dependencies << dep
-  target.frameworks_build_phase.add_file_reference(dep)
+  dep = target.package_product_dependencies.find { |d| d.product_name == product_name }
+  unless dep
+    dep = project.new(Xcodeproj::Project::Object::XCSwiftPackageProductDependency)
+    dep.product_name = product_name
+    dep.package      = package_ref
+    target.package_product_dependencies << dep
+  end
+
+  # SPM products link via PBXBuildFile.product_ref, NOT .file_ref. Older
+  # xcodeproj gems exposed `add_file_reference(dep)` as a shortcut; 1.27+
+  # rejects that with a type-check error, so we wire it explicitly.
+  next if existing_build_file_products.include?(product_name)
+  build_file = project.new(Xcodeproj::Project::Object::PBXBuildFile)
+  build_file.product_ref = dep
+  target.frameworks_build_phase.files << build_file
   log "Linked SPM product: #{product_name} (from #{owner == :local ? 'AzooKeyCore' : owner})"
 end
 

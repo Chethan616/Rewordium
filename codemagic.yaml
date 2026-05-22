@@ -61,6 +61,40 @@ workflows:
           /usr/libexec/PlistBuddy -c "Set :CFBundleIdentifier $BUNDLE_ID" ios/Runner/Info.plist || \
           /usr/libexec/PlistBuddy -c "Add :CFBundleIdentifier string $BUNDLE_ID" ios/Runner/Info.plist
 
+      - name: Fetch AzooKey dictionary submodules
+        script: |
+          # AzooKey ships its Japanese + emoji dictionaries as git submodules
+          # pointing at separate GitHub repos. We checked in empty placeholder
+          # directories; populate them on CI before the keyboard target wires
+          # them as resources. Idempotent — re-run is a no-op once cloned.
+          set -e
+          cd ios/Packages/azooKey
+
+          clone_if_empty() {
+            local target_dir="$1"
+            local repo_url="$2"
+            if [ -d "$target_dir/.git" ] || [ -n "$(ls -A "$target_dir" 2>/dev/null | grep -v '^.gitkeep$' || true)" ]; then
+              echo "  ✓ $target_dir already populated"
+              return 0
+            fi
+            echo "  → cloning $repo_url into $target_dir"
+            rm -rf "$target_dir"
+            git clone --depth 1 "$repo_url" "$target_dir"
+            rm -rf "$target_dir/.git"
+          }
+
+          clone_if_empty azooKey_dictionary_storage \
+            https://github.com/ensan-hcl/azooKey_dictionary_storage
+          clone_if_empty azooKey_emoji_dictionary_storage \
+            https://github.com/azooKey/azooKey_emoji_dictionary_storage
+
+          # Zenzai (neural converter) model files live on HuggingFace and are
+          # >100 MB each. Phase 2 builds without them — AzooKey degrades to its
+          # statistical converter. Re-enable in Phase 5 if Japanese quality
+          # complaints come in.
+          # clone_if_empty zenz-v3.1-small-gguf  https://huggingface.co/Miwa-Keita/zenz-v3.1-small-gguf
+          # clone_if_empty zenz-v3.1-xsmall-gguf https://huggingface.co/Miwa-Keita/zenz-v3.1-xsmall-gguf
+
       - name: Wire RewordiumKeyboard extension target
         script: |
           # Idempotent — adds the keyboard extension target to Runner.xcodeproj.
