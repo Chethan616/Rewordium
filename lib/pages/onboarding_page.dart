@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -60,6 +61,11 @@ enum _KeyboardHapticsMode { followSystem, alwaysVibrate }
 
 enum _SystemSetupStage { idle, keyboardEnable, keyboardSelect, accessibility }
 
+// Logical onboarding step ids. The active list depends on platform — the
+// Android variant adds assistant-mode and keyboard steps that map to system
+// services that don't exist on iOS yet.
+enum _StepKey { welcome, assistantMode, theme, llm, news, keyboard }
+
 class _OnboardingPageState extends State<OnboardingPage>
     with WidgetsBindingObserver {
   static const _accessibilityChannel =
@@ -71,14 +77,40 @@ class _OnboardingPageState extends State<OnboardingPage>
   final TextEditingController _endpointController = TextEditingController();
 
   // Sentence-case throughout — feels less SaaS-formal.
-  static const List<String> _stepTitles = [
-    'Welcome',
-    'Assistant mode',
-    'Theme',
-    'AI provider',
-    'News updates',
-    'Keyboard',
-  ];
+  static const Map<_StepKey, String> _stepTitleByKey = {
+    _StepKey.welcome: 'Welcome',
+    _StepKey.assistantMode: 'Assistant mode',
+    _StepKey.theme: 'Theme',
+    _StepKey.llm: 'AI provider',
+    _StepKey.news: 'News updates',
+    _StepKey.keyboard: 'Keyboard',
+  };
+
+  static bool get _isAndroid =>
+      defaultTargetPlatform == TargetPlatform.android;
+
+  // iOS skips assistantMode + keyboard (those map to Android-only system
+  // services); the iOS keyboard module is planned separately.
+  List<_StepKey> get _activeSteps => _isAndroid
+      ? const [
+          _StepKey.welcome,
+          _StepKey.assistantMode,
+          _StepKey.theme,
+          _StepKey.llm,
+          _StepKey.news,
+          _StepKey.keyboard,
+        ]
+      : const [
+          _StepKey.welcome,
+          _StepKey.theme,
+          _StepKey.llm,
+          _StepKey.news,
+        ];
+
+  List<String> get _stepTitles =>
+      _activeSteps.map((k) => _stepTitleByKey[k]!).toList(growable: false);
+
+  _StepKey get _currentStepKey => _activeSteps[_step];
 
   int _step = 0;
   bool _isSaving = false;
@@ -183,7 +215,7 @@ class _OnboardingPageState extends State<OnboardingPage>
       _assistantMode != _AssistantMode.accessibilityOverlay;
 
   String? _currentStepError() {
-    if (_step == 3 && _llmMode == _LlmMode.bringYourOwn) {
+    if (_currentStepKey == _StepKey.llm && _llmMode == _LlmMode.bringYourOwn) {
       final apiKey = _apiKeyController.text.trim();
       if (apiKey.isEmpty) {
         return 'Enter your API key or switch to the managed default provider.';
@@ -206,7 +238,7 @@ class _OnboardingPageState extends State<OnboardingPage>
   }
 
   Future<void> _onContinuePressed() async {
-    if (_step == 1) {
+    if (_currentStepKey == _StepKey.assistantMode) {
       await _handleAssistantModeContinue();
       return;
     }
@@ -415,6 +447,7 @@ class _OnboardingPageState extends State<OnboardingPage>
   }
 
   Future<bool> _isAccessibilityEnabled() async {
+    if (!_isAndroid) return false;
     try {
       final bool enabled = await _accessibilityChannel
           .invokeMethod('isAccessibilityServiceEnabled');
@@ -426,6 +459,7 @@ class _OnboardingPageState extends State<OnboardingPage>
 
   Future<void> _openAccessibilitySettings(
       {bool autoReturnToApp = false}) async {
+    if (!_isAndroid) return;
     try {
       await _accessibilityChannel.invokeMethod('requestAccessibilitySettings', {
         'autoReturnToApp': autoReturnToApp,
@@ -440,6 +474,13 @@ class _OnboardingPageState extends State<OnboardingPage>
     required bool fromResume,
   }) async {
     if (!mounted) return;
+
+    // iOS has no Rewordium IME or accessibility service to enable. Finalize
+    // immediately — keyboard module will be added once AzooKey is integrated.
+    if (!_isAndroid) {
+      await _finalizeOnboardingCompletion();
+      return;
+    }
 
     if (_usesKeyboard) {
       final keyboardEnabled = await _keyboardService.isKeyboardEnabled();
@@ -553,7 +594,7 @@ class _OnboardingPageState extends State<OnboardingPage>
         customEndpoint: '',
       );
       await AdvancedAISettingsService.saveSettings(settings);
-      await AISettingsBridge.syncSettingsToAndroid();
+      if (_isAndroid) await AISettingsBridge.syncSettingsToAndroid();
       return;
     }
 
@@ -568,7 +609,7 @@ class _OnboardingPageState extends State<OnboardingPage>
     );
 
     await AdvancedAISettingsService.saveSettings(settings);
-    await AISettingsBridge.syncSettingsToAndroid();
+    if (_isAndroid) await AISettingsBridge.syncSettingsToAndroid();
   }
 
   Future<void> _persistNewsChoice() async {
@@ -603,11 +644,17 @@ class _OnboardingPageState extends State<OnboardingPage>
       _keyboardHapticsMode.name,
     );
 
-    await RewordiumKeyboardService.setHapticFeedback(_keyboardHapticsEnabled);
-    final aiApplied =
-        await _keyboardService.setAiSuggestions(_keyboardAiDefaultEnabled);
-    await prefs.setBool('paraphraser_enabled', _keyboardAiDefaultEnabled);
-    await prefs.setBool('onboarding_keyboard_ai_applied', aiApplied);
+    // The native Rewordium IME only exists on Android today; persist
+    // preferences but skip the platform channel calls on iOS.
+    if (_isAndroid) {
+      await RewordiumKeyboardService.setHapticFeedback(_keyboardHapticsEnabled);
+      final aiApplied =
+          await _keyboardService.setAiSuggestions(_keyboardAiDefaultEnabled);
+      await prefs.setBool('paraphraser_enabled', _keyboardAiDefaultEnabled);
+      await prefs.setBool('onboarding_keyboard_ai_applied', aiApplied);
+    } else {
+      await prefs.setBool('paraphraser_enabled', _keyboardAiDefaultEnabled);
+    }
   }
 
   void _showMessage(String message) {
@@ -839,21 +886,19 @@ class _OnboardingPageState extends State<OnboardingPage>
   }
 
   Widget _buildStepBody(BuildContext context) {
-    switch (_step) {
-      case 0:
+    switch (_currentStepKey) {
+      case _StepKey.welcome:
         return _buildWelcomeStep(context);
-      case 1:
+      case _StepKey.assistantMode:
         return _buildAssistantModeStep(context);
-      case 2:
+      case _StepKey.theme:
         return _buildThemeStep(context);
-      case 3:
+      case _StepKey.llm:
         return _buildLlmStep(context);
-      case 4:
+      case _StepKey.news:
         return _buildNewsStep(context);
-      case 5:
+      case _StepKey.keyboard:
         return _buildKeyboardStep(context);
-      default:
-        return const SizedBox.shrink();
     }
   }
 
@@ -1121,7 +1166,6 @@ class _OnboardingPageState extends State<OnboardingPage>
   // ─────────────────────────────────────────────────────────────────────────
 
   Widget _buildThemeStep(BuildContext context) {
-    final cs = Theme.of(context).colorScheme;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -1134,17 +1178,23 @@ class _OnboardingPageState extends State<OnboardingPage>
           swatchColor: const Color(0xFF455A64), // blueGrey 700
           onTap: () => _applyThemeSelection(false),
         ),
-        _themeChoiceCard(
-          context: context,
-          title: 'Dynamic colors',
-          subtitle: 'Device-derived colors. Material 3 style.',
-          selected: _dynamicColorsEnabled,
-          swatchColor: const Color(0xFF00897B), // teal 600
-          onTap: () => _applyThemeSelection(true),
-        ),
+        // Material You dynamic colors are an Android 12+ concept; iOS has no
+        // equivalent system source, so we hide the option instead of offering
+        // a setting that would never change anything.
+        if (_isAndroid)
+          _themeChoiceCard(
+            context: context,
+            title: 'Dynamic colors',
+            subtitle: 'Device-derived colors. Material 3 style.',
+            selected: _dynamicColorsEnabled,
+            swatchColor: const Color(0xFF00897B), // teal 600
+            onTap: () => _applyThemeSelection(true),
+          ),
         const SizedBox(height: 14),
         Text(
-          'This affects the Flutter app theme only. It does not modify ReBoard keyboard theming.',
+          _isAndroid
+              ? 'This affects the Flutter app theme only. It does not modify ReBoard keyboard theming.'
+              : 'You can switch between light and dark, or match the system, anytime from Settings.',
           style: _bodySubtleStyle(context),
         ),
       ],
@@ -1225,7 +1275,7 @@ class _OnboardingPageState extends State<OnboardingPage>
 
   Widget _buildLlmStep(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
-    final llmError = _step == 3 ? _currentStepError() : null;
+    final llmError = _currentStepError();
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -1345,6 +1395,7 @@ class _OnboardingPageState extends State<OnboardingPage>
       ],
     );
   }
+
 
   // ─────────────────────────────────────────────────────────────────────────
   // STEP 4 — News updates

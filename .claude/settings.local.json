@@ -6,7 +6,9 @@
       "Bash(Get-ChildItem -Path \"C:\\\\Users\\\\cheth\\\\OneDrive\\\\Desktop\\\\PC2\\\\YC_startup-main\\\\rewordium\\\\rewordium\\\\android\" -Force)",
       "Bash(Select-Object Name, PSIsContainer)",
       "Bash(xargs cat)",
-      "Bash(xargs grep -l \"Canvas\\\\|DrawScope\\\\|Compose\")"
+      "Bash(xargs grep -l \"Canvas\\\\|DrawScope\\\\|Compose\")",
+      "Bash(where convert *)",
+      "PowerShell(Add-Type -AssemblyName System.Drawing; $src='C:\\\\Users\\\\cheth\\\\OneDrive\\\\Desktop\\\\PC2\\\\YC_startup-main\\\\rewordium\\\\rewordium\\\\rewordium\\\\icons\\\\appstore.png'; $dst='C:\\\\Users\\\\cheth\\\\OneDrive\\\\Desktop\\\\PC2\\\\YC_startup-main\\\\rewordium\\\\rewordium\\\\rewordium\\\\ios\\\\Runner\\\\Assets.xcassets\\\\AppIcon.appiconset\\\\Icon-App-1024x1024@1x.png'; $bmpSrc=[System.Drawing.Image]::FromFile\\($src\\); $bmp=New-Object System.Drawing.Bitmap\\(1024,1024,[System.Drawing.Imaging.PixelFormat]::Format24bppRgb\\); $g=[System.Drawing.Graphics]::FromImage\\($bmp\\); $g.Clear\\([System.Drawing.Color]::White\\); $g.InterpolationMode='HighQualityBicubic'; $g.SmoothingMode='AntiAlias'; $g.PixelOffsetMode='HighQuality'; $g.DrawImage\\($bmpSrc,0,0,1024,1024\\); $g.Dispose\\(\\); $bmp.Save\\($dst,[System.Drawing.Imaging.ImageFormat]::Png\\); $bmp.Dispose\\(\\); $bmpSrc.Dispose\\(\\); Write-Host \"1024x1024 marketing icon re-saved as RGB \\(no alpha\\)\")"
     ]
   }
 }

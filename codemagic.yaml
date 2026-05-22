@@ -6,17 +6,26 @@ workflows:
     environment:
       flutter: stable
       xcode: latest
+      cocoapods: default
       vars:
         BUNDLE_ID: com.noxquill.rewordium
+        XCODE_WORKSPACE: "ios/Runner.xcworkspace"
+        XCODE_SCHEME: "Runner"
       groups:
         - ios_secrets
+    cache:
+      cache_paths:
+        - $HOME/Library/Caches/CocoaPods
+        - $HOME/.pub-cache
+        - $CM_BUILD_DIR/ios/Pods
     scripts:
       - name: Install dependencies
-        script: flutter pub get
+        script: |
+          flutter pub get
 
       - name: Prepare .env for CI
         script: |
-          cat > .env <<'EOF'
+          cat > .env <<EOF
           GROQ_API_KEY=$GROQ_API_KEY
           EOF
 
@@ -51,9 +60,18 @@ workflows:
 
       - name: Build iOS app (no codesign)
         script: |
-          flutter build ios --release --no-codesign
-          xcodebuild -workspace ios/Runner.xcworkspace -scheme Runner -configuration Release -sdk iphoneos -destination 'generic/platform=iOS' -derivedDataPath build/ios/DerivedData -quiet clean build \
-            CODE_SIGNING_ALLOWED=NO CODE_SIGN_IDENTITY="" CODE_SIGNING_REQUIRED=NO DEVELOPMENT_TEAM=""
+          # flutter build ios generates ios/Podfile (if absent) and runs
+          # `pod install` automatically — no separate CocoaPods step needed.
+          flutter build ios --release --no-codesign \
+            --build-name="${FCI_BUILD_NAME:-2.9.1}" \
+            --build-number="${CM_BUILD_NUMBER:-75}"
+          xcodebuild -workspace "$XCODE_WORKSPACE" -scheme "$XCODE_SCHEME" \
+            -configuration Release -sdk iphoneos \
+            -destination 'generic/platform=iOS' \
+            -derivedDataPath build/ios/DerivedData \
+            -quiet clean build \
+            CODE_SIGNING_ALLOWED=NO CODE_SIGN_IDENTITY="" \
+            CODE_SIGNING_REQUIRED=NO DEVELOPMENT_TEAM=""
 
       - name: Package unsigned IPA for Sideloadly
         script: |
@@ -64,3 +82,5 @@ workflows:
 
     artifacts:
       - rewordium-unsigned.ipa
+      - /tmp/xcodebuild_logs/*.log
+      - flutter_drive.log

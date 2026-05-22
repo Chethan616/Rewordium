@@ -446,6 +446,9 @@ class KeyboardProvider extends ChangeNotifier {
 
   // Ensure keyboard is enabled and settings are applied
   Future<void> ensureKeyboardEnabled(BuildContext context) async {
+    // The Rewordium system keyboard is Android-only; iOS keyboard work is
+    // tracked separately (see docs/AZOOKEY_IOS_INTEGRATION.md).
+    if (defaultTargetPlatform != TargetPlatform.android) return;
     try {
       final sharedPrefs = await SharedPreferences.getInstance();
       final onboardingCompleted =
