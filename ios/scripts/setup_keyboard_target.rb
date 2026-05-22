@@ -198,6 +198,17 @@ end
 
 # ----------------------------------------------------------------------------
 # Embed the extension into the Runner app.
+#
+# BUILD-PHASE ORDERING:
+#   Flutter's `Thin Binary` shell-script phase reads INFOPLIST_PATH as an
+#   input. Xcode tracks the parent directory's tree signature, so if the
+#   embed phase places PlugIns/*.appex inside Runner.app AFTER Thin Binary
+#   has snapshotted that directory, Xcode raises:
+#       "Cycle inside Runner; building could produce unreliable results."
+#   The fix is to run the embed phase BEFORE Thin Binary, so the directory
+#   tree containing Info.plist is stable by the time Thin Binary inspects
+#   it. This matches the canonical build order Xcode uses for iOS apps with
+#   embedded extensions (Embed App Extensions → Run Script).
 
 embed_phase = runner.copy_files_build_phases.find { |p|
   p.name == 'Embed Foundation Extensions' || p.dst_subfolder_spec == '13'
@@ -211,6 +222,23 @@ unless embed_phase.files_references.include?(target.product_reference)
   bf = embed_phase.add_file_reference(target.product_reference)
   bf.settings = { 'ATTRIBUTES' => ['RemoveHeadersOnCopy'] }
   log "Embedded #{TARGET_NAME}.appex into Runner"
+end
+
+# Move the embed phase to just before Flutter's "Thin Binary" script phase.
+thin_binary = runner.build_phases.find { |p|
+  p.respond_to?(:name) && p.name == 'Thin Binary'
+}
+if thin_binary
+  current_idx = runner.build_phases.index(embed_phase)
+  thin_idx    = runner.build_phases.index(thin_binary)
+  if current_idx && thin_idx && current_idx > thin_idx
+    runner.build_phases.delete(embed_phase)
+    new_thin_idx = runner.build_phases.index(thin_binary)
+    runner.build_phases.insert(new_thin_idx, embed_phase)
+    log "Reordered: Embed Foundation Extensions now runs before Thin Binary"
+  end
+else
+  log "  (no Thin Binary phase found — leaving embed phase at default position)"
 end
 
 unless runner.dependencies.any? { |d| d.target == target }
