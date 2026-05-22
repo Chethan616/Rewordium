@@ -1,4 +1,11 @@
 # ===========================================================
+# AzooKey vendor snapshots that are NOT the active copy.
+# The build uses ios/Packages/azooKey/ only.
+# ===========================================================
+/azooKey/
+/azooKey-main/
+
+# ===========================================================
 # 🚨 CRITICAL SECURITY - NEVER COMMIT THESE FILES
 # ===========================================================
 
