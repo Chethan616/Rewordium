@@ -79,11 +79,12 @@ void main() async {
     isFirebaseInitialized = true;
   }
 
-  // Set UI styles immediately
+  // Set UI styles immediately. systemNavigationBar* fields only apply on Android.
   SystemChrome.setSystemUIOverlayStyle(
     const SystemUiOverlayStyle(
       statusBarColor: Colors.transparent,
       statusBarIconBrightness: Brightness.dark,
+      statusBarBrightness: Brightness.light,
       systemNavigationBarColor: Colors.white,
       systemNavigationBarIconBrightness: Brightness.dark,
     ),
@@ -109,10 +110,12 @@ void main() async {
     isGroqInitialized = true;
     AppLogger.init('Groq service');
 
-    // Initialize AI Settings Bridge for Android native services
-    AISettingsBridge.initialize();
-    unawaited(AISettingsBridge.syncSettingsToAndroid());
-    AppLogger.init('AI Settings Bridge');
+    // Initialize AI Settings Bridge for Android native services (Android only)
+    if (defaultTargetPlatform == TargetPlatform.android) {
+      AISettingsBridge.initialize();
+      unawaited(AISettingsBridge.syncSettingsToAndroid());
+      AppLogger.init('AI Settings Bridge');
+    }
   }).catchError((e) {
     AppLogger.warning('Error initializing Groq service: $e');
     // Continue with app launch but some features may be limited
@@ -280,6 +283,8 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
             statusBarColor: Colors.transparent,
             statusBarIconBrightness:
                 isDarkMode ? Brightness.light : Brightness.dark,
+            statusBarBrightness:
+                isDarkMode ? Brightness.dark : Brightness.light,
             systemNavigationBarColor: activeScheme.surfaceContainerLow,
             systemNavigationBarIconBrightness:
                 isDarkMode ? Brightness.light : Brightness.dark,
@@ -310,15 +315,39 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
               ),
             );
           },
-          // Optimize scrolling performance
-          scrollBehavior: const MaterialScrollBehavior().copyWith(
-            scrollbars: false,
-            overscroll: false,
-            physics: const ClampingScrollPhysics(),
-          ),
+          // Optimize scrolling performance, but keep iOS-native bounce so
+          // lists/sheets feel right on iPhone. Android stays Material-style.
+          scrollBehavior: _AdaptiveScrollBehavior(),
         );
       },
     );
+  }
+}
+
+// Scrollable physics that match each platform's native expectation. iOS gets
+// bounce, Android gets glow-overscroll. Scrollbars stay off everywhere.
+class _AdaptiveScrollBehavior extends MaterialScrollBehavior {
+  @override
+  Widget buildScrollbar(
+      BuildContext context, Widget child, ScrollableDetails details) {
+    return child;
+  }
+
+  @override
+  Widget buildOverscrollIndicator(
+      BuildContext context, Widget child, ScrollableDetails details) {
+    // No glow on Android, no bounce-stretch indicator anywhere — matches the
+    // original scrollBehavior(overscroll: false). Physics still bounce on iOS.
+    return child;
+  }
+
+  @override
+  ScrollPhysics getScrollPhysics(BuildContext context) {
+    final platform = getPlatform(context);
+    if (platform == TargetPlatform.iOS || platform == TargetPlatform.macOS) {
+      return const BouncingScrollPhysics();
+    }
+    return const ClampingScrollPhysics();
   }
 }
 

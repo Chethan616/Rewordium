@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:lottie/lottie.dart';
 import 'package:provider/provider.dart';
@@ -120,9 +121,11 @@ class _SplashScreenState extends State<SplashScreen>
     // Initialize force-update service after navigation.
     ForceUpdateService.initialize();
 
-    // Initialize Google Play In-App Update (flexible background download).
-    InAppUpdateService.initialize();
-    InAppUpdateService.checkForUpdate();
+    // Google Play In-App Update is Android-only; the App Store handles updates on iOS.
+    if (defaultTargetPlatform == TargetPlatform.android) {
+      InAppUpdateService.initialize();
+      InAppUpdateService.checkForUpdate();
+    }
   }
 
   // ── Dispose ───────────────────────────────────

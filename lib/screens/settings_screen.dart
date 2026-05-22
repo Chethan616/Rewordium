@@ -630,24 +630,28 @@ class _SettingsScreenState extends State<SettingsScreen> {
               // ============================================
               _buildSectionHeader(
                 icon: CupertinoIcons.sparkles,
-                title: "Keyboard & AI",
+                title: defaultTargetPlatform == TargetPlatform.android
+                    ? "Keyboard & AI"
+                    : "AI",
                 color: Colors.purple,
               ),
               AnimatedCard(
                 padding: EdgeInsets.zero,
                 child: Column(
                   children: [
-                    // Keyboard Settings
-                    _buildSettingItem(
-                      icon: CupertinoIcons.keyboard,
-                      iconColor: Theme.of(context).colorScheme.primary,
-                      title: "Rewordium AI Keyboard",
-                      subtitle: "Customize appearance and behavior",
-                      trailing: const Icon(CupertinoIcons.chevron_right,
-                          color: Colors.grey, size: 18),
-                      onTap: () => _openReboardSettings(),
-                    ),
-                    const Divider(height: 1, indent: 72),
+                    // Keyboard Settings — Android only until the iOS keyboard module ships
+                    if (defaultTargetPlatform == TargetPlatform.android) ...[
+                      _buildSettingItem(
+                        icon: CupertinoIcons.keyboard,
+                        iconColor: Theme.of(context).colorScheme.primary,
+                        title: "Rewordium AI Keyboard",
+                        subtitle: "Customize appearance and behavior",
+                        trailing: const Icon(CupertinoIcons.chevron_right,
+                            color: Colors.grey, size: 18),
+                        onTap: () => _openReboardSettings(),
+                      ),
+                      const Divider(height: 1, indent: 72),
+                    ],
                     // Advanced AI Settings
                     _buildSettingItem(
                       icon: Icons.psychology_rounded,
@@ -671,8 +675,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 ),
               ),
 
-              // Personalize Keyboard prompt for non-logged-in users
-              if (!isLoggedIn)
+              // Personalize Keyboard prompt for non-logged-in users (Android only)
+              if (!isLoggedIn &&
+                  defaultTargetPlatform == TargetPlatform.android)
                 AnimatedCard(
                   child: Column(
                     children: [
