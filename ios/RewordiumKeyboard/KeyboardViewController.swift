@@ -4,49 +4,73 @@ import KeyboardKit
 
 /// Entry point for the Rewordium Custom Keyboard Extension.
 ///
-/// KeyboardKit handles 99% of the keyboard mechanics — layout, button
-/// rendering, dark mode, dynamic type, haptics, callouts. We supply:
-///   * a `KeyboardApp` so the framework knows our App Group + identity
-///   * a custom root view that prepends our `AIToolbar` above the keyboard
-///
-/// Anything else (autocomplete, emoji keyboard, themes) is intentionally
-/// left at KeyboardKit defaults so a v1 ships before we get distracted.
+/// Follows the KeyboardKit v10.5 lifecycle exactly as the upstream demo does:
+///   * `viewWillSetupKeyboardKit` → call `setupKeyboardKit(for:)` with the
+///     KeyboardApp value. This wires up services + state and injects all the
+///     EnvironmentObjects (KeyboardContext, FeedbackContext, etc.) the SwiftUI
+///     hierarchy expects.
+///   * `viewWillSetupKeyboardView` → call `setupKeyboardView { controller in … }`
+///     returning the SwiftUI view. Don't call super here (per demo comment).
 final class KeyboardViewController: KeyboardInputViewController {
 
-    /// Lives for the lifetime of the keyboard. The SwiftUI hierarchy
-    /// observes it via `@Bindable` so status transitions animate cleanly.
+    /// Lives for the lifetime of the keyboard. The SwiftUI hierarchy reads it
+    /// by reference and observes via `@Observable` macro tracking.
     private let aiService = AIService()
 
     // MARK: - Lifecycle
 
-    override func viewDidLoad() {
-        super.viewDidLoad()
-        setup(for: rewordiumApp) { _ in
-            // Result intentionally unused. The free tier of KeyboardKit
-            // doesn't validate a license key, so success/failure here is
-            // a no-op for us. When/if we move to Pro, plug license-check
-            // telemetry in here.
+    /// Called once when the keyboard extension launches. Configure services
+    /// and state here. Anything view-related belongs in viewWillSetupKeyboardView.
+    override func viewWillSetupKeyboardKit() {
+        setupKeyboardKit(for: rewordiumApp) { [weak self] result in
+            switch result {
+            case .success:
+                self?.applyDefaultStateTweaks()
+            case .failure(let error):
+                NSLog("[RewordiumKeyboard] setup failed: \(error)")
+            }
         }
     }
 
-    /// Called by KeyboardKit each time the keyboard view needs (re-)building,
-    /// including locale changes and orientation flips. We rebuild from the
-    /// current controller state every time — cheap, and avoids stale views.
+    /// Called whenever KeyboardKit needs to (re)build the keyboard view —
+    /// includes orientation changes, locale changes, dark/light flips.
     override func viewWillSetupKeyboardView() {
-        super.viewWillSetupKeyboardView()
+        // Per demo: don't call super; we replace the view entirely.
         setupKeyboardView { [unowned self] controller in
-            RewordiumKeyboardView(controller: controller, aiService: self.aiService)
+            RewordiumKeyboardView(
+                services: controller.services,
+                state: controller.state,
+                controller: controller,
+                aiService: self.aiService
+            )
         }
     }
 
     // MARK: - KeyboardApp
 
     /// Identity for the framework: name shown in any default UI, App Group
-    /// for state sync with the Flutter host.
+    /// ID so KeyboardKit's settings sync into the same container we use.
     private var rewordiumApp: KeyboardApp {
         KeyboardApp(
             name: "Rewordium",
             appGroupId: SharedSettings.appGroupID
         )
+    }
+
+    // MARK: - State setup
+
+    /// Small quality-of-life tweaks applied after KeyboardKit boots.
+    private func applyDefaultStateTweaks() {
+        // Long-press space moves the cursor — matches the iOS system keyboard.
+        state.keyboardContext.settings.spacebarLongPressBehavior = .moveInputCursor
+
+        // Show locale name in the spacebar's trailing menu when there are
+        // multiple locales (no-op for single-locale setups).
+        state.keyboardContext.settings.spacebarMenuTrailing = .locale
+
+        // Honor the haptics preference written by the Flutter host app.
+        if !SharedSettings.hapticsEnabled {
+            state.feedbackContext.settings.isHapticFeedbackEnabled = false
+        }
     }
 }

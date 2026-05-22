@@ -5,13 +5,16 @@ import KeyboardKit
 ///
 /// Structure (top-to-bottom):
 ///   1. AIToolbar     — morphing surface (collapsed pill / action grid / result)
-///   2. KeyboardView  — KeyboardKit's stock QWERTY, untouched
+///   2. KeyboardView  — KeyboardKit's stock QWERTY
 ///
-/// We pass everything through from the controller so KeyboardKit handles
-/// input, layout, themes, dark mode, and dynamic type automatically.
+/// API surface matches the upstream demo: we receive `services` + `state`
+/// from `setupKeyboardView`, plus the controller (for `textDocumentProxy`
+/// access we need in the Apply flow).
 struct RewordiumKeyboardView: View {
 
-    unowned var controller: KeyboardInputViewController
+    let services: Keyboard.Services
+    let state: Keyboard.State
+    unowned let controller: KeyboardInputViewController
     let aiService: AIService
 
     var body: some View {
@@ -22,18 +25,20 @@ struct RewordiumKeyboardView: View {
         .background(Color.clear)
     }
 
-    /// KeyboardKit's default keyboard. We don't customize button content,
-    /// callouts, or layout for v1 — the stock keyboard is already the gold
-    /// standard for an iOS QWERTY experience. Phase 5 may layer in our own
-    /// number row toggle / theme tweaks.
+    /// KeyboardKit's stock keyboard view. The v10.5 initializer takes a
+    /// `services` value (not the controller) and ViewBuilder closures for the
+    /// customizable surfaces. Passing `$0.view` from each builder means "use
+    /// the default" — we only override `toolbar` because our AIToolbar lives
+    /// above the keyboard, not inside KeyboardKit's toolbar slot.
     private var keyboard: some View {
         KeyboardView(
-            controller: controller,
-            buttonContent: { params in params.view },
-            buttonView:    { params in params.view },
-            collapsedView: { params in params.view },
-            emojiKeyboard: { _ in EmptyView() },        // emoji kbd is Pro
-            toolbar:       { _ in EmptyView() }         // our AIToolbar replaces it
+            layout: nil,
+            services: services,
+            buttonContent: { $0.view },
+            buttonView:    { $0.view },
+            collapsedView: { $0.view },
+            emojiKeyboard: { $0.view },
+            toolbar:       { _ in EmptyView() }   // our AIToolbar replaces it
         )
     }
 }

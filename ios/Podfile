@@ -46,7 +46,7 @@ end
 
 # The RewordiumKeyboard app extension target is intentionally NOT listed here.
 # Flutter plugins are not extension-safe (Firebase / file_picker / etc. expect
-# the host UIApplication). The extension links AzooKey via SwiftPM only.
+# the host UIApplication). The extension links KeyboardKit via SwiftPM only.
 
 post_install do |installer|
   installer.pods_project.targets.each do |target|

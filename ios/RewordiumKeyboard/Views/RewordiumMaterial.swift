@@ -37,14 +37,17 @@ enum RewordiumTokens {
 
 /// Background material for the toolbar surface.
 ///
-/// iOS 26's Liquid Glass introduces `.glassEffect()` — when running on that
-/// SDK we switch to it. Older targets fall back to `.ultraThinMaterial` which
-/// has been the right system answer since iOS 15.
+/// We use `.ultraThinMaterial` (iOS 15+) which matches the system predictive
+/// bar's translucency and reads cleanly over both light and dark keyboards.
+///
+/// iOS 26 introduces a Liquid Glass design language with `.glassProminent`
+/// button styles and a `.glassEffect()` modifier — we adopt the former on
+/// the AI pill itself (`AIPill+iOS26.swift`-style conditional in AIToolbar),
+/// but keep the surface material at `.ultraThinMaterial` because that's the
+/// system's choice for keyboard predictive bars on iOS 26 too.
 struct RewordiumSurface: ViewModifier {
     func body(content: Content) -> some View {
         content
-            // .ultraThinMaterial reads well over both light and dark keyboards
-            // and matches the system predictive bar's translucency.
             .background(.ultraThinMaterial)
             .overlay(
                 Rectangle()
@@ -86,5 +89,18 @@ extension View {
     func rewordiumSurface() -> some View { modifier(RewordiumSurface()) }
     func rewordiumChip(isPressed: Bool = false, isHighlighted: Bool = false) -> some View {
         modifier(RewordiumChipSurface(isPressed: isPressed, isHighlighted: isHighlighted))
+    }
+
+    /// Prominent CTA button style. On iOS 26 we adopt the Liquid Glass
+    /// `glassProminent` style (matches the upstream KeyboardKit demo). Older
+    /// targets keep the capsule + accent-color background already encoded in
+    /// the calling view — so this modifier is intentionally a no-op pre-26.
+    @ViewBuilder
+    func rewordiumProminentStyle() -> some View {
+        if #available(iOS 26.0, *) {
+            self.buttonStyle(.glassProminent)
+        } else {
+            self
+        }
     }
 }
