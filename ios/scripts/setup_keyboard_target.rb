@@ -53,12 +53,54 @@ runner  = project.targets.find { |t| t.name == 'Runner' }
 abort "Runner target not found" unless runner
 
 # ----------------------------------------------------------------------------
-# Runner: App Group entitlement so the host app can write to the shared store.
+# Runner: App Group entitlement + KeyboardSettingsBridge source file.
+#
+# The bridge file lives at ios/Runner/KeyboardSettingsBridge.swift and is
+# referenced from AppDelegate.swift. Adding it to the source build phase is
+# what compiles it into the Runner module — without this step the build
+# fails with "Cannot find 'KeyboardSettingsBridge' in scope".
 
 runner.build_configurations.each do |config|
   config.build_settings['CODE_SIGN_ENTITLEMENTS'] = RUNNER_ENTITLEMENTS
 end
 log "Runner: CODE_SIGN_ENTITLEMENTS = #{RUNNER_ENTITLEMENTS}"
+
+# Add Runner-side bridge sources (idempotent). Path is project-relative.
+runner_group = project.main_group.find_subpath('Runner', false)
+abort "Runner group not found in Xcode project" unless runner_group
+
+runner_sources_to_add = ['Runner/KeyboardSettingsBridge.swift'].freeze
+
+runner_sources_to_add.each do |rel_path|
+  abs_path = File.join(IOS_DIR, rel_path)
+  unless File.exist?(abs_path)
+    log "  ⚠️  missing on disk: #{rel_path}"
+    next
+  end
+  # Skip if any file ref under Runner/ already points at this filename.
+  basename = File.basename(rel_path)
+  already_present = runner.source_build_phase.files.any? do |bf|
+    bf.file_ref&.path == basename || bf.file_ref&.real_path&.to_s&.end_with?(basename)
+  end
+  if already_present
+    log "  ✓ #{rel_path} already in Runner sources"
+    next
+  end
+  # Group path is "Runner", so we add by relative-to-group filename.
+  file_ref = runner_group.new_reference(basename)
+  runner.source_build_phase.add_file_reference(file_ref, true)
+  log "  + Added #{rel_path} to Runner sources"
+end
+
+# Add entitlements as a file reference so it shows up in the project navigator.
+# It's not compiled — the build setting CODE_SIGN_ENTITLEMENTS above is what
+# actually wires it into the build — but having a visible reference helps
+# anyone opening the project locally.
+entitlements_basename = File.basename(RUNNER_ENTITLEMENTS)
+unless runner_group.files.any? { |f| f.path == entitlements_basename }
+  runner_group.new_reference(entitlements_basename)
+  log "  + Added #{entitlements_basename} to Runner group (file reference only, not compiled)"
+end
 
 # ----------------------------------------------------------------------------
 # KeyboardKit SPM reference.
