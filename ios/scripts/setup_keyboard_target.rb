@@ -43,6 +43,33 @@ KEYBOARDKIT_VERSION  = '10.5.0'         # pin minor — KeyboardKit ships often
 KEYBOARDKIT_PRODUCT  = 'KeyboardKit'
 
 # ----------------------------------------------------------------------------
+# Read marketing/build version from pubspec.yaml.
+#
+# Why we can't reuse $(FLUTTER_BUILD_NUMBER) on the extension:
+#   Flutter writes FLUTTER_BUILD_NAME / FLUTTER_BUILD_NUMBER into
+#   `ios/Flutter/Generated.xcconfig`. The Runner target includes that file as
+#   its base config (via Debug.xcconfig / Release.xcconfig), but our extension
+#   target doesn't — so $(FLUTTER_BUILD_NUMBER) resolves to "" and the
+#   extension ships with CFBundleVersion="". Sideloadly / iOS then refuses to
+#   register the placeholder ("bundleVersion must be set"). We solve it by
+#   parsing pubspec.yaml at script time and injecting literal values.
+
+def read_pubspec_version(ios_dir)
+  pubspec_path = File.expand_path('../pubspec.yaml', ios_dir)
+  unless File.exist?(pubspec_path)
+    return ['1.0.0', '1']
+  end
+  File.foreach(pubspec_path) do |line|
+    if (m = line.match(/^\s*version:\s*(\d+\.\d+\.\d+)(?:\+(\d+))?/))
+      return [m[1], m[2] || '1']
+    end
+  end
+  ['1.0.0', '1']
+end
+
+MARKETING_VERSION, BUILD_NUMBER = read_pubspec_version(IOS_DIR)
+
+# ----------------------------------------------------------------------------
 
 def log(msg) = puts "[setup_keyboard_target] #{msg}"
 
@@ -51,6 +78,8 @@ abort "Runner.xcodeproj not found at #{PROJECT}" unless File.directory?(PROJECT)
 project = Xcodeproj::Project.open(PROJECT)
 runner  = project.targets.find { |t| t.name == 'Runner' }
 abort "Runner target not found" unless runner
+
+log "Extension version: #{MARKETING_VERSION} (build #{BUILD_NUMBER}) from pubspec.yaml"
 
 # ----------------------------------------------------------------------------
 # Runner: App Group entitlement + KeyboardSettingsBridge source file.
@@ -121,7 +150,13 @@ end
 
 target = project.targets.find { |t| t.name == TARGET_NAME }
 if target
-  log "Target '#{TARGET_NAME}' already exists — verifying SPM link."
+  log "Target '#{TARGET_NAME}' already exists — verifying SPM link + version."
+  # Re-apply versions in case the previous run wrote them wrong (e.g. with
+  # the broken $(FLUTTER_BUILD_NUMBER) reference). Cheap, idempotent.
+  target.build_configurations.each do |config|
+    config.build_settings['MARKETING_VERSION']        = MARKETING_VERSION
+    config.build_settings['CURRENT_PROJECT_VERSION']  = BUILD_NUMBER
+  end
 else
   target = project.new_target(:app_extension, TARGET_NAME, :ios, DEPLOYMENT_T, nil, :swift)
   log "Created target: #{TARGET_NAME}"
@@ -145,8 +180,12 @@ else
     bs['SKIP_INSTALL']                   = 'YES'
     bs['LD_RUNPATH_SEARCH_PATHS']        = ['$(inherited)', '@executable_path/Frameworks', '@executable_path/../../Frameworks']
     bs['CODE_SIGNING_ALLOWED']           = 'NO'
-    bs['MARKETING_VERSION']              = '2.9.1'
-    bs['CURRENT_PROJECT_VERSION']        = '$(FLUTTER_BUILD_NUMBER)'
+    # Literal values (NOT $(FLUTTER_BUILD_NUMBER)) — the extension target
+    # doesn't see Generated.xcconfig, so the variable would resolve to "" and
+    # Sideloadly/iOS would reject the extension with
+    # "bundleVersion must be set in placeholder attributes".
+    bs['MARKETING_VERSION']              = MARKETING_VERSION
+    bs['CURRENT_PROJECT_VERSION']        = BUILD_NUMBER
     bs['GENERATE_INFOPLIST_FILE']        = 'NO'
     bs['DEFINES_MODULE']                 = 'YES'
     bs['SWIFT_OPTIMIZATION_LEVEL']       = config.name == 'Debug' ? '-Onone' : '-O'
