@@ -261,7 +261,17 @@ All Rewordium-specific code lives in:
 * `ios/RewordiumKeyboard/` — the extension target's own files (controller shim, SharedSettings, paraphraser UI/logic)
 * `ios/Runner/KeyboardSettingsBridge.swift` — the Flutter method channel
 
-The vendored `ios/Packages/azooKey/` tree is **read-only**. To upgrade AzooKey:
+The vendored `ios/Packages/azooKey/` tree is **read-only with one documented exception**:
+
+### Documented local modifications to vendored AzooKey
+
+| File | Change | Why |
+|---|---|---|
+| `ios/Packages/azooKey/AzooKeyCore/Package.swift` | Removed `traits: ["ZenzaiCPU"]` from the `AzooKeyKanaKanjiConverter` dependency declaration. | Zenzai (neural Japanese converter) requires a `llama.cpp` binary XCFramework. At the pinned upstream revision, that artifact zip's internal layout doesn't match SwiftPM's expected name → `binary target 'llama.cpp' could not be mapped`. The same resolver failure cascades to `swiftymarisa`. Removing the trait skips Zenzai entirely; AzooKey falls back to its statistical converter. Restore the trait when we either upgrade AzooKeyKanaKanjiConverter to a revision with a fixed binary target, or host the xcframework ourselves. |
+
+Each upstream rebase must re-apply this diff. The comment block in `Package.swift` marks the exact line.
+
+To upgrade AzooKey:
 ```
 cd ios/Packages/azooKey
 rm -rf *
