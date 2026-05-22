@@ -12,7 +12,12 @@
       "Bash(python3 *)",
       "PowerShell(New-Item *)",
       "Bash(ruby -c \"C:\\\\Users\\\\cheth\\\\OneDrive\\\\Desktop\\\\PC2\\\\YC_startup-main\\\\rewordium\\\\rewordium\\\\rewordium\\\\ios\\\\scripts\\\\setup_keyboard_target.rb\")",
-      "Bash(echo \"exit=$?\")"
+      "Bash(echo \"exit=$?\")",
+      "WebFetch(domain:raw.githubusercontent.com)",
+      "WebFetch(domain:github.com)",
+      "WebFetch(domain:keyboardkit.com)",
+      "PowerShell(Test-Path *)",
+      "PowerShell(Remove-Item *)"
     ]
   }
 }

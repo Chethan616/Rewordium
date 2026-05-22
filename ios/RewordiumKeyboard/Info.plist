@@ -29,7 +29,7 @@
 			<key>PrefersRightToLeft</key>
 			<false/>
 			<key>PrimaryLanguage</key>
-			<string>ja-JP</string>
+			<string>en-US</string>
 			<key>RequestsOpenAccess</key>
 			<true/>
 		</dict>
@@ -38,9 +38,5 @@
 		<key>NSExtensionPrincipalClass</key>
 		<string>$(PRODUCT_MODULE_NAME).KeyboardViewController</string>
 	</dict>
-	<key>UIAppFonts</key>
-	<array>
-		<string>AzooKeyIcon-Regular.otf</string>
-	</array>
 </dict>
 </plist>
