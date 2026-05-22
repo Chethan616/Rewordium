@@ -75,7 +75,7 @@ class UnifiedAIService {
       'error': 'OUT_OF_CREDITS',
       'errorType': 'OUT_OF_CREDITS',
       'content':
-          'âš ï¸ You are out of credits. Upgrade to Pro or connect your own API in Advanced AI Settings.',
+          '⚠️ You are out of credits. Upgrade to Pro or connect your own API in Advanced AI Settings.',
     };
   }
 
@@ -92,7 +92,7 @@ class UnifiedAIService {
       return {
         'error': 'NOT_LOGGED_IN',
         'errorType': 'NOT_LOGGED_IN',
-        'content': 'âš ï¸ Please log in to use AI features.',
+        'content': '⚠️ Please log in to use AI features.',
       };
     }
 
@@ -217,7 +217,7 @@ class UnifiedAIService {
           'error': 'MISSING_API_KEY',
           'errorType': 'MISSING_API_KEY',
           'content':
-              'âš ï¸ Advanced AI Settings are enabled but no API key is provided.\n\nPlease go to Settings â†’ Advanced AI Settings and either:\nâ€¢ Enter a valid API key, or\nâ€¢ Disable Advanced AI Settings to use the default Groq service',
+              '⚠️ Advanced AI Settings are enabled but no API key is provided.\n\nPlease go to Settings →’ Advanced AI Settings and either:\n• Enter a valid API key, or\n• Disable Advanced AI Settings to use the default Groq service',
         };
       }
 
@@ -232,7 +232,7 @@ class UnifiedAIService {
           'error': 'RATE_LIMIT',
           'errorType': 'RATE_LIMIT',
           'content':
-              'âš ï¸ API rate limit or token quota exceeded.\n\nYour AI provider has reached its usage limit. Please wait a moment and try again, or check your API plan.',
+              '⚠️ API rate limit or token quota exceeded.\n\nYour AI provider has reached its usage limit. Please wait a moment and try again, or check your API plan.',
         };
       }
 
@@ -244,7 +244,7 @@ class UnifiedAIService {
           'error': 'INVALID_API_KEY',
           'errorType': 'INVALID_API_KEY',
           'content':
-              'âš ï¸ Invalid API key.\n\nThe API key you provided is not valid. Please check your API key in Settings â†’ Advanced AI Settings.',
+              '⚠️ Invalid API key.\n\nThe API key you provided is not valid. Please check your API key in Settings →’ Advanced AI Settings.',
         };
       }
 
@@ -256,7 +256,7 @@ class UnifiedAIService {
           'error': 'MISSING_ENDPOINT',
           'errorType': 'MISSING_ENDPOINT',
           'content':
-              'âš ï¸ Custom endpoint URL is missing or invalid.\n\nPlease provide a valid API endpoint URL in Settings â†’ Advanced AI Settings.',
+              '⚠️ Custom endpoint URL is missing or invalid.\n\nPlease provide a valid API endpoint URL in Settings →’ Advanced AI Settings.',
         };
       }
 
@@ -301,12 +301,8 @@ class UnifiedAIService {
       // Belt-and-suspenders: API-level + model-level disable of thinking.
       final effectiveSystemPrompt = isQwen3
           ? (requireJson
-              ? '$systemPrompt
-
-Return ONLY valid JSON. /no_think'
-              : '$systemPrompt
-
-/no_think')
+              ? '$systemPrompt\n\nReturn ONLY valid JSON. /no_think'
+              : '$systemPrompt\n\n/no_think')
           : systemPrompt;
 
       final body = <String, dynamic>{
@@ -371,9 +367,7 @@ Return ONLY valid JSON. /no_think'
         if (kDebugMode) _logGroqFailure(response, 'json_validation_retry');
         return _makeGroqRequest(
           systemPrompt:
-              '$systemPrompt
-
-Return only a single JSON object. No prose, no markdown.',
+              '$systemPrompt\n\nReturn only a single JSON object. No prose, no markdown.',
           userMessage: userMessage,
           temperature: temperature,
           requireJson: false,
@@ -732,7 +726,7 @@ Return only a single JSON object. No prose, no markdown.',
     String targetLanguage,
   ) async {
     final systemPromptTemplate =
-        'You are a professional translator with native-level fluency. Translate the text into {LANG}, preserving the original meaning, tone, and style naturally â€” avoid literal or robotic phrasing. Return a JSON response with: {"translated_text": "the translated text", "source_language": "detected language", "confidence": 0.95}';
+        'You are a professional translator with native-level fluency. Translate the text into {LANG}, preserving the original meaning, tone, and style naturally — avoid literal or robotic phrasing. Return a JSON response with: {"translated_text": "the translated text", "source_language": "detected language", "confidence": 0.95}';
     final systemPrompt = systemPromptTemplate.replaceAll('{LANG}', targetLanguage);
 
     final config = await AdvancedAISettingsService.getAPIConfig();
@@ -766,11 +760,10 @@ Return only a single JSON object. No prose, no markdown.',
     final parsed = _extractJson(result['content'] as String? ?? '');
     if (parsed != null) return parsed;
     return {
-        'translated_text': text,
-        'source_language': 'unknown',
-        'confidence': 0,
-        'error': e.toString(),
-      };
+      'translated_text': text,
+      'source_language': 'unknown',
+      'confidence': 0,
+    };
   }
 
   /// Detect AI-generated text using configured provider
@@ -802,12 +795,11 @@ Return only a single JSON object. No prose, no markdown.',
     final parsed = _extractJson(result['content'] as String? ?? '');
     if (parsed != null) return parsed;
     return {
-        'is_ai_generated': false,
-        'confidence': 0,
-        'indicators': [],
-        'explanation': 'Error analyzing text',
-        'error': e.toString(),
-      };
+      'is_ai_generated': false,
+      'confidence': 0,
+      'indicators': [],
+      'explanation': 'Could not parse model response.',
+    };
   }
 
   /// Summarize text using configured provider
@@ -838,12 +830,11 @@ Return only a single JSON object. No prose, no markdown.',
     final parsed = _extractJson(result['content'] as String? ?? '');
     if (parsed != null) return parsed;
     return {
-        'summary': text,
-        'key_points': [],
-        'word_count_original': text.split(' ').length,
-        'word_count_summary': text.split(' ').length,
-        'error': e.toString(),
-      };
+      'summary': text,
+      'key_points': [],
+      'word_count_original': text.split(' ').length,
+      'word_count_summary': text.split(' ').length,
+    };
   }
 
   /// Edit tone of text using configured provider
@@ -852,7 +843,7 @@ Return only a single JSON object. No prose, no markdown.',
     String targetTone,
   ) async {
     final systemPromptTemplate =
-        'You are an expert email writer and editor. Rewrite the text to match a {TONE} tone, keeping the original meaning and making it sound natural â€” not corporate or robotic. Return JSON: {"edited_text": "the rewritten text", "original_tone": "assessment", "changes_made": ["change 1"]}';
+        'You are an expert email writer and editor. Rewrite the text to match a {TONE} tone, keeping the original meaning and making it sound natural — not corporate or robotic. Return JSON: {"edited_text": "the rewritten text", "original_tone": "assessment", "changes_made": ["change 1"]}';
     final systemPrompt = systemPromptTemplate.replaceAll('{TONE}', targetTone);
 
     final config = await AdvancedAISettingsService.getAPIConfig();
@@ -886,11 +877,10 @@ Return only a single JSON object. No prose, no markdown.',
     final parsed = _extractJson(result['content'] as String? ?? '');
     if (parsed != null) return parsed;
     return {
-        'edited_text': text,
-        'original_tone': 'unknown',
-        'changes_made': [],
-        'error': e.toString(),
-      };
+      'edited_text': text,
+      'original_tone': 'unknown',
+      'changes_made': [],
+    };
   }
 
   /// Paraphrase with persona using configured provider
