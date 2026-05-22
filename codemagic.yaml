@@ -1,0 +1,66 @@
+workflows:
+  ios_sideloadly:
+    name: iOS Sideloadly Build
+    instance_type: mac_mini_m2
+    max_build_duration: 60
+    environment:
+      flutter: stable
+      xcode: latest
+      vars:
+        BUNDLE_ID: com.noxquill.rewordium
+      groups:
+        - ios_secrets
+    scripts:
+      - name: Install dependencies
+        script: flutter pub get
+
+      - name: Prepare .env for CI
+        script: |
+          cat > .env <<'EOF'
+          GROQ_API_KEY=$GROQ_API_KEY
+          EOF
+
+      - name: Restore Firebase iOS config
+        script: |
+          python3 - <<'PY'
+          import base64
+          import os
+          import pathlib
+          import sys
+
+          gs = os.environ.get("IOS_GOOGLESERVICE_INFO_PLIST_BASE64", "")
+          if not gs:
+              sys.stderr.write("Missing IOS_GOOGLESERVICE_INFO_PLIST_BASE64\n")
+              sys.exit(1)
+
+          pathlib.Path("ios/Runner").mkdir(parents=True, exist_ok=True)
+          with open("ios/Runner/GoogleService-Info.plist", "wb") as f:
+              f.write(base64.b64decode(gs))
+
+          app_id = os.environ.get("IOS_FIREBASE_APP_ID_FILE_BASE64", "")
+          if app_id:
+              pathlib.Path("ios").mkdir(parents=True, exist_ok=True)
+              with open("ios/firebase_app_id_file.json", "wb") as f:
+                  f.write(base64.b64decode(app_id))
+          PY
+
+      - name: Set iOS bundle identifier
+        script: |
+          /usr/libexec/PlistBuddy -c "Set :CFBundleIdentifier $BUNDLE_ID" ios/Runner/Info.plist || \
+          /usr/libexec/PlistBuddy -c "Add :CFBundleIdentifier string $BUNDLE_ID" ios/Runner/Info.plist
+
+      - name: Build iOS app (no codesign)
+        script: |
+          flutter build ios --release --no-codesign
+          xcodebuild -workspace ios/Runner.xcworkspace -scheme Runner -configuration Release -sdk iphoneos -destination 'generic/platform=iOS' -derivedDataPath build/ios/DerivedData -quiet clean build \
+            CODE_SIGNING_ALLOWED=NO CODE_SIGN_IDENTITY="" CODE_SIGNING_REQUIRED=NO DEVELOPMENT_TEAM=""
+
+      - name: Package unsigned IPA for Sideloadly
+        script: |
+          rm -rf Payload rewordium-unsigned.ipa
+          mkdir -p Payload
+          mv build/ios/DerivedData/Build/Products/Release-iphoneos/Runner.app Payload/
+          zip -r -q rewordium-unsigned.ipa Payload
+
+    artifacts:
+      - rewordium-unsigned.ipa
