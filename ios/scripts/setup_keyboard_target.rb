@@ -119,6 +119,13 @@ else
 
   target.build_configurations.each do |config|
     bs = config.build_settings
+    # PRODUCT_NAME + WRAPPER_EXTENSION are critical — without them, the .appex
+    # output path becomes literal ".appex" and Xcode's link + mkdir commands
+    # collide ("Multiple commands produce '.../.appex'"). xcodeproj 1.27's
+    # default template no longer sets these for app_extension; pin them here.
+    bs['PRODUCT_NAME']                   = '$(TARGET_NAME)'
+    bs['WRAPPER_EXTENSION']              = 'appex'
+    bs['PRODUCT_BUNDLE_PACKAGE_TYPE']    = 'XPC!'
     bs['PRODUCT_BUNDLE_IDENTIFIER']      = BUNDLE_ID
     bs['INFOPLIST_FILE']                 = "#{KB_SCAFFOLD}/Info.plist"
     bs['CODE_SIGN_ENTITLEMENTS']         = "#{KB_SCAFFOLD}/RewordiumKeyboard.entitlements"
@@ -135,6 +142,8 @@ else
     bs['MARKETING_VERSION']              = '2.9.1'
     bs['CURRENT_PROJECT_VERSION']        = '$(FLUTTER_BUILD_NUMBER)'
     bs['GENERATE_INFOPLIST_FILE']        = 'NO'
+    bs['DEFINES_MODULE']                 = 'YES'
+    bs['SWIFT_OPTIMIZATION_LEVEL']       = config.name == 'Debug' ? '-Onone' : '-O'
   end
 
   # Add Swift sources from AzooKey's Keyboard/Display directory.

@@ -11,7 +11,14 @@ project 'Runner', {
 }
 
 def flutter_root
-  generated_xcode_build_settings_path = File.expand_path(File.join('..', 'Flutter', 'Generated.xcconfig'), __dir__)
+  # Match the standard Flutter Podfile template: use __FILE__ (path to this
+  # Podfile) as the expand base, NOT __dir__. With __dir__ ("ios/"), the `..`
+  # resolves to <root>/Flutter/Generated.xcconfig — which doesn't exist. With
+  # __FILE__ ("ios/Podfile"), File.expand_path treats the trailing path
+  # component as if it were a dir, so .. correctly walks back to ios/, giving
+  # <root>/ios/Flutter/Generated.xcconfig. This subtle quirk is why every
+  # Flutter Podfile in the wild uses __FILE__.
+  generated_xcode_build_settings_path = File.expand_path(File.join('..', 'Flutter', 'Generated.xcconfig'), __FILE__)
   unless File.exist?(generated_xcode_build_settings_path)
     raise "#{generated_xcode_build_settings_path} must exist. If you're running pod install manually, make sure flutter pub get is executed first"
   end
