@@ -299,6 +299,11 @@ class KeyboardManager(context: Context) : InputKeyEventReceiver {
 
     fun commitGesture(word: String) {
         editorInstance.commitGesture(fixCase(word))
+        // Adaptive learned swipe typing: glide-typed words feed into personal
+        // vocabulary too. Without this, a word the user only ever swipes
+        // would never enter the learned-words store, defeating the purpose
+        // of swipe adaptation.
+        nlpManager.learnWord(subtypeManager.activeSubtype, word)
     }
 
     /**

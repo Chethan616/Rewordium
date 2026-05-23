@@ -227,6 +227,13 @@ abstract class FlorisPreferenceModel : PreferenceModel() {
             key = "suggestion__enable_floris_user_dictionary",
             default = true,
         )
+        // Auto-learn from manually-typed and glide-typed novel words so the
+        // glide decoder eventually predicts personal vocabulary (names, slang,
+        // transliterated words). Backed by LearnedWordsStore on disk.
+        val learnPersonalWords = boolean(
+            key = "dictionary__learn_personal_words",
+            default = true,
+        )
     }
 
     val emoji = Emoji()

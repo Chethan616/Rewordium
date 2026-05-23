@@ -197,16 +197,23 @@ class EmojiSuggestionProvider(private val context: Context) : SuggestionProvider
             "thx" to "🙏"
         )
 
-        /** Hard cap on emojis in any single suggestion strip. */
-        const val GBOARD_MAX_CANDIDATES = 2
+        /**
+         * Hard cap on emojis in any single suggestion strip. In Reboard's
+         * classic 3-column smartbar we want text to own the first 2 slots
+         * and emoji to peek into at most the trailing slot — exactly how
+         * Gboard behaves. Allowing 2 emojis would crowd words out.
+         */
+        const val GBOARD_MAX_CANDIDATES = 1
 
         /**
          * Anything below this confidence is treated as a guess and dropped.
-         * At 0.75 only exact-name (1.0), name-prefix (0.88), and exact-keyword
-         * (0.80) matches pass — keyword-prefix (0.70) and substring matches
-         * are suppressed. This matches Gboard's conservative behavior.
+         * At 0.80 only exact-name (1.0), name-prefix (0.88), and
+         * exact-keyword (0.80) matches pass — keyword-prefix (0.70) and
+         * substring matches are filtered out. This is the "name typed
+         * correctly" bar the user asked for: typing "good" surfaces 👍
+         * (exact keyword), typing "goo" surfaces nothing.
          */
-        const val MIN_CONFIDENCE = 0.75
+        const val MIN_CONFIDENCE = 0.80
 
         /**
          * Window of recently-committed emojis to suppress in upcoming

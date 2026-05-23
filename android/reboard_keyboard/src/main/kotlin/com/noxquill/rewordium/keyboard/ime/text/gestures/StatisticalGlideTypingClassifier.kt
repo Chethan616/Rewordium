@@ -213,9 +213,11 @@ class StatisticalGlideTypingClassifier(context: Context) : GlideTypingClassifier
         }
     }
 
-    override fun setWordData(subtype: Subtype) {
-        // stop duplicate calls..
-        if (wordDataSubtype == subtype) {
+    override fun setWordData(subtype: Subtype, force: Boolean) {
+        // Early-exit unless caller explicitly forces a rebuild (used by the
+        // adaptive learned-swipe pipeline after enough personal words have
+        // accumulated to warrant re-snapshotting the lexicon).
+        if (!force && wordDataSubtype == subtype) {
             return
         }
 
@@ -225,8 +227,14 @@ class StatisticalGlideTypingClassifier(context: Context) : GlideTypingClassifier
         this.wordFrequencies = nlpManager.getFrequencyMap(subtype)
 
         this.wordDataSubtype = subtype
+        if (force) {
+            // Drop the cached pruner so initializePruner rebuilds with the
+            // newly-learned vocabulary instead of returning the stale one.
+            prunerCache.remove(subtype)
+            lruSuggestionCache.evictAll()
+        }
         if (wordDataSubtype == layoutSubtype) {
-            initializePruner(false)
+            initializePruner(invalidateCache = force)
         }
     }
 

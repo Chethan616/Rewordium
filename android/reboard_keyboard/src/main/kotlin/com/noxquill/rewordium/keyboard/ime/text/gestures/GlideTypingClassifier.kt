@@ -38,8 +38,14 @@ interface GlideTypingClassifier {
 
     /**
      * Change the word data of the gesture classifier.
+     *
+     * @param subtype the active subtype.
+     * @param force when true, re-snapshot the word + frequency data and
+     *              rebuild the pruner cache even if [subtype] hasn't
+     *              changed. Used by the adaptive-learned-swipe pipeline to
+     *              pick up newly-learned personal vocabulary.
      */
-    fun setWordData(subtype: Subtype)
+    fun setWordData(subtype: Subtype, force: Boolean = false)
 
     /**
      * Process a completed gesture and find its location.
