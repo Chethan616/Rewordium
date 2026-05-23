@@ -6,7 +6,9 @@ workflows:
 
     environment:
       flutter: stable
-      xcode: latest
+      # Pin to stable Xcode — 'latest' can resolve to Xcode 26.x beta where
+      # StoreKit 1 APIs (used by in_app_purchase_storekit) fail to build.
+      xcode: 16.2
       cocoapods: default
 
       vars:
