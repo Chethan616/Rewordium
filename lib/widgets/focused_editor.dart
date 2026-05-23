@@ -2,18 +2,16 @@ import 'dart:ui';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_quill/flutter_quill.dart' as quill;
 import '../services/document_service.dart';
 import '../widgets/url_import_dialog.dart';
 
-/// Full-screen text editor.
+/// Full-screen text editor backed by flutter_quill (11.5.x).
 ///
-/// Originally backed by flutter_quill for a "premium writing experience",
-/// but the Quill dependency was removed when 11.x stopped compiling against
-/// Flutter 3.27+'s new TextInputClient interface and 12.x wasn't yet
-/// available on pub. Now uses a plain Material `TextField` with the same
-/// header/toolbar/import-sheet shell — the rich-formatting affordances
-/// Quill provides (bold/italic/lists/etc.) weren't exposed in this UI
-/// anyway, so functionally nothing was lost.
+/// Wrapped in our blur-glass header + import sheet + toolbar shell, the
+/// Quill editor gives us a richer writing surface (paste-styling, multi-
+/// paragraph layout, scroll behavior) than a plain TextField while keeping
+/// the API a simple `Future<String?>` of plain text in/out for callers.
 class FocusedEditor extends StatefulWidget {
   final String initialValue;
   final String title;
@@ -48,14 +46,21 @@ class FocusedEditor extends StatefulWidget {
 }
 
 class _FocusedEditorState extends State<FocusedEditor> {
-  late final TextEditingController _controller;
+  late final quill.QuillController _controller;
   final FocusNode _focusNode = FocusNode();
+  final ScrollController _scrollController = ScrollController();
   bool _isImporting = false;
 
   @override
   void initState() {
     super.initState();
-    _controller = TextEditingController(text: widget.initialValue);
+    _controller = quill.QuillController.basic(
+      config: const quill.QuillControllerConfig(),
+    );
+    if (widget.initialValue.isNotEmpty) {
+      // Document.insert at offset 0 seeds the doc with the caller's text.
+      _controller.document = quill.Document()..insert(0, widget.initialValue);
+    }
     _controller.addListener(_onTextChanged);
     // Defer focus so the page-transition can settle before the IME slides
     // up — focusing during the slide makes the surface tear for a frame.
@@ -69,6 +74,7 @@ class _FocusedEditorState extends State<FocusedEditor> {
     _controller.removeListener(_onTextChanged);
     _controller.dispose();
     _focusNode.dispose();
+    _scrollController.dispose();
     super.dispose();
   }
 
@@ -76,16 +82,24 @@ class _FocusedEditorState extends State<FocusedEditor> {
     setState(() {}); // Rebuild word/char count
   }
 
+  /// Quill's `Document.toPlainText()` always appends a trailing `\n` to
+  /// represent the document terminator. Strip it before we measure or
+  /// return text to callers.
+  String get _plainText {
+    final raw = _controller.document.toPlainText();
+    return raw.endsWith('\n') ? raw.substring(0, raw.length - 1) : raw;
+  }
+
   int get _wordCount {
-    final t = _controller.text.trim();
+    final t = _plainText.trim();
     if (t.isEmpty) return 0;
     return t.split(RegExp(r'\s+')).length;
   }
 
-  int get _charCount => _controller.text.length;
+  int get _charCount => _plainText.length;
 
   void _done() {
-    Navigator.of(context).pop(_controller.text.trim());
+    Navigator.of(context).pop(_plainText.trim());
   }
 
   /// Inserts [text] into the editor at the current selection (replacing any
@@ -93,28 +107,37 @@ class _FocusedEditorState extends State<FocusedEditor> {
   /// content, or replaces the doc entirely if empty.
   void _insertText(String text) {
     if (text.isEmpty) return;
-    final current = _controller.text;
-    if (current.trim().isEmpty) {
-      _controller.value = TextEditingValue(
-        text: text,
-        selection: TextSelection.collapsed(offset: text.length),
+    final currentPlain = _plainText.trim();
+    if (currentPlain.isEmpty) {
+      _controller.document = quill.Document()..insert(0, text);
+      _controller.updateSelection(
+        TextSelection.collapsed(offset: text.length),
+        quill.ChangeSource.local,
       );
     } else {
       final selection = _controller.selection;
       if (selection.isValid && !selection.isCollapsed) {
+        // Replace the selected range.
         final start = selection.start;
-        final end = selection.end;
-        final newText = current.replaceRange(start, end, text);
-        _controller.value = TextEditingValue(
-          text: newText,
-          selection: TextSelection.collapsed(offset: start + text.length),
+        final length = selection.end - selection.start;
+        _controller.replaceText(
+          start,
+          length,
+          text,
+          TextSelection.collapsed(offset: start + text.length),
         );
       } else {
-        final separator = current.endsWith('\n') ? '\n' : '\n\n';
-        final appended = '$current$separator$text';
-        _controller.value = TextEditingValue(
-          text: appended,
-          selection: TextSelection.collapsed(offset: appended.length),
+        // Append at the end, with a blank-line separator.
+        // document.length includes the trailing \n terminator, so we insert
+        // just before it (length - 1).
+        final insertAt = _controller.document.length - 1;
+        final raw = _controller.document.toPlainText();
+        final separator = raw.endsWith('\n\n') ? '' : '\n\n';
+        _controller.replaceText(
+          insertAt,
+          0,
+          '$separator$text',
+          TextSelection.collapsed(offset: insertAt + separator.length + text.length),
         );
       }
     }
@@ -263,30 +286,26 @@ class _FocusedEditorState extends State<FocusedEditor> {
           SafeArea(
             top: false,
             bottom: false,
-            child: Padding(
-              padding: EdgeInsets.fromLTRB(
-                  20, MediaQuery.of(context).padding.top + 80, 20, 16),
-              child: TextField(
-                controller: _controller,
-                focusNode: _focusNode,
-                maxLines: null,
-                expands: true,
-                textAlignVertical: TextAlignVertical.top,
-                keyboardType: TextInputType.multiline,
-                textCapitalization: TextCapitalization.sentences,
-                style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                      fontSize: 17,
-                      height: 1.6,
-                      color: cs.onSurface,
-                    ),
-                decoration: InputDecoration(
-                  hintText: widget.hint ?? 'Start typing…',
-                  hintStyle: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                        fontSize: 17,
-                        color: cs.onSurfaceVariant.withValues(alpha: 0.55),
-                      ),
-                  border: InputBorder.none,
-                  contentPadding: EdgeInsets.zero,
+            child: quill.QuillEditor(
+              controller: _controller,
+              focusNode: _focusNode,
+              scrollController: _scrollController,
+              config: quill.QuillEditorConfig(
+                placeholder: widget.hint ?? 'Start typing…',
+                padding: EdgeInsets.fromLTRB(
+                    20, MediaQuery.of(context).padding.top + 80, 20, 16),
+                customStyles: quill.DefaultStyles(
+                  paragraph: quill.DefaultTextBlockStyle(
+                    Theme.of(context).textTheme.bodyLarge!.copyWith(
+                          fontSize: 17,
+                          height: 1.6,
+                          color: cs.onSurface,
+                        ),
+                    const quill.HorizontalSpacing(0, 0),
+                    const quill.VerticalSpacing(0, 0),
+                    const quill.VerticalSpacing(0, 0),
+                    null,
+                  ),
                 ),
               ),
             ),
@@ -324,13 +343,17 @@ class _FocusedEditorState extends State<FocusedEditor> {
                 final text = data?.text;
                 if (text == null || text.isEmpty) return;
                 final selection = _controller.selection;
-                final current = _controller.text;
-                final start = selection.isValid ? selection.start : current.length;
-                final end = selection.isValid ? selection.end : current.length;
-                final newText = current.replaceRange(start, end, text);
-                _controller.value = TextEditingValue(
-                  text: newText,
-                  selection: TextSelection.collapsed(offset: start + text.length),
+                final start = selection.isValid
+                    ? selection.start
+                    : _controller.document.length - 1;
+                final length = selection.isValid
+                    ? selection.end - selection.start
+                    : 0;
+                _controller.replaceText(
+                  start,
+                  length,
+                  text,
+                  TextSelection.collapsed(offset: start + text.length),
                 );
               },
             ),
@@ -338,7 +361,7 @@ class _FocusedEditorState extends State<FocusedEditor> {
             _ToolbarButton(
               icon: CupertinoIcons.delete,
               label: 'Clear',
-              onTap: _controller.text.trim().isEmpty
+              onTap: _plainText.trim().isEmpty
                   ? null
                   : () {
                       HapticFeedback.selectionClick();
