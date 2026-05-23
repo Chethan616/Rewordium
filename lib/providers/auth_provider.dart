@@ -4,6 +4,7 @@ import 'package:flutter/services.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import '../services/firebase_service.dart';
 import '../services/credit_service.dart';
+import '../services/ios_keyboard_bridge.dart';
 
 class AuthProvider extends ChangeNotifier {
   User? _user;
@@ -512,6 +513,9 @@ class AuthProvider extends ChangeNotifier {
     _isLoading = true;
     notifyListeners();
     await FirebaseService.signOut();
+    // Wipe the iOS keyboard extension's App Group settings so the next user
+    // doesn't inherit the previous Groq token. No-op on non-iOS.
+    await IosKeyboardBridge.clear();
     _isLoading = false;
     notifyListeners();
   }

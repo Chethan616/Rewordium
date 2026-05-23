@@ -10,6 +10,7 @@ import '../utils/lottie_assets.dart';
 import '../widgets/custom_button.dart';
 import '../widgets/home/keyboard_status_card.dart';
 import '../widgets/home/assistant_status_card.dart';
+import '../widgets/home/ios_keyboard_status_card.dart';
 import '../widgets/home/feedback_card.dart';
 import '../screens/auth/login_screen.dart';
 import '../widgets/profile_dropdown.dart';
@@ -176,8 +177,12 @@ class _HomeScreenState extends State<HomeScreen> {
               _ToolsRow(useDynamicColors: useDynamicColors),
               SizedBox(height: r.h(4)),
               _buildSectionTitle(context, "Setup Status"),
+              // KeyboardStatusCard + AssistantStatusCard self-hide on iOS;
+              // IosKeyboardStatusCard self-hides on Android. Only one of the
+              // platform-specific cards renders at a time.
               const KeyboardStatusCard(),
               const AssistantStatusCard(),
+              const IosKeyboardStatusCard(),
               const FeedbackCard(),
               SizedBox(height: r.h(20)),
             ],

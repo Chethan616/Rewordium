@@ -10,6 +10,7 @@ import '../theme/theme_provider.dart';
 import '../widgets/custom_app_bar.dart';
 import '../widgets/animated_card.dart';
 import '../services/ai_settings_bridge.dart';
+import '../services/ios_keyboard_bridge.dart';
 
 class AdvancedAISettingsScreen extends StatefulWidget {
   const AdvancedAISettingsScreen({super.key});
@@ -84,8 +85,10 @@ class _AdvancedAISettingsScreenState extends State<AdvancedAISettingsScreen> {
 
       await AdvancedAISettingsService.saveSettings(newSettings);
 
-      // Sync settings to Android native services (Accessibility & Keyboard)
+      // Sync settings to native services. Both bridges are internally
+      // platform-gated; only the matching one does real work.
       await AISettingsBridge.syncSettingsToAndroid();
+      await IosKeyboardBridge.syncCurrentSettings();
 
       setState(() {
         _settings = newSettings;

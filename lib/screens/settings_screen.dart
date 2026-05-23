@@ -10,6 +10,7 @@ import 'package:m3e_collection/m3e_collection.dart';
 import 'package:expressive_refresh/expressive_refresh.dart';
 import '../widgets/whats_new_sheet.dart';
 import '../providers/keyboard_provider.dart';
+import '../services/ios_keyboard_bridge.dart';
 import '../services/news_subscription_service.dart';
 import '../services/rewordium_keyboard_service.dart';
 import '../services/force_update_service.dart';
@@ -51,11 +52,94 @@ class _SettingsScreenState extends State<SettingsScreen> {
   // Rewordium header toggle (pro users)
   bool _removeRewordiumHeader = false;
 
+  // iOS-only keyboard mirror state. Source of truth lives in the App Group;
+  // we cache local SharedPreferences so the UI is instant on screen open and
+  // we know what to push back through IosKeyboardBridge on toggle.
+  bool _iosAiEnabled = true;
+  bool _iosHapticsEnabled = true;
+  String _iosDefaultTone = 'neutral';
+  bool _iosSyncing = false;
+
+  static const _iosToneOptions = <String>[
+    'neutral',
+    'friendly',
+    'professional',
+    'concise',
+  ];
+
   @override
   void initState() {
     super.initState();
     _loadNewsSubscriptionStatus();
     _loadHeaderPref();
+    if (defaultTargetPlatform == TargetPlatform.iOS) {
+      _loadIosKeyboardPrefs();
+    }
+  }
+
+  Future<void> _loadIosKeyboardPrefs() async {
+    final prefs = await SharedPreferences.getInstance();
+    if (!mounted) return;
+    setState(() {
+      _iosAiEnabled = prefs.getBool('ios_keyboard_ai_enabled_mirror') ?? true;
+      _iosHapticsEnabled =
+          prefs.getBool('ios_keyboard_haptics_enabled_mirror') ?? true;
+      _iosDefaultTone =
+          prefs.getString('ios_keyboard_default_tone_mirror') ?? 'neutral';
+    });
+  }
+
+  Future<void> _openIosKeyboardSettings() async {
+    final candidates = [
+      Uri.parse('App-Prefs:'),
+      Uri.parse('app-settings:'),
+    ];
+    for (final uri in candidates) {
+      if (await canLaunchUrl(uri)) {
+        await launchUrl(uri, mode: LaunchMode.externalApplication);
+        return;
+      }
+    }
+  }
+
+  Future<void> _setIosAiEnabled(bool value) async {
+    setState(() => _iosAiEnabled = value);
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool('ios_keyboard_ai_enabled_mirror', value);
+    await IosKeyboardBridge.writeSettings(aiEnabled: value);
+  }
+
+  Future<void> _setIosHapticsEnabled(bool value) async {
+    setState(() => _iosHapticsEnabled = value);
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool('ios_keyboard_haptics_enabled_mirror', value);
+    await IosKeyboardBridge.writeSettings(hapticsEnabled: value);
+  }
+
+  Future<void> _setIosDefaultTone(String value) async {
+    setState(() => _iosDefaultTone = value);
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString('ios_keyboard_default_tone_mirror', value);
+    await IosKeyboardBridge.writeSettings(defaultTone: value);
+  }
+
+  Future<void> _resyncIosKeyboard() async {
+    if (_iosSyncing) return;
+    setState(() => _iosSyncing = true);
+    await IosKeyboardBridge.writeSettings(
+      aiEnabled: _iosAiEnabled,
+      hapticsEnabled: _iosHapticsEnabled,
+      defaultTone: _iosDefaultTone,
+    );
+    if (!mounted) return;
+    setState(() => _iosSyncing = false);
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text('Synced to Rewordium Keyboard.'),
+        behavior: SnackBarBehavior.floating,
+        duration: Duration(seconds: 2),
+      ),
+    );
   }
 
   Future<void> _loadHeaderPref() async {
@@ -639,7 +723,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 padding: EdgeInsets.zero,
                 child: Column(
                   children: [
-                    // Keyboard Settings — Android only until the iOS keyboard module ships
+                    // Android: Rewordium IME
                     if (defaultTargetPlatform == TargetPlatform.android) ...[
                       _buildSettingItem(
                         icon: CupertinoIcons.keyboard,
@@ -649,6 +733,86 @@ class _SettingsScreenState extends State<SettingsScreen> {
                         trailing: const Icon(CupertinoIcons.chevron_right,
                             color: Colors.grey, size: 18),
                         onTap: () => _openReboardSettings(),
+                      ),
+                      const Divider(height: 1, indent: 72),
+                    ],
+                    // iOS: Custom Keyboard Extension settings (App Group bridge)
+                    if (defaultTargetPlatform == TargetPlatform.iOS) ...[
+                      _buildSettingItem(
+                        icon: CupertinoIcons.keyboard,
+                        iconColor: Theme.of(context).colorScheme.primary,
+                        title: "Open Keyboard Settings",
+                        subtitle:
+                            "Settings → General → Keyboard → Keyboards",
+                        trailing: const Icon(CupertinoIcons.chevron_right,
+                            color: Colors.grey, size: 18),
+                        onTap: _openIosKeyboardSettings,
+                      ),
+                      const Divider(height: 1, indent: 72),
+                      _buildSettingItem(
+                        icon: CupertinoIcons.sparkles,
+                        iconColor: Colors.purple,
+                        title: "AI suggestions",
+                        subtitle: "Show the sparkle toolbar in the keyboard",
+                        trailing: Switch(
+                          value: _iosAiEnabled,
+                          onChanged: _setIosAiEnabled,
+                          activeColor:
+                              Theme.of(context).colorScheme.primary,
+                        ),
+                      ),
+                      const Divider(height: 1, indent: 72),
+                      _buildSettingItem(
+                        icon: CupertinoIcons.hand_draw,
+                        iconColor: Colors.orange,
+                        title: "Haptic feedback",
+                        subtitle: "Vibration when typing or tapping AI",
+                        trailing: Switch(
+                          value: _iosHapticsEnabled,
+                          onChanged: _setIosHapticsEnabled,
+                          activeColor:
+                              Theme.of(context).colorScheme.primary,
+                        ),
+                      ),
+                      const Divider(height: 1, indent: 72),
+                      _buildSettingItem(
+                        icon: CupertinoIcons.bubble_left_bubble_right,
+                        iconColor: Colors.teal,
+                        title: "Default rewrite tone",
+                        subtitle:
+                            "Used when you tap the sparkle without picking a chip",
+                        trailing: DropdownButton<String>(
+                          value: _iosDefaultTone,
+                          underline: const SizedBox(),
+                          items: _iosToneOptions
+                              .map((t) => DropdownMenuItem(
+                                    value: t,
+                                    child: Text(
+                                      t[0].toUpperCase() + t.substring(1),
+                                    ),
+                                  ))
+                              .toList(),
+                          onChanged: (v) {
+                            if (v != null) _setIosDefaultTone(v);
+                          },
+                        ),
+                      ),
+                      const Divider(height: 1, indent: 72),
+                      _buildSettingItem(
+                        icon: CupertinoIcons.arrow_2_circlepath,
+                        iconColor: Colors.indigo,
+                        title: "Sync now",
+                        subtitle:
+                            "Push current settings to the keyboard extension",
+                        trailing: _iosSyncing
+                            ? const SizedBox(
+                                width: 18,
+                                height: 18,
+                                child: CircularProgressIndicator(strokeWidth: 2),
+                              )
+                            : const Icon(CupertinoIcons.chevron_right,
+                                color: Colors.grey, size: 18),
+                        onTap: _resyncIosKeyboard,
                       ),
                       const Divider(height: 1, indent: 72),
                     ],
