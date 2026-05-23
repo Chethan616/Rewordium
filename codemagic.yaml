@@ -91,13 +91,61 @@ workflows:
             -scheme "$XCODE_SCHEME" \
             -clonedSourcePackagesDirPath build/ios/SourcePackages
 
-      # NOTE: The "Skip MLKit on simulator" patch lives in ios/Podfile's
-      # post_install hook (not here as a separate step), because
-      # `flutter build ios` runs injectPlugins which REGENERATES
-      # GeneratedPluginRegistrant.m mid-build and clobbers any patch
-      # applied before xcodebuild. Pod install runs after injectPlugins
-      # and before xcodebuild, so the Podfile hook is the only timing
-      # window where the patch survives to the compile step.
+      - name: Strip MLKit from iOS plugin deps (sim only)
+        script: |
+          # Why this exists:
+          #   GoogleMLKit, MLImage, MLKitCommon, MLKitVision don't ship
+          #   arm64-simulator slices. We need arm64 sim for iOS 26 +
+          #   Liquid Glass testing, so MLKit on sim is fundamentally
+          #   incompatible. Instead of patching generated files after the
+          #   fact (we tried; xcconfigs/embed scripts have too many edges),
+          #   we strip the `google_mlkit_*` plugin entries from
+          #   `.flutter-plugins-dependencies` here. Then:
+          #     • `flutter build ios --no-pub` won't regenerate the file
+          #     • `injectPlugins` reads the stripped file → emits a
+          #       GeneratedPluginRegistrant.m without MLKit references
+          #     • `flutter_install_all_ios_pods` reads the stripped file
+          #       → never installs MLKit pods → linker has nothing to
+          #       miss
+          #     • Podfile's `has_mlkit_plugins` check self-skips the
+          #       language-pack pods
+          #   On-device builds use a different workflow and don't run
+          #   this script, so OCR keeps working on real iPhones.
+          python3 - <<'PY'
+          import json
+          from pathlib import Path
+
+          p = Path('.flutter-plugins-dependencies')
+          if not p.exists():
+              print('[strip-mlkit] .flutter-plugins-dependencies not found, skipping')
+              raise SystemExit(0)
+
+          data = json.loads(p.read_text())
+          removed = []
+          plugins = data.get('plugins', {})
+
+          for platform_key in ('ios', 'macos'):
+              platform_plugins = plugins.get(platform_key) or []
+              kept = []
+              for plug in platform_plugins:
+                  name = plug.get('name', '')
+                  if name.startswith('google_mlkit_'):
+                      removed.append(f'{platform_key}:{name}')
+                  else:
+                      kept.append(plug)
+              plugins[platform_key] = kept
+
+          # Also strip from the top-level `dependencyGraph` so other
+          # tooling (e.g. injectPlugins on macOS) sees a consistent view.
+          dep_graph = data.get('dependencyGraph') or []
+          data['dependencyGraph'] = [
+              entry for entry in dep_graph
+              if not entry.get('name', '').startswith('google_mlkit_')
+          ]
+
+          p.write_text(json.dumps(data, indent=2))
+          print(f'[strip-mlkit] Removed {len(removed)} MLKit plugin entries: {removed}')
+          PY
 
       - name: Update CocoaPods repo (required for MLKit 9.x specs)
         script: |
@@ -109,15 +157,17 @@ workflows:
           # Pin app to arm64 simulator (exclude x86_64) so iOS 26
           # simulators run it — required for Liquid Glass (`.glassEffect()`
           # in RewordiumKeyboard) and any future FoundationModels usage.
-          # MLKit pods are skipped on sim by the Podfile + the "Skip
-          # MLKit on simulator builds" script step above, so the arm64-sim
-          # link succeeds.
           # Suppress StoreKit 1 deprecation warnings (in_app_purchase_storekit legacy ObjC).
           cat >> ios/Flutter/Debug.xcconfig <<'XCFG'
           EXCLUDED_ARCHS[sdk=iphonesimulator*] = x86_64
           GCC_WARN_ABOUT_DEPRECATED_FUNCTIONS = NO
           XCFG
-          flutter build ios --simulator \
+          # --no-pub is CRITICAL: a regular `flutter build ios` runs
+          # `pub get` internally, which would regenerate
+          # `.flutter-plugins-dependencies` and undo the MLKit-strip step
+          # above. We already ran `flutter pub get` at the top of the
+          # workflow, so deps are current.
+          flutter build ios --simulator --no-pub \
             --build-name="${FCI_BUILD_NAME:-2.9.1}" \
             --build-number="${CM_BUILD_NUMBER:-75}"
 
