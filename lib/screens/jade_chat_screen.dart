@@ -39,7 +39,9 @@ class _JadeChatScreenState extends State<JadeChatScreen>
       duration: const Duration(milliseconds: 900),
       vsync: this,
     )..repeat();
-    _addWelcomeMessage();
+    // No welcome ChatMessage — the empty state IS the welcome. Pushing a
+    // chat bubble that says "I can do X, Y, Z" reads like a marketing
+    // banner; the empty state shows the same info as actionable cards.
   }
 
   @override
@@ -51,13 +53,9 @@ class _JadeChatScreenState extends State<JadeChatScreen>
     super.dispose();
   }
 
-  void _addWelcomeMessage() {
-    _messages.add(ChatMessage(
-      content:
-          'Paste text to rewrite, ask anything, or tell me to change a setting (theme, haptics, sound, text size, notifications…).',
-      isUser: false,
-      timestamp: DateTime.now(),
-    ));
+  /// Reset for "new chat" — clear history, return to empty state.
+  void _resetConversation() {
+    setState(() => _messages.clear());
   }
 
   Future<void> _sendMessage() async {
@@ -186,56 +184,51 @@ class _JadeChatScreenState extends State<JadeChatScreen>
           ],
         ),
         actions: [
-          IconButton(
-            tooltip: 'New chat',
-            icon: const Icon(CupertinoIcons.refresh, size: 20),
-            onPressed: () {
-              HapticFeedback.selectionClick();
-              setState(() => _messages.clear());
-              _addWelcomeMessage();
-            },
-            color: cs.onSurfaceVariant,
-          ),
+          if (_messages.isNotEmpty)
+            IconButton(
+              tooltip: 'New chat',
+              icon: const Icon(CupertinoIcons.refresh, size: 20),
+              onPressed: () {
+                HapticFeedback.selectionClick();
+                _resetConversation();
+              },
+              color: cs.onSurfaceVariant,
+            ),
           const SizedBox(width: 4),
         ],
       ),
       body: Column(
         children: [
           Expanded(
-            child: ListView.builder(
-              controller: _scrollController,
-              padding: const EdgeInsets.fromLTRB(16, 12, 16, 12),
-              itemCount: _messages.length + (_isTyping ? 1 : 0),
-              itemBuilder: (context, index) {
-                if (index == _messages.length && _isTyping) {
-                  return _TypingDots(controller: _typingDots);
-                }
-                final message = _messages[index];
-                final prev = index > 0 ? _messages[index - 1] : null;
-                final next =
-                    index + 1 < _messages.length ? _messages[index + 1] : null;
-                final isStartOfGroup =
-                    prev == null || prev.isUser != message.isUser;
-                final isEndOfGroup =
-                    next == null || next.isUser != message.isUser;
-                return _MessageBlock(
-                  message: message,
-                  isStartOfGroup: isStartOfGroup,
-                  isEndOfGroup: isEndOfGroup,
-                );
-              },
-            ),
+            child: _messages.isEmpty && !_isTyping
+                ? _JadeEmptyState(
+                    onPickStarter: _handleStarter,
+                  )
+                : ListView.builder(
+                    controller: _scrollController,
+                    padding: const EdgeInsets.fromLTRB(16, 12, 16, 12),
+                    itemCount: _messages.length + (_isTyping ? 1 : 0),
+                    itemBuilder: (context, index) {
+                      if (index == _messages.length && _isTyping) {
+                        return _TypingDots(controller: _typingDots);
+                      }
+                      final message = _messages[index];
+                      final prev = index > 0 ? _messages[index - 1] : null;
+                      final next = index + 1 < _messages.length
+                          ? _messages[index + 1]
+                          : null;
+                      final isStartOfGroup =
+                          prev == null || prev.isUser != message.isUser;
+                      final isEndOfGroup =
+                          next == null || next.isUser != message.isUser;
+                      return _MessageBlock(
+                        message: message,
+                        isStartOfGroup: isStartOfGroup,
+                        isEndOfGroup: isEndOfGroup,
+                      );
+                    },
+                  ),
           ),
-          if (_messages.length <= 1) _Starters(onPick: (text) {
-            _messageController.text = text;
-            if (text.endsWith(': ')) {
-              _messageController.selection =
-                  TextSelection.collapsed(offset: text.length);
-              _messageFocusNode.requestFocus();
-            } else {
-              _sendMessage();
-            }
-          }),
           _MessageInput(
             controller: _messageController,
             focusNode: _messageFocusNode,
@@ -246,13 +239,25 @@ class _JadeChatScreenState extends State<JadeChatScreen>
       ),
     );
   }
+
+  void _handleStarter(String text) {
+    if (text.endsWith(': ')) {
+      _messageController.text = text;
+      _messageController.selection =
+          TextSelection.collapsed(offset: text.length);
+      _messageFocusNode.requestFocus();
+    } else {
+      _messageController.text = text;
+      _sendMessage();
+    }
+  }
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Message rendering
 // ─────────────────────────────────────────────────────────────────────────────
 
-class _MessageBlock extends StatelessWidget {
+class _MessageBlock extends StatefulWidget {
   final ChatMessage message;
   final bool isStartOfGroup;
   final bool isEndOfGroup;
@@ -264,17 +269,52 @@ class _MessageBlock extends StatelessWidget {
   });
 
   @override
+  State<_MessageBlock> createState() => _MessageBlockState();
+}
+
+class _MessageBlockState extends State<_MessageBlock>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _enter;
+
+  @override
+  void initState() {
+    super.initState();
+    // Subtle fade-up on insert. New messages slide ~6pt with an ease-out so
+    // the chat feels alive without the bouncy/synthetic feel of full springs.
+    _enter = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 220),
+    )..forward();
+  }
+
+  @override
+  void dispose() {
+    _enter.dispose();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
+    final body = widget.message.isUser
+        ? _userBubble(context)
+        : (widget.message.isActionReceipt
+            ? _actionReceipt(context)
+            : _assistantBlock(context));
     return Padding(
       padding: EdgeInsets.only(
-        top: isStartOfGroup ? 18 : 4,
-        bottom: isEndOfGroup ? 2 : 0,
+        top: widget.isStartOfGroup ? 18 : 4,
+        bottom: widget.isEndOfGroup ? 2 : 0,
       ),
-      child: message.isUser
-          ? _userBubble(context)
-          : (message.isActionReceipt
-              ? _actionReceipt(context)
-              : _assistantBlock(context)),
+      child: FadeTransition(
+        opacity: CurvedAnimation(parent: _enter, curve: Curves.easeOut),
+        child: SlideTransition(
+          position: Tween<Offset>(
+            begin: const Offset(0, 0.08),
+            end: Offset.zero,
+          ).animate(CurvedAnimation(parent: _enter, curve: Curves.easeOutCubic)),
+          child: body,
+        ),
+      ),
     );
   }
 
@@ -323,7 +363,7 @@ class _MessageBlock extends StatelessWidget {
                   ),
                   const SizedBox(height: 2),
                   SelectableText(
-                    message.content,
+                    widget.message.content,
                     style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                           color: cs.onSurface,
                           height: 1.4,
@@ -352,13 +392,13 @@ class _MessageBlock extends StatelessWidget {
             color: cs.primary,
             borderRadius: BorderRadius.only(
               topLeft: const Radius.circular(16),
-              topRight: Radius.circular(isStartOfGroup ? 16 : 6),
+              topRight: Radius.circular(widget.isStartOfGroup ? 16 : 6),
               bottomLeft: const Radius.circular(16),
-              bottomRight: Radius.circular(isEndOfGroup ? 16 : 6),
+              bottomRight: Radius.circular(widget.isEndOfGroup ? 16 : 6),
             ),
           ),
           child: SelectableText(
-            message.content,
+            widget.message.content,
             style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                   color: cs.onPrimary,
                   height: 1.35,
@@ -371,7 +411,7 @@ class _MessageBlock extends StatelessWidget {
 
   Widget _assistantBlock(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
-    final isError = message.isError;
+    final isError = widget.message.isError;
     final accent = isError ? cs.error : cs.primary.withValues(alpha: 0.6);
 
     return Padding(
@@ -384,7 +424,7 @@ class _MessageBlock extends StatelessWidget {
               width: 2,
               margin: const EdgeInsets.only(right: 12),
               decoration: BoxDecoration(
-                color: accent.withValues(alpha: isStartOfGroup ? 1.0 : 0.4),
+                color: accent.withValues(alpha: widget.isStartOfGroup ? 1.0 : 0.4),
                 borderRadius: BorderRadius.circular(1),
               ),
             ),
@@ -392,7 +432,7 @@ class _MessageBlock extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  if (isStartOfGroup)
+                  if (widget.isStartOfGroup)
                     Padding(
                       padding: const EdgeInsets.only(bottom: 6),
                       child: Text(
@@ -405,12 +445,13 @@ class _MessageBlock extends StatelessWidget {
                       ),
                     ),
                   SelectableText(
-                    message.content,
+                    widget.message.content,
                     style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                           color: isError
                               ? cs.onSurface.withValues(alpha: 0.85)
                               : cs.onSurface,
                           height: 1.45,
+                          fontSize: 15,
                         ),
                   ),
                 ],
@@ -465,83 +506,301 @@ class _TypingDots extends StatelessWidget {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Starters (only on empty state)
+// Empty state — the brand-new-user hero
+//
+// Shows Jade's three modes (Write / Adjust / Ask) as discoverable, tappable
+// suggestion cards. "Adjust" is the killer feature — most chat surfaces don't
+// have hands. Surfacing it as its own column with a bolt icon tells the user
+// at a glance: this isn't a chat box, it's a tool.
 // ─────────────────────────────────────────────────────────────────────────────
 
-class _Starters extends StatelessWidget {
-  final ValueChanged<String> onPick;
-  const _Starters({required this.onPick});
-
-  // Two kinds of starters mixed together: writing prompts (which open the
-  // composer with a prefix, letting the user paste text) and *action*
-  // starters that show Jade's hands — toggles a setting on tap. The mix is
-  // intentional: a brand-new user should discover that Jade isn't just a
-  // chat bubble, it can change the app state too.
-  static const _items = <(String, String, bool)>[
-    ('Improve this', 'Improve this: ', false),
-    ('Paraphrase', 'Paraphrase: ', false),
-    ('Dark mode', 'Switch to dark mode', true),
-    ('Mute haptics', 'Turn off haptics', true),
-    ('What can you change?',
-        'List every app setting you can change for me', false),
-  ];
+class _JadeEmptyState extends StatelessWidget {
+  final ValueChanged<String> onPickStarter;
+  const _JadeEmptyState({required this.onPickStarter});
 
   @override
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(12, 0, 12, 4),
-      child: SingleChildScrollView(
-        scrollDirection: Axis.horizontal,
-        child: Row(
-          children: _items
-              .map((item) => Padding(
-                    padding: const EdgeInsets.only(right: 8),
-                    child: GestureDetector(
-                      onTap: () => onPick(item.$2),
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: 12, vertical: 7),
-                        decoration: BoxDecoration(
-                          color: item.$3
-                              ? cs.primary.withValues(alpha: 0.10)
-                              : cs.surfaceContainerHigh,
-                          borderRadius: BorderRadius.circular(999),
-                          border: Border.all(
-                            color: item.$3
-                                ? cs.primary.withValues(alpha: 0.30)
-                                : cs.outlineVariant.withValues(alpha: 0.6),
-                            width: 0.5,
-                          ),
-                        ),
-                        child: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            if (item.$3) ...[
-                              Icon(
-                                CupertinoIcons.bolt_fill,
-                                size: 11,
-                                color: cs.primary,
-                              ),
-                              const SizedBox(width: 5),
-                            ],
-                            Text(
-                              item.$1,
-                              style: Theme.of(context)
-                                  .textTheme
-                                  .labelMedium
-                                  ?.copyWith(
-                                    color: item.$3 ? cs.primary : cs.onSurface,
-                                    fontWeight: FontWeight.w500,
-                                  ),
-                            ),
-                          ],
-                        ),
-                      ),
+
+    return ListView(
+      padding: const EdgeInsets.fromLTRB(20, 24, 20, 24),
+      children: [
+        // Header: subtle pulse avatar + greeting.
+        Center(
+          child: Column(
+            children: [
+              _PulseRing(
+                color: cs.primary,
+                child: const AnimatedJadeAvatar(
+                  size: 56,
+                  enableRotation: false,
+                  showBorder: false,
+                ),
+              ),
+              const SizedBox(height: 18),
+              Text(
+                "Hi, I'm Jade.",
+                style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                      fontWeight: FontWeight.w700,
+                      letterSpacing: -0.4,
                     ),
-                  ))
-              .toList(),
+              ),
+              const SizedBox(height: 4),
+              Text(
+                'Your in-app writing assistant.',
+                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                      color: cs.onSurfaceVariant,
+                    ),
+              ),
+            ],
+          ),
         ),
+        const SizedBox(height: 28),
+        _StarterGroup(
+          title: 'Write',
+          subtitle: 'Paste text, get a rewrite.',
+          icon: CupertinoIcons.pencil,
+          items: const [
+            _Starter('Improve this', 'Improve this: '),
+            _Starter('Paraphrase formally', 'Paraphrase this formally: '),
+            _Starter('Make it concise', 'Rewrite this more concisely: '),
+          ],
+          onPick: onPickStarter,
+        ),
+        const SizedBox(height: 14),
+        _StarterGroup(
+          title: 'Adjust',
+          subtitle: 'Tell me to change something in the app.',
+          icon: CupertinoIcons.bolt_fill,
+          accent: true,
+          items: const [
+            _Starter('Switch to dark mode', 'Switch to dark mode'),
+            _Starter('Mute haptics', 'Turn off haptics'),
+            _Starter('Bigger text', 'Make the text bigger'),
+          ],
+          onPick: onPickStarter,
+        ),
+        const SizedBox(height: 14),
+        _StarterGroup(
+          title: 'Ask',
+          subtitle: 'I can explain what I do.',
+          icon: CupertinoIcons.question_circle,
+          items: const [
+            _Starter('What can you change?',
+                'List every app setting you can change for me'),
+            _Starter('How do you work?', 'How do you work behind the scenes?'),
+          ],
+          onPick: onPickStarter,
+        ),
+        const SizedBox(height: 8),
+      ],
+    );
+  }
+}
+
+class _Starter {
+  final String label;
+  final String prompt;
+  const _Starter(this.label, this.prompt);
+}
+
+class _StarterGroup extends StatelessWidget {
+  final String title;
+  final String subtitle;
+  final IconData icon;
+  final List<_Starter> items;
+  final ValueChanged<String> onPick;
+  final bool accent;
+
+  const _StarterGroup({
+    required this.title,
+    required this.subtitle,
+    required this.icon,
+    required this.items,
+    required this.onPick,
+    this.accent = false,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+    final iconColor = accent ? cs.primary : cs.onSurfaceVariant;
+    final borderColor = accent
+        ? cs.primary.withValues(alpha: 0.22)
+        : cs.outlineVariant.withValues(alpha: 0.55);
+
+    return Container(
+      decoration: BoxDecoration(
+        color: cs.surfaceContainerLow,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: borderColor, width: 0.5),
+      ),
+      padding: const EdgeInsets.fromLTRB(14, 12, 14, 8),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(icon, size: 15, color: iconColor),
+              const SizedBox(width: 7),
+              Text(
+                title,
+                style: Theme.of(context).textTheme.labelLarge?.copyWith(
+                      color: iconColor,
+                      fontWeight: FontWeight.w700,
+                      letterSpacing: 0.4,
+                    ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 2),
+          Padding(
+            padding: const EdgeInsets.only(left: 22),
+            child: Text(
+              subtitle,
+              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                    color: cs.onSurfaceVariant,
+                  ),
+            ),
+          ),
+          const SizedBox(height: 6),
+          ...items.map(
+            (s) => _StarterRow(
+              label: s.label,
+              accent: accent,
+              onTap: () => onPick(s.prompt),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _StarterRow extends StatefulWidget {
+  final String label;
+  final bool accent;
+  final VoidCallback onTap;
+
+  const _StarterRow({
+    required this.label,
+    required this.accent,
+    required this.onTap,
+  });
+
+  @override
+  State<_StarterRow> createState() => _StarterRowState();
+}
+
+class _StarterRowState extends State<_StarterRow> {
+  bool _pressed = false;
+
+  @override
+  Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+    return GestureDetector(
+      behavior: HitTestBehavior.opaque,
+      onTapDown: (_) => setState(() => _pressed = true),
+      onTapCancel: () => setState(() => _pressed = false),
+      onTapUp: (_) => setState(() => _pressed = false),
+      onTap: () {
+        HapticFeedback.selectionClick();
+        widget.onTap();
+      },
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 120),
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
+        margin: const EdgeInsets.only(top: 4),
+        decoration: BoxDecoration(
+          color: _pressed
+              ? cs.onSurface.withValues(alpha: 0.04)
+              : Colors.transparent,
+          borderRadius: BorderRadius.circular(10),
+        ),
+        child: Row(
+          children: [
+            Expanded(
+              child: Text(
+                widget.label,
+                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                      color: cs.onSurface,
+                      fontWeight: FontWeight.w500,
+                    ),
+              ),
+            ),
+            Icon(
+              CupertinoIcons.arrow_up_right,
+              size: 14,
+              color: widget.accent ? cs.primary : cs.onSurfaceVariant,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// Subtle pulse ring behind the empty-state avatar — gives a tiny sign of
+/// life without animating the avatar itself (avatar rotation reads as AI
+/// slop; ring breathing reads as ambient).
+class _PulseRing extends StatefulWidget {
+  final Widget child;
+  final Color color;
+  const _PulseRing({required this.child, required this.color});
+
+  @override
+  State<_PulseRing> createState() => _PulseRingState();
+}
+
+class _PulseRingState extends State<_PulseRing>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _ac;
+
+  @override
+  void initState() {
+    super.initState();
+    _ac = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 2400),
+    )..repeat();
+  }
+
+  @override
+  void dispose() {
+    _ac.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      width: 88,
+      height: 88,
+      child: Stack(
+        alignment: Alignment.center,
+        children: [
+          AnimatedBuilder(
+            animation: _ac,
+            builder: (_, __) {
+              final t = _ac.value;
+              final scale = 0.85 + 0.25 * t;
+              final opacity = (1.0 - t).clamp(0.0, 1.0) * 0.5;
+              return Transform.scale(
+                scale: scale,
+                child: Container(
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    border: Border.all(
+                      color: widget.color.withValues(alpha: opacity),
+                      width: 1.5,
+                    ),
+                  ),
+                ),
+              );
+            },
+          ),
+          widget.child,
+        ],
       ),
     );
   }

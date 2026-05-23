@@ -304,34 +304,38 @@ class _SettingsScreenState extends State<SettingsScreen>
     );
   }
 
-  void _checkAdminAccess() {
-    final BuildContext context = this.context;
-    final now = DateTime.now();
+  // Only this account is allowed to discover + open the admin panel. Gating
+  // here keeps the version row tappable for the maintainer while making it
+  // an inert label for everyone else — Apple's review rule "every control
+  // must do something" is satisfied because the GestureDetector itself is
+  // only attached when the gate is open (see _buildAppInfoCard).
+  static const _adminEmail = 'chethankrishna2022@gmail.com';
 
-    // Reset counter if more than 2 seconds have passed since last tap
+  bool _isAdminAccount(BuildContext context) {
+    final auth = Provider.of<AuthProvider>(context, listen: false);
+    final email = auth.user?.email?.toLowerCase().trim();
+    return email == _adminEmail;
+  }
+
+  void _checkAdminAccess() {
+    if (!_isAdminAccount(context)) return; // belt-and-suspenders; UI also gates
+
+    final now = DateTime.now();
     if (_lastTapTime != null &&
         now.difference(_lastTapTime!) > const Duration(seconds: 2)) {
       _adminTapCount = 0;
     }
-
     _lastTapTime = now;
     _adminTapCount++;
 
-    // Show remaining taps needed
-    final remainingTaps = 5 - _adminTapCount;
-    if (remainingTaps > 0) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Tap $remainingTaps more times to access admin panel'),
-          duration: const Duration(seconds: 1),
-        ),
-      );
-    }
+    // No tap-counter snackbar — the discovery is intentionally silent so
+    // it doesn't read as a half-broken feature when seen by reviewers /
+    // beta users. Subtle haptic on each tap; navigation on the 5th.
+    HapticFeedback.selectionClick();
 
     if (_adminTapCount >= 5) {
       _adminTapCount = 0;
-
-      // Navigate to admin panel
+      HapticFeedback.heavyImpact();
       Navigator.push(
         context,
         MaterialPageRoute(builder: (context) => const AdminPanel()),
@@ -1134,17 +1138,30 @@ class _SettingsScreenState extends State<SettingsScreen>
           padding: EdgeInsets.zero,
           child: Column(
             children: [
-              // App Version
-              GestureDetector(
-                onTap: _checkAdminAccess,
-                child: _buildSettingItem(
+              // App Version. Tappable ONLY when the admin account is signed
+              // in — for everyone else the row renders as a plain
+              // non-interactive label, which is the App Store-compliant
+              // behavior (no dead buttons).
+              if (_isAdminAccount(context))
+                GestureDetector(
+                  behavior: HitTestBehavior.opaque,
+                  onTap: _checkAdminAccess,
+                  child: _buildSettingItem(
+                    icon: CupertinoIcons.app_badge,
+                    iconColor: Colors.blue,
+                    title: "App Version",
+                    subtitle: "v$appVersion (Build $buildNumber)",
+                    trailing: const SizedBox.shrink(),
+                  ),
+                )
+              else
+                _buildSettingItem(
                   icon: CupertinoIcons.app_badge,
                   iconColor: Colors.blue,
                   title: "App Version",
                   subtitle: "v$appVersion (Build $buildNumber)",
                   trailing: const SizedBox.shrink(),
                 ),
-              ),
               const Divider(height: 1, indent: 72),
               // What's New
               _buildSettingItem(
