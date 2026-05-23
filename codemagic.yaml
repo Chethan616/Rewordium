@@ -97,14 +97,16 @@ workflows:
 
       - name: Build iOS Simulator App
         script: |
+          # Inject build settings into Debug.xcconfig (simulator builds use Debug).
           # arm64-only: FoundationModels doesn't exist on x86_64 simulators.
           # Suppress StoreKit 1 deprecation warnings (in_app_purchase_storekit legacy ObjC).
+          cat >> ios/Flutter/Debug.xcconfig <<'XCFG'
+          EXCLUDED_ARCHS[sdk=iphonesimulator*] = x86_64
+          GCC_WARN_ABOUT_DEPRECATED_FUNCTIONS = NO
+          XCFG
           flutter build ios --simulator \
             --build-name="${FCI_BUILD_NAME:-2.9.1}" \
-            --build-number="${CM_BUILD_NUMBER:-75}" \
-            -- \
-            EXCLUDED_ARCHS='x86_64' \
-            GCC_WARN_ABOUT_DEPRECATED_FUNCTIONS=NO
+            --build-number="${CM_BUILD_NUMBER:-75}"
 
       - name: Zip Simulator App
         script: |
