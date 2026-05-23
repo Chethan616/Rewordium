@@ -37,24 +37,35 @@ enum RewordiumTokens {
 
 /// Background material for the toolbar surface.
 ///
-/// We use `.ultraThinMaterial` (iOS 15+) which matches the system predictive
-/// bar's translucency and reads cleanly over both light and dark keyboards.
-///
-/// iOS 26 introduces a Liquid Glass design language with `.glassProminent`
-/// button styles and a `.glassEffect()` modifier — we adopt the former on
-/// the AI pill itself (`AIPill+iOS26.swift`-style conditional in AIToolbar),
-/// but keep the surface material at `.ultraThinMaterial` because that's the
-/// system's choice for keyboard predictive bars on iOS 26 too.
+/// iOS 15+: `.ultraThinMaterial` matches the system predictive bar.
+/// iOS 26+: the SwiftUI `.glassEffect()` modifier applies the Liquid Glass
+/// material — a subtle refraction/edge-light treatment that the system itself
+/// uses on toolbars + sheets in 26. We pick the more diffuse `.regular`
+/// variant so the bar reads as a calm surface above the keyboard, not a
+/// flashy element competing for attention.
 struct RewordiumSurface: ViewModifier {
     func body(content: Content) -> some View {
         content
-            .background(.ultraThinMaterial)
+            .background(GlassyBackground())
             .overlay(
                 Rectangle()
                     .frame(height: RewordiumTokens.Stroke.hairline)
                     .foregroundStyle(.quaternary),
                 alignment: .bottom
             )
+    }
+
+    private struct GlassyBackground: View {
+        var body: some View {
+            if #available(iOS 26.0, *) {
+                Rectangle()
+                    .fill(.regularMaterial)
+                    .glassEffect()
+            } else {
+                Rectangle()
+                    .fill(.ultraThinMaterial)
+            }
+        }
     }
 }
 

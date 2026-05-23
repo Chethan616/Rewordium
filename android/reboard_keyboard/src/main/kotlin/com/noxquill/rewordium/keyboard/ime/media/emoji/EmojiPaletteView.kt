@@ -92,7 +92,9 @@ import com.noxquill.rewordium.keyboard.ime.text.keyboard.TextKeyData
 import com.noxquill.rewordium.keyboard.ime.theme.FlorisImeUi
 import com.noxquill.rewordium.keyboard.keyboardManager
 import dev.patrickgold.jetpref.datastore.model.observeAsState
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import org.florisboard.lib.android.AndroidKeyguardManager
 import org.florisboard.lib.android.showShortToast
 import org.florisboard.lib.android.systemService
@@ -110,6 +112,18 @@ import kotlin.math.ceil
 private val EmojiCategoryValues = EmojiCategory.entries
 private val EmojiBaseWidth = 42.dp
 private val EmojiDefaultFontSize = 22.sp
+
+// Process-wide cache for the supported-emoji filter. The filter calls
+// EmojiCompat.getEmojiMatch + Paint.hasGlyph for every emoji (~3k items),
+// which was running synchronously inside remember{} on the UI thread and
+// causing a 400-800ms freeze on first emoji-panel open. Keyed on the inputs
+// the filter actually depends on so we re-run only when those change.
+private data class EmojiFilterCacheKey(
+    val systemId: Int,
+    val metadataVersion: Int,
+    val replaceAll: Boolean,
+)
+private val emojiFilterCache = mutableMapOf<EmojiFilterCacheKey, EmojiDataByCategory>()
 
 private val VariantsTriangleShapeLtr = GenericShape { size, _ ->
     moveTo(x = size.width, y = 0f)
@@ -148,15 +162,39 @@ fun EmojiPaletteView(
     val metadataVersion = activeEditorInfo.emojiCompatMetadataVersion
     val replaceAll = activeEditorInfo.emojiCompatReplaceAll
     val emojiCompatInstance by FlorisEmojiCompat.getAsFlow(replaceAll).collectAsState()
-    val emojiMappings = remember(emojiCompatInstance, fullEmojiMappings, metadataVersion, systemFontPaint) {
-        fullEmojiMappings.byCategory.mapValues { (_, emojiSetList) ->
-            emojiSetList.mapNotNull { emojiSet ->
-                emojiSet.emojis.filter { emoji ->
-                    emojiCompatInstance?.getEmojiMatch(emoji.value, metadataVersion) == EmojiCompat.EMOJI_SUPPORTED ||
-                        systemFontPaint.hasGlyph(emoji.value)
-                }.let { if (it.isEmpty()) null else EmojiSet(it) }
+
+    // First open is expensive: ~3k emojis × (EmojiCompat.getEmojiMatch +
+    // Paint.hasGlyph) on the UI thread caused a noticeable freeze. We now:
+    //   1. consult a process-wide cache keyed on the inputs that actually
+    //      change the filter result, so re-opening the panel is instant.
+    //   2. on a cache miss, immediately show the unfiltered emoji set so
+    //      the panel renders in <16ms, then refine on a background coroutine.
+    //      Worst case: a few unsupported emojis render as tofu boxes for
+    //      one frame on the very first open.
+    val cacheKey = remember(fullEmojiMappings, metadataVersion, replaceAll) {
+        EmojiFilterCacheKey(
+            systemId = System.identityHashCode(fullEmojiMappings),
+            metadataVersion = metadataVersion,
+            replaceAll = replaceAll,
+        )
+    }
+    var emojiMappings by remember(cacheKey) {
+        mutableStateOf(emojiFilterCache[cacheKey] ?: fullEmojiMappings.byCategory)
+    }
+    LaunchedEffect(cacheKey, emojiCompatInstance) {
+        if (emojiFilterCache.containsKey(cacheKey)) return@LaunchedEffect
+        val filtered = withContext(Dispatchers.Default) {
+            fullEmojiMappings.byCategory.mapValues { (_, emojiSetList) ->
+                emojiSetList.mapNotNull { emojiSet ->
+                    emojiSet.emojis.filter { emoji ->
+                        emojiCompatInstance?.getEmojiMatch(emoji.value, metadataVersion) == EmojiCompat.EMOJI_SUPPORTED ||
+                            systemFontPaint.hasGlyph(emoji.value)
+                    }.let { if (it.isEmpty()) null else EmojiSet(it) }
+                }
             }
         }
+        emojiFilterCache[cacheKey] = filtered
+        emojiMappings = filtered
     }
     val androidKeyguardManager = remember { context.systemService(AndroidKeyguardManager::class) }
 

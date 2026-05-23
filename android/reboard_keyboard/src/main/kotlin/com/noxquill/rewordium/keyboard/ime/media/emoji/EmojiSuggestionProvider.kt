@@ -55,6 +55,10 @@ class EmojiSuggestionProvider(private val context: Context) : SuggestionProvider
                 EmojiData.get(context, locale).bySkinTone
             }
         }
+        // Also warm the root.txt asset that MediaInputLayout opens — without
+        // this, the first emoji-panel open pays a ~200KB asset parse on top
+        // of the supported-emoji filter and the panel feels frozen.
+        EmojiData.get(context, "ime/media/emoji/root.txt")
     }
 
     override suspend fun suggest(
@@ -67,19 +71,28 @@ class EmojiSuggestionProvider(private val context: Context) : SuggestionProvider
         val preferredSkinTone = prefs.emoji.preferredSkinTone.get()
         val showName = prefs.emoji.suggestionCandidateShowName.get()
         val query = validateInputQuery(content.composingText) ?: return emptyList()
+        // Emoji names + keywords are short. Anything past ~20 chars cannot
+        // be a substring of an emoji name, so the entire scan is wasted —
+        // and on glide-typed long words this scan ran on every keystroke
+        // and made the suggestion bar feel laggy.
+        if (query.length > MAX_QUERY_LENGTH) return emptyList()
         val emojis = cachedEmojiMappings.get(subtype.primaryLocale)?.get(preferredSkinTone) ?: emptyList()
         val candidates = withContext(Dispatchers.Default) {
             emojis.parallelStream()
                 .map { emoji ->
                     val nameWeight = emoji.name.containsWeighted(query, ignoreCase = true)
-                    val keywordWeight = emoji.keywords
-                        .any { it.contains(query, ignoreCase = true) }
-                        .let { if (it) 1.0 else 0.0 }
+                    // Short-circuit the keyword scan when the name already matched
+                    // (we only need *some* non-zero weight to keep the candidate).
+                    val keywordWeight = if (nameWeight > 0.0) 0.0
+                        else if (emoji.keywords.any { it.contains(query, ignoreCase = true) }) 1.0
+                        else 0.0
                     emoji to (nameWeight * 0.7 + keywordWeight * 0.3)
                 }
+                // Filter BEFORE sort — without this, sort runs over the full
+                // ~3k emoji list, then limit + filter throws most of it away.
+                .filter { (_, a) -> a > 0 }
                 .sorted { (_, a), (_, b) -> b.compareTo(a) }
                 .limit(maxCandidateCount.toLong())
-                .filter { (_, a) -> a > 0 }
                 .map { (emoji, _) ->
                     EmojiSuggestionCandidate(
                         emoji = emoji,
@@ -90,6 +103,10 @@ class EmojiSuggestionProvider(private val context: Context) : SuggestionProvider
                 .collect(Collectors.toList())
         }
         return candidates
+    }
+
+    private companion object {
+        const val MAX_QUERY_LENGTH = 20
     }
 
     override suspend fun notifySuggestionAccepted(subtype: Subtype, candidate: SuggestionCandidate) {

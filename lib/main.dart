@@ -34,6 +34,7 @@ import 'services/unified_ai_service.dart';
 import 'services/cache_manager.dart';
 import 'services/admin_service.dart';
 import 'services/ai_settings_bridge.dart';
+import 'services/ios_keyboard_bridge.dart';
 import 'services/billing_service.dart';
 import 'services/deep_link_service.dart';
 import 'services/usage_analytics_service.dart';
@@ -115,6 +116,13 @@ void main() async {
       AISettingsBridge.initialize();
       unawaited(AISettingsBridge.syncSettingsToAndroid());
       AppLogger.init('AI Settings Bridge');
+    }
+    // iOS counterpart: push current API key + model into the App Group so
+    // the RewordiumKeyboard extension can talk to Groq without waiting for
+    // the user to open settings. Internally guarded so non-iOS is a no-op.
+    if (defaultTargetPlatform == TargetPlatform.iOS) {
+      unawaited(IosKeyboardBridge.syncCurrentSettings());
+      AppLogger.init('iOS Keyboard Bridge');
     }
   }).catchError((e) {
     AppLogger.warning('Error initializing Groq service: $e');

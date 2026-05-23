@@ -1,5 +1,9 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+
+import '../models/advanced_ai_settings.dart';
+import 'groq_service.dart';
 
 /// Writes Rewordium settings into the iOS App Group container so the
 /// RewordiumKeyboard extension can read them.
@@ -57,6 +61,40 @@ class IosKeyboardBridge {
       return null;
     } on PlatformException {
       return null;
+    }
+  }
+
+  /// Convenience: read the user's current API key + model from existing
+  /// services (GroqService secure storage, AdvancedAISettings) and push them
+  /// into the App Group along with any cached mirror preferences. Used at
+  /// every "AI settings changed" call site so the extension stays in sync
+  /// without each caller having to assemble the payload manually.
+  ///
+  /// Call freely from anywhere — guarded internally by [_isIOS].
+  static Future<bool> syncCurrentSettings() async {
+    if (!_isIOS) return false;
+    try {
+      final config = await AdvancedAISettingsService.getAPIConfig();
+      // For Groq fallback (the managed-default case), read the env key from
+      // GroqService — that's the one the extension actually needs.
+      final apiKey = (config['provider'] == 'groq')
+          ? await GroqService.getApiKey()
+          : (config['apiKey'] as String? ?? '');
+      final model = (config['model'] as String?) ??
+          AdvancedAISettings(provider: AIProvider.groq).getDefaultModelName();
+      final prefs = await SharedPreferences.getInstance();
+      return writeSettings(
+        groqAPIKey: apiKey,
+        groqModel: model,
+        aiEnabled:
+            prefs.getBool('ios_keyboard_ai_enabled_mirror') ?? true,
+        hapticsEnabled:
+            prefs.getBool('ios_keyboard_haptics_enabled_mirror') ?? true,
+        defaultTone:
+            prefs.getString('ios_keyboard_default_tone_mirror') ?? 'neutral',
+      );
+    } catch (_) {
+      return false;
     }
   }
 

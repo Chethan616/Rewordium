@@ -6,10 +6,12 @@ import 'package:m3e_collection/m3e_collection.dart' hide Cubic;
 import 'package:package_info_plus/package_info_plus.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 import '../main.dart';
 import '../models/advanced_ai_settings.dart';
 import '../services/ai_settings_bridge.dart';
+import '../services/ios_keyboard_bridge.dart';
 import '../services/keyboard_service.dart';
 import '../services/news_subscription_service.dart';
 import '../services/rewordium_keyboard_service.dart';
@@ -89,8 +91,9 @@ class _OnboardingPageState extends State<OnboardingPage>
   static bool get _isAndroid =>
       defaultTargetPlatform == TargetPlatform.android;
 
-  // iOS skips assistantMode + keyboard (those map to Android-only system
-  // services); the iOS keyboard module is planned separately.
+  // iOS skips assistantMode (no accessibility-overlay equivalent), but DOES
+  // include the keyboard step now — it routes to a separate iOS flow that
+  // points the user at Settings → Keyboards → Add Rewordium.
   List<_StepKey> get _activeSteps => _isAndroid
       ? const [
           _StepKey.welcome,
@@ -105,6 +108,7 @@ class _OnboardingPageState extends State<OnboardingPage>
           _StepKey.theme,
           _StepKey.llm,
           _StepKey.news,
+          _StepKey.keyboard,
         ];
 
   List<String> get _stepTitles =>
@@ -594,7 +598,11 @@ class _OnboardingPageState extends State<OnboardingPage>
         customEndpoint: '',
       );
       await AdvancedAISettingsService.saveSettings(settings);
-      if (_isAndroid) await AISettingsBridge.syncSettingsToAndroid();
+      if (_isAndroid) {
+        await AISettingsBridge.syncSettingsToAndroid();
+      } else {
+        await IosKeyboardBridge.syncCurrentSettings();
+      }
       return;
     }
 
@@ -898,7 +906,103 @@ class _OnboardingPageState extends State<OnboardingPage>
       case _StepKey.news:
         return _buildNewsStep(context);
       case _StepKey.keyboard:
-        return _buildKeyboardStep(context);
+        return _isAndroid
+            ? _buildKeyboardStep(context)
+            : _buildKeyboardStepIOS(context);
+    }
+  }
+
+  // ─────────────────────────────────────────────────────────────────────────
+  // STEP — Keyboard (iOS)
+  // Advisory-only. iOS doesn't expose extension-enable state to the host, so
+  // we just walk the user through Settings → Keyboards → Add Rewordium. The
+  // Continue button is enabled at all times (skippable per product decision).
+  // ─────────────────────────────────────────────────────────────────────────
+
+  Widget _buildKeyboardStepIOS(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+
+    Widget bullet(int n, String text) {
+      return Padding(
+        padding: const EdgeInsets.symmetric(vertical: 8),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            SizedBox(
+              width: 28,
+              child: Text(
+                n.toString().padLeft(2, '0'),
+                style: GoogleFonts.ibmPlexSans(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w500,
+                  color: cs.onSurfaceVariant,
+                  fontFeatures: const [FontFeature.tabularFigures()],
+                ),
+              ),
+            ),
+            Expanded(child: Text(text, style: _bodyStyle(context))),
+          ],
+        ),
+      );
+    }
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          'You can install the Rewordium Keyboard from iOS Settings. We can\'t do it for you, but it\'s three taps:',
+          style: _bodySubtleStyle(context),
+        ),
+        const SizedBox(height: 14),
+        bullet(1, 'Open Settings → General → Keyboard → Keyboards'),
+        bullet(2, 'Tap Add New Keyboard → Rewordium'),
+        bullet(3, 'Tap Rewordium and turn on Allow Full Access'),
+        const SizedBox(height: 18),
+        Row(
+          children: [
+            Expanded(
+              child: _PressableScale(
+                onPressed: _openIOSSettings,
+                child: Container(
+                  padding: const EdgeInsets.symmetric(vertical: 12),
+                  decoration: BoxDecoration(
+                    color: cs.primary,
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Center(
+                    child: Text(
+                      'Open Settings',
+                      style: GoogleFonts.ibmPlexSans(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w600,
+                        color: cs.onPrimary,
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 12),
+        Text(
+          'You can also do this later from Home → Setup Status, or skip and continue.',
+          style: _bodySubtleStyle(context),
+        ),
+      ],
+    );
+  }
+
+  Future<void> _openIOSSettings() async {
+    final candidates = [
+      Uri.parse('App-Prefs:'),
+      Uri.parse('app-settings:'),
+    ];
+    for (final uri in candidates) {
+      if (await canLaunchUrl(uri)) {
+        await launchUrl(uri, mode: LaunchMode.externalApplication);
+        return;
+      }
     }
   }
 
