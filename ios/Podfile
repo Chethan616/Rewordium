@@ -43,10 +43,12 @@ target 'Runner' do
   flutter_install_all_ios_pods File.dirname(File.realpath(__FILE__))
 
   # MLKit language packs for multi-script text recognition
-  pod 'GoogleMLKit/TextRecognitionChinese', '~> 7.0.0'
-  pod 'GoogleMLKit/TextRecognitionDevanagari', '~> 7.0.0'
-  pod 'GoogleMLKit/TextRecognitionJapanese', '~> 7.0.0'
-  pod 'GoogleMLKit/TextRecognitionKorean', '~> 7.0.0'
+  # Version must match GoogleMLKit/TextRecognition ~> 9.0.0 required by
+  # google_mlkit_text_recognition 0.15.1 — do NOT change to a different major.
+  pod 'GoogleMLKit/TextRecognitionChinese', '~> 9.0.0'
+  pod 'GoogleMLKit/TextRecognitionDevanagari', '~> 9.0.0'
+  pod 'GoogleMLKit/TextRecognitionJapanese', '~> 9.0.0'
+  pod 'GoogleMLKit/TextRecognitionKorean', '~> 9.0.0'
 
   target 'RunnerTests' do
     inherit! :search_paths
