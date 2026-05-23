@@ -44,9 +44,15 @@ import androidx.compose.foundation.shape.GenericShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowLeft
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
+import androidx.compose.material.icons.outlined.Close
 import androidx.compose.material.icons.outlined.Delete
 import androidx.compose.material.icons.outlined.PushPin
+import androidx.compose.material.icons.outlined.Search
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.Icon
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Tab
 import androidx.compose.material3.TabRow
 import androidx.compose.material3.TabRowDefaults
@@ -112,6 +118,7 @@ import kotlin.math.ceil
 private val EmojiCategoryValues = EmojiCategory.entries
 private val EmojiBaseWidth = 42.dp
 private val EmojiDefaultFontSize = 22.sp
+private val SearchBarHeight = 40.dp
 
 // Process-wide cache for the supported-emoji filter. The filter calls
 // EmojiCompat.getEmojiMatch + Paint.hasGlyph for every emoji (~3k items),
@@ -316,9 +323,53 @@ fun EmojiPaletteView(
         }
     }
 
+    // Gboard-style search state. Empty query = show normal pager + tabs.
+    // Non-empty query = swap in a flat results grid, hide pager + tabs.
+    var searchQuery by remember { mutableStateOf("") }
+    val trimmedQuery = searchQuery.trim()
+    val isSearching = trimmedQuery.isNotEmpty()
+
+    // Flatten the full emoji catalog ONCE per emojiMappings build, with a
+    // lowercased searchable key per emoji. Avoids per-keystroke flattening.
+    val searchIndex = remember(emojiMappings) {
+        val out = ArrayList<Pair<EmojiSet, String>>(2048)
+        for ((_, list) in emojiMappings) {
+            for (set in list) {
+                val base = set.base()
+                // Index name + keywords joined. Lowercased once, lookup-cheap.
+                val keyText = buildString {
+                    append(base.name.lowercase())
+                    base.keywords.forEach { kw ->
+                        append(' ')
+                        append(kw.lowercase())
+                    }
+                }
+                out.add(set to keyText)
+            }
+        }
+        out
+    }
+    val searchResults = remember(trimmedQuery, searchIndex) {
+        if (trimmedQuery.isEmpty()) emptyList()
+        else {
+            val q = trimmedQuery.lowercase()
+            searchIndex.asSequence()
+                .filter { (_, key) -> key.contains(q) }
+                .map { it.first }
+                .take(200)  // cap so a one-letter query doesn't render 3k cells
+                .toList()
+        }
+    }
+
     Column(
         modifier = modifier
     ) {
+        EmojiSearchBar(
+            query = searchQuery,
+            onQueryChange = { searchQuery = it },
+            onClear = { searchQuery = "" },
+        )
+
         val pagerState = rememberPagerState(
             pageCount = { calculatePageNumbers() }
         )
@@ -326,6 +377,38 @@ fun EmojiPaletteView(
         // Reset the pager to the first page when emojiHistory is enabled
         LaunchedEffect(emojiHistoryEnabled) {
             pagerState.animateScrollToPage(0)
+        }
+
+        if (isSearching) {
+            // ─── Search results path ────────────────────────────────────────
+            if (searchResults.isEmpty()) {
+                Column(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(24.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                ) {
+                    androidx.compose.material3.Text(
+                        "No emojis match \"$trimmedQuery\"",
+                        color = androidx.compose.material3.MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+            } else {
+                CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Ltr) {
+                    LazyVerticalGrid(
+                        modifier = Modifier.fillMaxSize(),
+                        columns = GridCells.Adaptive(minSize = EmojiBaseWidth),
+                    ) {
+                        items(
+                            items = searchResults,
+                            key = { it.base().value },
+                        ) { emojiSet ->
+                            EmojiKeyWrapper(emojiSet)
+                        }
+                    }
+                }
+            }
+            return@Column
         }
 
         EmojiCategoriesTabRow(
@@ -678,39 +761,123 @@ private fun EmojiHistoryPopup(
     }
 }
 
+/**
+ * Gboard-style emoji search bar.
+ *
+ * A pill TextField at the top of the emoji panel. Typing immediately filters
+ * the catalog (case-insensitive substring on name + keywords) — no submit
+ * required. Clear button appears once text is present. Filter logic lives in
+ * the caller; this composable is presentation-only.
+ */
+@Composable
+private fun EmojiSearchBar(
+    query: String,
+    onQueryChange: (String) -> Unit,
+    onClear: () -> Unit,
+) {
+    val cs = MaterialTheme.colorScheme
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 12.dp, vertical = 8.dp),
+    ) {
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(SearchBarHeight)
+                .background(
+                    color = cs.surfaceContainerHigh,
+                    shape = RoundedCornerShape(50),
+                )
+                .padding(horizontal = 12.dp),
+            contentAlignment = Alignment.CenterStart,
+        ) {
+            androidx.compose.foundation.layout.Row(
+                verticalAlignment = Alignment.CenterVertically,
+                modifier = Modifier.fillMaxSize(),
+            ) {
+                Icon(
+                    Icons.Outlined.Search,
+                    contentDescription = null,
+                    tint = cs.onSurfaceVariant,
+                    modifier = Modifier.size(18.dp),
+                )
+                androidx.compose.foundation.layout.Spacer(modifier = Modifier.width(10.dp))
+                Box(modifier = Modifier.weight(1f)) {
+                    if (query.isEmpty()) {
+                        androidx.compose.material3.Text(
+                            "Search emoji",
+                            color = cs.onSurfaceVariant.copy(alpha = 0.7f),
+                            fontSize = 14.sp,
+                        )
+                    }
+                    BasicTextField(
+                        value = query,
+                        onValueChange = onQueryChange,
+                        singleLine = true,
+                        textStyle = androidx.compose.ui.text.TextStyle(
+                            color = cs.onSurface,
+                            fontSize = 14.sp,
+                        ),
+                        cursorBrush = androidx.compose.ui.graphics.SolidColor(cs.primary),
+                        modifier = Modifier.fillMaxWidth(),
+                    )
+                }
+                if (query.isNotEmpty()) {
+                    androidx.compose.foundation.layout.Spacer(modifier = Modifier.width(6.dp))
+                    Box(
+                        modifier = Modifier
+                            .size(22.dp)
+                            .background(
+                                color = cs.onSurface.copy(alpha = 0.08f),
+                                shape = androidx.compose.foundation.shape.CircleShape,
+                            )
+                            .pointerInput(Unit) {
+                                detectTapGestures { onClear() }
+                            },
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        Icon(
+                            Icons.Outlined.Close,
+                            contentDescription = "Clear",
+                            tint = cs.onSurfaceVariant,
+                            modifier = Modifier.size(14.dp),
+                        )
+                    }
+                }
+            }
+        }
+    }
+}
+
+/**
+ * Native-Compose emoji renderer.
+ *
+ * The previous implementation wrapped `EmojiTextView` in `AndroidView` for
+ * every cell, which was the dominant source of emoji-panel lag — each visible
+ * cell paid the cost of inflating a heavyweight Android View inside the
+ * Compose tree. With 40+ visible cells per screen + recomposition during
+ * scroll, that easily hit 400–800ms of jank per open.
+ *
+ * Compose's `Text` composable renders emoji natively via the system font
+ * fallback chain on Android 7+, which is what KeyboardKit, Gboard, and
+ * SwiftKey all do. Trade-off: a small number of brand-new Unicode emojis
+ * may render as tofu on older OS versions where the system font lacks the
+ * glyph. Acceptable price for the perf win; we filter unsupported glyphs
+ * out at the `emojiMappings` build step anyway.
+ */
 @Composable
 fun EmojiText(
     text: String,
     emojiCompatInstance: EmojiCompat?,
     modifier: Modifier = Modifier,
-    color: Color = Color.Black,
+    color: Color = Color.Unspecified,
     fontSize: TextUnit = EmojiDefaultFontSize,
 ) {
-    if (emojiCompatInstance != null) {
-        AndroidView(
-            modifier = modifier,
-            factory = { context ->
-                EmojiTextView(context).also {
-                    it.setTextSize(TypedValue.COMPLEX_UNIT_SP, fontSize.value)
-                    it.setTextColor(color.toArgb())
-                }
-            },
-            update = { view ->
-                view.text = text
-            },
-        )
-    } else {
-        AndroidView(
-            modifier = modifier,
-            factory = { context ->
-                TextView(context).also {
-                    it.setTextSize(TypedValue.COMPLEX_UNIT_SP, fontSize.value)
-                    it.setTextColor(color.toArgb())
-                }
-            },
-            update = { view ->
-                view.text = text
-            },
-        )
-    }
+    androidx.compose.material3.Text(
+        text = text,
+        modifier = modifier,
+        fontSize = fontSize,
+        color = color,
+    )
 }

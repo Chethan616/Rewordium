@@ -1,139 +1,162 @@
+import 'dart:ui';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_quill/flutter_quill.dart' as quill;
+import '../services/document_service.dart';
+import '../widgets/url_import_dialog.dart';
 
-import 'rewordium_toast.dart';
+/// Full-screen text editor using Flutter Quill for a premium writing experience.
+class FocusedEditor extends StatefulWidget {
+  final String initialValue;
+  final String title;
+  final String? hint;
 
-/// Full-screen text editor pushed when the user taps an input field on a tool
-/// screen (paraphraser, grammar, translator, etc.).
-///
-/// Why this exists: the inline tool inputs share vertical space with mode
-/// pickers, persona chips, and a result pane. On small phones you end up
-/// writing inside a ~120pt slot above an open keyboard with no breathing
-/// room. Lifting the editor into its own screen gives the user the full
-/// viewport (modulo the IME), a quiet chrome, and a one-tap commit back to
-/// the tool screen. Same affordance as Notes / iA Writer's full-screen mode.
-///
-/// Usage:
-/// ```dart
-/// final updated = await FocusedEditor.open(
-///   context,
-///   initialValue: _controller.text,
-///   title: 'Paraphrase',
-///   hint: 'Paste or type text to paraphrase…',
-/// );
-/// if (updated != null) _controller.text = updated;
-/// ```
-class FocusedEditor {
-  FocusedEditor._();
+  const FocusedEditor({
+    super.key,
+    required this.initialValue,
+    required this.title,
+    this.hint,
+  });
 
   static Future<String?> open(
     BuildContext context, {
-    required String initialValue,
-    required String title,
-    String hint = 'Type here…',
+    String initialValue = '',
+    String title = 'Edit Text',
+    String? hint,
   }) {
     return Navigator.of(context).push<String>(
-      PageRouteBuilder(
-        opaque: true,
-        // Fade + slight slide — feels like the editor lifts into focus
-        // rather than the brutal default page push.
-        transitionDuration: const Duration(milliseconds: 240),
-        reverseTransitionDuration: const Duration(milliseconds: 200),
-        pageBuilder: (_, __, ___) => _FocusedEditorScreen(
+      MaterialPageRoute(
+        builder: (_) => FocusedEditor(
           initialValue: initialValue,
           title: title,
           hint: hint,
         ),
-        transitionsBuilder: (_, animation, __, child) {
-          final curved = CurvedAnimation(
-            parent: animation,
-            curve: Curves.easeOutCubic,
-            reverseCurve: Curves.easeInCubic,
-          );
-          return FadeTransition(
-            opacity: curved,
-            child: SlideTransition(
-              position: Tween<Offset>(
-                begin: const Offset(0, 0.04),
-                end: Offset.zero,
-              ).animate(curved),
-              child: child,
-            ),
-          );
-        },
       ),
     );
   }
-}
-
-class _FocusedEditorScreen extends StatefulWidget {
-  final String initialValue;
-  final String title;
-  final String hint;
-
-  const _FocusedEditorScreen({
-    required this.initialValue,
-    required this.title,
-    required this.hint,
-  });
 
   @override
-  State<_FocusedEditorScreen> createState() => _FocusedEditorScreenState();
+  State<FocusedEditor> createState() => _FocusedEditorState();
 }
 
-class _FocusedEditorScreenState extends State<_FocusedEditorScreen> {
-  late final TextEditingController _controller;
-  late final FocusNode _focusNode;
+class _FocusedEditorState extends State<FocusedEditor> {
+  late final quill.QuillController _controller;
+  final FocusNode _focusNode = FocusNode();
+  bool _isImporting = false;
 
   @override
   void initState() {
     super.initState();
-    _controller = TextEditingController(text: widget.initialValue);
-    _focusNode = FocusNode();
-    // Defer focus so the transition can settle — focusing during the slide-in
-    // makes the IME race the animation and the surface tears for one frame.
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (mounted) _focusNode.requestFocus();
-    });
+    final doc = widget.initialValue.isNotEmpty
+        ? (quill.Document()..insert(0, widget.initialValue))
+        : quill.Document();
+
+    _controller = quill.QuillController(
+      document: doc,
+      selection: const TextSelection.collapsed(offset: 0),
+    );
+    _controller.addListener(_onTextChanged);
   }
 
   @override
   void dispose() {
+    _controller.removeListener(_onTextChanged);
     _controller.dispose();
     _focusNode.dispose();
     super.dispose();
   }
 
+  void _onTextChanged() {
+    setState(() {}); // Rebuild word/char count
+  }
+
   int get _wordCount {
-    final t = _controller.text.trim();
+    final t = _controller.document.toPlainText().trim();
     if (t.isEmpty) return 0;
     return t.split(RegExp(r'\s+')).length;
   }
 
-  Future<void> _paste() async {
-    final data = await Clipboard.getData(Clipboard.kTextPlain);
-    final text = data?.text;
-    if (text == null || text.isEmpty) return;
-    final selection = _controller.selection;
-    final start = selection.isValid ? selection.start : _controller.text.length;
-    final end = selection.isValid ? selection.end : _controller.text.length;
-    final newText = _controller.text.replaceRange(start, end, text);
-    _controller.value = TextEditingValue(
-      text: newText,
-      selection: TextSelection.collapsed(offset: start + text.length),
-    );
-    setState(() {});
-  }
-
-  void _clear() {
-    _controller.clear();
-    setState(() {});
+  int get _charCount {
+    final t = _controller.document.toPlainText();
+    return (t.length - 1).clamp(0, double.infinity).toInt();
   }
 
   void _done() {
+    final text = _controller.document.toPlainText().trim();
+    Navigator.of(context).pop(text);
+  }
+
+  /// Inserts imported text into the editor, replacing any current selection
+  /// or appending if the doc is empty.
+  void _insertText(String text) {
+    if (text.isEmpty) return;
+    final currentText = _controller.document.toPlainText().trim();
+    if (currentText.isEmpty) {
+      // Replace the empty document
+      _controller.replaceText(0, _controller.document.length - 1, text, null);
+    } else {
+      // Append with a separator
+      final len = _controller.document.length - 1;
+      _controller.replaceText(len, 0, '\n\n$text', null);
+    }
+    setState(() {});
+  }
+
+  /// Shows the import bottom sheet with File and URL options.
+  void _showImportSheet() {
     HapticFeedback.selectionClick();
-    Navigator.of(context).pop(_controller.text);
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.transparent,
+      isScrollControlled: true,
+      builder: (sheetCtx) => _ImportBottomSheet(
+        onFileImport: () async {
+          Navigator.of(sheetCtx).pop();
+          setState(() => _isImporting = true);
+          try {
+            final result = await DocumentService.pickFile();
+            if (result != null && result.text.isNotEmpty) {
+              _insertText(result.text);
+              if (mounted) {
+                ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+                  content: Text('Imported: ${result.title ?? 'document'}'),
+                  duration: const Duration(seconds: 2),
+                ));
+              }
+            } else if (result != null && mounted) {
+              ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+                content: Text('No text could be extracted from this file'),
+              ));
+            }
+          } finally {
+            if (mounted) setState(() => _isImporting = false);
+          }
+        },
+        onUrlImport: () {
+          Navigator.of(sheetCtx).pop();
+          Future.delayed(const Duration(milliseconds: 200), () {
+            if (!mounted) return;
+            showModalBottomSheet(
+              context: context,
+              backgroundColor: Colors.transparent,
+              isScrollControlled: true,
+              builder: (_) => UrlImportDialog(
+                onImported: (result) {
+                  _insertText(result.text);
+                  if (mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+                      content: Text('Imported: ${result.title ?? result.sourceUrl ?? 'URL'}'),
+                      duration: const Duration(seconds: 2),
+                    ));
+                  }
+                },
+              ),
+            );
+          });
+        },
+      ),
+    );
   }
 
   @override
@@ -142,91 +165,128 @@ class _FocusedEditorScreenState extends State<_FocusedEditorScreen> {
 
     return Scaffold(
       backgroundColor: cs.surface,
-      // The editor itself owns the bottom inset — we let the IME push the
-      // toolbar instead of leaving an empty band.
-      resizeToAvoidBottomInset: true,
-      appBar: AppBar(
-        backgroundColor: cs.surface,
-        elevation: 0,
-        scrolledUnderElevation: 0,
-        leading: _RoundChevron(
-          onTap: () => Navigator.of(context).pop(),
-          icon: CupertinoIcons.chevron_back,
-        ),
-        title: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              widget.title,
-              style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                    fontWeight: FontWeight.w600,
-                  ),
-            ),
-            const SizedBox(height: 2),
-            AnimatedBuilder(
-              animation: _controller,
-              builder: (_, __) => Text(
-                '$_wordCount ${_wordCount == 1 ? "word" : "words"}',
-                style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                      color: cs.onSurfaceVariant,
+      extendBodyBehindAppBar: true,
+      extendBody: true,
+      appBar: PreferredSize(
+        preferredSize: const Size.fromHeight(70),
+        child: ClipRRect(
+          child: BackdropFilter(
+            filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
+            child: Container(
+              color: cs.surface.withValues(alpha: 0.7),
+              padding: EdgeInsets.only(
+                  top: MediaQuery.of(context).padding.top + 8,
+                  left: 16,
+                  right: 16,
+                  bottom: 8),
+              child: Row(
+                children: [
+                  GestureDetector(
+                    onTap: () => Navigator.of(context).pop(),
+                    child: Container(
+                      padding: const EdgeInsets.all(8),
+                      decoration: BoxDecoration(
+                        color: cs.surfaceContainerHighest.withValues(alpha: 0.5),
+                        shape: BoxShape.circle,
+                      ),
+                      child: Icon(CupertinoIcons.chevron_back,
+                          color: cs.onSurface, size: 20),
                     ),
-              ),
-            ),
-          ],
-        ),
-        actions: [
-          Padding(
-            padding: const EdgeInsets.only(right: 12),
-            child: Center(
-              child: GestureDetector(
-                onTap: _done,
-                child: Container(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
-                  decoration: BoxDecoration(
-                    color: cs.primary,
-                    borderRadius: BorderRadius.circular(999),
                   ),
-                  child: Text(
-                    'Done',
-                    style: Theme.of(context).textTheme.labelLarge?.copyWith(
-                          color: cs.onPrimary,
-                          fontWeight: FontWeight.w600,
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Text(
+                          widget.title,
+                          style: Theme.of(context)
+                              .textTheme
+                              .titleMedium
+                              ?.copyWith(fontWeight: FontWeight.w600),
                         ),
+                        Text(
+                          '$_wordCount words · $_charCount chars',
+                          style: Theme.of(context)
+                              .textTheme
+                              .labelSmall
+                              ?.copyWith(color: cs.onSurfaceVariant),
+                        ),
+                      ],
+                    ),
+                  ),
+                  GestureDetector(
+                    onTap: _done,
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 16, vertical: 8),
+                      decoration: BoxDecoration(
+                        color: cs.primary,
+                        borderRadius: BorderRadius.circular(999),
+                      ),
+                      child: Text(
+                        'Done',
+                        style: Theme.of(context).textTheme.labelMedium?.copyWith(
+                              color: cs.onPrimary,
+                              fontWeight: FontWeight.bold,
+                            ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ),
+      body: Stack(
+        children: [
+          SafeArea(
+            top: false,
+            bottom: false,
+            child: quill.QuillEditor.basic(
+              controller: _controller,
+              focusNode: _focusNode,
+              config: quill.QuillEditorConfig(
+                padding: EdgeInsets.fromLTRB(
+                    20, MediaQuery.of(context).padding.top + 80, 20, 100),
+                placeholder: widget.hint ?? "Start typing...",
+                customStyles: quill.DefaultStyles(
+                  paragraph: quill.DefaultTextBlockStyle(
+                    Theme.of(context).textTheme.bodyLarge!.copyWith(
+                          fontSize: 17,
+                          height: 1.6,
+                          color: cs.onSurface,
+                        ),
+                    const quill.HorizontalSpacing(0, 0),
+                    const quill.VerticalSpacing(0, 0),
+                    const quill.VerticalSpacing(0, 0),
+                    null,
                   ),
                 ),
               ),
             ),
           ),
-        ],
-      ),
-      body: SafeArea(
-        top: false,
-        child: Padding(
-          padding: const EdgeInsets.fromLTRB(20, 8, 20, 0),
-          child: TextField(
-            controller: _controller,
-            focusNode: _focusNode,
-            maxLines: null,
-            expands: true,
-            textAlignVertical: TextAlignVertical.top,
-            keyboardType: TextInputType.multiline,
-            textCapitalization: TextCapitalization.sentences,
-            style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                  height: 1.55,
-                  fontSize: 16.5,
-                ),
-            decoration: InputDecoration(
-              hintText: widget.hint,
-              hintStyle: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                    color: cs.onSurfaceVariant.withValues(alpha: 0.6),
-                    fontSize: 16.5,
+          // Importing overlay
+          if (_isImporting)
+            Positioned.fill(
+              child: Container(
+                color: cs.surface.withValues(alpha: 0.75),
+                child: Center(
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      CircularProgressIndicator(color: cs.primary),
+                      const SizedBox(height: 16),
+                      Text('Extracting text…',
+                          style: Theme.of(context).textTheme.bodyMedium),
+                    ],
                   ),
-              border: InputBorder.none,
-              contentPadding: EdgeInsets.zero,
+                ),
+              ),
             ),
-          ),
-        ),
+        ],
       ),
       bottomNavigationBar: SafeArea(
         top: false,
@@ -236,25 +296,32 @@ class _FocusedEditorScreenState extends State<_FocusedEditorScreen> {
             _ToolbarButton(
               icon: CupertinoIcons.doc_on_clipboard,
               label: 'Paste',
-              onTap: _paste,
+              onTap: () async {
+                final data = await Clipboard.getData(Clipboard.kTextPlain);
+                final text = data?.text;
+                if (text != null && text.isNotEmpty) {
+                  final index = _controller.selection.baseOffset;
+                  final length = _controller.selection.extentOffset - index;
+                  _controller.replaceText(index, length, text, null);
+                }
+              },
             ),
             const SizedBox(width: 8),
             _ToolbarButton(
               icon: CupertinoIcons.delete,
               label: 'Clear',
-              onTap: _controller.text.isEmpty
+              onTap: _controller.document.toPlainText().trim().isEmpty
                   ? null
                   : () {
                       HapticFeedback.selectionClick();
-                      _clear();
+                      _controller.replaceText(
+                          0, _controller.document.length - 1, '', null);
                     },
             ),
             const Spacer(),
-            _ToolbarButton(
-              icon: CupertinoIcons.checkmark_alt,
-              label: 'Done',
-              onTap: _done,
-              emphasized: true,
+            // ── Import button ──────────────────────────
+            _ImportButton(
+              onTap: _isImporting ? null : _showImportSheet,
             ),
           ],
         ),
@@ -263,57 +330,217 @@ class _FocusedEditorScreenState extends State<_FocusedEditorScreen> {
   }
 }
 
-class _ToolbarButton extends StatelessWidget {
-  final IconData icon;
-  final String label;
-  final VoidCallback? onTap;
-  final bool emphasized;
+// ─────────────────────────────────────────────────────────
+// Import Bottom Sheet
+// ─────────────────────────────────────────────────────────
 
-  const _ToolbarButton({
-    required this.icon,
-    required this.label,
-    required this.onTap,
-    this.emphasized = false,
+class _ImportBottomSheet extends StatelessWidget {
+  final VoidCallback onFileImport;
+  final VoidCallback onUrlImport;
+
+  const _ImportBottomSheet({
+    required this.onFileImport,
+    required this.onUrlImport,
   });
 
   @override
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
-    final enabled = onTap != null;
-    final bg = emphasized
-        ? cs.primary
-        : cs.surfaceContainerHigh;
-    final fg = emphasized
-        ? cs.onPrimary
-        : (enabled ? cs.onSurface : cs.onSurfaceVariant);
 
-    return Opacity(
-      opacity: enabled ? 1.0 : 0.45,
-      child: GestureDetector(
+    return Container(
+      margin: const EdgeInsets.all(16),
+      padding: const EdgeInsets.fromLTRB(20, 20, 20, 24),
+      decoration: BoxDecoration(
+        color: cs.surface,
+        borderRadius: BorderRadius.circular(24),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.12),
+            blurRadius: 20,
+            offset: const Offset(0, -4),
+          ),
+        ],
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Handle
+          Center(
+            child: Container(
+              width: 36,
+              height: 4,
+              decoration: BoxDecoration(
+                color: cs.onSurfaceVariant.withValues(alpha: 0.2),
+                borderRadius: BorderRadius.circular(2),
+              ),
+            ),
+          ),
+          const SizedBox(height: 16),
+          Text(
+            'Import Content',
+            style: Theme.of(context)
+                .textTheme
+                .titleMedium
+                ?.copyWith(fontWeight: FontWeight.w700),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            'Choose a source to import text from',
+            style: Theme.of(context)
+                .textTheme
+                .bodySmall
+                ?.copyWith(color: cs.onSurfaceVariant),
+          ),
+          const SizedBox(height: 20),
+          // File option
+          _ImportOptionTile(
+            icon: CupertinoIcons.doc_fill,
+            iconColor: cs.primary,
+            title: 'From File',
+            subtitle: 'PDF · DOCX · TXT · MD',
+            onTap: onFileImport,
+          ),
+          const SizedBox(height: 10),
+          // URL option
+          _ImportOptionTile(
+            icon: CupertinoIcons.link_circle_fill,
+            iconColor: const Color(0xFF0891B2),
+            title: 'From URL',
+            subtitle: 'Web pages · Online PDFs · Google Docs',
+            onTap: onUrlImport,
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _ImportOptionTile extends StatelessWidget {
+  final IconData icon;
+  final Color iconColor;
+  final String title;
+  final String subtitle;
+  final VoidCallback onTap;
+
+  const _ImportOptionTile({
+    required this.icon,
+    required this.iconColor,
+    required this.title,
+    required this.subtitle,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
         onTap: onTap,
+        borderRadius: BorderRadius.circular(16),
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
+          decoration: BoxDecoration(
+            color: iconColor.withValues(alpha: 0.07),
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(color: iconColor.withValues(alpha: 0.15)),
+          ),
+          child: Row(
+            children: [
+              Container(
+                width: 44,
+                height: 44,
+                decoration: BoxDecoration(
+                  color: iconColor,
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Icon(icon, color: Colors.white, size: 22),
+              ),
+              const SizedBox(width: 14),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      title,
+                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                            fontWeight: FontWeight.w700,
+                            color: iconColor,
+                          ),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      subtitle,
+                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                            color: cs.onSurfaceVariant,
+                            fontSize: 11,
+                          ),
+                    ),
+                  ],
+                ),
+              ),
+              Icon(CupertinoIcons.chevron_right,
+                  size: 16, color: cs.onSurfaceVariant),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+// ─────────────────────────────────────────────────────────
+// Import FAB-style button (bottom-right)
+// ─────────────────────────────────────────────────────────
+
+class _ImportButton extends StatefulWidget {
+  final VoidCallback? onTap;
+  const _ImportButton({this.onTap});
+
+  @override
+  State<_ImportButton> createState() => _ImportButtonState();
+}
+
+class _ImportButtonState extends State<_ImportButton> {
+  bool _pressed = false;
+
+  @override
+  Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+    final enabled = widget.onTap != null;
+
+    return GestureDetector(
+      onTapDown: enabled ? (_) => setState(() => _pressed = true) : null,
+      onTapUp: enabled ? (_) => setState(() => _pressed = false) : null,
+      onTapCancel: enabled ? () => setState(() => _pressed = false) : null,
+      onTap: widget.onTap,
+      child: Opacity(
+        opacity: enabled ? 1.0 : 0.4,
         child: AnimatedContainer(
           duration: const Duration(milliseconds: 120),
-          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 9),
           decoration: BoxDecoration(
-            color: bg,
-            borderRadius: BorderRadius.circular(12),
-            border: emphasized
-                ? null
-                : Border.all(
-                    color: cs.outlineVariant.withValues(alpha: 0.5),
-                    width: 0.5,
-                  ),
+            color: _pressed
+                ? cs.primary.withValues(alpha: 0.85)
+                : cs.primary.withValues(alpha: 0.12),
+            borderRadius: BorderRadius.circular(999),
+            border: Border.all(color: cs.primary.withValues(alpha: 0.3)),
           ),
           child: Row(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Icon(icon, size: 16, color: fg),
-              const SizedBox(width: 8),
+              Icon(
+                CupertinoIcons.arrow_down_doc_fill,
+                size: 16,
+                color: _pressed ? cs.onPrimary : cs.primary,
+              ),
+              const SizedBox(width: 6),
               Text(
-                label,
-                style: Theme.of(context).textTheme.labelLarge?.copyWith(
-                      color: fg,
-                      fontWeight: FontWeight.w500,
+                'Import',
+                style: Theme.of(context).textTheme.labelMedium?.copyWith(
+                      color: _pressed ? cs.onPrimary : cs.primary,
+                      fontWeight: FontWeight.w700,
                     ),
               ),
             ],
@@ -324,29 +551,40 @@ class _ToolbarButton extends StatelessWidget {
   }
 }
 
-class _RoundChevron extends StatefulWidget {
-  final VoidCallback onTap;
+// ─────────────────────────────────────────────────────────
+// Generic toolbar icon button
+// ─────────────────────────────────────────────────────────
+
+class _ToolbarButton extends StatefulWidget {
   final IconData icon;
-  const _RoundChevron({required this.onTap, required this.icon});
+  final String label;
+  final VoidCallback? onTap;
+
+  const _ToolbarButton({
+    required this.icon,
+    required this.label,
+    required this.onTap,
+  });
 
   @override
-  State<_RoundChevron> createState() => _RoundChevronState();
+  State<_ToolbarButton> createState() => _ToolbarButtonState();
 }
 
-class _RoundChevronState extends State<_RoundChevron> {
+class _ToolbarButtonState extends State<_ToolbarButton> {
   bool _pressed = false;
 
   @override
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
-    return Padding(
-      padding: const EdgeInsets.only(left: 8),
-      child: GestureDetector(
-        behavior: HitTestBehavior.opaque,
-        onTapDown: (_) => setState(() => _pressed = true),
-        onTapCancel: () => setState(() => _pressed = false),
-        onTapUp: (_) => setState(() => _pressed = false),
-        onTap: widget.onTap,
+    final enabled = widget.onTap != null;
+
+    return GestureDetector(
+      onTapDown: enabled ? (_) => setState(() => _pressed = true) : null,
+      onTapUp: enabled ? (_) => setState(() => _pressed = false) : null,
+      onTapCancel: enabled ? () => setState(() => _pressed = false) : null,
+      onTap: widget.onTap,
+      child: Opacity(
+        opacity: enabled ? 1.0 : 0.4,
         child: AnimatedContainer(
           duration: const Duration(milliseconds: 120),
           width: 36,
@@ -363,7 +601,3 @@ class _RoundChevronState extends State<_RoundChevron> {
     );
   }
 }
-
-// Re-export the toast extension so call sites can flash a quick notice when
-// committing edits, e.g. context.showToast('Updated', variant: .success).
-typedef FocusedEditorToast = RewordiumToastContext;

@@ -260,4 +260,12 @@ dependencies {
     
     // ========== REBOARD KEYBOARD MODULE ==========
     implementation(project(":reboard_keyboard"))
+
+    // ========== ML KIT TEXT RECOGNITION LANGUAGE PACKS ==========
+    // Latin is bundled by default with google_mlkit_text_recognition Flutter plugin.
+    // Add extra script packs for multi-language document scanning:
+    implementation("com.google.mlkit:text-recognition-chinese:16.0.1")
+    implementation("com.google.mlkit:text-recognition-devanagari:16.0.1")
+    implementation("com.google.mlkit:text-recognition-japanese:16.0.1")
+    implementation("com.google.mlkit:text-recognition-korean:16.0.1")
 }

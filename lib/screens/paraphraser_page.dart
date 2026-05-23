@@ -876,24 +876,56 @@ class _ParaphraserPageState extends State<ParaphraserPage>
         Expanded(
           child: Container(
             width: double.infinity,
-            padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
               color: colorScheme.surfaceContainer,
               borderRadius: BorderRadius.circular(16),
               border: Border.all(
                   color: colorScheme.primary.withValues(alpha: 0.15)),
             ),
-            child: SingleChildScrollView(
-              physics: const BouncingScrollPhysics(),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  SelectableText(
-                    _resultController.text,
+            child: Column(
+              children: [
+                Expanded(
+                  child: TextField(
+                    controller: _resultController,
+                    maxLines: null,
+                    expands: true,
+                    readOnly: true,
+                    showCursor: false,
+                    textAlignVertical: TextAlignVertical.top,
                     style: Theme.of(context).textTheme.bodyMedium!,
+                    decoration: InputDecoration(
+                      contentPadding: const EdgeInsets.all(16),
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(16),
+                        borderSide: BorderSide.none,
+                      ),
+                      filled: true,
+                      fillColor: Colors.transparent,
+                    ),
+                    onTap: () async {
+                      final result = await FocusedEditor.open(
+                        context,
+                        initialValue: _resultController.text,
+                        title: 'Result',
+                      );
+                      if (result != null) {
+                        setState(() {
+                          _resultController.text = result;
+                        });
+                        _persistDraft();
+                      }
+                    },
                   ),
-                  if (_alternatives.isNotEmpty) ...[
-                    const SizedBox(height: 16),
+                ),
+                if (_alternatives.isNotEmpty)
+                  Expanded(
+                    child: SingleChildScrollView(
+                      physics: const BouncingScrollPhysics(),
+                      padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const SizedBox(height: 16),
                     Container(
                       padding: const EdgeInsets.symmetric(
                           horizontal: 10, vertical: 4),
@@ -965,9 +997,11 @@ class _ParaphraserPageState extends State<ParaphraserPage>
                         ),
                       );
                     }),
-                  ],
-                ],
-              ),
+                        ],
+                      ),
+                    ),
+                  ),
+              ],
             ),
           ),
         ),

@@ -288,7 +288,7 @@ abstract class FlorisPreferenceModel : PreferenceModel() {
         )
         val suggestionCandidateMaxCount = int(
             key = "emoji__suggestion_candidate_max_count",
-            default = 5,
+            default = 2,
         )
     }
 
@@ -739,7 +739,7 @@ abstract class FlorisPreferenceModel : PreferenceModel() {
         )
         val displayMode = enum(
             key = "suggestion__display_mode",
-            default = CandidatesDisplayMode.DYNAMIC_SCROLLABLE,
+            default = CandidatesDisplayMode.CLASSIC,
         )
         val blockPossiblyOffensive = boolean(
             key = "suggestion__block_possibly_offensive",

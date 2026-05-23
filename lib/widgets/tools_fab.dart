@@ -125,22 +125,8 @@ class _ToolsFabState extends State<ToolsFab>
           clipBehavior: Clip.none,
           alignment: Alignment.bottomRight,
           children: [
-            // Scrim — covers the rest of the screen when the menu is open so
-            // an outside tap closes it. Positioned slack so it doesn't fight
-            // the FAB's own gesture area.
-            if (t > 0.01)
-              Positioned.fill(
-                child: IgnorePointer(
-                  ignoring: !_isOpen,
-                  child: GestureDetector(
-                    behavior: HitTestBehavior.opaque,
-                    onTap: _isOpen ? _toggleMenu : null,
-                    child: Container(
-                      color: Colors.black.withValues(alpha: 0.18 * t.clamp(0.0, 1.0)),
-                    ),
-                  ),
-                ),
-              ),
+            // Scrim was removed because it was rendering as a localized black box 
+            // behind the FAB column instead of a full-screen overlay.
             Column(
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.end,

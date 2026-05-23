@@ -101,6 +101,7 @@ dependencies:
   m3e_collection: ^0.3.7
   expressive_refresh: ^0.1.2
   dynamic_color: ^1.8.1
+  flutter_quill: ^11.5.0
 
 dev_dependencies:
   flutter_test:
