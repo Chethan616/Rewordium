@@ -74,8 +74,14 @@ post_install do |installer|
       if Gem::Version.new($iOSVersion) > Gem::Version.new(config.build_settings['IPHONEOS_DEPLOYMENT_TARGET'] || '0')
         config.build_settings['IPHONEOS_DEPLOYMENT_TARGET'] = $iOSVersion
       end
-      # Strip simulator arches for App Store / Sideloadly builds.
-      config.build_settings['EXCLUDED_ARCHS[sdk=iphonesimulator*]'] = 'arm64'
+      # DO NOT exclude arm64 from iphonesimulator builds. That used to be an
+      # Intel-Mac workaround for pods that only shipped x86_64 sim slices;
+      # on Apple Silicon (which is what Codemagic's M-series builders use,
+      # and what every modern Mac uses) the simulator itself runs arm64, so
+      # excluding it makes pods like cunning_document_scanner compile for
+      # zero architectures → "Module 'cunning_document_scanner' not found"
+      # in GeneratedPluginRegistrant.m. Leave architecture selection to the
+      # toolchain.
     end
   end
 end
