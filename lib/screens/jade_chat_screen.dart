@@ -54,7 +54,7 @@ class _JadeChatScreenState extends State<JadeChatScreen>
   void _addWelcomeMessage() {
     _messages.add(ChatMessage(
       content:
-          'Paste text to rewrite or ask anything. I can change app settings too.',
+          'Paste text to rewrite, ask anything, or tell me to change a setting (theme, haptics, sound, text size, notifications…).',
       isUser: false,
       timestamp: DateTime.now(),
     ));
@@ -83,7 +83,12 @@ class _JadeChatScreenState extends State<JadeChatScreen>
           await JadeSettingsController.processCommand(message, context);
 
       String response;
-      if (settingsResponse.isNotEmpty) {
+      // settingsResponse non-empty means Jade actually executed something
+      // (changed a pref, toggled a theme, opened a system panel). Render it
+      // as an "action receipt" so the user sees that Jade has hands, not
+      // just a chat box.
+      final isActionReceipt = settingsResponse.isNotEmpty;
+      if (isActionReceipt) {
         response = settingsResponse;
       } else {
         await GroqService.initialize();
@@ -118,6 +123,7 @@ class _JadeChatScreenState extends State<JadeChatScreen>
           content: response,
           isUser: false,
           timestamp: DateTime.now(),
+          isActionReceipt: isActionReceipt,
         ));
         _isTyping = false;
       });
@@ -264,7 +270,71 @@ class _MessageBlock extends StatelessWidget {
         top: isStartOfGroup ? 18 : 4,
         bottom: isEndOfGroup ? 2 : 0,
       ),
-      child: message.isUser ? _userBubble(context) : _assistantBlock(context),
+      child: message.isUser
+          ? _userBubble(context)
+          : (message.isActionReceipt
+              ? _actionReceipt(context)
+              : _assistantBlock(context)),
+    );
+  }
+
+  Widget _actionReceipt(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+    return Padding(
+      padding: const EdgeInsets.only(right: 24),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+        decoration: BoxDecoration(
+          color: cs.primaryContainer.withValues(alpha: 0.35),
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(
+            color: cs.primary.withValues(alpha: 0.25),
+            width: 0.5,
+          ),
+        ),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Container(
+              width: 22,
+              height: 22,
+              margin: const EdgeInsets.only(top: 1, right: 10),
+              decoration: BoxDecoration(
+                color: cs.primary,
+                shape: BoxShape.circle,
+              ),
+              child: Icon(
+                CupertinoIcons.checkmark_alt,
+                size: 14,
+                color: cs.onPrimary,
+              ),
+            ),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Done',
+                    style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                          color: cs.primary,
+                          fontWeight: FontWeight.w700,
+                          letterSpacing: 0.3,
+                        ),
+                  ),
+                  const SizedBox(height: 2),
+                  SelectableText(
+                    message.content,
+                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                          color: cs.onSurface,
+                          height: 1.4,
+                        ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
     );
   }
 
@@ -402,11 +472,18 @@ class _Starters extends StatelessWidget {
   final ValueChanged<String> onPick;
   const _Starters({required this.onPick});
 
-  static const _items = <(String, String)>[
-    ('Improve this', 'Improve this: '),
-    ('Paraphrase', 'Paraphrase: '),
-    ('Make formal', 'Rewrite this formally: '),
-    ('What can you do?', 'What can you help me with?'),
+  // Two kinds of starters mixed together: writing prompts (which open the
+  // composer with a prefix, letting the user paste text) and *action*
+  // starters that show Jade's hands — toggles a setting on tap. The mix is
+  // intentional: a brand-new user should discover that Jade isn't just a
+  // chat bubble, it can change the app state too.
+  static const _items = <(String, String, bool)>[
+    ('Improve this', 'Improve this: ', false),
+    ('Paraphrase', 'Paraphrase: ', false),
+    ('Dark mode', 'Switch to dark mode', true),
+    ('Mute haptics', 'Turn off haptics', true),
+    ('What can you change?',
+        'List every app setting you can change for me', false),
   ];
 
   @override
@@ -426,20 +503,39 @@ class _Starters extends StatelessWidget {
                         padding: const EdgeInsets.symmetric(
                             horizontal: 12, vertical: 7),
                         decoration: BoxDecoration(
-                          color: cs.surfaceContainerHigh,
+                          color: item.$3
+                              ? cs.primary.withValues(alpha: 0.10)
+                              : cs.surfaceContainerHigh,
                           borderRadius: BorderRadius.circular(999),
                           border: Border.all(
-                            color: cs.outlineVariant.withValues(alpha: 0.6),
+                            color: item.$3
+                                ? cs.primary.withValues(alpha: 0.30)
+                                : cs.outlineVariant.withValues(alpha: 0.6),
                             width: 0.5,
                           ),
                         ),
-                        child: Text(
-                          item.$1,
-                          style:
-                              Theme.of(context).textTheme.labelMedium?.copyWith(
-                                    color: cs.onSurface,
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            if (item.$3) ...[
+                              Icon(
+                                CupertinoIcons.bolt_fill,
+                                size: 11,
+                                color: cs.primary,
+                              ),
+                              const SizedBox(width: 5),
+                            ],
+                            Text(
+                              item.$1,
+                              style: Theme.of(context)
+                                  .textTheme
+                                  .labelMedium
+                                  ?.copyWith(
+                                    color: item.$3 ? cs.primary : cs.onSurface,
                                     fontWeight: FontWeight.w500,
                                   ),
+                            ),
+                          ],
                         ),
                       ),
                     ),
@@ -621,11 +717,16 @@ class ChatMessage {
   final bool isUser;
   final DateTime timestamp;
   final bool isError;
+  /// True when the reply came from JadeSettingsController — i.e. Jade actually
+  /// performed an in-app action (theme toggle, pref write, navigation).
+  /// Rendered as a compact action card instead of an open-ended chat reply.
+  final bool isActionReceipt;
 
   ChatMessage({
     required this.content,
     required this.isUser,
     required this.timestamp,
     this.isError = false,
+    this.isActionReceipt = false,
   });
 }

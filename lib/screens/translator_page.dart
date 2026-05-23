@@ -8,6 +8,7 @@ import 'package:m3e_collection/m3e_collection.dart';
 
 import '../widgets/custom_app_bar.dart';
 import '../widgets/custom_button.dart';
+import '../widgets/focused_editor.dart';
 import '../utils/lottie_assets.dart';
 import '../providers/auth_provider.dart';
 import '../services/unified_ai_service.dart';
@@ -417,10 +418,12 @@ class _TranslatorPageState extends State<TranslatorPage> {
                     controller: _controller,
                     maxLines: null,
                     expands: true,
+                    readOnly: true,
+                    showCursor: false,
                     textAlignVertical: TextAlignVertical.top,
                     style: Theme.of(context).textTheme.bodyMedium!,
                     decoration: InputDecoration(
-                      hintText: "Enter text to translate...",
+                      hintText: "Tap to translate…",
                       contentPadding: const EdgeInsets.symmetric(
                           vertical: 16, horizontal: 16),
                       border: OutlineInputBorder(
@@ -430,6 +433,18 @@ class _TranslatorPageState extends State<TranslatorPage> {
                       filled: true,
                       fillColor: Theme.of(context).colorScheme.surface,
                     ),
+                    onTap: () async {
+                      final result = await FocusedEditor.open(
+                        context,
+                        initialValue: _controller.text,
+                        title: 'Translate',
+                        hint: 'Paste or type the text you want to translate…',
+                      );
+                      if (result != null) {
+                        _controller.text = result;
+                        setState(() {});
+                      }
+                    },
                   ),
                 ),
               ),
