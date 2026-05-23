@@ -1,6 +1,6 @@
 workflows:
   ios_sideloadly:
-    name: iOS Simulator Build
+    name: iOS Sideloadly Build
     instance_type: mac_mini_m2
     max_build_duration: 90
 
@@ -9,7 +9,7 @@ workflows:
       # Xcode 26.5 (Swift 6.3, iOS 26 SDK):
       #  • KeyboardKit 10.5+ binary compiled with Swift 6.2.4 — needs ≥6.2 compiler
       #  • Xcode 26.4 only has Swift 6.1.2 → "SDK not supported by the compiler"
-      #  • FoundationModels + Liquid Glass APIs require iOS 26 SDK
+      #  • Liquid Glass / FoundationModels APIs require iOS 26 SDK
       xcode: 26.5
       cocoapods: default
 
@@ -24,12 +24,11 @@ workflows:
 
     cache:
       cache_paths:
-        - $HOME/Library/Caches/CocoaPods  # specs cache only, NOT resolved Pods
+        - $HOME/Library/Caches/CocoaPods
         - $HOME/Library/Caches/org.swift.swiftpm
         - $HOME/Library/Developer/Xcode/DerivedData/SourcePackages
         - $HOME/.pub-cache
-        # ios/Pods is intentionally NOT cached — stale resolved pods cause
-        # version-conflict errors when new pods (e.g. MLKit language packs) are added.
+        - $CM_BUILD_DIR/ios/Pods
 
     scripts:
       - name: Install dependencies
@@ -60,15 +59,12 @@ workflows:
               sys.exit(1)
 
           pathlib.Path("ios/Runner").mkdir(parents=True, exist_ok=True)
-
           with open("ios/Runner/GoogleService-Info.plist", "wb") as f:
               f.write(base64.b64decode(gs))
 
           app_id = os.environ.get("IOS_FIREBASE_APP_ID_FILE_BASE64", "")
-
           if app_id:
               pathlib.Path("ios").mkdir(parents=True, exist_ok=True)
-
               with open("ios/firebase_app_id_file.json", "wb") as f:
                   f.write(base64.b64decode(app_id))
           PY
@@ -80,103 +76,66 @@ workflows:
 
       - name: Wire RewordiumKeyboard extension target
         script: |
+          # Idempotent — adds the keyboard extension target to Runner.xcodeproj.
+          # The `xcodeproj` gem ships with the Codemagic mac image (CocoaPods uses it).
           gem list xcodeproj -i >/dev/null 2>&1 || sudo gem install xcodeproj --no-document
           cd ios
           ruby scripts/setup_keyboard_target.rb
 
       - name: Resolve SwiftPM packages
         script: |
+          # Pre-fetch KeyboardKit so the cache populates before the build.
+          # Idempotent — re-runs hit $HOME/Library/Caches/org.swift.swiftpm.
           xcodebuild -resolvePackageDependencies \
             -workspace "$XCODE_WORKSPACE" \
             -scheme "$XCODE_SCHEME" \
             -clonedSourcePackagesDirPath build/ios/SourcePackages
 
-      - name: Strip MLKit from iOS plugin deps (sim only)
+      - name: Build iOS app (no codesign)
         script: |
-          # Why this exists:
-          #   GoogleMLKit, MLImage, MLKitCommon, MLKitVision don't ship
-          #   arm64-simulator slices. We need arm64 sim for iOS 26 +
-          #   Liquid Glass testing, so MLKit on sim is fundamentally
-          #   incompatible. Instead of patching generated files after the
-          #   fact (we tried; xcconfigs/embed scripts have too many edges),
-          #   we strip the `google_mlkit_*` plugin entries from
-          #   `.flutter-plugins-dependencies` here. Then:
-          #     • `flutter build ios --no-pub` won't regenerate the file
-          #     • `injectPlugins` reads the stripped file → emits a
-          #       GeneratedPluginRegistrant.m without MLKit references
-          #     • `flutter_install_all_ios_pods` reads the stripped file
-          #       → never installs MLKit pods → linker has nothing to
-          #       miss
-          #     • Podfile's `has_mlkit_plugins` check self-skips the
-          #       language-pack pods
-          #   On-device builds use a different workflow and don't run
-          #   this script, so OCR keeps working on real iPhones.
-          python3 - <<'PY'
-          import json
-          from pathlib import Path
-
-          p = Path('.flutter-plugins-dependencies')
-          if not p.exists():
-              print('[strip-mlkit] .flutter-plugins-dependencies not found, skipping')
-              raise SystemExit(0)
-
-          data = json.loads(p.read_text())
-          removed = []
-          plugins = data.get('plugins', {})
-
-          for platform_key in ('ios', 'macos'):
-              platform_plugins = plugins.get(platform_key) or []
-              kept = []
-              for plug in platform_plugins:
-                  name = plug.get('name', '')
-                  if name.startswith('google_mlkit_'):
-                      removed.append(f'{platform_key}:{name}')
-                  else:
-                      kept.append(plug)
-              plugins[platform_key] = kept
-
-          # Also strip from the top-level `dependencyGraph` so other
-          # tooling (e.g. injectPlugins on macOS) sees a consistent view.
-          dep_graph = data.get('dependencyGraph') or []
-          data['dependencyGraph'] = [
-              entry for entry in dep_graph
-              if not entry.get('name', '').startswith('google_mlkit_')
-          ]
-
-          p.write_text(json.dumps(data, indent=2))
-          print(f'[strip-mlkit] Removed {len(removed)} MLKit plugin entries: {removed}')
-          PY
-
-      - name: Update CocoaPods repo (required for MLKit 9.x specs)
-        script: |
-          pod repo update
-
-      - name: Build iOS Simulator App
-        script: |
-          # Inject build settings into Debug.xcconfig (simulator builds use Debug).
-          # Pin app to arm64 simulator (exclude x86_64) so iOS 26
-          # simulators run it — required for Liquid Glass (`.glassEffect()`
-          # in RewordiumKeyboard) and any future FoundationModels usage.
-          # Suppress StoreKit 1 deprecation warnings (in_app_purchase_storekit legacy ObjC).
-          cat >> ios/Flutter/Debug.xcconfig <<'XCFG'
-          EXCLUDED_ARCHS[sdk=iphonesimulator*] = x86_64
-          GCC_WARN_ABOUT_DEPRECATED_FUNCTIONS = NO
-          XCFG
-          # --no-pub is CRITICAL: a regular `flutter build ios` runs
-          # `pub get` internally, which would regenerate
-          # `.flutter-plugins-dependencies` and undo the MLKit-strip step
-          # above. We already ran `flutter pub get` at the top of the
-          # workflow, so deps are current.
-          flutter build ios --simulator --no-pub \
+          # Two-stage build:
+          #  1. `flutter build ios --release --no-codesign` runs to generate
+          #     Flutter's iOS scaffolding (Generated.xcconfig, pod install,
+          #     Flutter framework). On Xcode 26 / iOS 26 SDK, flutter_tools
+          #     added a strict post-build validation that demands
+          #     DEVELOPMENT_TEAM be set even when --no-codesign is passed.
+          #     The actual xcodebuild *inside* the flutter command succeeds —
+          #     only the trailing validation step trips. We tolerate that
+          #     failure with `|| echo` because:
+          #  2. Our own explicit xcodebuild below re-runs the build into a
+          #     directory we control with CODE_SIGNING_ALLOWED=NO etc.
+          #     forced at the command line — those override anything in
+          #     pbxproj that the post-build validator complained about.
+          #
+          # Building for device (`-sdk iphoneos`) sidesteps the MLKit
+          # arm64-simulator problem entirely — MLKit ships full
+          # arm64-iphoneos slices, so OCR works on real iPhones.
+          # Liquid Glass / iOS 26 SDK code paths are reachable on any iOS 26
+          # device installed via Sideloadly.
+          flutter build ios --release --no-codesign \
             --build-name="${FCI_BUILD_NAME:-2.9.1}" \
-            --build-number="${CM_BUILD_NUMBER:-75}"
+            --build-number="${CM_BUILD_NUMBER:-75}" \
+            || echo "(flutter post-build validation failed — continuing with our own xcodebuild, see codemagic.yaml comment)"
 
-      - name: Zip Simulator App
+          xcodebuild -workspace "$XCODE_WORKSPACE" -scheme "$XCODE_SCHEME" \
+            -configuration Release -sdk iphoneos \
+            -destination 'generic/platform=iOS' \
+            -derivedDataPath build/ios/DerivedData \
+            -clonedSourcePackagesDirPath build/ios/SourcePackages \
+            -quiet clean build \
+            CODE_SIGNING_ALLOWED=NO CODE_SIGN_IDENTITY="" \
+            CODE_SIGNING_REQUIRED=NO DEVELOPMENT_TEAM=""
+
+      - name: Package unsigned IPA for Sideloadly
         script: |
-          cd build/ios/iphonesimulator
-          zip -r Runner.zip Runner.app
+          rm -rf Payload rewordium-unsigned.ipa
+          mkdir -p Payload
+          mv build/ios/DerivedData/Build/Products/Release-iphoneos/Runner.app Payload/
+          # The .appex is already nested inside Runner.app/PlugIns/ from the
+          # Embed Foundation Extensions phase — nothing else to copy.
+          zip -r -q rewordium-unsigned.ipa Payload
 
     artifacts:
-      - build/ios/iphonesimulator/Runner.zip
+      - rewordium-unsigned.ipa
       - /tmp/xcodebuild_logs/*.log
       - flutter_drive.log
