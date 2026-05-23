@@ -118,10 +118,16 @@ post_install do |installer|
   # !TARGET_OS_SIMULATOR`) and don't double-wrap.
   registrant_path = File.expand_path('Runner/GeneratedPluginRegistrant.m', __dir__)
   if File.exist?(registrant_path)
+    # Case-insensitive regex catches all spellings of MLKit identifiers:
+    #   • snake_case pod name in @imports:  `google_mlkit_commons`
+    #   • camelCase class name in calls:    `GoogleMlKitCommonsPlugin`
+    #   • either form of `mlkit` (capital K is what Flutter's plugin
+    #     code actually emits — `GoogleMl` + `Kit`, not `GoogleMlkit`)
+    mlkit_regex = /google[_]?ml[_]?kit/i
     lines = File.readlines(registrant_path)
     out = []
     lines.each_with_index do |line, i|
-      mlkit_line = line.include?('google_mlkit') || line.include?('GoogleMlkit')
+      mlkit_line = line.match?(mlkit_regex)
       prev_already_guarded = i > 0 && lines[i - 1].include?('#if !TARGET_OS_SIMULATOR')
       if mlkit_line && !prev_already_guarded
         out << "#if !TARGET_OS_SIMULATOR\n"
@@ -132,7 +138,8 @@ post_install do |installer|
       end
     end
     File.write(registrant_path, out.join)
-    puts "[Podfile] Wrapped MLKit registrations in #if !TARGET_OS_SIMULATOR"
+    wrapped = lines.count { |l| l.match?(mlkit_regex) }
+    puts "[Podfile] Wrapped #{wrapped} MLKit registrations in #if !TARGET_OS_SIMULATOR"
   else
     puts "[Podfile] GeneratedPluginRegistrant.m not found (skipped patch)"
   end
