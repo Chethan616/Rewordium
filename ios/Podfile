@@ -98,4 +98,42 @@ post_install do |installer|
       end
     end
   end
+
+  # ─── Patch GeneratedPluginRegistrant.m to skip MLKit on simulator ────
+  #
+  # We have to do this here (in pod post_install) rather than as a
+  # standalone codemagic.yaml step, because `flutter build ios` runs
+  # `injectPlugins` internally which REGENERATES the registrant from
+  # scratch every build — any pre-build patch gets overwritten before
+  # xcodebuild runs. pod install (which fires this hook) runs AFTER
+  # injectPlugins and BEFORE xcodebuild, so the patch sticks.
+  #
+  # The patch wraps every MLKit-related @import + +registerWithRegistrar:
+  # line in `#if !TARGET_OS_SIMULATOR` so the sim build doesn't try to
+  # link against MLKit symbols that don't exist (the MLKit pods are
+  # excluded from sim arches by the loop above). Device builds are
+  # untouched — MLKit ships arm64-iphoneos slices and OCR works there.
+  #
+  # Idempotent: we detect already-wrapped lines (preceding `#if
+  # !TARGET_OS_SIMULATOR`) and don't double-wrap.
+  registrant_path = File.expand_path('Runner/GeneratedPluginRegistrant.m', __dir__)
+  if File.exist?(registrant_path)
+    lines = File.readlines(registrant_path)
+    out = []
+    lines.each_with_index do |line, i|
+      mlkit_line = line.include?('google_mlkit') || line.include?('GoogleMlkit')
+      prev_already_guarded = i > 0 && lines[i - 1].include?('#if !TARGET_OS_SIMULATOR')
+      if mlkit_line && !prev_already_guarded
+        out << "#if !TARGET_OS_SIMULATOR\n"
+        out << line
+        out << "#endif\n"
+      else
+        out << line
+      end
+    end
+    File.write(registrant_path, out.join)
+    puts "[Podfile] Wrapped MLKit registrations in #if !TARGET_OS_SIMULATOR"
+  else
+    puts "[Podfile] GeneratedPluginRegistrant.m not found (skipped patch)"
+  end
 end

@@ -91,40 +91,13 @@ workflows:
             -scheme "$XCODE_SCHEME" \
             -clonedSourcePackagesDirPath build/ios/SourcePackages
 
-      - name: Skip MLKit on simulator builds
-        script: |
-          # MLKit's underlying Google libs (GoogleMLKit / MLImage /
-          # MLKitCommon / MLKitVision) don't ship arm64-simulator slices,
-          # and we need arm64 sim for Liquid Glass + iOS 26 testing. The
-          # Podfile excludes MLKit pods from sim entirely; this step
-          # mirrors that on the Flutter registrant side by wrapping the
-          # MLKit @import + +registerWithRegistrar: call in a
-          # TARGET_OS_SIMULATOR guard. Device builds are untouched.
-          #
-          # Camera OCR being unavailable on simulator is expected — there's
-          # no camera there to begin with.
-          python3 - <<'PY'
-          from pathlib import Path
-          p = Path('ios/Runner/GeneratedPluginRegistrant.m')
-          if not p.exists():
-              print('GeneratedPluginRegistrant.m not found, skipping')
-          else:
-              text = p.read_text()
-              out_lines = []
-              for line in text.splitlines():
-                  needs_guard = (
-                      'google_mlkit' in line.lower()
-                      or 'GoogleMlkit' in line
-                  )
-                  if needs_guard:
-                      out_lines.append('#if !TARGET_OS_SIMULATOR')
-                      out_lines.append(line)
-                      out_lines.append('#endif')
-                  else:
-                      out_lines.append(line)
-              p.write_text('\n'.join(out_lines) + '\n')
-              print('Wrapped MLKit registrations in #if !TARGET_OS_SIMULATOR')
-          PY
+      # NOTE: The "Skip MLKit on simulator" patch lives in ios/Podfile's
+      # post_install hook (not here as a separate step), because
+      # `flutter build ios` runs injectPlugins which REGENERATES
+      # GeneratedPluginRegistrant.m mid-build and clobbers any patch
+      # applied before xcodebuild. Pod install runs after injectPlugins
+      # and before xcodebuild, so the Podfile hook is the only timing
+      # window where the patch survives to the compile step.
 
       - name: Update CocoaPods repo (required for MLKit 9.x specs)
         script: |
