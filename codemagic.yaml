@@ -6,11 +6,11 @@ workflows:
 
     environment:
       flutter: stable
-      # Xcode 26.x required:
-      #  • KeyboardKit 10.5+ compiled with Swift 6.2 + uses FoundationModels (iOS 26)
-      #  • Liquid Glass APIs require iOS 26 SDK
-      #  • StoreKit 1 deprecation warnings are warnings, not errors
-      xcode: latest
+      # Xcode 26.5 (Swift 6.3, iOS 26 SDK):
+      #  • KeyboardKit 10.5+ binary compiled with Swift 6.2.4 — needs ≥6.2 compiler
+      #  • Xcode 26.4 only has Swift 6.1.2 → "SDK not supported by the compiler"
+      #  • FoundationModels + Liquid Glass APIs require iOS 26 SDK
+      xcode: 26.5
       cocoapods: default
 
       vars:
@@ -97,9 +97,14 @@ workflows:
 
       - name: Build iOS Simulator App
         script: |
+          # arm64-only: FoundationModels doesn't exist on x86_64 simulators.
+          # Suppress StoreKit 1 deprecation warnings (in_app_purchase_storekit legacy ObjC).
           flutter build ios --simulator \
             --build-name="${FCI_BUILD_NAME:-2.9.1}" \
-            --build-number="${CM_BUILD_NUMBER:-75}"
+            --build-number="${CM_BUILD_NUMBER:-75}" \
+            -- \
+            EXCLUDED_ARCHS='x86_64' \
+            GCC_WARN_ABOUT_DEPRECATED_FUNCTIONS=NO
 
       - name: Zip Simulator App
         script: |
