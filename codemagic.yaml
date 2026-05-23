@@ -6,9 +6,10 @@ workflows:
 
     environment:
       flutter: stable
-      # Pin to stable Xcode — 'latest' can resolve to Xcode 26.x beta where
-      # StoreKit 1 APIs (used by in_app_purchase_storekit) fail to build.
-      xcode: 16.2
+      # Pin to stable Xcode 16.4 (Swift 6.1 + iOS 18 SDK):
+      #  • 16.2 won't work: KeyboardKit uses trailing commas (Swift 6.1 / SE-0439)
+      #  • 26.x won't work: in_app_purchase_storekit uses StoreKit 1 (removed in iOS 26)
+      xcode: 16.4
       cocoapods: default
 
       vars:
