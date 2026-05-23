@@ -36,6 +36,7 @@ class _GrammarPageState extends State<GrammarPage>
       <String, Map<String, dynamic>>{};
 
   final TextEditingController _textController = TextEditingController();
+  final TextEditingController _resultController = TextEditingController();
   final FocusNode _textFocusNode = FocusNode();
   int _wordCount = 0;
   int _errorCount = 0;
@@ -97,6 +98,7 @@ class _GrammarPageState extends State<GrammarPage>
       setState(() {
         _textController.text = text;
         _correctedText = corrected;
+        _resultController.text = corrected;
         _errorCount = errorCount;
         _errors = restoredErrors;
         _wordCount =
@@ -201,6 +203,7 @@ class _GrammarPageState extends State<GrammarPage>
   void dispose() {
     _wordCountDebounce?.cancel();
     _textController.dispose();
+    _resultController.dispose();
     _textFocusNode.dispose();
     super.dispose();
   }
@@ -270,6 +273,7 @@ class _GrammarPageState extends State<GrammarPage>
 
       setState(() {
         _correctedText = normalizedResult['corrected_text'] ?? text;
+        _resultController.text = _correctedText;
         _errorCount = normalizedResult['error_count'] ?? 0;
         _errors =
             List<Map<String, dynamic>>.from(normalizedResult['errors'] ?? []);
@@ -666,6 +670,7 @@ class _GrammarPageState extends State<GrammarPage>
                 onPressed: () {
                   setState(() {
                     _correctedText = '';
+                    _resultController.text = '';
                     _errors.clear();
                     _errorCount = 0;
                   });
@@ -705,9 +710,31 @@ class _GrammarPageState extends State<GrammarPage>
                     border: Border.all(
                         color: colorScheme.primary.withValues(alpha: 0.2)),
                   ),
-                  child: SelectableText(
-                    _correctedText,
+                  child: TextField(
+                    controller: _resultController,
+                    maxLines: null,
+                    readOnly: true,
+                    showCursor: false,
+                    textAlignVertical: TextAlignVertical.top,
                     style: Theme.of(context).textTheme.bodyMedium!,
+                    decoration: const InputDecoration(
+                      border: InputBorder.none,
+                      contentPadding: EdgeInsets.zero,
+                    ),
+                    onTap: () async {
+                      final result = await FocusedEditor.open(
+                        context,
+                        initialValue: _correctedText,
+                        title: 'Result',
+                      );
+                      if (result != null) {
+                        setState(() {
+                          _correctedText = result;
+                          _resultController.text = result;
+                        });
+                        _persistDraft();
+                      }
+                    },
                   ),
                 ),
               ],

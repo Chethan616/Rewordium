@@ -25,11 +25,12 @@ struct RewordiumKeyboardView: View {
         .background(Color.clear)
     }
 
-    /// KeyboardKit's stock keyboard view. The v10.5 initializer takes a
-    /// `services` value (not the controller) and ViewBuilder closures for the
-    /// customizable surfaces. Passing `$0.view` from each builder means "use
-    /// the default" — we only override `toolbar` because our AIToolbar lives
-    /// above the keyboard, not inside KeyboardKit's toolbar slot.
+    /// KeyboardKit's stock keyboard view. We override two slots:
+    ///   * `toolbar` — our AIToolbar lives above the keyboard, not inside.
+    ///   * `emojiKeyboard` — KeyboardKit's free-tier emoji surface is bare
+    ///     (no recents persistence, no skin-tone variants, no category
+    ///     navigation). `RewordiumEmojiPanel` is our production-grade
+    ///     replacement; see that file for the design.
     private var keyboard: some View {
         KeyboardView(
             layout: nil,
@@ -37,7 +38,22 @@ struct RewordiumKeyboardView: View {
             buttonContent: { $0.view },
             buttonView:    { $0.view },
             collapsedView: { $0.view },
-            emojiKeyboard: { $0.view },
+            emojiKeyboard: { _ in
+                RewordiumEmojiPanel(
+                    onInsert: { emoji in
+                        controller.textDocumentProxy.insertText(emoji)
+                    },
+                    onBackspace: {
+                        controller.textDocumentProxy.deleteBackward()
+                    },
+                    onReturnToAlphabetic: {
+                        // KeyboardContext owns the current keyboard type;
+                        // setting it to .alphabetic flips back to QWERTY
+                        // through KeyboardKit's normal redraw path.
+                        state.keyboardContext.keyboardType = .alphabetic(.auto)
+                    }
+                )
+            },
             toolbar:       { _ in EmptyView() }   // our AIToolbar replaces it
         )
     }

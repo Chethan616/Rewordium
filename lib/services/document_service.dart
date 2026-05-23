@@ -37,7 +37,7 @@ class DocumentService {
     try {
       final result = await FilePicker.pickFiles(
         type: FileType.custom,
-        allowedExtensions: allowedExtensions ?? ['pdf', 'docx', 'doc', 'txt'],
+        allowedExtensions: allowedExtensions ?? ['pdf', 'docx', 'doc', 'txt', 'md'],
         allowMultiple: false,
       );
 
@@ -57,6 +57,7 @@ class DocumentService {
         case 'doc':
           return await extractFromDocx(filePath, fileName);
         case 'txt':
+        case 'md':
           return await _extractFromTxt(filePath, fileName);
         default:
           return await _extractFromTxt(filePath, fileName);
@@ -98,18 +99,21 @@ class DocumentService {
 
       if (imagePaths.isEmpty) return null;
 
-      final textRecognizer = TextRecognizer();
+      // Use the proper script-aware constructor as per MLKit docs
+      final textRecognizer = TextRecognizer(script: TextRecognitionScript.latin);
       final extractedTexts = <String>[];
 
       try {
         for (final path in imagePaths) {
           final inputImage = InputImage.fromFilePath(path);
-          final recognizedText = await textRecognizer.processImage(inputImage);
+          final RecognizedText recognizedText =
+              await textRecognizer.processImage(inputImage);
           if (recognizedText.text.isNotEmpty) {
             extractedTexts.add(recognizedText.text);
           }
         }
       } finally {
+        // Always release ML Kit resources
         textRecognizer.close();
       }
 

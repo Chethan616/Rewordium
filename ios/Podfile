@@ -1,6 +1,8 @@
 # Uncomment this line to define a global platform for your project
 platform :ios, '17.0'
 
+$iOSVersion = '17.0' # MLKit requires 15.5+; 17.0 matches our deployment target
+
 # CocoaPods analytics sends network stats synchronously affecting flutter build latency.
 ENV['COCOAPODS_DISABLE_STATS'] = 'true'
 
@@ -39,6 +41,13 @@ target 'Runner' do
   use_modular_headers!
 
   flutter_install_all_ios_pods File.dirname(File.realpath(__FILE__))
+
+  # MLKit language packs for multi-script text recognition
+  pod 'GoogleMLKit/TextRecognitionChinese', '~> 7.0.0'
+  pod 'GoogleMLKit/TextRecognitionDevanagari', '~> 7.0.0'
+  pod 'GoogleMLKit/TextRecognitionJapanese', '~> 7.0.0'
+  pod 'GoogleMLKit/TextRecognitionKorean', '~> 7.0.0'
+
   target 'RunnerTests' do
     inherit! :search_paths
   end
@@ -49,10 +58,20 @@ end
 # the host UIApplication). The extension links KeyboardKit via SwiftPM only.
 
 post_install do |installer|
+  # Required for MLKit: exclude armv7 on all build configs
+  installer.pods_project.build_configurations.each do |config|
+    config.build_settings['EXCLUDED_ARCHS[sdk=*]'] = 'armv7'
+    config.build_settings['IPHONEOS_DEPLOYMENT_TARGET'] = $iOSVersion
+  end
+
   installer.pods_project.targets.each do |target|
     flutter_additional_ios_build_settings(target)
+
+    # Enforce minimum iOS version required by MLKit on all pods
     target.build_configurations.each do |config|
-      config.build_settings['IPHONEOS_DEPLOYMENT_TARGET'] = '17.0'
+      if Gem::Version.new($iOSVersion) > Gem::Version.new(config.build_settings['IPHONEOS_DEPLOYMENT_TARGET'] || '0')
+        config.build_settings['IPHONEOS_DEPLOYMENT_TARGET'] = $iOSVersion
+      end
       # Strip simulator arches for App Store / Sideloadly builds.
       config.build_settings['EXCLUDED_ARCHS[sdk=iphonesimulator*]'] = 'arm64'
     end

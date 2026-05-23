@@ -223,8 +223,8 @@ class NlpManager(context: Context) {
             internalSuggestionsGuard.withLock {
                 if (internalSuggestions.first < reqTime) {
                     internalSuggestions = reqTime to buildList {
-                        addAll(emojiSuggestions)
-                        addAll(suggestions)
+                        addAll(suggestions)        // text predictions first (Gboard behavior)
+                        addAll(emojiSuggestions)    // emojis at end of strip
                     }
                 }
             }

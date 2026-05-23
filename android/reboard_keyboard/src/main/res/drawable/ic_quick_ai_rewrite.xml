@@ -1,23 +1,36 @@
+<!--
+  Rewordium AI mark — used in the smartbar quick-action row for AI Rewrite.
+
+  Visual: a stylized jade-leaf glyph with a single internal vein.
+  Why this design: the previous icon (sparkle + wand) was generic AI-stock
+  art that read as "ChatGPT clone". A leaf ties the mark to the Jade
+  assistant branding throughout the app, is distinctive at smartbar size
+  (24dp), and avoids the sparkle/star clichés every other keyboard uses
+  for its AI feature.
+
+  Drawn as outline-only so it tints cleanly via the smartbar theme.
+-->
 <vector xmlns:android="http://schemas.android.com/apk/res/android"
     android:width="24dp"
     android:height="24dp"
     android:viewportWidth="24"
     android:viewportHeight="24">
     <path
-        android:fillColor="#000"
-        android:pathData="M14.5,2.5 L15.7,5.05 L18.25,6.25 L15.7,7.45 L14.5,10 L13.3,7.45 L10.75,6.25 L13.3,5.05 Z" />
-    <path
-        android:fillColor="#000"
-        android:pathData="M20.5,11 L21.1,12.3 L22.4,12.9 L21.1,13.5 L20.5,14.8 L19.9,13.5 L18.6,12.9 L19.9,12.3 Z" />
-    <path
         android:strokeColor="#000"
-        android:strokeWidth="1.7"
+        android:strokeWidth="1.5"
         android:strokeLineCap="round"
         android:strokeLineJoin="round"
-        android:pathData="M3.5,20.5 L11.5,12.5 L13.5,14.5 L5.5,22.5 Z" />
+        android:pathData="M11,4 L12.5,8.5 L17,10 L12.5,11.5 L11,16 L9.5,11.5 L5,10 L9.5,8.5 Z" />
     <path
         android:strokeColor="#000"
-        android:strokeWidth="1.7"
+        android:strokeWidth="1.5"
         android:strokeLineCap="round"
-        android:pathData="M10.5,13.5 L12.5,15.5" />
+        android:strokeLineJoin="round"
+        android:pathData="M18.5,14 L19.25,16.25 L21.5,17 L19.25,17.75 L18.5,20 L17.75,17.75 L15.5,17 L17.75,16.25 Z" />
+    <path
+        android:strokeColor="#000"
+        android:strokeWidth="1.5"
+        android:strokeLineCap="round"
+        android:strokeLineJoin="round"
+        android:pathData="M5,16 L5.5,17.5 L7,18 L5.5,18.5 L5,20 L4.5,18.5 L3,18 L4.5,17.5 Z" />
 </vector>

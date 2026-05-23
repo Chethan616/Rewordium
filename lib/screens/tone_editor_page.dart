@@ -1,23 +1,23 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/cupertino.dart';
-import 'package:animate_do/animate_do.dart';
 import 'package:flutter/services.dart';
-import 'package:shimmer/shimmer.dart';
+import 'dart:convert';
 import 'package:provider/provider.dart';
-import 'package:lottie/lottie.dart';
 import 'package:m3e_collection/m3e_collection.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import '../widgets/custom_app_bar.dart';
 import '../widgets/custom_button.dart';
+import '../widgets/focused_editor.dart';
 import '../providers/auth_provider.dart';
 import '../services/unified_ai_service.dart';
 import '../services/document_chunking_service.dart';
+import '../utils/ai_error_handler.dart';
 import '../models/document_result.dart';
 import '../widgets/document_input_widget.dart';
 import '../screens/document_viewer_screen.dart';
 import '../utils/responsive.dart';
 
-// Import your login screen here; adjust path as needed
 import 'auth/login_screen.dart';
 
 class ToneEditorPage extends StatefulWidget {
@@ -27,28 +27,54 @@ class ToneEditorPage extends StatefulWidget {
   State<ToneEditorPage> createState() => _ToneEditorPageState();
 }
 
-class _ToneEditorPageState extends State<ToneEditorPage> {
+class _ToneEditorPageState extends State<ToneEditorPage>
+    with AutomaticKeepAliveClientMixin {
+  // ─── Draft persistence keys ──────────────────────────────────────
+  static const String _draftInputKey = 'tone_draft_input';
+  static const String _draftResultKey = 'tone_draft_result';
+  static const String _draftToneKey = 'tone_draft_tone';
+  static const String _draftChangesKey = 'tone_draft_changes';
+
+  static final Map<String, Map<String, dynamic>> _sessionCache =
+      <String, Map<String, dynamic>>{};
+
+  // ─── Accent color ────────────────────────────────────────────────
+  static const Color _accent = Color(0xFF009688); // Material Teal 500
+
   final TextEditingController _controller = TextEditingController();
   final TextEditingController _resultController = TextEditingController();
   final TextEditingController _customToneController = TextEditingController();
   bool _isLoading = false;
   String _selectedTone = "Professional";
-  Map<String, dynamic>? _toneResult;
   List<String> _changesMade = [];
+  String? _originalTone;
   DocumentResult? _loadedDocument;
+  String? _lastErrorMessage;
+  bool _isRestoringDraft = false;
+  bool _isInputEmpty = true;
 
-  void _onDocumentTextExtracted(String text, DocumentResult doc) {
-    setState(() {
-      _controller.text = text;
-      _loadedDocument = doc;
-    });
-  }
+  @override
+  bool get wantKeepAlive => true;
 
-  void _clearDocument() {
-    setState(() => _loadedDocument = null);
-  }
+  // ─── Tones ───────────────────────────────────────────────────────
+  static const _toneIcons = <String, IconData>{
+    'Professional': CupertinoIcons.briefcase,
+    'Casual': CupertinoIcons.chat_bubble_text,
+    'Friendly': CupertinoIcons.hand_thumbsup,
+    'Formal': CupertinoIcons.doc_text,
+    'Academic': CupertinoIcons.book,
+    'Enthusiastic': CupertinoIcons.sparkles,
+    'Confident': CupertinoIcons.shield,
+    'Empathetic': CupertinoIcons.heart,
+    'Persuasive': CupertinoIcons.lightbulb,
+    'Humorous': CupertinoIcons.smiley,
+    'Inspirational': CupertinoIcons.star,
+    'Diplomatic': CupertinoIcons.hand_raised,
+    'Urgent': CupertinoIcons.exclamationmark_triangle,
+    'Custom': CupertinoIcons.slider_horizontal_3,
+  };
 
-  final List<String> _tones = [
+  static const List<String> _tones = [
     "Professional",
     "Casual",
     "Friendly",
@@ -59,16 +85,75 @@ class _ToneEditorPageState extends State<ToneEditorPage> {
     "Empathetic",
     "Persuasive",
     "Humorous",
-    "Authoritative",
     "Inspirational",
     "Diplomatic",
-    "Respectful",
     "Urgent",
-    "Compassionate",
-    "Optimistic",
-    "Serious",
-    "Custom"
+    "Custom",
   ];
+
+  // ─── Cache ───────────────────────────────────────────────────────
+  String _cacheKey(String text) =>
+      'tone|$_selectedTone|${_customToneController.text.trim()}|$text';
+
+  void _cacheResult(String key, Map<String, dynamic> value) {
+    if (_sessionCache.length >= 30) {
+      _sessionCache.remove(_sessionCache.keys.first);
+    }
+    _sessionCache[key] = value;
+  }
+
+  // ─── Draft persistence ───────────────────────────────────────────
+  Future<void> _persistDraft() async {
+    if (_isRestoringDraft) return;
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setString(_draftInputKey, _controller.text);
+      await prefs.setString(_draftResultKey, _resultController.text);
+      await prefs.setString(_draftToneKey, _selectedTone);
+      await prefs.setString(_draftChangesKey, jsonEncode(_changesMade));
+    } catch (_) {}
+  }
+
+  Future<void> _restoreDraft() async {
+    _isRestoringDraft = true;
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final input = prefs.getString(_draftInputKey) ?? '';
+      final result = prefs.getString(_draftResultKey) ?? '';
+      final tone = prefs.getString(_draftToneKey) ?? 'Professional';
+      final changesRaw = prefs.getString(_draftChangesKey);
+
+      List<String> restoredChanges = <String>[];
+      if (changesRaw != null && changesRaw.isNotEmpty) {
+        try {
+          final decoded = jsonDecode(changesRaw);
+          if (decoded is List) {
+            restoredChanges = decoded.map((e) => e.toString()).toList();
+          }
+        } catch (_) {}
+      }
+
+      if (!mounted) return;
+      setState(() {
+        _controller.text = input;
+        _resultController.text = result;
+        _selectedTone = tone;
+        _changesMade = restoredChanges;
+        _isInputEmpty = input.trim().isEmpty;
+      });
+    } catch (_) {
+    } finally {
+      _isRestoringDraft = false;
+    }
+  }
+
+  // ─── Lifecycle ───────────────────────────────────────────────────
+  @override
+  void initState() {
+    super.initState();
+    UnifiedAIService.initialize();
+    _restoreDraft();
+  }
 
   @override
   void dispose() {
@@ -78,7 +163,77 @@ class _ToneEditorPageState extends State<ToneEditorPage> {
     super.dispose();
   }
 
-  // Edit the tone of text using OpenAI
+  // ─── Document input ──────────────────────────────────────────────
+  void _onDocumentTextExtracted(String text, DocumentResult doc) {
+    setState(() {
+      _controller.text = text;
+      _loadedDocument = doc;
+      _isInputEmpty = text.trim().isEmpty;
+    });
+    _persistDraft();
+  }
+
+  void _clearDocument() {
+    setState(() => _loadedDocument = null);
+    _persistDraft();
+  }
+
+  // ─── Custom tone dialog ──────────────────────────────────────────
+  Future<void> _showCustomToneDialog() async {
+    _customToneController.text = '';
+    final cs = Theme.of(context).colorScheme;
+    return showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Custom Tone'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'Describe the tone you want:',
+              style: Theme.of(context).textTheme.bodySmall!.copyWith(
+                    color: cs.onSurfaceVariant,
+                  ),
+            ),
+            const SizedBox(height: 12),
+            TextField(
+              controller: _customToneController,
+              maxLines: 3,
+              decoration: InputDecoration(
+                hintText:
+                    'e.g., Sarcastic, Poetic, Professional but humorous…',
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () {
+              if (_customToneController.text.trim().isEmpty) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                      content: Text('Please enter a tone description')),
+                );
+                return;
+              }
+              Navigator.pop(context);
+            },
+            child: const Text('Apply'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // ─── Tone edit ───────────────────────────────────────────────────
   Future<void> _editTone() async {
     final text = _controller.text.trim();
     if (text.isEmpty) {
@@ -88,39 +243,51 @@ class _ToneEditorPageState extends State<ToneEditorPage> {
       return;
     }
 
-    // Handle custom tone selection
     if (_selectedTone == "Custom") {
       await _showCustomToneDialog();
-      if (_selectedTone == "Custom" && _customToneController.text.isEmpty) {
-        return; // User canceled or didn't enter a custom tone
-      }
+      if (_customToneController.text.trim().isEmpty) return;
     }
 
     setState(() {
       _isLoading = true;
+      _lastErrorMessage = null;
     });
 
     try {
       final targetTone = _selectedTone == 'Custom'
-          ? _customToneController.text
+          ? _customToneController.text.trim()
           : _selectedTone.toLowerCase();
 
-      final result = DocumentChunkingService.needsChunking(text)
-          ? await DocumentChunkingService.editToneLarge(text, targetTone)
-          : await UnifiedAIService.editTone(text, targetTone);
+      final key = _cacheKey(text);
+      final cachedResult = _sessionCache[key];
+      final result = cachedResult ??
+          (DocumentChunkingService.needsChunking(text)
+              ? await DocumentChunkingService.editToneLarge(text, targetTone)
+              : await UnifiedAIService.editTone(text, targetTone));
+
+      if (result.containsKey('error') || result.containsKey('errorType')) {
+        setState(() => _isLoading = false);
+        _lastErrorMessage =
+            result['error']?.toString() ?? 'Failed to edit tone';
+        if (mounted) AIErrorHandler.showErrorSnackBar(context, result);
+        setState(() {});
+        return;
+      }
+
+      if (cachedResult == null) _cacheResult(key, result);
 
       setState(() {
-        _toneResult = result;
         _resultController.text = result['edited_text'] ?? text;
         _changesMade = List<String>.from(result['changes_made'] ?? []);
+        _originalTone = result['original_tone']?.toString();
         _isLoading = false;
+        _lastErrorMessage = null;
       });
-
-      // Show the result dialog
-      _showResultDialog();
+      _persistDraft();
     } catch (e) {
       setState(() {
         _isLoading = false;
+        _lastErrorMessage = 'Error editing tone: $e';
       });
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Error editing tone: $e')),
@@ -128,147 +295,18 @@ class _ToneEditorPageState extends State<ToneEditorPage> {
     }
   }
 
-  // Show custom tone selection dialog
-  Future<void> _showCustomToneDialog() async {
-    return showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: Text('Enter Custom Tone'),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text('Describe the tone you want for your text:'),
-            SizedBox(height: 8),
-            TextField(
-              controller: _customToneController,
-              decoration: InputDecoration(
-                hintText: 'e.g., Sarcastic, Poetic, Technical, Childlike',
-                border: OutlineInputBorder(),
-              ),
-            ),
-            SizedBox(height: 12),
-            Text(
-              'You can also describe the tone in more detail, like "professional but with a touch of humor" or "poetic with Victorian-era language".',
-              style: TextStyle(fontSize: 12, color: Colors.grey),
-            ),
-          ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () {
-              Navigator.pop(context);
-              // Keep "Custom" selected but don't proceed
-            },
-            child: Text('Cancel'),
-          ),
-          TextButton(
-            onPressed: () {
-              final customTone = _customToneController.text.trim();
-              if (customTone.isNotEmpty) {
-                Navigator.pop(context);
-              } else {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(
-                      content: Text('Please enter a tone description')),
-                );
-              }
-            },
-            child: Text('Apply'),
-          ),
-        ],
-      ),
-    );
-  }
-
-  // Show the tone editing result
-  void _showResultDialog() {
-    if (_toneResult == null) return;
-
-    final String originalTone = _toneResult!['original_tone'] ?? 'Unknown';
-
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: Text('Tone Edited Text'),
-        content: Container(
-          width: double.maxFinite,
-          child: SingleChildScrollView(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text('Original Tone: $originalTone',
-                    style: TextStyle(fontWeight: FontWeight.bold)),
-                Text(
-                    'New Tone: ${_selectedTone == "Custom" ? _customToneController.text : _selectedTone}',
-                    style: TextStyle(
-                        fontWeight: FontWeight.bold, color: Colors.teal)),
-                SizedBox(height: 16),
-                Text('Edited Text:',
-                    style: TextStyle(fontWeight: FontWeight.bold)),
-                Container(
-                  padding: const EdgeInsets.all(12),
-                  decoration: BoxDecoration(
-                    color: Colors.teal.withOpacity(0.1),
-                    borderRadius: BorderRadius.circular(8),
-                    border: Border.all(color: Colors.teal.withOpacity(0.3)),
-                  ),
-                  child: Text(_resultController.text),
-                ),
-                if (_changesMade.isNotEmpty) ...[
-                  SizedBox(height: 16),
-                  Text('Changes Made:',
-                      style: TextStyle(fontWeight: FontWeight.bold)),
-                  SizedBox(height: 8),
-                  ...List.generate(_changesMade.length, (index) {
-                    return Padding(
-                      padding: const EdgeInsets.only(bottom: 8),
-                      child: Row(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text('• ', style: TextStyle(color: Colors.teal)),
-                          Expanded(
-                            child: Text(_changesMade[index],
-                                style: TextStyle(color: Colors.teal.shade700)),
-                          ),
-                        ],
-                      ),
-                    );
-                  }),
-                ],
-              ],
-            ),
-          ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: Text('Close'),
-          ),
-          TextButton(
-            onPressed: () {
-              Clipboard.setData(ClipboardData(text: _resultController.text));
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(
-                    content: Text('Edited text copied to clipboard')),
-              );
-            },
-            child: Text('Copy Text'),
-          ),
-        ],
-      ),
-    );
-  }
-
+  // ─── Build ───────────────────────────────────────────────────────
   @override
   Widget build(BuildContext context) {
-    final Size screenSize = MediaQuery.of(context).size;
+    super.build(context);
     final r = Responsive.of(context);
     final authProvider = Provider.of<AuthProvider>(context);
     final bool isLoggedIn = authProvider.isLoggedIn;
+    final colorScheme = Theme.of(context).colorScheme;
+    final hasResult = _resultController.text.isNotEmpty;
 
     return Scaffold(
+      backgroundColor: colorScheme.surfaceContainerLowest,
       body: SafeArea(
         child: Column(
           children: [
@@ -276,7 +314,7 @@ class _ToneEditorPageState extends State<ToneEditorPage> {
               title: "Tone Editor",
               leadingIcon: Icon(
                 CupertinoIcons.waveform,
-                color: Colors.teal,
+                color: _accent,
               ),
               actions: [
                 if (!isLoggedIn)
@@ -286,11 +324,10 @@ class _ToneEditorPageState extends State<ToneEditorPage> {
                       Navigator.push(
                         context,
                         MaterialPageRoute(
-                          builder: (context) => const LoginScreen(),
+                          builder: (_) => const LoginScreen(),
                         ),
                       );
                     },
-                    width: r.w(80),
                     height: r.h(36),
                     type: ButtonType.primary,
                   ),
@@ -301,15 +338,16 @@ class _ToneEditorPageState extends State<ToneEditorPage> {
               LinearProgressIndicatorM3E(
                 shape: ProgressM3EShape.wavy,
                 size: LinearProgressM3ESize.s,
-                activeColor: Colors.teal,
+                activeColor: _accent,
               ),
+            _buildErrorBanner(colorScheme),
             Padding(
-              padding: r.fromLTRB(16, 12, 16, 0),
+              padding: r.fromLTRB(16, 8, 16, 0),
               child: DocumentInputWidget(
                 onTextExtracted: _onDocumentTextExtracted,
                 currentDocument: _loadedDocument,
                 onClear: _clearDocument,
-                accentColor: Colors.teal,
+                accentColor: _accent,
                 initialToolForViewer: 'tone',
                 onViewDocument: (doc) {
                   Navigator.push(
@@ -320,6 +358,8 @@ class _ToneEditorPageState extends State<ToneEditorPage> {
                         initialTool: 'tone',
                         onUseText: (text) {
                           _controller.text = text;
+                          setState(() =>
+                              _isInputEmpty = text.trim().isEmpty);
                         },
                       ),
                     ),
@@ -327,208 +367,448 @@ class _ToneEditorPageState extends State<ToneEditorPage> {
                 },
               ),
             ),
-            Padding(
-              padding: r.fromLTRB(16, 8, 16, 8),
-              child: Material(
-                elevation: 2,
-                borderRadius: BorderRadius.circular(r.r(16)),
-                child: SizedBox(
-                  height: r.inputFieldHeight * 0.65,
+            // Main content
+            Expanded(
+              child: Padding(
+                padding: r.fromLTRB(16, 8, 16, 0),
+                child: hasResult
+                    ? _buildResultView(colorScheme)
+                    : _buildInputArea(colorScheme),
+              ),
+            ),
+            // Bottom bar
+            _buildBottomBar(r, colorScheme),
+          ],
+        ),
+      ),
+    );
+  }
+
+  // ─── Error banner ────────────────────────────────────────────────
+  Widget _buildErrorBanner(ColorScheme colorScheme) {
+    if (_lastErrorMessage == null) return const SizedBox.shrink();
+    return Container(
+      width: double.infinity,
+      margin: const EdgeInsets.fromLTRB(16, 8, 16, 0),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+      decoration: BoxDecoration(
+        color: colorScheme.errorContainer,
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Icon(Icons.warning_amber_rounded,
+              size: 18, color: colorScheme.onErrorContainer),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Text(
+              _lastErrorMessage!,
+              style: Theme.of(context).textTheme.bodySmall!.copyWith(
+                    color: colorScheme.onErrorContainer,
+                  ),
+            ),
+          ),
+          TextButton(
+            onPressed: _isLoading ? null : _editTone,
+            child: const Text('Retry'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // ─── Input area ──────────────────────────────────────────────────
+  Widget _buildInputArea(ColorScheme colorScheme) {
+    final r = Responsive.of(context);
+    return Container(
+      decoration: BoxDecoration(
+        color: colorScheme.surfaceContainer,
+        borderRadius: BorderRadius.circular(r.r(16)),
+      ),
+      child: TextField(
+        controller: _controller,
+        maxLines: null,
+        expands: true,
+        readOnly: true,
+        showCursor: false,
+        textAlignVertical: TextAlignVertical.top,
+        style: Theme.of(context).textTheme.bodyMedium!,
+        decoration: InputDecoration(
+          hintText: "Tap to edit tone…",
+          contentPadding: r.all(16),
+          border: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(r.r(16)),
+            borderSide: BorderSide.none,
+          ),
+          filled: true,
+          fillColor: Colors.transparent,
+          suffixIcon: !_isInputEmpty
+              ? IconButton(
+                  icon: Icon(Icons.clear, size: r.r(18)),
+                  onPressed: () => setState(() {
+                    _controller.clear();
+                    _isInputEmpty = true;
+                    _persistDraft();
+                  }),
+                )
+              : IconButton(
+                  icon: Icon(Icons.content_paste, size: r.r(18)),
+                  onPressed: () async {
+                    final data =
+                        await Clipboard.getData(Clipboard.kTextPlain);
+                    if (data?.text != null) {
+                      _controller.text = data!.text!;
+                      setState(() {
+                        _isInputEmpty = data.text!.trim().isEmpty;
+                      });
+                      _persistDraft();
+                    }
+                  },
+                ),
+        ),
+        onTap: () async {
+          final result = await FocusedEditor.open(
+            context,
+            initialValue: _controller.text,
+            title: 'Tone Editor',
+            hint: 'Paste or type the text you want to change the tone of…',
+          );
+          if (result != null) {
+            _controller.text = result;
+            setState(() {
+              _isInputEmpty = result.trim().isEmpty;
+            });
+            _persistDraft();
+          }
+        },
+      ),
+    );
+  }
+
+  // ─── Result view ─────────────────────────────────────────────────
+  Widget _buildResultView(ColorScheme colorScheme) {
+    final r = Responsive.of(context);
+    return Column(
+      children: [
+        // Header with tone info
+        Container(
+          padding: r.all(12),
+          decoration: BoxDecoration(
+            color: _accent.withValues(alpha: 0.08),
+            borderRadius: BorderRadius.circular(r.r(14)),
+          ),
+          child: Row(
+            children: [
+              Container(
+                width: 40,
+                height: 40,
+                decoration: BoxDecoration(
+                  color: _accent,
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: const Icon(CupertinoIcons.waveform,
+                    size: 20, color: Colors.white),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Tone: $_selectedTone',
+                      style:
+                          Theme.of(context).textTheme.titleSmall!.copyWith(
+                                fontWeight: FontWeight.bold,
+                              ),
+                    ),
+                    if (_originalTone != null)
+                      Text(
+                        'From: $_originalTone',
+                        style:
+                            Theme.of(context).textTheme.bodySmall!.copyWith(
+                                  color: colorScheme.onSurfaceVariant,
+                                ),
+                      ),
+                  ],
+                ),
+              ),
+              IconButtonM3E(
+                icon: const Icon(Icons.copy_rounded, size: 16),
+                onPressed: () {
+                  Clipboard.setData(
+                      ClipboardData(text: _resultController.text));
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('Copied to clipboard')),
+                  );
+                },
+                variant: IconButtonM3EVariant.outlined,
+                size: IconButtonM3ESize.sm,
+              ),
+              const SizedBox(width: 6),
+              IconButtonM3E(
+                icon: const Icon(Icons.edit_note_rounded, size: 16),
+                onPressed: () {
+                  _controller.text = _resultController.text;
+                  setState(() {
+                    _resultController.clear();
+                    _changesMade.clear();
+                    _isInputEmpty = _controller.text.trim().isEmpty;
+                  });
+                  _persistDraft();
+                },
+                variant: IconButtonM3EVariant.outlined,
+                size: IconButtonM3ESize.sm,
+              ),
+              const SizedBox(width: 6),
+              IconButtonM3E(
+                icon: const Icon(Icons.close_rounded, size: 16),
+                onPressed: () {
+                  setState(() {
+                    _resultController.clear();
+                    _changesMade.clear();
+                  });
+                  _persistDraft();
+                },
+                variant: IconButtonM3EVariant.outlined,
+                size: IconButtonM3ESize.sm,
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(height: 8),
+        // Result text + changes
+        Expanded(
+          child: Container(
+            width: double.infinity,
+            decoration: BoxDecoration(
+              color: colorScheme.surfaceContainer,
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(
+                  color: _accent.withValues(alpha: 0.15)),
+            ),
+            child: Column(
+              children: [
+                Expanded(
                   child: TextField(
-                    controller: _controller,
+                    controller: _resultController,
                     maxLines: null,
                     expands: true,
+                    readOnly: true,
+                    showCursor: false,
                     textAlignVertical: TextAlignVertical.top,
                     style: Theme.of(context).textTheme.bodyMedium!,
                     decoration: InputDecoration(
-                      hintText: "Enter text to adjust its tone...",
-                      contentPadding: const EdgeInsets.symmetric(
-                          vertical: 16, horizontal: 16),
+                      contentPadding: const EdgeInsets.all(16),
                       border: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(16),
                         borderSide: BorderSide.none,
                       ),
                       filled: true,
-                      fillColor: Theme.of(context).colorScheme.surface,
+                      fillColor: Colors.transparent,
                     ),
+                    onTap: () async {
+                      final result = await FocusedEditor.open(
+                        context,
+                        initialValue: _resultController.text,
+                        title: 'Result',
+                      );
+                      if (result != null) {
+                        setState(() {
+                          _resultController.text = result;
+                        });
+                        _persistDraft();
+                      }
+                    },
                   ),
                 ),
-              ),
-            ),
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16),
-              child: Row(
-                children: [
-                  Text("Target Tone:",
-                      style: Theme.of(context)
-                          .textTheme
-                          .bodySmall!
-                          .copyWith(fontWeight: FontWeight.w600)),
-                  SizedBox(width: 8),
+                if (_changesMade.isNotEmpty)
                   Expanded(
-                    child: Container(
-                      padding:
-                          EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                    child: SingleChildScrollView(
+                      physics: const BouncingScrollPhysics(),
+                      padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const SizedBox(height: 16),
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 10, vertical: 4),
                       decoration: BoxDecoration(
-                        color: Colors.teal.withOpacity(0.05),
-                        borderRadius: BorderRadius.circular(10),
-                        border: Border.all(color: Colors.teal.withOpacity(0.2)),
-                        boxShadow: [
-                          BoxShadow(
-                            color: Colors.teal.withOpacity(0.05),
-                            blurRadius: 4,
-                            offset: Offset(0, 2),
-                          ),
-                        ],
+                        color: _accent.withValues(alpha: 0.08),
+                        borderRadius: BorderRadius.circular(8),
                       ),
-                      child: DropdownButtonHideUnderline(
-                        child: DropdownButton<String>(
-                          value: _selectedTone,
-                          isExpanded: true,
-                          icon: Icon(
-                            CupertinoIcons.chevron_down,
-                            color: Colors.teal,
-                            size: 16,
-                          ),
-                          borderRadius: BorderRadius.circular(10),
-                          dropdownColor: Theme.of(context).colorScheme.surface,
-                          style:
-                              Theme.of(context).textTheme.bodyMedium!.copyWith(
-                                    color: Colors.teal.shade700,
-                                    fontWeight: FontWeight.w500,
-                                  ),
-                          items: _tones.map((String tone) {
-                            return DropdownMenuItem<String>(
-                              value: tone,
-                              child: Text(
-                                tone,
-                                style: TextStyle(
-                                  color: tone == _selectedTone
-                                      ? Colors.teal
-                                      : Theme.of(context).colorScheme.onSurface,
-                                ),
-                              ),
-                            );
-                          }).toList(),
-                          onChanged: (String? newValue) {
-                            if (newValue != null) {
-                              setState(() {
-                                _selectedTone = newValue;
-                                if (newValue == "Custom") {
-                                  _showCustomToneDialog();
-                                }
-                              });
-                            }
-                          },
-                        ),
+                      child: Text(
+                        'Changes Made',
+                        style: Theme.of(context)
+                            .textTheme
+                            .labelMedium!
+                            .copyWith(
+                              fontWeight: FontWeight.bold,
+                              color: _accent,
+                            ),
                       ),
                     ),
-                  ),
-                ],
-              ),
-            ),
-            Expanded(
-              child: FadeIn(
-                child: SingleChildScrollView(
-                  physics: const BouncingScrollPhysics(),
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      const SizedBox(height: 12),
-                      Container(
-                        height: r.h(225), // Even larger container
-                        padding: r.all(16),
-                        child: Shimmer.fromColors(
-                          baseColor: Colors.teal.shade300,
-                          highlightColor: Colors.teal.shade100,
-                          period: const Duration(seconds: 3),
-                          child: Center(
-                            child: Lottie.asset(
-                              'assets/lottie/toneEditor.json',
-                              height: r.h(200), // Larger animation
-                              width: r.w(200), // Make it square
-                              fit: BoxFit.contain,
-                              repeat: true,
-                              animate: true,
-                            ),
-                          ),
+                    const SizedBox(height: 8),
+                    ...List.generate(_changesMade.length, (i) {
+                      return Container(
+                        width: double.infinity,
+                        margin: const EdgeInsets.only(bottom: 8),
+                        padding: const EdgeInsets.all(10),
+                        decoration: BoxDecoration(
+                          color: colorScheme.surface,
+                          borderRadius: BorderRadius.circular(10),
+                          border: Border.all(
+                              color: colorScheme.outlineVariant),
                         ),
-                      ),
-                      const SizedBox(height: 12),
-                      Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 16),
-                        child: Text(
-                          "Enter or paste text and select a tone to apply",
-                          textAlign: TextAlign.center,
-                          style:
-                              Theme.of(context).textTheme.bodyMedium!.copyWith(
-                                    color: Theme.of(context)
-                                        .colorScheme
-                                        .onSurfaceVariant,
-                                  ),
-                        ),
-                      ),
-                      const SizedBox(height: 16),
-                      Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 16),
                         child: Row(
-                          mainAxisAlignment: MainAxisAlignment.center,
+                          crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            CustomButton(
-                              text: "Paste Text",
-                              onPressed: () async {
-                                try {
-                                  final ClipboardData? clipboardData =
-                                      await Clipboard.getData(
-                                          Clipboard.kTextPlain);
-                                  if (clipboardData != null &&
-                                      clipboardData.text != null) {
-                                    _controller.text = clipboardData.text!;
-                                  }
-                                } catch (e) {
-                                  ScaffoldMessenger.of(context).showSnackBar(
-                                    SnackBar(content: Text('Paste failed: $e')),
-                                  );
-                                }
-                              },
-                              icon: Icons.content_paste,
-                              type: ButtonType.secondary,
-                              width: 140,
+                            Container(
+                              width: 22,
+                              height: 22,
+                              decoration: BoxDecoration(
+                                color: _accent.withValues(alpha: 0.12),
+                                borderRadius: BorderRadius.circular(6),
+                              ),
+                              child: Center(
+                                child: Text(
+                                  '${i + 1}',
+                                  style: Theme.of(context)
+                                      .textTheme
+                                      .labelSmall!
+                                      .copyWith(
+                                        color: _accent,
+                                        fontWeight: FontWeight.bold,
+                                      ),
+                                ),
+                              ),
                             ),
-                            const SizedBox(width: 16),
-                            CustomButton(
-                              text: "Clear",
-                              onPressed: () {
-                                _controller.clear();
-                              },
-                              icon: CupertinoIcons.clear,
-                              type: ButtonType.secondary,
-                              width: 140,
+                            const SizedBox(width: 8),
+                            Expanded(
+                              child: Text(
+                                _changesMade[i],
+                                style: Theme.of(context)
+                                    .textTheme
+                                    .bodySmall!,
+                              ),
                             ),
                           ],
                         ),
+                      );
+                    }),
+                        ],
                       ),
-                      const SizedBox(height: 12),
-                    ],
+                    ),
                   ),
-                ),
-              ),
+              ],
             ),
-            FadeInUp(
-              child: Padding(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-                child: CustomButton(
-                  text: "Edit Tone",
-                  onPressed: _isLoading ? null : _editTone,
-                  width: screenSize.width * 0.8,
-                  isLoading: _isLoading,
-                ),
-              ),
-            ),
-          ],
+          ),
         ),
+      ],
+    );
+  }
+
+  // ─── Bottom bar ──────────────────────────────────────────────────
+  Widget _buildBottomBar(ResponsiveData r, ColorScheme colorScheme) {
+    return Container(
+      padding: r.fromLTRB(8, 10, 8, 4),
+      decoration: BoxDecoration(
+        color: colorScheme.surface,
+        borderRadius: BorderRadius.vertical(top: Radius.circular(r.r(20))),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.06),
+            blurRadius: 12,
+            offset: const Offset(0, -4),
+          ),
+        ],
       ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          // Scrollable tone chips
+          SizedBox(
+            height: r.h(38),
+            child: _buildToneChips(colorScheme),
+          ),
+          SizedBox(height: r.h(10)),
+          // CTA button
+          Padding(
+            padding: r.symmetric(horizontal: 16),
+            child: CustomButton(
+              text: _resultController.text.isNotEmpty
+                  ? "Edit Again"
+                  : "Edit Tone",
+              onPressed: _isLoading ? null : _editTone,
+              width: double.infinity,
+              isLoading: _isLoading,
+              icon: _isLoading ? null : CupertinoIcons.waveform,
+            ),
+          ),
+          const SizedBox(height: 4),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildToneChips(ColorScheme colorScheme) {
+    return ListView.separated(
+      scrollDirection: Axis.horizontal,
+      physics: const BouncingScrollPhysics(),
+      padding: const EdgeInsets.symmetric(horizontal: 8),
+      itemCount: _tones.length,
+      separatorBuilder: (_, __) => const SizedBox(width: 6),
+      itemBuilder: (_, i) {
+        final tone = _tones[i];
+        final selected = _selectedTone == tone;
+        return GestureDetector(
+          onTap: () {
+            setState(() => _selectedTone = tone);
+            _persistDraft();
+            if (tone == 'Custom') _showCustomToneDialog();
+          },
+          child: AnimatedContainer(
+            duration: const Duration(milliseconds: 200),
+            padding:
+                const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+            decoration: BoxDecoration(
+              color: selected
+                  ? _accent
+                  : colorScheme.surfaceContainer,
+              borderRadius: BorderRadius.circular(20),
+              border: selected
+                  ? null
+                  : Border.all(color: colorScheme.outlineVariant),
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(
+                  _toneIcons[tone] ?? CupertinoIcons.waveform,
+                  size: 14,
+                  color: selected
+                      ? Colors.white
+                      : colorScheme.onSurfaceVariant,
+                ),
+                const SizedBox(width: 6),
+                Text(
+                  tone,
+                  style:
+                      Theme.of(context).textTheme.labelMedium!.copyWith(
+                            color: selected
+                                ? Colors.white
+                                : colorScheme.onSurfaceVariant,
+                            fontWeight: selected
+                                ? FontWeight.bold
+                                : FontWeight.normal,
+                          ),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
     );
   }
 }
