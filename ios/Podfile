@@ -43,24 +43,12 @@ target 'Runner' do
   flutter_install_all_ios_pods File.dirname(File.realpath(__FILE__))
 
   # MLKit language packs for multi-script text recognition.
-  # Self-detected: if `.flutter-plugins-dependencies` no longer lists the
-  # `google_mlkit_*` Flutter wrappers (the sim CI workflow strips them
-  # because GoogleMLKit ships no arm64-sim slices and we need arm64 sim
-  # for iOS 26 / Liquid Glass), skip the language packs too — they have
-  # no consumer without the wrapper plugins.
   # Version must match GoogleMLKit/TextRecognition ~> 9.0.0 required by
   # google_mlkit_text_recognition 0.15.1 — do NOT change to a different major.
-  plugins_dep_file = File.expand_path('../.flutter-plugins-dependencies', __dir__)
-  has_mlkit_plugins = File.exist?(plugins_dep_file) &&
-    File.read(plugins_dep_file).include?('google_mlkit')
-  if has_mlkit_plugins
-    pod 'GoogleMLKit/TextRecognitionChinese', '~> 9.0.0'
-    pod 'GoogleMLKit/TextRecognitionDevanagari', '~> 9.0.0'
-    pod 'GoogleMLKit/TextRecognitionJapanese', '~> 9.0.0'
-    pod 'GoogleMLKit/TextRecognitionKorean', '~> 9.0.0'
-  else
-    puts "[Podfile] MLKit plugins not in .flutter-plugins-dependencies → skipping language packs"
-  end
+  pod 'GoogleMLKit/TextRecognitionChinese', '~> 9.0.0'
+  pod 'GoogleMLKit/TextRecognitionDevanagari', '~> 9.0.0'
+  pod 'GoogleMLKit/TextRecognitionJapanese', '~> 9.0.0'
+  pod 'GoogleMLKit/TextRecognitionKorean', '~> 9.0.0'
 
   target 'RunnerTests' do
     inherit! :search_paths
@@ -88,15 +76,10 @@ post_install do |installer|
     end
   end
 
-  # NOTE: We used to ship a 3-layer post_install patch here to wrap MLKit
-  # registrations in #if !TARGET_OS_SIMULATOR, strip MLKit -framework refs
-  # from Pods-Runner xcconfig, and guard the framework-embed script. That
-  # approach was too fragile (xcconfig keys can land in unexpected files,
-  # framework refs come from multiple places). The current strategy is to
-  # prevent MLKit pods from being installed in the simulator workflow at
-  # all — codemagic.yaml strips `google_mlkit_*` from
-  # `.flutter-plugins-dependencies` BEFORE `flutter build ios --no-pub`,
-  # so `flutter_install_all_ios_pods` never sees them and the language
-  # packs above self-skip via the `has_mlkit_plugins` check. Device
-  # builds keep MLKit normally.
+  # NOTE: We don't apply any MLKit / arm64-simulator workarounds here
+  # anymore. The CI workflow builds for *device* (-sdk iphoneos), and
+  # MLKit ships full arm64-iphoneos slices, so OCR works end-to-end on
+  # real iPhones installed via Sideloadly. The arm64-simulator slice
+  # problem only existed for the now-removed "iOS Simulator Build"
+  # workflow — testing on real device + iOS 26 covers Liquid Glass too.
 end
