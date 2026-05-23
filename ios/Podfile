@@ -42,13 +42,25 @@ target 'Runner' do
 
   flutter_install_all_ios_pods File.dirname(File.realpath(__FILE__))
 
-  # MLKit language packs for multi-script text recognition
+  # MLKit language packs for multi-script text recognition.
+  # Self-detected: if `.flutter-plugins-dependencies` no longer lists the
+  # `google_mlkit_*` Flutter wrappers (the sim CI workflow strips them
+  # because GoogleMLKit ships no arm64-sim slices and we need arm64 sim
+  # for iOS 26 / Liquid Glass), skip the language packs too — they have
+  # no consumer without the wrapper plugins.
   # Version must match GoogleMLKit/TextRecognition ~> 9.0.0 required by
   # google_mlkit_text_recognition 0.15.1 — do NOT change to a different major.
-  pod 'GoogleMLKit/TextRecognitionChinese', '~> 9.0.0'
-  pod 'GoogleMLKit/TextRecognitionDevanagari', '~> 9.0.0'
-  pod 'GoogleMLKit/TextRecognitionJapanese', '~> 9.0.0'
-  pod 'GoogleMLKit/TextRecognitionKorean', '~> 9.0.0'
+  plugins_dep_file = File.expand_path('../.flutter-plugins-dependencies', __dir__)
+  has_mlkit_plugins = File.exist?(plugins_dep_file) &&
+    File.read(plugins_dep_file).include?('google_mlkit')
+  if has_mlkit_plugins
+    pod 'GoogleMLKit/TextRecognitionChinese', '~> 9.0.0'
+    pod 'GoogleMLKit/TextRecognitionDevanagari', '~> 9.0.0'
+    pod 'GoogleMLKit/TextRecognitionJapanese', '~> 9.0.0'
+    pod 'GoogleMLKit/TextRecognitionKorean', '~> 9.0.0'
+  else
+    puts "[Podfile] MLKit plugins not in .flutter-plugins-dependencies → skipping language packs"
+  end
 
   target 'RunnerTests' do
     inherit! :search_paths
@@ -60,7 +72,8 @@ end
 # the host UIApplication). The extension links KeyboardKit via SwiftPM only.
 
 post_install do |installer|
-  # Required for MLKit: exclude armv7 on all build configs
+  # Exclude armv7 on all build configs; bump every pod to our minimum
+  # iOS deployment target.
   installer.pods_project.build_configurations.each do |config|
     config.build_settings['EXCLUDED_ARCHS[sdk=*]'] = 'armv7'
     config.build_settings['IPHONEOS_DEPLOYMENT_TARGET'] = $iOSVersion
@@ -68,142 +81,22 @@ post_install do |installer|
 
   installer.pods_project.targets.each do |target|
     flutter_additional_ios_build_settings(target)
-
-    # Enforce minimum iOS version required by MLKit on all pods
     target.build_configurations.each do |config|
       if Gem::Version.new($iOSVersion) > Gem::Version.new(config.build_settings['IPHONEOS_DEPLOYMENT_TARGET'] || '0')
         config.build_settings['IPHONEOS_DEPLOYMENT_TARGET'] = $iOSVersion
       end
-
-      # MLKit family doesn't ship arm64-simulator slices, but we need
-      # arm64 sim for iOS 26 / Liquid Glass testing. Resolution: skip
-      # MLKit pods entirely on simulator (both arches) by excluding both
-      # 'arm64' and 'x86_64' for iphonesimulator → the pod compiles for
-      # zero sim arches → the resulting framework is empty for sim.
-      #
-      # GeneratedPluginRegistrant.m's reference to the MLKit Flutter
-      # plugin is then wrapped in `#if !TARGET_OS_SIMULATOR` by a
-      # codemagic.yaml post-pub-get script step, so the app's link step
-      # doesn't pull in MLKit symbols on sim.
-      #
-      # Device builds (arm64-iphoneos) are unaffected: MLKit ships those
-      # slices, the registration code compiles normally, OCR works.
-      # On sim there's no camera anyway — OCR being unavailable is the
-      # right behavior.
-      mlkit_target = target.name.start_with?('GoogleMLKit', 'MLImage',
-                                              'MLKitCommon', 'MLKitVision',
-                                              'google_mlkit_')
-      if mlkit_target
-        config.build_settings['EXCLUDED_ARCHS[sdk=iphonesimulator*]'] = 'arm64 x86_64'
-      end
     end
   end
 
-  # ─── Patch GeneratedPluginRegistrant.m to skip MLKit on simulator ────
-  #
-  # We have to do this here (in pod post_install) rather than as a
-  # standalone codemagic.yaml step, because `flutter build ios` runs
-  # `injectPlugins` internally which REGENERATES the registrant from
-  # scratch every build — any pre-build patch gets overwritten before
-  # xcodebuild runs. pod install (which fires this hook) runs AFTER
-  # injectPlugins and BEFORE xcodebuild, so the patch sticks.
-  #
-  # The patch wraps every MLKit-related @import + +registerWithRegistrar:
-  # line in `#if !TARGET_OS_SIMULATOR` so the sim build doesn't try to
-  # link against MLKit symbols that don't exist (the MLKit pods are
-  # excluded from sim arches by the loop above). Device builds are
-  # untouched — MLKit ships arm64-iphoneos slices and OCR works there.
-  #
-  # Idempotent: we detect already-wrapped lines (preceding `#if
-  # !TARGET_OS_SIMULATOR`) and don't double-wrap.
-  # ─── Layer 1: GeneratedPluginRegistrant.m ─────────────────────────────
-  # Wrap @import + +registerWithRegistrar: lines so the compile step
-  # doesn't pull MLKit symbols on simulator. Matches both snake_case
-  # (@import) and camelCase (class name) forms.
-  mlkit_regex = /google[_]?ml[_]?kit/i
-
-  registrant_path = File.expand_path('Runner/GeneratedPluginRegistrant.m', __dir__)
-  if File.exist?(registrant_path)
-    lines = File.readlines(registrant_path)
-    out = []
-    lines.each_with_index do |line, i|
-      mlkit_line = line.match?(mlkit_regex)
-      prev_already_guarded = i > 0 && lines[i - 1].include?('#if !TARGET_OS_SIMULATOR')
-      if mlkit_line && !prev_already_guarded
-        out << "#if !TARGET_OS_SIMULATOR\n"
-        out << line
-        out << "#endif\n"
-      else
-        out << line
-      end
-    end
-    File.write(registrant_path, out.join)
-    wrapped = lines.count { |l| l.match?(mlkit_regex) }
-    puts "[Podfile] Wrapped #{wrapped} MLKit registrations in #if !TARGET_OS_SIMULATOR"
-  else
-    puts "[Podfile] GeneratedPluginRegistrant.m not found (skipped patch)"
-  end
-
-  # ─── Layer 2: Pods-Runner xcconfig OTHER_LDFLAGS ──────────────────────
-  # Cocoapods bakes `-framework "google_mlkit_commons"` (and friends) into
-  # the Runner target's link flags. Because the MLKit pods are excluded
-  # from sim arches, the .framework files don't exist on simulator → the
-  # linker errors with "Framework 'google_mlkit_commons' not found".
-  # Fix: append an `OTHER_LDFLAGS[sdk=iphonesimulator*]` override with the
-  # MLKit `-framework` flags stripped out.
-  #
-  # The `[sdk=iphonesimulator*]` qualifier means: for sim builds, use the
-  # stripped list; for device builds, fall back to the original (full)
-  # OTHER_LDFLAGS, so OCR keeps working on real iPhones.
-  ldflag_strip_regex = /-framework\s+"(?:google_mlkit_\w+|GoogleMLKit\w*|MLKit\w*|MLImage\w*)"\s*/
-
-  %w[debug release profile].each do |build_config|
-    xcconfig_path = File.expand_path(
-      "Pods/Target Support Files/Pods-Runner/Pods-Runner.#{build_config}.xcconfig",
-      __dir__,
-    )
-    next unless File.exist?(xcconfig_path)
-    contents = File.read(xcconfig_path)
-    # Idempotent: skip if we've already appended the override.
-    next if contents.include?('OTHER_LDFLAGS[sdk=iphonesimulator*]')
-
-    ldflags_match = contents.match(/^OTHER_LDFLAGS\s*=\s*(.+)$/)
-    next unless ldflags_match
-
-    stripped = ldflags_match[1].gsub(ldflag_strip_regex, '').gsub(/\s+/, ' ').strip
-    File.open(xcconfig_path, 'a') do |f|
-      f.puts ''
-      f.puts '// Auto-injected by Podfile post_install: strip MLKit frameworks'
-      f.puts '// from the simulator linker (MLKit pods are excluded from sim'
-      f.puts '// arches above so their .framework files do not exist for sim).'
-      f.puts "OTHER_LDFLAGS[sdk=iphonesimulator*] = #{stripped}"
-    end
-    puts "[Podfile] Patched Pods-Runner.#{build_config}.xcconfig (stripped MLKit -framework on sim)"
-  end
-
-  # ─── Layer 3: Pods-Runner-frameworks.sh (embed step) ──────────────────
-  # The framework-embed script runs `install_framework` on every pod and
-  # would error on sim because MLKit framework binaries don't exist.
-  # Make `install_framework` a no-op for missing source paths so MLKit
-  # entries fail silently on sim while every other framework still copies.
-  embed_script_path = File.expand_path(
-    'Pods/Target Support Files/Pods-Runner/Pods-Runner-frameworks.sh',
-    __dir__,
-  )
-  if File.exist?(embed_script_path)
-    script = File.read(embed_script_path)
-    sentinel = '# REWORDIUM_SIM_GUARD'
-    unless script.include?(sentinel)
-      # Inject an early-return guard at the top of install_framework() that
-      # silently skips when the source path doesn't exist (i.e. MLKit on sim).
-      patched = script.sub(
-        /install_framework\(\)\s*\{/,
-        "install_framework() {\n  #{sentinel}\n  if [ ! -e \"$1\" ] && [ ! -L \"$1\" ]; then\n    echo \"[skip] $1 (not built for this destination)\"\n    return 0\n  fi",
-      )
-      if patched != script
-        File.write(embed_script_path, patched)
-        puts '[Podfile] Patched Pods-Runner-frameworks.sh (skip missing frameworks)'
-      end
-    end
-  end
+  # NOTE: We used to ship a 3-layer post_install patch here to wrap MLKit
+  # registrations in #if !TARGET_OS_SIMULATOR, strip MLKit -framework refs
+  # from Pods-Runner xcconfig, and guard the framework-embed script. That
+  # approach was too fragile (xcconfig keys can land in unexpected files,
+  # framework refs come from multiple places). The current strategy is to
+  # prevent MLKit pods from being installed in the simulator workflow at
+  # all — codemagic.yaml strips `google_mlkit_*` from
+  # `.flutter-plugins-dependencies` BEFORE `flutter build ios --no-pub`,
+  # so `flutter_install_all_ios_pods` never sees them and the language
+  # packs above self-skip via the `has_mlkit_plugins` check. Device
+  # builds keep MLKit normally.
 end
