@@ -74,14 +74,28 @@ post_install do |installer|
       if Gem::Version.new($iOSVersion) > Gem::Version.new(config.build_settings['IPHONEOS_DEPLOYMENT_TARGET'] || '0')
         config.build_settings['IPHONEOS_DEPLOYMENT_TARGET'] = $iOSVersion
       end
-      # DO NOT exclude arm64 from iphonesimulator builds. That used to be an
-      # Intel-Mac workaround for pods that only shipped x86_64 sim slices;
-      # on Apple Silicon (which is what Codemagic's M-series builders use,
-      # and what every modern Mac uses) the simulator itself runs arm64, so
-      # excluding it makes pods like cunning_document_scanner compile for
-      # zero architectures → "Module 'cunning_document_scanner' not found"
-      # in GeneratedPluginRegistrant.m. Leave architecture selection to the
-      # toolchain.
+
+      # MLKit family doesn't ship arm64-simulator slices, but we need
+      # arm64 sim for iOS 26 / Liquid Glass testing. Resolution: skip
+      # MLKit pods entirely on simulator (both arches) by excluding both
+      # 'arm64' and 'x86_64' for iphonesimulator → the pod compiles for
+      # zero sim arches → the resulting framework is empty for sim.
+      #
+      # GeneratedPluginRegistrant.m's reference to the MLKit Flutter
+      # plugin is then wrapped in `#if !TARGET_OS_SIMULATOR` by a
+      # codemagic.yaml post-pub-get script step, so the app's link step
+      # doesn't pull in MLKit symbols on sim.
+      #
+      # Device builds (arm64-iphoneos) are unaffected: MLKit ships those
+      # slices, the registration code compiles normally, OCR works.
+      # On sim there's no camera anyway — OCR being unavailable is the
+      # right behavior.
+      mlkit_target = target.name.start_with?('GoogleMLKit', 'MLImage',
+                                              'MLKitCommon', 'MLKitVision',
+                                              'google_mlkit_')
+      if mlkit_target
+        config.build_settings['EXCLUDED_ARCHS[sdk=iphonesimulator*]'] = 'arm64 x86_64'
+      end
     end
   end
 end
