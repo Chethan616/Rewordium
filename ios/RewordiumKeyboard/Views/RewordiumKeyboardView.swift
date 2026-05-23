@@ -50,7 +50,7 @@ struct RewordiumKeyboardView: View {
                         // KeyboardContext owns the current keyboard type;
                         // setting it to .alphabetic flips back to QWERTY
                         // through KeyboardKit's normal redraw path.
-                        state.keyboardContext.keyboardType = .alphabetic(.auto)
+                        state.keyboardContext.keyboardType = .alphabetic
                     }
                 )
             },
