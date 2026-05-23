@@ -116,14 +116,14 @@ post_install do |installer|
   #
   # Idempotent: we detect already-wrapped lines (preceding `#if
   # !TARGET_OS_SIMULATOR`) and don't double-wrap.
+  # ─── Layer 1: GeneratedPluginRegistrant.m ─────────────────────────────
+  # Wrap @import + +registerWithRegistrar: lines so the compile step
+  # doesn't pull MLKit symbols on simulator. Matches both snake_case
+  # (@import) and camelCase (class name) forms.
+  mlkit_regex = /google[_]?ml[_]?kit/i
+
   registrant_path = File.expand_path('Runner/GeneratedPluginRegistrant.m', __dir__)
   if File.exist?(registrant_path)
-    # Case-insensitive regex catches all spellings of MLKit identifiers:
-    #   • snake_case pod name in @imports:  `google_mlkit_commons`
-    #   • camelCase class name in calls:    `GoogleMlKitCommonsPlugin`
-    #   • either form of `mlkit` (capital K is what Flutter's plugin
-    #     code actually emits — `GoogleMl` + `Kit`, not `GoogleMlkit`)
-    mlkit_regex = /google[_]?ml[_]?kit/i
     lines = File.readlines(registrant_path)
     out = []
     lines.each_with_index do |line, i|
@@ -142,5 +142,68 @@ post_install do |installer|
     puts "[Podfile] Wrapped #{wrapped} MLKit registrations in #if !TARGET_OS_SIMULATOR"
   else
     puts "[Podfile] GeneratedPluginRegistrant.m not found (skipped patch)"
+  end
+
+  # ─── Layer 2: Pods-Runner xcconfig OTHER_LDFLAGS ──────────────────────
+  # Cocoapods bakes `-framework "google_mlkit_commons"` (and friends) into
+  # the Runner target's link flags. Because the MLKit pods are excluded
+  # from sim arches, the .framework files don't exist on simulator → the
+  # linker errors with "Framework 'google_mlkit_commons' not found".
+  # Fix: append an `OTHER_LDFLAGS[sdk=iphonesimulator*]` override with the
+  # MLKit `-framework` flags stripped out.
+  #
+  # The `[sdk=iphonesimulator*]` qualifier means: for sim builds, use the
+  # stripped list; for device builds, fall back to the original (full)
+  # OTHER_LDFLAGS, so OCR keeps working on real iPhones.
+  ldflag_strip_regex = /-framework\s+"(?:google_mlkit_\w+|GoogleMLKit\w*|MLKit\w*|MLImage\w*)"\s*/
+
+  %w[debug release profile].each do |build_config|
+    xcconfig_path = File.expand_path(
+      "Pods/Target Support Files/Pods-Runner/Pods-Runner.#{build_config}.xcconfig",
+      __dir__,
+    )
+    next unless File.exist?(xcconfig_path)
+    contents = File.read(xcconfig_path)
+    # Idempotent: skip if we've already appended the override.
+    next if contents.include?('OTHER_LDFLAGS[sdk=iphonesimulator*]')
+
+    ldflags_match = contents.match(/^OTHER_LDFLAGS\s*=\s*(.+)$/)
+    next unless ldflags_match
+
+    stripped = ldflags_match[1].gsub(ldflag_strip_regex, '').gsub(/\s+/, ' ').strip
+    File.open(xcconfig_path, 'a') do |f|
+      f.puts ''
+      f.puts '// Auto-injected by Podfile post_install: strip MLKit frameworks'
+      f.puts '// from the simulator linker (MLKit pods are excluded from sim'
+      f.puts '// arches above so their .framework files do not exist for sim).'
+      f.puts "OTHER_LDFLAGS[sdk=iphonesimulator*] = #{stripped}"
+    end
+    puts "[Podfile] Patched Pods-Runner.#{build_config}.xcconfig (stripped MLKit -framework on sim)"
+  end
+
+  # ─── Layer 3: Pods-Runner-frameworks.sh (embed step) ──────────────────
+  # The framework-embed script runs `install_framework` on every pod and
+  # would error on sim because MLKit framework binaries don't exist.
+  # Make `install_framework` a no-op for missing source paths so MLKit
+  # entries fail silently on sim while every other framework still copies.
+  embed_script_path = File.expand_path(
+    'Pods/Target Support Files/Pods-Runner/Pods-Runner-frameworks.sh',
+    __dir__,
+  )
+  if File.exist?(embed_script_path)
+    script = File.read(embed_script_path)
+    sentinel = '# REWORDIUM_SIM_GUARD'
+    unless script.include?(sentinel)
+      # Inject an early-return guard at the top of install_framework() that
+      # silently skips when the source path doesn't exist (i.e. MLKit on sim).
+      patched = script.sub(
+        /install_framework\(\)\s*\{/,
+        "install_framework() {\n  #{sentinel}\n  if [ ! -e \"$1\" ] && [ ! -L \"$1\" ]; then\n    echo \"[skip] $1 (not built for this destination)\"\n    return 0\n  fi",
+      )
+      if patched != script
+        File.write(embed_script_path, patched)
+        puts '[Podfile] Patched Pods-Runner-frameworks.sh (skip missing frameworks)'
+      end
+    end
   end
 end
