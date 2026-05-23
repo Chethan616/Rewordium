@@ -8,7 +8,10 @@ import 'package:package_info_plus/package_info_plus.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:m3e_collection/m3e_collection.dart';
 import 'package:expressive_refresh/expressive_refresh.dart';
+import 'package:permission_handler/permission_handler.dart';
+import 'package:firebase_messaging/firebase_messaging.dart';
 import '../widgets/whats_new_sheet.dart';
+import '../widgets/rewordium_toast.dart';
 import '../providers/keyboard_provider.dart';
 import '../services/ios_keyboard_bridge.dart';
 import '../services/news_subscription_service.dart';
@@ -38,7 +41,8 @@ class SettingsScreen extends StatefulWidget {
   State<SettingsScreen> createState() => _SettingsScreenState();
 }
 
-class _SettingsScreenState extends State<SettingsScreen> {
+class _SettingsScreenState extends State<SettingsScreen>
+    with WidgetsBindingObserver {
   // Admin access state
   int _adminTapCount = 0;
   DateTime? _lastTapTime;
@@ -48,6 +52,11 @@ class _SettingsScreenState extends State<SettingsScreen> {
   // News subscription state
   bool _isNewsSubscribed = false;
   bool _isLoadingNewsSubscription = true;
+
+  // System notification permission state — mirrors the OS-level toggle so the
+  // UI doesn't drift after the user returns from Settings.app / system perms.
+  bool _notificationsGranted = false;
+  bool _isLoadingNotificationStatus = true;
 
   // Rewordium header toggle (pro users)
   bool _removeRewordiumHeader = false;
@@ -70,10 +79,80 @@ class _SettingsScreenState extends State<SettingsScreen> {
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     _loadNewsSubscriptionStatus();
     _loadHeaderPref();
+    _refreshNotificationStatus();
     if (defaultTargetPlatform == TargetPlatform.iOS) {
       _loadIosKeyboardPrefs();
+    }
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    // Re-probe perm state when returning from the system Settings app.
+    if (state == AppLifecycleState.resumed) {
+      _refreshNotificationStatus();
+    }
+  }
+
+  Future<void> _refreshNotificationStatus() async {
+    final status = await Permission.notification.status;
+    if (!mounted) return;
+    setState(() {
+      _notificationsGranted = status.isGranted || status.isLimited;
+      _isLoadingNotificationStatus = false;
+    });
+  }
+
+  Future<void> _toggleNotifications(bool desired) async {
+    if (desired) {
+      final status = await Permission.notification.status;
+      if (status.isPermanentlyDenied) {
+        // System dialog won't appear again — push the user to Settings.
+        if (!mounted) return;
+        context.showToast(
+          'Enable notifications in System Settings to receive updates.',
+          variant: RewordiumToastVariant.info,
+        );
+        await openAppSettings();
+        return;
+      }
+      final result = await Permission.notification.request();
+      final granted = result.isGranted || result.isLimited;
+      if (granted) {
+        try {
+          await FirebaseMessaging.instance.subscribeToTopic('all_users');
+        } catch (_) {}
+      }
+      if (!mounted) return;
+      setState(() => _notificationsGranted = granted);
+      if (granted) {
+        context.showToast('Notifications on',
+            variant: RewordiumToastVariant.success);
+      } else {
+        context.showToast('Permission denied',
+            variant: RewordiumToastVariant.error);
+      }
+    } else {
+      // We can't programmatically revoke the OS permission. Unsubscribe from
+      // the topic locally so server-fanned-out messages stop arriving, and
+      // bounce the user to Settings if they want to fully revoke.
+      try {
+        await FirebaseMessaging.instance.unsubscribeFromTopic('all_users');
+      } catch (_) {}
+      if (!mounted) return;
+      setState(() => _notificationsGranted = false);
+      context.showToast(
+        'Unsubscribed. To fully revoke, open System Settings.',
+        variant: RewordiumToastVariant.info,
+      );
     }
   }
 
@@ -668,9 +747,35 @@ class _SettingsScreenState extends State<SettingsScreen> {
                         ],
                       ),
                     ),
+                    const Divider(height: 1, indent: 72),
+                    // System-level push notifications (iOS + Android 13+ both
+                    // gate this behind a runtime permission). Toggle mirrors
+                    // OS state and re-probes on app resume.
+                    _buildSettingItem(
+                      icon: CupertinoIcons.bell,
+                      iconColor: Colors.amber.shade700,
+                      title: "Notifications",
+                      subtitle: _notificationsGranted
+                          ? "Push notifications enabled"
+                          : "Allow Rewordium to send push notifications",
+                      trailing: _isLoadingNotificationStatus
+                          ? const SizedBox(
+                              width: 24,
+                              height: 24,
+                              child: LoadingIndicatorM3E(
+                                constraints: BoxConstraints(
+                                    maxWidth: 24, maxHeight: 24),
+                              ),
+                            )
+                          : Switch(
+                              value: _notificationsGranted,
+                              onChanged: _toggleNotifications,
+                            ),
+                    ),
                     if (isLoggedIn) ...[
                       const Divider(height: 1, indent: 72),
-                      // News & Updates Toggle
+                      // News & Updates Toggle (in-app channel preference,
+                      // independent of the OS permission above).
                       _buildSettingItem(
                         icon: CupertinoIcons.bell_fill,
                         iconColor: Colors.pink,

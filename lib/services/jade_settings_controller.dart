@@ -79,20 +79,19 @@ class JadeSettingsController {
     if (wantsDark && !themeProvider.isDarkMode) {
       themeProvider.toggleTheme();
       HapticFeedback.selectionClick();
-      return "🌙 Dark mode activated! Perfect for nighttime use. Your eyes will thank you! ✨";
+      return "Switched to dark mode.";
     } else if (wantsLight && themeProvider.isDarkMode) {
       themeProvider.toggleTheme();
       HapticFeedback.selectionClick();
-      return "☀️ Light mode activated! Bright, clean, and perfect for daytime use! 🌟";
+      return "Switched to light mode.";
     } else if (wantsDark && themeProvider.isDarkMode) {
-      return "🌙 You're already in dark mode! Looking good! ✨";
+      return "Already in dark mode.";
     } else if (wantsLight && !themeProvider.isDarkMode) {
-      return "☀️ You're already in light mode! Bright and beautiful! 🌟";
+      return "Already in light mode.";
     } else {
-      // General toggle
       themeProvider.toggleTheme();
       HapticFeedback.selectionClick();
-      return "🎨 Theme switched to ${themeProvider.isDarkMode ? 'dark' : 'light'} mode! Perfect! ✨";
+      return "Switched to ${themeProvider.isDarkMode ? 'dark' : 'light'} mode.";
     }
   }
 
@@ -114,9 +113,9 @@ class JadeSettingsController {
 
     if (newValue) {
       HapticFeedback.mediumImpact();
-      return "📳 Haptic feedback enabled! You'll feel those satisfying vibrations now! ✨";
+      return "Haptics on.";
     } else {
-      return "🔇 Haptic feedback disabled. No more vibrations for a quieter experience! 😌";
+      return "Haptics off.";
     }
   }
 
@@ -139,9 +138,9 @@ class JadeSettingsController {
     await prefs.setBool('notifications_enabled', newValue);
 
     if (newValue) {
-      return "🔔 Notifications enabled! I'll keep you updated with important alerts! 📢";
+      return "Notifications on.";
     } else {
-      return "🔕 Notifications disabled. Enjoy the peaceful, distraction-free experience! 😴";
+      return "Notifications off.";
     }
   }
 
@@ -159,14 +158,14 @@ class JadeSettingsController {
       currentSize = (currentSize + 2).clamp(12.0, 24.0);
       await prefs.setDouble('text_size', currentSize);
       HapticFeedback.lightImpact();
-      return "📝 Text size increased to ${currentSize}px! Much better readability! 👀✨";
+      return "Text size: ${currentSize.toInt()}px.";
     } else if (wantsSmaller) {
       currentSize = (currentSize - 2).clamp(12.0, 24.0);
       await prefs.setDouble('text_size', currentSize);
       HapticFeedback.lightImpact();
-      return "📝 Text size decreased to ${currentSize}px! More compact and clean! 🎯";
+      return "Text size: ${currentSize.toInt()}px.";
     } else {
-      return "📏 Current text size is ${currentSize}px. Say 'bigger text' or 'smaller text' to adjust! 📝";
+      return "Text size is ${currentSize.toInt()}px. Say \"bigger\" or \"smaller\" to adjust.";
     }
   }
 
@@ -187,9 +186,9 @@ class JadeSettingsController {
     await prefs.setBool('sound_feedback', newValue);
 
     if (newValue) {
-      return "🔊 Sound feedback enabled! You'll hear satisfying clicks and beeps! 🎵";
+      return "Sound feedback on.";
     } else {
-      return "🔇 Sound feedback disabled. Silent and smooth operation! 🤫";
+      return "Sound feedback off.";
     }
   }
 
@@ -212,9 +211,9 @@ class JadeSettingsController {
     await prefs.setBool('auto_correction', newValue);
 
     if (newValue) {
-      return "✅ Auto-correction enabled! I'll help fix those typos automatically! 📝✨";
+      return "Auto-correction on.";
     } else {
-      return "❌ Auto-correction disabled. You have full control over your typing! 🎯";
+      return "Auto-correction off.";
     }
   }
 
@@ -222,13 +221,13 @@ class JadeSettingsController {
       BuildContext context, String message) async {
     try {
       if (defaultTargetPlatform != TargetPlatform.android) {
-        return "⌨️ Keyboard settings are only available on Android! 📱";
+        return "Keyboard settings are Android-only — open Settings → General → Keyboard on iOS.";
       }
       await RewordiumKeyboardService.openKeyboardSettings();
       HapticFeedback.lightImpact();
-      return "⌨️ Keyboard settings opened! Customize your typing experience! 🎛️✨";
+      return "Opened keyboard settings.";
     } catch (e) {
-      return "🔧 Couldn't open keyboard settings automatically. Please go to Settings > Keyboard to customize manually! 📱";
+      return "Couldn't open keyboard settings. Open Settings → Keyboard manually.";
     }
   }
 
@@ -309,7 +308,7 @@ class JadeSettingsController {
           final Function handler = patternData['handler'] as Function;
           return await handler(context, message);
         } catch (e) {
-          return "⚠️ I encountered an issue while changing that setting. Please try again! 🔄";
+          return "Couldn't change that setting. Try again.";
         }
       }
     }

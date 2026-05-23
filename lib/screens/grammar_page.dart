@@ -9,6 +9,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import '../widgets/custom_app_bar.dart';
 import '../widgets/custom_button.dart';
+import '../widgets/focused_editor.dart';
 import '../providers/auth_provider.dart';
 import '../services/unified_ai_service.dart';
 import '../services/document_chunking_service.dart';
@@ -521,15 +522,20 @@ class _GrammarPageState extends State<GrammarPage>
         color: colorScheme.surfaceContainer,
         borderRadius: BorderRadius.circular(r.r(16)),
       ),
+      // readOnly + onTap routes editing through FocusedEditor (full-screen).
+      // Inline TextField still renders + selects + copies; typing happens
+      // in the dedicated editor screen.
       child: TextField(
         controller: _textController,
         focusNode: _textFocusNode,
         maxLines: null,
         expands: true,
+        readOnly: true,
+        showCursor: false,
         textAlignVertical: TextAlignVertical.top,
         style: Theme.of(context).textTheme.bodyMedium!,
         decoration: InputDecoration(
-          hintText: "Type or paste text to check grammar...",
+          hintText: "Tap to check grammar…",
           contentPadding: r.all(16),
           border: OutlineInputBorder(
             borderRadius: BorderRadius.circular(r.r(16)),
@@ -562,15 +568,21 @@ class _GrammarPageState extends State<GrammarPage>
                   },
                 ),
         ),
-        onChanged: (text) {
-          _scheduleWordCountUpdate(text);
-          final isNowEmpty = text.trim().isEmpty;
-          if (isNowEmpty != _isInputEmpty) {
+        onTap: () async {
+          final result = await FocusedEditor.open(
+            context,
+            initialValue: _textController.text,
+            title: 'Grammar Check',
+            hint: 'Paste or type the text you want to grammar-check…',
+          );
+          if (result != null) {
+            _textController.text = result;
+            _updateWordCount(result);
             setState(() {
-              _isInputEmpty = isNowEmpty;
+              _isInputEmpty = result.trim().isEmpty;
             });
+            _persistDraft();
           }
-          _persistDraft();
         },
       ),
     );

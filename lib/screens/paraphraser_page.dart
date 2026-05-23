@@ -8,6 +8,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import '../widgets/custom_app_bar.dart';
 import '../widgets/custom_button.dart';
+import '../widgets/focused_editor.dart';
 import '../providers/auth_provider.dart';
 import '../services/unified_ai_service.dart';
 import '../services/document_chunking_service.dart';
@@ -740,14 +741,19 @@ class _ParaphraserPageState extends State<ParaphraserPage>
         color: colorScheme.surfaceContainer,
         borderRadius: BorderRadius.circular(r.r(16)),
       ),
+      // readOnly + onTap routes editing through FocusedEditor (full-screen).
+      // Inline TextField still renders the current value with selection +
+      // copy support; typing happens in the dedicated editor screen.
       child: TextField(
         controller: _controller,
         maxLines: null,
         expands: true,
+        readOnly: true,
+        showCursor: false,
         textAlignVertical: TextAlignVertical.top,
         style: Theme.of(context).textTheme.bodyMedium!,
         decoration: InputDecoration(
-          hintText: "Enter or paste text to paraphrase...",
+          hintText: "Tap to paraphrase…",
           contentPadding: r.all(16),
           border: OutlineInputBorder(
             borderRadius: BorderRadius.circular(r.r(16)),
@@ -775,9 +781,18 @@ class _ParaphraserPageState extends State<ParaphraserPage>
                   },
                 ),
         ),
-        onChanged: (_) {
-          setState(() {});
-          _persistDraft();
+        onTap: () async {
+          final result = await FocusedEditor.open(
+            context,
+            initialValue: _controller.text,
+            title: 'Paraphrase',
+            hint: 'Paste or type the text you want to paraphrase…',
+          );
+          if (result != null) {
+            _controller.text = result;
+            setState(() {});
+            _persistDraft();
+          }
         },
       ),
     );
