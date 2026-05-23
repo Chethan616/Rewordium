@@ -32,9 +32,10 @@ workflows:
     scripts:
       - name: Install dependencies
         script: |
-          # Flutter's SPM integration rsyncs plugin sources into this dir
-          # during pub get — it must exist on a fresh checkout.
+          # Flutter's SPM integration rsyncs plugin sources into these dirs
+          # during pub get — they must exist on a fresh checkout.
           mkdir -p build/ios/SourcePackages
+          mkdir -p build/macos/SourcePackages
           flutter pub get
 
       - name: Prepare .env for CI
