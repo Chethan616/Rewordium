@@ -17,7 +17,8 @@
       "WebFetch(domain:github.com)",
       "WebFetch(domain:keyboardkit.com)",
       "PowerShell(Test-Path *)",
-      "PowerShell(Remove-Item *)"
+      "PowerShell(Remove-Item *)",
+      "Bash(xargs grep -l \"notifySuggestionAccepted\\\\|appendWord\")"
     ]
   }
 }

@@ -7,6 +7,8 @@ import 'package:http/http.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 
+import 'widgets/rewordium_toast.dart';
+
 class AdminPanel extends StatefulWidget {
   const AdminPanel({Key? key}) : super(key: key);
 
@@ -46,12 +48,7 @@ class _AdminPanelState extends State<AdminPanel> {
         _isAuthenticated = true;
       });
     } else {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Incorrect password'),
-          backgroundColor: Colors.red,
-        ),
-      );
+      context.showToast('Incorrect password', variant: RewordiumToastVariant.error);
     }
   }
 
@@ -90,12 +87,8 @@ class _AdminPanelState extends State<AdminPanel> {
         });
 
         if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('Successfully signed in as admin'),
-              backgroundColor: Colors.green,
-            ),
-          );
+          context.showToast('Signed in as admin',
+              variant: RewordiumToastVariant.success);
         }
 
         // Print user info for debugging
@@ -107,13 +100,9 @@ class _AdminPanelState extends State<AdminPanel> {
     } catch (e) {
       print('Error in _signInWithGoogle: $e');
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Failed to sign in: ${e.toString()}'),
-            backgroundColor: Colors.red,
-            duration: const Duration(seconds: 5),
-          ),
-        );
+        context.showToast('Sign-in failed: ${e.toString()}',
+            variant: RewordiumToastVariant.error,
+            duration: const Duration(seconds: 5));
       }
 
       // Reset sign in state on error
@@ -139,25 +128,16 @@ class _AdminPanelState extends State<AdminPanel> {
 
       // Show success message
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Successfully signed out'),
-            backgroundColor: Colors.green,
-          ),
-        );
+        context.showToast('Signed out', variant: RewordiumToastVariant.success);
       }
 
       print('User signed out successfully');
     } catch (e) {
       print('Error signing out: $e');
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Error signing out: ${e.toString()}'),
-            backgroundColor: Colors.red,
-            duration: const Duration(seconds: 5),
-          ),
-        );
+        context.showToast('Sign-out failed: ${e.toString()}',
+            variant: RewordiumToastVariant.error,
+            duration: const Duration(seconds: 5));
       }
     }
   }
@@ -205,13 +185,8 @@ class _AdminPanelState extends State<AdminPanel> {
 
       if (response.statusCode == 200 && responseData['success'] == true) {
         if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('Notification sent successfully!'),
-              backgroundColor: Colors.green,
-              duration: Duration(seconds: 3),
-            ),
-          );
+          context.showToast('Notification sent',
+              variant: RewordiumToastVariant.success);
         }
         _titleController.clear();
         _bodyController.clear();
@@ -235,13 +210,9 @@ class _AdminPanelState extends State<AdminPanel> {
       }
 
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(errorMessage),
-            backgroundColor: Colors.red,
-            duration: const Duration(seconds: 5),
-          ),
-        );
+        context.showToast(errorMessage,
+            variant: RewordiumToastVariant.error,
+            duration: const Duration(seconds: 5));
       }
     } finally {
       if (mounted) {

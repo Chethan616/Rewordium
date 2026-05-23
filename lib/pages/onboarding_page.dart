@@ -17,6 +17,7 @@ import '../services/news_subscription_service.dart';
 import '../services/rewordium_keyboard_service.dart';
 import '../screens/accessibility_disclosure_screen.dart';
 import '../theme/theme_provider.dart';
+import '../widgets/rewordium_toast.dart';
 
 // Strong custom easing curves (from easings.co / Emil Kowalski's design eng notes).
 // Built-in Flutter curves are weaker than these — these have the punch that makes
@@ -667,8 +668,7 @@ class _OnboardingPageState extends State<OnboardingPage>
 
   void _showMessage(String message) {
     if (!mounted) return;
-    ScaffoldMessenger.of(context)
-        .showSnackBar(SnackBar(content: Text(message)));
+    context.showToast(message);
   }
 
   Future<void> _applyThemeSelection(bool dynamicEnabled) async {
