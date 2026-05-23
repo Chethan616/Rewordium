@@ -20,11 +20,12 @@ workflows:
 
     cache:
       cache_paths:
-        - $HOME/Library/Caches/CocoaPods
+        - $HOME/Library/Caches/CocoaPods  # specs cache only, NOT resolved Pods
         - $HOME/Library/Caches/org.swift.swiftpm
         - $HOME/Library/Developer/Xcode/DerivedData/SourcePackages
         - $HOME/.pub-cache
-        - $CM_BUILD_DIR/ios/Pods
+        # ios/Pods is intentionally NOT cached — stale resolved pods cause
+        # version-conflict errors when new pods (e.g. MLKit language packs) are added.
 
     scripts:
       - name: Install dependencies
@@ -81,6 +82,10 @@ workflows:
             -workspace "$XCODE_WORKSPACE" \
             -scheme "$XCODE_SCHEME" \
             -clonedSourcePackagesDirPath build/ios/SourcePackages
+
+      - name: Update CocoaPods repo (required for MLKit 9.x specs)
+        script: |
+          pod repo update
 
       - name: Build iOS Simulator App
         script: |
