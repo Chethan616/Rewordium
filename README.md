@@ -112,20 +112,96 @@ It’s designed for creators, professionals, and anyone who values effortless, i
 
 ## 🧩 AI Engine Flow
 
-```mermaid
-graph LR
-    A[📝 Your Text] --> B{Rewordium Engine}
-    B --> C[✨ Paraphrase]
-    B --> D[📊 Summarize]
-    B --> E[🎭 Tone Shift]
-    B --> F[⚡ Instant Suggestion]
+The following diagram reflects the **exact production architecture** as implemented in the codebase.
 
-    style B fill:#6C63FF,stroke:#4CAF50,stroke-width:3px,color:#fff
-    style C fill:#FF6B6B,color:#fff
-    style D fill:#4ECDC4,color:#fff
-    style E fill:#FFE66D,color:#000
-    style F fill:#95E1D3,color:#000
+```mermaid
+flowchart TD
+    U([👤 User]) --> INPUT
+
+    subgraph INPUT["📥 Text Input Layer"]
+        direction TB
+        EDITOR["✍️ FocusedEditor\n(flutter_quill)"]
+        IMPORT["📂 DocumentService\nPDF · DOCX · TXT · MD · URL"]
+        SCAN["📷 CunningDocumentScanner\n+ MLKit TextRecognizer"]
+        KB["⌨️ Reboard Keyboard\nIME (AOSP/FlorisBoard fork)"]
+    end
+
+    INPUT --> ENGINE
+
+    subgraph ENGINE["🔀 UnifiedAIService · Provider Router"]
+        direction LR
+        GATE{"🔐 Firebase Auth\nGate"}
+        GATE -->|logged in| CRED{"💳 Credit Check\nFirebaseService"}
+        CRED -->|sufficient| PROVIDER
+
+        subgraph PROVIDER["LLM Provider"]
+            GROQ["🟢 Groq\nqwen/qwen3-32b\n(default)"]
+            GEMINI["🔵 Gemini\ngenerativelanguage API"]
+            OAI["⚫ OpenAI\nGPT-4o / GPT-4"]
+            CLAUDE["🟠 Anthropic\nClaude 3.x"]
+            CUSTOM["⚙️ Custom\nOpenAI-compat endpoint"]
+        end
+
+        PROVIDER --> SANITIZE["🧹 _sanitizeUserText\n_stripThinkTags\n_extractJson"]
+    end
+
+    subgraph TOOLS["🛠 AI Writing Tools"]
+        direction TB
+        PARA["✍️ Paraphraser\nTone modes + Custom prompt"]
+        GRAM["🪶 Grammar Check\nCorrections + Error list"]
+        SUMM["🧾 Summarizer\nSummary + Key points"]
+        TONE["🎭 Tone Editor\nChange tracking"]
+        TRANS["🌐 Translator\n100+ languages + Notes"]
+        DETECT["🛡️ AI Detector\nPer-sentence scores"]
+        JADE["💬 Jade AI Chat\nPersona-aware chatbot"]
+        KB_AI["⚡ Keyboard Quick Rewrite\nFloating overlay"]
+    end
+
+    ENGINE --> TOOLS
+    TOOLS --> OUT["📤 Result Output\n(same FocusedEditor view)"]
+    OUT --> U
+
+    subgraph CHUNKING["📄 DocumentChunkingService"]
+        CHK["Splits text > limit\ninto parallel chunks\nthen merges results"]
+    end
+
+    IMPORT --> CHUNKING
+    CHUNKING --> ENGINE
+
+    subgraph ANALYTICS["📊 UsageAnalyticsService"]
+        ANA["Records provider · feature\ncredits used · errors\nFirestore"]
+    end
+
+    ENGINE --> ANALYTICS
+
+    style ENGINE fill:#1a1a2e,stroke:#6C63FF,color:#fff
+    style PROVIDER fill:#16213e,stroke:#4CAF50,color:#fff
+    style GROQ fill:#00875A,color:#fff
+    style GEMINI fill:#1A73E8,color:#fff
+    style OAI fill:#333,color:#fff
+    style CLAUDE fill:#D97706,color:#fff
+    style CUSTOM fill:#555,color:#fff
+    style TOOLS fill:#0f3460,stroke:#e94560,color:#fff
+    style INPUT fill:#1a1a2e,stroke:#32CD32,color:#fff
+    style CHUNKING fill:#1e293b,stroke:#64748b,color:#fff
+    style ANALYTICS fill:#1e293b,stroke:#64748b,color:#fff
 ```
+
+### Key Architecture Notes
+
+| Component | Implementation |
+|-----------|---------------|
+| **Default LLM** | `qwen/qwen3-32b` via Groq Cloud (`UnifiedAIService._makeGroqRequest`) |
+| **Think-tag stripping** | `_stripThinkTags()` removes `<think>…</think>` from all Qwen3 output |
+| **JSON extraction** | `_extractJson()` tolerates markdown fences + stray prose from all models |
+| **Credit system** | 1 credit deducted per successful default-provider call via `FirebaseService.consumeCredit` |
+| **Large docs** | `DocumentChunkingService` splits text, runs parallel AI calls, merges results |
+| **Document import** | `DocumentService` handles PDF (Syncfusion), DOCX (archive+xml), TXT/MD (dart:io), URL (HTTP + BeautifulSoup) |
+| **OCR scanning** | `CunningDocumentScanner` → `MLKit TextRecognizer(script: TextRecognitionScript.latin)` |
+| **Keyboard AI** | Reboard IME sends text to `GroqService` directly via `RewordiumKeyboardService` |
+| **Custom providers** | Gemini, OpenAI, Anthropic, and any OpenAI-compat endpoint — user-configured in Advanced AI Settings |
+
+
 ---
 ## 🏗️ Building From Source
 
