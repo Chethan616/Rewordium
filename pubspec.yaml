@@ -101,11 +101,11 @@ dependencies:
   m3e_collection: ^0.3.7
   expressive_refresh: ^0.1.2
   dynamic_color: ^1.8.1
-  # flutter_quill 11.x doesn't implement the new TextInputClient interface
-  # (Flutter 3.27+ added abstract onFocusReceived), which made the iOS CI
-  # build fail with "QuillRawEditorState is missing implementations for
-  # TextInputClient.onFocusReceived". 12.x is the API-aligned major.
-  flutter_quill: ^12.0.0
+  # flutter_quill removed: 11.x doesn't implement Flutter 3.27+'s new
+  # TextInputClient.onFocusReceived abstract method and 12.x doesn't exist
+  # on pub yet. FocusedEditor now uses a plain TextField — none of the
+  # rich-text formatting Quill provides was actually being surfaced in the
+  # UI, so the dependency wasn't paying for itself.
 
 dev_dependencies:
   flutter_test:
