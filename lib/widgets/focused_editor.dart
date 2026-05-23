@@ -2,11 +2,18 @@ import 'dart:ui';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:flutter_quill/flutter_quill.dart' as quill;
 import '../services/document_service.dart';
 import '../widgets/url_import_dialog.dart';
 
-/// Full-screen text editor using Flutter Quill for a premium writing experience.
+/// Full-screen text editor.
+///
+/// Originally backed by flutter_quill for a "premium writing experience",
+/// but the Quill dependency was removed when 11.x stopped compiling against
+/// Flutter 3.27+'s new TextInputClient interface and 12.x wasn't yet
+/// available on pub. Now uses a plain Material `TextField` with the same
+/// header/toolbar/import-sheet shell — the rich-formatting affordances
+/// Quill provides (bold/italic/lists/etc.) weren't exposed in this UI
+/// anyway, so functionally nothing was lost.
 class FocusedEditor extends StatefulWidget {
   final String initialValue;
   final String title;
@@ -41,22 +48,20 @@ class FocusedEditor extends StatefulWidget {
 }
 
 class _FocusedEditorState extends State<FocusedEditor> {
-  late final quill.QuillController _controller;
+  late final TextEditingController _controller;
   final FocusNode _focusNode = FocusNode();
   bool _isImporting = false;
 
   @override
   void initState() {
     super.initState();
-    final doc = widget.initialValue.isNotEmpty
-        ? (quill.Document()..insert(0, widget.initialValue))
-        : quill.Document();
-
-    _controller = quill.QuillController(
-      document: doc,
-      selection: const TextSelection.collapsed(offset: 0),
-    );
+    _controller = TextEditingController(text: widget.initialValue);
     _controller.addListener(_onTextChanged);
+    // Defer focus so the page-transition can settle before the IME slides
+    // up — focusing during the slide makes the surface tear for a frame.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) _focusNode.requestFocus();
+    });
   }
 
   @override
@@ -72,33 +77,46 @@ class _FocusedEditorState extends State<FocusedEditor> {
   }
 
   int get _wordCount {
-    final t = _controller.document.toPlainText().trim();
+    final t = _controller.text.trim();
     if (t.isEmpty) return 0;
     return t.split(RegExp(r'\s+')).length;
   }
 
-  int get _charCount {
-    final t = _controller.document.toPlainText();
-    return (t.length - 1).clamp(0, double.infinity).toInt();
-  }
+  int get _charCount => _controller.text.length;
 
   void _done() {
-    final text = _controller.document.toPlainText().trim();
-    Navigator.of(context).pop(text);
+    Navigator.of(context).pop(_controller.text.trim());
   }
 
-  /// Inserts imported text into the editor, replacing any current selection
-  /// or appending if the doc is empty.
+  /// Inserts [text] into the editor at the current selection (replacing any
+  /// selected range), or appends with a blank-line separator if the doc has
+  /// content, or replaces the doc entirely if empty.
   void _insertText(String text) {
     if (text.isEmpty) return;
-    final currentText = _controller.document.toPlainText().trim();
-    if (currentText.isEmpty) {
-      // Replace the empty document
-      _controller.replaceText(0, _controller.document.length - 1, text, null);
+    final current = _controller.text;
+    if (current.trim().isEmpty) {
+      _controller.value = TextEditingValue(
+        text: text,
+        selection: TextSelection.collapsed(offset: text.length),
+      );
     } else {
-      // Append with a separator
-      final len = _controller.document.length - 1;
-      _controller.replaceText(len, 0, '\n\n$text', null);
+      final selection = _controller.selection;
+      if (selection.isValid && !selection.isCollapsed) {
+        final start = selection.start;
+        final end = selection.end;
+        final newText = current.replaceRange(start, end, text);
+        _controller.value = TextEditingValue(
+          text: newText,
+          selection: TextSelection.collapsed(offset: start + text.length),
+        );
+      } else {
+        final separator = current.endsWith('\n') ? '\n' : '\n\n';
+        final appended = '$current$separator$text';
+        _controller.value = TextEditingValue(
+          text: appended,
+          selection: TextSelection.collapsed(offset: appended.length),
+        );
+      }
     }
     setState(() {});
   }
@@ -245,25 +263,30 @@ class _FocusedEditorState extends State<FocusedEditor> {
           SafeArea(
             top: false,
             bottom: false,
-            child: quill.QuillEditor.basic(
-              controller: _controller,
-              focusNode: _focusNode,
-              config: quill.QuillEditorConfig(
-                padding: EdgeInsets.fromLTRB(
-                    20, MediaQuery.of(context).padding.top + 80, 20, 100),
-                placeholder: widget.hint ?? "Start typing...",
-                customStyles: quill.DefaultStyles(
-                  paragraph: quill.DefaultTextBlockStyle(
-                    Theme.of(context).textTheme.bodyLarge!.copyWith(
-                          fontSize: 17,
-                          height: 1.6,
-                          color: cs.onSurface,
-                        ),
-                    const quill.HorizontalSpacing(0, 0),
-                    const quill.VerticalSpacing(0, 0),
-                    const quill.VerticalSpacing(0, 0),
-                    null,
-                  ),
+            child: Padding(
+              padding: EdgeInsets.fromLTRB(
+                  20, MediaQuery.of(context).padding.top + 80, 20, 16),
+              child: TextField(
+                controller: _controller,
+                focusNode: _focusNode,
+                maxLines: null,
+                expands: true,
+                textAlignVertical: TextAlignVertical.top,
+                keyboardType: TextInputType.multiline,
+                textCapitalization: TextCapitalization.sentences,
+                style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                      fontSize: 17,
+                      height: 1.6,
+                      color: cs.onSurface,
+                    ),
+                decoration: InputDecoration(
+                  hintText: widget.hint ?? 'Start typing…',
+                  hintStyle: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                        fontSize: 17,
+                        color: cs.onSurfaceVariant.withValues(alpha: 0.55),
+                      ),
+                  border: InputBorder.none,
+                  contentPadding: EdgeInsets.zero,
                 ),
               ),
             ),
@@ -299,23 +322,27 @@ class _FocusedEditorState extends State<FocusedEditor> {
               onTap: () async {
                 final data = await Clipboard.getData(Clipboard.kTextPlain);
                 final text = data?.text;
-                if (text != null && text.isNotEmpty) {
-                  final index = _controller.selection.baseOffset;
-                  final length = _controller.selection.extentOffset - index;
-                  _controller.replaceText(index, length, text, null);
-                }
+                if (text == null || text.isEmpty) return;
+                final selection = _controller.selection;
+                final current = _controller.text;
+                final start = selection.isValid ? selection.start : current.length;
+                final end = selection.isValid ? selection.end : current.length;
+                final newText = current.replaceRange(start, end, text);
+                _controller.value = TextEditingValue(
+                  text: newText,
+                  selection: TextSelection.collapsed(offset: start + text.length),
+                );
               },
             ),
             const SizedBox(width: 8),
             _ToolbarButton(
               icon: CupertinoIcons.delete,
               label: 'Clear',
-              onTap: _controller.document.toPlainText().trim().isEmpty
+              onTap: _controller.text.trim().isEmpty
                   ? null
                   : () {
                       HapticFeedback.selectionClick();
-                      _controller.replaceText(
-                          0, _controller.document.length - 1, '', null);
+                      _controller.clear();
                     },
             ),
             const Spacer(),
