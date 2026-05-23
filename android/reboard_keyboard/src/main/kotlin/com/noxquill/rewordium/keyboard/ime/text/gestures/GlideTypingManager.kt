@@ -52,6 +52,18 @@ class GlideTypingManager(context: Context) : GlideTypingGesture.Listener {
     private var glideTypingClassifier = StatisticalGlideTypingClassifier(context)
     private var lastTime = System.currentTimeMillis()
 
+    init {
+        // Adaptive learned swipe typing: listen for "vocabulary changed
+        // enough to warrant a rebuild" signals from the suggestion provider.
+        // The provider debounces these (~every 10 new learned words), so
+        // the expensive Pruner rebuild here amortizes well.
+        scope.launch {
+            nlpManager.wordDataDirtyFlow.collect { subtype ->
+                glideTypingClassifier.setWordData(subtype, force = true)
+            }
+        }
+    }
+
     override fun onGlideComplete(data: GlideTypingGesture.Detector.PointerData) {
         updateSuggestionsAsync(MAX_SUGGESTION_COUNT, true) {
             glideTypingClassifier.clear()

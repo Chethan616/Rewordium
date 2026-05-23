@@ -229,12 +229,26 @@ class EditorInstance(context: Context) : AbstractEditorInstance(context) {
         }
         val isPhantomSpaceActive = phantomSpace.determine(effectiveChar)
         phantomSpace.setInactive()
+        // Adaptive learned swipe typing: capture the in-progress composing
+        // word BEFORE the commit (super.commitChar finalizes the composing
+        // region). Only word terminators (space, newline, punctuation) cause
+        // a learn — letters extend the composing region, they don't end it.
+        val terminatesWord = effectiveChar == SPACE
+            || effectiveChar == "\n"
+            || (effectiveChar.length == 1 && !effectiveChar[0].isLetter() && !effectiveChar[0].isDigit())
+        val composingBeforeCommit = if (terminatesWord) {
+            activeContent.composingText.toString()
+        } else ""
         val result = super.commitChar(
             char = effectiveChar,
             deletePreviousSpace = isDeletePreviousSpace,
             insertSpaceBeforeChar = isInsertAutoSpaceBeforeChar || isPhantomSpaceActive,
             insertSpaceAfterChar = isInsertAutoSpaceAfterChar,
         )
+        if (result && composingBeforeCommit.isNotBlank()) {
+            // Fire-and-forget; provider does validation + threshold logic.
+            nlpManager.learnWord(subtypeManager.activeSubtype, composingBeforeCommit)
+        }
         if (result && effectiveChar == SPACE) {
             ghostTextManager.requestGhostText()
         }

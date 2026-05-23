@@ -18,13 +18,16 @@ package com.noxquill.rewordium.keyboard.ime.nlp.latin
 
 import android.content.Context
 import android.content.SharedPreferences
+import com.noxquill.rewordium.keyboard.app.FlorisPreferenceStore
 import com.noxquill.rewordium.keyboard.appContext
 import java.io.BufferedInputStream
 import java.io.BufferedOutputStream
 import java.io.DataInputStream
 import java.io.DataOutputStream
 import java.io.File
+import java.util.concurrent.atomic.AtomicInteger
 import com.noxquill.rewordium.keyboard.ime.core.Subtype
+import com.noxquill.rewordium.keyboard.ime.dictionary.LearnedWordsStore
 import com.noxquill.rewordium.keyboard.ime.editor.EditorContent
 import com.noxquill.rewordium.keyboard.ime.nlp.SpellingProvider
 import com.noxquill.rewordium.keyboard.ime.nlp.SpellingResult
@@ -33,6 +36,9 @@ import com.noxquill.rewordium.keyboard.ime.nlp.SuggestionProvider
 import com.noxquill.rewordium.keyboard.ime.nlp.WordSuggestionCandidate
 import com.noxquill.rewordium.keyboard.lib.devtools.flogDebug
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.MutableSharedFlow
+import kotlinx.coroutines.flow.SharedFlow
+import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.builtins.MapSerializer
 import kotlinx.serialization.builtins.serializer
@@ -53,6 +59,13 @@ class LatinLanguageProvider(context: Context) : SpellingProvider, SuggestionProv
         private const val CACHE_MAGIC = 0x52420002.toInt() // 'RB' + version 2
         private const val WORD_CACHE_NAME = "dict_words.bin"
         private const val BIGRAM_CACHE_NAME = "dict_bigrams.bin"
+
+        // Adaptive learned swipe typing thresholds.
+        private const val LEARNED_REFRESH_THRESHOLD = 10
+        private const val LEARN_WORD_MIN_LEN = 2
+        private const val LEARN_WORD_MAX_LEN = 40
+        // Letters + apostrophe only — exclude URLs, numbers, symbols.
+        private val LEARN_WORD_PATTERN = Regex("^[A-Za-z']+$")
     }
 
     override val providerId = ProviderId
@@ -77,6 +90,20 @@ class LatinLanguageProvider(context: Context) : SpellingProvider, SuggestionProv
 
     // Recently typed words for recency boost (LRU-style)
     private val recentWords = ArrayDeque<String>(MAX_RECENCY_WORDS + 5)
+
+    // ── Adaptive learned swipe typing (Section B of the plan) ────────────────
+    // Per-user vocabulary persisted across IME process restarts. Loaded on
+    // preload() and merged into wordData so glide ranking automatically
+    // boosts personal words. Bumped on every word commit via learnWord().
+    private val learnedStore = LearnedWordsStore(context)
+    private val learnedSinceLastRefresh = AtomicInteger(0)
+    private val _wordDataDirtyFlow = MutableSharedFlow<Subtype>(
+        replay = 0,
+        extraBufferCapacity = 1,
+    )
+    /** Emitted when learned-word additions warrant a glide-classifier rebuild. */
+    val wordDataDirtyFlow: SharedFlow<Subtype> = _wordDataDirtyFlow.asSharedFlow()
+    private val prefs by FlorisPreferenceStore
 
     override suspend fun create() {
         // No-op
@@ -116,6 +143,54 @@ class LatinLanguageProvider(context: Context) : SpellingProvider, SuggestionProv
             learnedBigramsPrefs = appContext.getSharedPreferences(LEARNED_BIGRAMS_PREFS, Context.MODE_PRIVATE)
         }
         loadLearnedBigrams()
+
+        // Merge persisted personal vocabulary into wordData so the glide
+        // decoder sees user-learned words on the very first suggestion call
+        // after process restart (the snapshot taken by setWordData reflects
+        // this merged state).
+        learnedStore.ensureLoaded()
+        val learned = learnedStore.snapshot(subtype.primaryLocale)
+        if (learned.isNotEmpty()) {
+            wordData.withLock { data ->
+                for ((word, entry) in learned) {
+                    val current = data[word] ?: 0
+                    // maxOf so we don't clobber high-frequency dictionary
+                    // entries with low-freq learned counterparts.
+                    data[word] = maxOf(current, entry.f.coerceIn(0, 255))
+                }
+            }
+        }
+    }
+
+    /**
+     * Adaptive learning entry point. Called from EditorInstance.commitChar
+     * (on space/punctuation) and KeyboardManager.commitGesture (on glide
+     * commit) via NlpManager.learnWord facade.
+     *
+     * Validates the word, bumps frequency in [wordData], persists via
+     * [learnedStore], and emits a dirty signal when enough new words have
+     * accumulated to warrant a glide-classifier rebuild.
+     *
+     * Hot path — runs once per word commit. All work is microseconds: one
+     * regex check, one map mutation, one channel offer. Pruner rebuild
+     * (the expensive part) is debounced via [LEARNED_REFRESH_THRESHOLD].
+     */
+    suspend fun learnWord(subtype: Subtype, rawWord: String) {
+        if (!prefs.dictionary.learnPersonalWords.get()) return
+        val word = rawWord.trim().lowercase()
+        if (word.length < LEARN_WORD_MIN_LEN || word.length > LEARN_WORD_MAX_LEN) return
+        if (!LEARN_WORD_PATTERN.matches(word)) return
+
+        wordData.withLock { data ->
+            val current = data[word] ?: 0
+            data[word] = (current + 1).coerceAtMost(255)
+        }
+        learnedStore.bump(subtype.primaryLocale, word)
+
+        if (learnedSinceLastRefresh.incrementAndGet() >= LEARNED_REFRESH_THRESHOLD) {
+            learnedSinceLastRefresh.set(0)
+            _wordDataDirtyFlow.tryEmit(subtype)
+        }
     }
 
     // ── Binary dictionary cache helpers ─────────────────────────────────────
@@ -529,6 +604,21 @@ class LatinLanguageProvider(context: Context) : SpellingProvider, SuggestionProv
         wordData.withLock { data ->
             val current = data.getOrDefault(accepted, 0)
             data[accepted] = (current + 2).coerceAtMost(255)
+        }
+
+        // Also persist for adaptive learned swipe typing — accepted
+        // suggestions are stronger signal than manual commits (+2 vs +1).
+        // The persistence layer is internally guarded by the same pref +
+        // validation regex as [learnWord].
+        if (prefs.dictionary.learnPersonalWords.get() &&
+            accepted.length in LEARN_WORD_MIN_LEN..LEARN_WORD_MAX_LEN &&
+            LEARN_WORD_PATTERN.matches(accepted)
+        ) {
+            learnedStore.bump(subtype.primaryLocale, accepted, freqDelta = 2)
+            if (learnedSinceLastRefresh.incrementAndGet() >= LEARNED_REFRESH_THRESHOLD) {
+                learnedSinceLastRefresh.set(0)
+                _wordDataDirtyFlow.tryEmit(subtype)
+            }
         }
 
         // Track recency

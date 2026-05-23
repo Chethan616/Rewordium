@@ -38,7 +38,10 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharedFlow
+import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
@@ -130,6 +133,44 @@ class NlpManager(context: Context) {
     private suspend fun getSuggestionProvider(subtype: Subtype): SuggestionProvider {
         return providers.withLock { it[subtype.nlpProviders.suggestion] }?.provider as? SuggestionProvider
             ?: FallbackNlpProvider
+    }
+
+    /**
+     * Tag-along forward to the active suggestion provider's personal-vocab
+     * learning hook, called from EditorInstance.commitChar and
+     * KeyboardManager.commitGesture. No-op for providers that don't support
+     * it (e.g. Han CJK), so commit-site callers don't need to type-check.
+     *
+     * Fire-and-forget: scoped to the NlpManager background dispatcher so
+     * the calling thread (UI / IME input pipeline) never blocks.
+     */
+    fun learnWord(subtype: Subtype, word: String) {
+        if (word.isBlank()) return
+        scope.launch {
+            val provider = getSuggestionProvider(subtype)
+            if (provider is LatinLanguageProvider) {
+                provider.learnWord(subtype, word)
+            }
+        }
+    }
+
+    /**
+     * Forwards [LatinLanguageProvider.wordDataDirtyFlow] up to the IME so
+     * the glide-typing manager can rebuild its classifier index when enough
+     * personal words have been learned to warrant it.
+     *
+     * Resolved lazily on first access, and cached — the Latin provider is a
+     * singleton in the providers map, so we can capture its flow once and
+     * avoid the runBlocking dance on every getter access. Non-Latin layouts
+     * just see no dirty signals, which is correct (glide adaptation today
+     * only applies to Latin-script subtypes).
+     */
+    val wordDataDirtyFlow: SharedFlow<Subtype> by lazy {
+        val latin = runBlocking {
+            providers.withLock { it[LatinLanguageProvider.ProviderId] }?.provider
+        } as? LatinLanguageProvider
+        latin?.wordDataDirtyFlow
+            ?: MutableSharedFlow<Subtype>(replay = 0).asSharedFlow()
     }
 
     fun preload(subtype: Subtype) {

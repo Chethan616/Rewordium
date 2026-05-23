@@ -101,7 +101,11 @@ dependencies:
   m3e_collection: ^0.3.7
   expressive_refresh: ^0.1.2
   dynamic_color: ^1.8.1
-  flutter_quill: ^11.5.0
+  # flutter_quill 11.x doesn't implement the new TextInputClient interface
+  # (Flutter 3.27+ added abstract onFocusReceived), which made the iOS CI
+  # build fail with "QuillRawEditorState is missing implementations for
+  # TextInputClient.onFocusReceived". 12.x is the API-aligned major.
+  flutter_quill: ^12.0.0
 
 dev_dependencies:
   flutter_test:
