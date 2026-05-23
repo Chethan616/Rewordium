@@ -1,4 +1,7 @@
+import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/physics.dart';
+import 'package:flutter/services.dart';
 
 import '../screens/ai_detector_page.dart';
 import '../screens/jade_chat_screen.dart';
@@ -6,6 +9,20 @@ import '../screens/summarizer_page.dart';
 import '../screens/tone_editor_page.dart';
 import '../screens/translator_page.dart';
 
+/// Tools FAB — the "+" button that fans out the writing tools.
+///
+/// Motion brief (matches Google Drive's FAB feel):
+///   * Spring-driven open/close (overshoots slightly then settles). Plain
+///     `Curves.easeOutBack` snaps; a real spring oscillates and reads as
+///     mechanical the way GDrive's does.
+///   * Items reveal in stagger — bottom item first (nearest to FAB), each
+///     subsequent one delayed by ~40ms. Closing reverses the stagger.
+///   * Icon morphs with a 90° quarter-turn while also pulsing scale,
+///     so the FAB feels alive on tap, not just swapped.
+///   * Haptic tick on toggle + on each item tap.
+///   * A soft scrim fades in behind the menu so taps outside dismiss; the
+///     scrim is intentionally NOT pitch-black — it's just enough to focus
+///     attention on the menu without blanking the underlying screen.
 class ToolsFab extends StatefulWidget {
   final ValueChanged<int>? onSelectHomeTab;
   final String tooltip;
@@ -20,17 +37,30 @@ class ToolsFab extends StatefulWidget {
   State<ToolsFab> createState() => _ToolsFabState();
 }
 
-class _ToolsFabState extends State<ToolsFab> with SingleTickerProviderStateMixin {
-  late AnimationController _controller;
+class _ToolsFabState extends State<ToolsFab>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _controller;
   bool _isOpen = false;
+
+  // Springs tuned for GDrive-style bounce. Two of them: a softer one for
+  // opening (lets items "land" with a tiny overshoot), a tighter one for
+  // closing (no oscillation, just clean retreat — open is fun, close is
+  // efficient).
+  static const _openSpring = SpringDescription(
+    mass: 1.0,
+    stiffness: 480,
+    damping: 22, // damping ratio ~0.50 → noticeable overshoot
+  );
+  static const _closeSpring = SpringDescription(
+    mass: 1.0,
+    stiffness: 600,
+    damping: 38, // damping ratio ~0.78 → critical-ish, no bounce
+  );
 
   @override
   void initState() {
     super.initState();
-    _controller = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 250),
-    );
+    _controller = AnimationController.unbounded(vsync: this, value: 0.0);
   }
 
   @override
@@ -40,19 +70,29 @@ class _ToolsFabState extends State<ToolsFab> with SingleTickerProviderStateMixin
   }
 
   void _toggleMenu() {
-    setState(() {
-      _isOpen = !_isOpen;
-      if (_isOpen) {
-        _controller.forward();
-      } else {
-        _controller.reverse();
-      }
-    });
+    HapticFeedback.selectionClick();
+    setState(() => _isOpen = !_isOpen);
+    final target = _isOpen ? 1.0 : 0.0;
+    _controller.animateWith(
+      SpringSimulation(
+        _isOpen ? _openSpring : _closeSpring,
+        _controller.value,
+        target,
+        // Velocity kick — gives the spring something to overshoot off of so
+        // the bounce is felt even on a static start.
+        _isOpen ? 6.0 : -4.0,
+      ),
+    );
   }
 
   Future<void> _handleAction(BuildContext context, _ToolAction action) async {
     final navigator = Navigator.of(context, rootNavigator: true);
-
+    HapticFeedback.lightImpact();
+    _toggleMenu();
+    // Wait a frame so the menu has started closing before pushing — the page
+    // transition feels less stacked when the FAB has visibly retreated first.
+    await Future.delayed(const Duration(milliseconds: 80));
+    if (!context.mounted) return;
     switch (action) {
       case _ToolAction.jadeAi:
         navigator.push(MaterialPageRoute(builder: (_) => const JadeChatScreen()));
@@ -74,94 +114,171 @@ class _ToolsFabState extends State<ToolsFab> with SingleTickerProviderStateMixin
 
   @override
   Widget build(BuildContext context) {
-    final colorScheme = Theme.of(context).colorScheme;
+    final cs = Theme.of(context).colorScheme;
+    final items = _toolActions();
 
-    return Column(
-      mainAxisSize: MainAxisSize.min,
-      crossAxisAlignment: CrossAxisAlignment.end,
-      children: [
-        // 1. Cascading Floating Menu Items
-        Flexible(
-          child: IgnorePointer(
-            ignoring: !_isOpen,
-            child: FadeTransition(
-              opacity: _controller,
-              child: ScaleTransition(
-                scale: CurvedAnimation(
-                  parent: _controller,
-                  curve: Curves.easeOutBack,
-                ),
-                alignment: Alignment.bottomRight,
-                child: SingleChildScrollView(
-                  reverse: true,
-                  physics: const BouncingScrollPhysics(),
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    crossAxisAlignment: CrossAxisAlignment.end,
-                    children: _toolActions()
-                        .map((item) => _buildToolItem(context, item))
-                        .toList(),
+    return AnimatedBuilder(
+      animation: _controller,
+      builder: (context, _) {
+        final t = _controller.value.clamp(0.0, 1.2); // allow overshoot
+        return Stack(
+          clipBehavior: Clip.none,
+          alignment: Alignment.bottomRight,
+          children: [
+            // Scrim — covers the rest of the screen when the menu is open so
+            // an outside tap closes it. Positioned slack so it doesn't fight
+            // the FAB's own gesture area.
+            if (t > 0.01)
+              Positioned.fill(
+                child: IgnorePointer(
+                  ignoring: !_isOpen,
+                  child: GestureDetector(
+                    behavior: HitTestBehavior.opaque,
+                    onTap: _isOpen ? _toggleMenu : null,
+                    child: Container(
+                      color: Colors.black.withValues(alpha: 0.18 * t.clamp(0.0, 1.0)),
+                    ),
                   ),
                 ),
               ),
+            Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.end,
+              children: [
+                // Cascading items (bottom-most reveals first).
+                IgnorePointer(
+                  ignoring: !_isOpen,
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.end,
+                    children: List.generate(items.length, (i) {
+                      // Stagger: bottom item (i = items.length-1) starts at
+                      // t=0; top item starts later. Each item gets ~ 0.18 of
+                      // the timeline; the rest overlaps.
+                      final reverseIndex = items.length - 1 - i;
+                      final stagger = reverseIndex * 0.08;
+                      final local = ((t - stagger) / (1.0 - stagger))
+                          .clamp(0.0, 1.0);
+                      // Easing within each item's slice: a small overshoot
+                      // by reading the spring value past 1.0.
+                      final scale = _controller.value > 1.0
+                          ? (1.0 + 0.04 * (_controller.value - 1.0))
+                          : local;
+                      return Padding(
+                        padding: const EdgeInsets.only(bottom: 10.0),
+                        child: Opacity(
+                          opacity: local,
+                          child: Transform.translate(
+                            offset: Offset(0, 18 * (1 - local)),
+                            child: Transform.scale(
+                              scale: scale.clamp(0.0, 1.1),
+                              alignment: Alignment.bottomRight,
+                              child: _ToolPill(
+                                item: items[i],
+                                onTap: () => _handleAction(context, items[i].action),
+                              ),
+                            ),
+                          ),
+                        ),
+                      );
+                    }),
+                  ),
+                ),
+                const SizedBox(height: 4),
+                // Main FAB
+                Transform.scale(
+                  scale: 1.0 + 0.06 * (1.0 - (1.0 - t.clamp(0.0, 1.0)).abs()),
+                  child: FloatingActionButton(
+                    tooltip: widget.tooltip,
+                    backgroundColor: Color.lerp(
+                      cs.primaryContainer,
+                      cs.primary,
+                      t.clamp(0.0, 1.0),
+                    ),
+                    foregroundColor: Color.lerp(
+                      cs.onPrimaryContainer,
+                      cs.onPrimary,
+                      t.clamp(0.0, 1.0),
+                    ),
+                    onPressed: _toggleMenu,
+                    elevation: 6 + 2 * t.clamp(0.0, 1.0),
+                    child: Transform.rotate(
+                      angle: t.clamp(0.0, 1.0) * 0.5 * 3.14159, // 90°
+                      child: const Icon(CupertinoIcons.add, size: 26),
+                    ),
+                  ),
+                ),
+              ],
             ),
-          ),
-        ),
-        const SizedBox(height: 12),
-        // 2. Main Action Toggle Button
-        FloatingActionButton(
-          tooltip: widget.tooltip,
-          // Adapts exactly to your app's ButtonType.primary theme
-          backgroundColor: _isOpen ? colorScheme.primary : colorScheme.primaryContainer,
-          foregroundColor: _isOpen ? colorScheme.onPrimary : colorScheme.onPrimaryContainer,
-          onPressed: _toggleMenu,
-          elevation: 6,
-          child: AnimatedSwitcher(
-            duration: const Duration(milliseconds: 200),
-            transitionBuilder: (child, anim) => RotationTransition(
-              turns: child.key == const ValueKey('close')
-                  ? Tween<double>(begin: -0.25, end: 0).animate(anim)
-                  : Tween<double>(begin: 0.25, end: 0).animate(anim),
-              child: ScaleTransition(scale: anim, child: child),
-            ),
-            child: _isOpen
-                ? const Icon(Icons.close, key: ValueKey('close'))
-                : const Icon(Icons.grid_view_rounded, key: ValueKey('open')),
-          ),
-        ),
-      ],
+          ],
+        );
+      },
     );
   }
 
-  Widget _buildToolItem(BuildContext context, _ToolItem item) {
-    final colorScheme = Theme.of(context).colorScheme;
+  List<_ToolItem> _toolActions() {
+    return const [
+      _ToolItem(label: 'Jade AI', icon: CupertinoIcons.sparkles, action: _ToolAction.jadeAi),
+      _ToolItem(label: 'AI Detector', icon: CupertinoIcons.shield_lefthalf_fill, action: _ToolAction.aiDetector),
+      _ToolItem(label: 'Translator', icon: CupertinoIcons.globe, action: _ToolAction.translator),
+      _ToolItem(label: 'Summarizer', icon: CupertinoIcons.doc_text, action: _ToolAction.summarizer),
+      _ToolItem(label: 'Tone Editor', icon: CupertinoIcons.waveform, action: _ToolAction.toneEditor),
+    ];
+  }
+}
 
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 10.0),
-      child: Material(
-        color: colorScheme.primaryContainer, // Light themed pill shape background
-        borderRadius: BorderRadius.circular(28),
-        elevation: 4,
-        shadowColor: Colors.black26,
-        child: InkWell(
+class _ToolPill extends StatefulWidget {
+  final _ToolItem item;
+  final VoidCallback onTap;
+  const _ToolPill({required this.item, required this.onTap});
+
+  @override
+  State<_ToolPill> createState() => _ToolPillState();
+}
+
+class _ToolPillState extends State<_ToolPill> {
+  bool _pressed = false;
+
+  @override
+  Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+    return GestureDetector(
+      behavior: HitTestBehavior.opaque,
+      onTapDown: (_) => setState(() => _pressed = true),
+      onTapCancel: () => setState(() => _pressed = false),
+      onTapUp: (_) => setState(() => _pressed = false),
+      onTap: widget.onTap,
+      child: AnimatedScale(
+        scale: _pressed ? 0.96 : 1.0,
+        duration: const Duration(milliseconds: 120),
+        curve: Curves.easeOut,
+        child: Material(
+          color: cs.surfaceContainerHigh,
           borderRadius: BorderRadius.circular(28),
-          onTap: () {
-            _toggleMenu();
-            _handleAction(context, item.action);
-          },
+          elevation: 3,
+          shadowColor: Colors.black.withValues(alpha: 0.25),
           child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 14),
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
             child: Row(
               mainAxisSize: MainAxisSize.min,
               children: [
-                Icon(item.icon, size: 20, color: colorScheme.onPrimaryContainer),
-                const SizedBox(width: 12),
+                Container(
+                  width: 28,
+                  height: 28,
+                  decoration: BoxDecoration(
+                    color: cs.primary.withValues(alpha: 0.12),
+                    shape: BoxShape.circle,
+                  ),
+                  child: Icon(widget.item.icon, size: 15, color: cs.primary),
+                ),
+                const SizedBox(width: 10),
                 Text(
-                  item.label,
+                  widget.item.label,
                   style: TextStyle(
-                    color: colorScheme.onPrimaryContainer,
+                    color: cs.onSurface,
                     fontSize: 14,
                     fontWeight: FontWeight.w600,
+                    letterSpacing: 0.1,
                   ),
                 ),
               ],
@@ -170,16 +287,6 @@ class _ToolsFabState extends State<ToolsFab> with SingleTickerProviderStateMixin
         ),
       ),
     );
-  }
-
-  List<_ToolItem> _toolActions() {
-    return const [
-      _ToolItem(label: 'Jade AI', icon: Icons.auto_awesome, action: _ToolAction.jadeAi),
-      _ToolItem(label: 'AI Detector', icon: Icons.shield_rounded, action: _ToolAction.aiDetector),
-      _ToolItem(label: 'Translator', icon: Icons.translate_rounded, action: _ToolAction.translator),
-      _ToolItem(label: 'Summarizer', icon: Icons.summarize_rounded, action: _ToolAction.summarizer),
-      _ToolItem(label: 'Tone Editor', icon: Icons.graphic_eq_rounded, action: _ToolAction.toneEditor),
-    ];
   }
 }
 
