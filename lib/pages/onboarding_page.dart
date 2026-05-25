@@ -17,6 +17,7 @@ import '../services/news_subscription_service.dart';
 import '../services/rewordium_keyboard_service.dart';
 import '../screens/accessibility_disclosure_screen.dart';
 import '../theme/theme_provider.dart';
+import '../providers/keyboard_provider.dart';
 import '../widgets/rewordium_toast.dart';
 
 // Strong custom easing curves (from easings.co / Emil Kowalski's design eng notes).
@@ -663,6 +664,15 @@ class _OnboardingPageState extends State<OnboardingPage>
       await prefs.setBool('onboarding_keyboard_ai_applied', aiApplied);
     } else {
       await prefs.setBool('paraphraser_enabled', _keyboardAiDefaultEnabled);
+    }
+
+    // Push the onboarding choice into the live KeyboardProvider so the home
+    // screen's keyboard-status card reflects the AI toggle immediately —
+    // without waiting for an app restart. The provider already cached
+    // `_isParaphraserEnabled` from prefs at startup (before onboarding ran),
+    // so a re-read is needed for the change to surface in the UI.
+    if (mounted) {
+      await context.read<KeyboardProvider>().refreshParaphraserState();
     }
   }
 

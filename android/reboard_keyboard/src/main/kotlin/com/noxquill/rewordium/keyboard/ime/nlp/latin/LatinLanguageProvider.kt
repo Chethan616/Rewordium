@@ -66,6 +66,10 @@ class LatinLanguageProvider(context: Context) : SpellingProvider, SuggestionProv
         // every 3 newly learned words so a freshly-typed name surfaces in
         // glide candidates within seconds rather than after dozens of commits.
         private const val LEARNED_REFRESH_THRESHOLD = 3
+        // First-time-seen personal words bootstrap to this frequency so they
+        // can actually win against common dict words in glide ranking.
+        // Equivalent to roughly the median dictionary word frequency.
+        private const val NEW_WORD_BOOTSTRAP_FREQ = 30
         private const val LEARN_WORD_MIN_LEN = 2
         private const val LEARN_WORD_MAX_LEN = 40
         // Letters + apostrophe only — exclude URLs, numbers, symbols.
@@ -227,13 +231,40 @@ class LatinLanguageProvider(context: Context) : SpellingProvider, SuggestionProv
         if (word.length < LEARN_WORD_MIN_LEN || word.length > LEARN_WORD_MAX_LEN) return
         if (!LEARN_WORD_PATTERN.matches(word)) return
 
+        // First-time-seen words (NOT in built-in dict, NOT previously learned)
+        // get bootstrapped to a competitive frequency floor. Without this,
+        // a freshly-typed personal word like "evaru" has freq 1/255 ≈ 0.004
+        // — far below common dict words — and the glide shape-matcher's
+        // frequency-weighted ranking puts dict words above it every time,
+        // even when "evaru" geometrically matches the swipe better.
+        //
+        // 30 puts the new word in the mid-frequency band where it can win
+        // a clear shape match while still ranking below truly common words
+        // for ambiguous swipes.
+        val isNewWord: Boolean
         wordData.withLock { data ->
             val current = data[word] ?: 0
-            data[word] = (current + 1).coerceAtMost(255)
+            isNewWord = current == 0
+            val next = if (isNewWord) NEW_WORD_BOOTSTRAP_FREQ else (current + 1).coerceAtMost(255)
+            data[word] = next
         }
-        learnedStore.bump(subtype.primaryLocale, word)
+        // Persist using a larger delta on first learn so the learned-store
+        // row reflects the bootstrap (otherwise an IME restart would drop
+        // the word back to freq=1).
+        learnedStore.bump(
+            subtype.primaryLocale,
+            word,
+            freqDelta = if (isNewWord) NEW_WORD_BOOTSTRAP_FREQ else 1,
+        )
 
-        if (learnedSinceLastRefresh.incrementAndGet() >= LEARNED_REFRESH_THRESHOLD) {
+        // First-time-seen personal words deserve an immediate Pruner rebuild
+        // so the user sees the effect on their next swipe — not after they
+        // commit three random words. For repeat reinforcement, still
+        // debounce via the threshold to avoid rebuilding for every keystroke.
+        if (isNewWord) {
+            learnedSinceLastRefresh.set(0)
+            _wordDataDirtyFlow.tryEmit(subtype)
+        } else if (learnedSinceLastRefresh.incrementAndGet() >= LEARNED_REFRESH_THRESHOLD) {
             learnedSinceLastRefresh.set(0)
             _wordDataDirtyFlow.tryEmit(subtype)
         }
@@ -685,6 +716,29 @@ class LatinLanguageProvider(context: Context) : SpellingProvider, SuggestionProv
 
     override suspend fun notifySuggestionReverted(subtype: Subtype, candidate: SuggestionCandidate) {
         flogDebug { candidate.toString() }
+        // When the user reverts a previously-accepted suggestion (typically
+        // an autocorrect that produced the wrong word), we treat it as a
+        // strong negative signal against that word — they explicitly said
+        // "no, not this one". Decrement its frequency so the keyboard
+        // stops aggressively pushing it. Same path as removeSuggestion but
+        // softer: we don't delete the entry, just down-weight it.
+        val reverted = candidate.text.toString().trim().lowercase()
+        if (reverted.isBlank()) return
+        if (!LEARN_WORD_PATTERN.matches(reverted)) return
+
+        wordData.withLock { data ->
+            val current = data[reverted] ?: return@withLock
+            // Drop by 3 — strong enough that two reverts in a row will pull
+            // the word out of the top suggestions, but not enough to nuke
+            // a high-frequency dict word from a single accident.
+            val next = (current - 3).coerceAtLeast(0)
+            if (next == 0) data.remove(reverted) else data[reverted] = next
+        }
+        // Also reflect the demotion in the persisted learned store so it
+        // survives IME restart.
+        if (prefs.dictionary.learnPersonalWords.get()) {
+            learnedStore.bump(subtype.primaryLocale, reverted, freqDelta = -3)
+        }
     }
 
     override suspend fun removeSuggestion(subtype: Subtype, candidate: SuggestionCandidate): Boolean {
