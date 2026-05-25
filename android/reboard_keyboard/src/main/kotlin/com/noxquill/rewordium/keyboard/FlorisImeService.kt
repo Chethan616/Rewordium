@@ -42,6 +42,7 @@ import android.widget.inline.InlinePresentationSpec
 import androidx.annotation.RequiresApi
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.animation.animateContentSize
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
@@ -779,30 +780,71 @@ class FlorisImeService : LifecycleInputMethodService() {
                             androidx.compose.foundation.layout.Column(
                                 modifier = Modifier
                                     .fillMaxWidth()
-                                    .wrapContentHeight(),
+                                    .wrapContentHeight()
+                                    // Smooth the column's own size changes
+                                    // as the overlay grows/shrinks. Without
+                                    // this, each animation frame of the
+                                    // overlay's expandVertically caused a
+                                    // jagged step in the column's reported
+                                    // size; the IME view's wrap-content
+                                    // lagged one frame, leaving a brief
+                                    // gap at the bottom edge.
+                                    .animateContentSize(
+                                        animationSpec = androidx.compose.animation.core.tween(
+                                            durationMillis = 280,
+                                            easing = androidx.compose.animation.core.EaseOutCubic,
+                                        ),
+                                    ),
                             ) {
-                                // Smooth glide-up on open, glide-down on close.
-                                // 220ms matches Material standard motion duration
-                                // and matches Gboard's perceived speed.
+                                // Staged Gboard-style transition:
+                                //
+                                // Open  ─ slot expands (300ms, easeOutCubic),
+                                //         content fades in delayed +120ms so
+                                //         the container appears to "make room"
+                                //         before the search UI materializes.
+                                //
+                                // Close ─ content fades out first (120ms),
+                                //         THEN the slot collapses (220ms,
+                                //         easeInCubic). Reading the close as
+                                //         "content leaves, then container
+                                //         minimises" matches the natural
+                                //         expectation users have from sheets
+                                //         in iOS / Material 3.
+                                //
+                                // expandVertically is preferred over slideIn
+                                // because slideIn keeps the slot at full size
+                                // immediately — which means the keyboard below
+                                // jumps down on frame 1 then settles. expand
+                                // grows the slot in lockstep with the visual,
+                                // so the keyboard glides into its final
+                                // position smoothly.
                                 androidx.compose.animation.AnimatedVisibility(
                                     visible = emojiSearchActive != null,
-                                    enter = androidx.compose.animation.slideInVertically(
+                                    enter = androidx.compose.animation.expandVertically(
                                         animationSpec = androidx.compose.animation.core.tween(
-                                            durationMillis = 220,
-                                            easing = androidx.compose.animation.core.FastOutSlowInEasing,
+                                            durationMillis = 300,
+                                            easing = androidx.compose.animation.core.EaseOutCubic,
                                         ),
-                                        initialOffsetY = { fullHeight -> fullHeight },
+                                        expandFrom = androidx.compose.ui.Alignment.Bottom,
                                     ) + androidx.compose.animation.fadeIn(
-                                        animationSpec = androidx.compose.animation.core.tween(durationMillis = 160),
-                                    ),
-                                    exit = androidx.compose.animation.slideOutVertically(
                                         animationSpec = androidx.compose.animation.core.tween(
                                             durationMillis = 200,
-                                            easing = androidx.compose.animation.core.FastOutLinearInEasing,
+                                            delayMillis = 120,
+                                            easing = androidx.compose.animation.core.EaseOut,
                                         ),
-                                        targetOffsetY = { fullHeight -> fullHeight },
-                                    ) + androidx.compose.animation.fadeOut(
-                                        animationSpec = androidx.compose.animation.core.tween(durationMillis = 140),
+                                    ),
+                                    exit = androidx.compose.animation.fadeOut(
+                                        animationSpec = androidx.compose.animation.core.tween(
+                                            durationMillis = 120,
+                                            easing = androidx.compose.animation.core.EaseIn,
+                                        ),
+                                    ) + androidx.compose.animation.shrinkVertically(
+                                        animationSpec = androidx.compose.animation.core.tween(
+                                            durationMillis = 220,
+                                            delayMillis = 60,
+                                            easing = androidx.compose.animation.core.EaseInCubic,
+                                        ),
+                                        shrinkTowards = androidx.compose.ui.Alignment.Bottom,
                                     ),
                                 ) {
                                     EmojiSearchOverlay()
