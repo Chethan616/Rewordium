@@ -412,6 +412,12 @@ class FlorisImeService : LifecycleInputMethodService() {
                     prefs.clipboard.suggestionEnabled.get(),
                 )
                 prefs.clipboard.suggestionEnabled.set(clipboardSuggestions)
+                // The onboarding toggle is labelled "Clipboard" and users
+                // expect it to control the clipboard PANEL (history) too,
+                // not just the in-strip suggestion. Without this, flipping
+                // the toggle has no visible effect — the clipboard icon
+                // still opens an empty / disabled panel.
+                prefs.clipboard.historyEnabled.set(clipboardSuggestions)
 
                 val hapticsEnabled = flutterPrefs.getBoolean(
                     KEY_ONBOARDING_HAPTICS_ENABLED,

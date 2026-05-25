@@ -155,6 +155,21 @@ class NlpManager(context: Context) {
     }
 
     /**
+     * Forwards an explicit User Dictionary add (from Settings UI) into the
+     * Latin provider's wordData so the glide-classifier picks the new word
+     * up immediately — no IME restart needed.
+     */
+    fun importUserDictionaryEntry(subtype: Subtype, word: String, freq: Int) {
+        if (word.isBlank()) return
+        scope.launch {
+            val provider = getSuggestionProvider(subtype)
+            if (provider is LatinLanguageProvider) {
+                provider.importUserDictionaryEntry(subtype, word, freq)
+            }
+        }
+    }
+
+    /**
      * Forwards [LatinLanguageProvider.wordDataDirtyFlow] up to the IME so
      * the glide-typing manager can rebuild its classifier index when enough
      * personal words have been learned to warrant it.

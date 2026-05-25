@@ -55,6 +55,8 @@ import com.noxquill.rewordium.keyboard.ime.dictionary.UserDictionaryDao
 import com.noxquill.rewordium.keyboard.ime.dictionary.UserDictionaryEntry
 import com.noxquill.rewordium.keyboard.ime.dictionary.UserDictionaryValidation
 import com.noxquill.rewordium.keyboard.lib.FlorisLocale
+import com.noxquill.rewordium.keyboard.nlpManager
+import com.noxquill.rewordium.keyboard.subtypeManager
 import com.noxquill.rewordium.keyboard.lib.compose.FlorisScreen
 import com.noxquill.rewordium.keyboard.lib.compose.Validation
 import com.noxquill.rewordium.keyboard.lib.rememberValidationResult
@@ -92,6 +94,8 @@ fun UserDictionaryScreen(type: UserDictionaryType) = FlorisScreen {
     val navController = LocalNavController.current
     val context = LocalContext.current
     val dictionaryManager = DictionaryManager.default()
+    val nlpManager by context.nlpManager()
+    val subtypeManager by context.subtypeManager()
     val scope = rememberCoroutineScope()
 
     var currentLocale by remember { mutableStateOf<FlorisLocale?>(null) }
@@ -346,6 +350,19 @@ fun UserDictionaryScreen(type: UserDictionaryType) = FlorisScreen {
                             userDictionaryDao()?.insert(entry)
                         } else {
                             userDictionaryDao()?.update(entry)
+                        }
+                        // Live-feed the new/updated word into the Latin
+                        // glide-typing word data so swipe recognizes it
+                        // without an IME process restart. Only meaningful for
+                        // the Floris-backed dictionary; the system one is
+                        // managed by Android's own UserDictionary content
+                        // provider and doesn't drive our glide pipeline.
+                        if (type == UserDictionaryType.FLORIS) {
+                            nlpManager.importUserDictionaryEntry(
+                                subtypeManager.activeSubtype,
+                                entry.word,
+                                entry.freq,
+                            )
                         }
                         userDictionaryEntryForDialog = null
                         buildUi()

@@ -112,6 +112,29 @@ class KeyboardManager(context: Context) : InputKeyEventReceiver {
     private val _lastCharactersEvaluator = MutableStateFlow<ComputingEvaluator>(DefaultComputingEvaluator)
     val lastCharactersEvaluator get() = _lastCharactersEvaluator.asStateFlow()
 
+    // Gboard-style emoji search: when non-null, the EmojiPaletteView shows
+    // a stripped-down panel (search display + horizontal results + QWERTY
+    // keyboard) and key events from that QWERTY route into this query
+    // instead of committing to the host editor. null = search not active.
+    private val _emojiSearchQuery = MutableStateFlow<String?>(null)
+    val emojiSearchQuery get() = _emojiSearchQuery.asStateFlow()
+
+    fun beginEmojiSearch() { _emojiSearchQuery.value = "" }
+    fun endEmojiSearch() { _emojiSearchQuery.value = null }
+    fun appendToEmojiSearch(text: String) {
+        if (text.isEmpty()) return
+        _emojiSearchQuery.value = (_emojiSearchQuery.value ?: "") + text
+    }
+    fun backspaceEmojiSearch() {
+        val current = _emojiSearchQuery.value ?: return
+        if (current.isEmpty()) {
+            // Gboard parity: backspacing on an empty query exits search.
+            _emojiSearchQuery.value = null
+        } else {
+            _emojiSearchQuery.value = current.dropLast(1)
+        }
+    }
+
     val inputEventDispatcher = InputEventDispatcher.new(
         repeatableKeyCodes = intArrayOf(
             KeyCode.ARROW_DOWN,
@@ -751,6 +774,37 @@ class KeyboardManager(context: Context) : InputKeyEventReceiver {
     }
 
     override fun onInputKeyUp(data: KeyData) = activeState.batchEdit {
+        // Emoji-search intercept: when the user has opened the in-panel search,
+        // QWERTY taps build the query instead of committing to the editor.
+        // Layout-switch keys (shift, ?123, etc.) still pass through so the user
+        // can reach symbols/punctuation if they want them in their query.
+        if (_emojiSearchQuery.value != null && activeState.imeUiMode == ImeUiMode.MEDIA) {
+            when (data.code) {
+                KeyCode.DELETE -> { backspaceEmojiSearch(); return@batchEdit }
+                KeyCode.SPACE -> { appendToEmojiSearch(" "); return@batchEdit }
+                KeyCode.ENTER -> { endEmojiSearch(); return@batchEdit }
+                KeyCode.SHIFT,
+                KeyCode.CAPS_LOCK,
+                KeyCode.VIEW_CHARACTERS,
+                KeyCode.VIEW_SYMBOLS,
+                KeyCode.VIEW_SYMBOLS2,
+                KeyCode.VIEW_NUMERIC,
+                KeyCode.VIEW_NUMERIC_ADVANCED -> { /* fall through to normal handling */ }
+                else -> {
+                    if (data.type == KeyType.CHARACTER || data.type == KeyType.NUMERIC) {
+                        appendToEmojiSearch(data.asString(isForDisplay = false))
+                        if (activeState.inputShiftState != InputShiftState.CAPS_LOCK &&
+                            !inputEventDispatcher.isPressed(KeyCode.SHIFT)) {
+                            activeState.inputShiftState = InputShiftState.UNSHIFTED
+                        }
+                        return@batchEdit
+                    }
+                    // Unknown control codes during emoji search: swallow rather
+                    // than letting them disturb the editor.
+                    return@batchEdit
+                }
+            }
+        }
         when (data.code) {
             KeyCode.ARROW_DOWN,
             KeyCode.ARROW_LEFT,

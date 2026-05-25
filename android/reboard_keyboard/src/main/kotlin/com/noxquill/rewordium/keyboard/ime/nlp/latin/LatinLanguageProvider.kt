@@ -27,6 +27,7 @@ import java.io.DataOutputStream
 import java.io.File
 import java.util.concurrent.atomic.AtomicInteger
 import com.noxquill.rewordium.keyboard.ime.core.Subtype
+import com.noxquill.rewordium.keyboard.ime.dictionary.DictionaryManager
 import com.noxquill.rewordium.keyboard.ime.dictionary.LearnedWordsStore
 import com.noxquill.rewordium.keyboard.ime.editor.EditorContent
 import com.noxquill.rewordium.keyboard.ime.nlp.SpellingProvider
@@ -61,7 +62,10 @@ class LatinLanguageProvider(context: Context) : SpellingProvider, SuggestionProv
         private const val BIGRAM_CACHE_NAME = "dict_bigrams.bin"
 
         // Adaptive learned swipe typing thresholds.
-        private const val LEARNED_REFRESH_THRESHOLD = 10
+        // Gboard-balanced cadence: rebuild the glide-classifier Pruner after
+        // every 3 newly learned words so a freshly-typed name surfaces in
+        // glide candidates within seconds rather than after dozens of commits.
+        private const val LEARNED_REFRESH_THRESHOLD = 3
         private const val LEARN_WORD_MIN_LEN = 2
         private const val LEARN_WORD_MAX_LEN = 40
         // Letters + apostrophe only — exclude URLs, numbers, symbols.
@@ -160,6 +164,48 @@ class LatinLanguageProvider(context: Context) : SpellingProvider, SuggestionProv
                 }
             }
         }
+
+        // Merge manually-added User Dictionary entries (Room DB) so the glide
+        // shape matcher recognizes them. Without this, words the user types
+        // into Settings → User Dictionary are invisible to swipe input.
+        // queryAll() returns ALL entries regardless of locale so we ignore
+        // locale here — global vocab feeds glide for every active subtype.
+        runCatching {
+            val dao = DictionaryManager.default().florisUserDictionaryDao() ?: return@runCatching
+            val entries = dao.queryAll()
+            if (entries.isEmpty()) return@runCatching
+            wordData.withLock { data ->
+                for (entry in entries) {
+                    val word = entry.word.trim().lowercase()
+                    if (!LEARN_WORD_PATTERN.matches(word)) continue
+                    val current = data[word] ?: 0
+                    // 64 floor mirrors Gboard's bias toward user-added entries:
+                    // they should outrank random low-freq dictionary noise but
+                    // can still be overridden by truly common dictionary words.
+                    data[word] = maxOf(current, entry.freq.coerceIn(64, 255))
+                }
+            }
+        }.onFailure { e -> flogDebug { "Failed to merge user dictionary: ${e.message}" } }
+        Unit
+    }
+
+    /**
+     * Live import a single User Dictionary entry into [wordData] and trigger
+     * a glide-classifier rebuild. Called from UserDictionaryScreen after the
+     * Room insert succeeds so the user sees the new word in glide without
+     * waiting for the next IME process restart.
+     */
+    suspend fun importUserDictionaryEntry(subtype: Subtype, rawWord: String, freq: Int) {
+        val word = rawWord.trim().lowercase()
+        if (word.length < LEARN_WORD_MIN_LEN || word.length > LEARN_WORD_MAX_LEN) return
+        if (!LEARN_WORD_PATTERN.matches(word)) return
+        wordData.withLock { data ->
+            val current = data[word] ?: 0
+            data[word] = maxOf(current, freq.coerceIn(64, 255))
+        }
+        // Rebuild glide Pruner immediately — unlike learnWord(), there's no
+        // need to debounce a single explicit user-add action.
+        _wordDataDirtyFlow.tryEmit(subtype)
     }
 
     /**
