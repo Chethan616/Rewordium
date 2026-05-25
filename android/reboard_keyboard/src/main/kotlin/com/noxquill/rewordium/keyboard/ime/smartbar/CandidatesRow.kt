@@ -42,6 +42,7 @@ import androidx.compose.ui.unit.dp
 import com.noxquill.rewordium.keyboard.app.FlorisPreferenceStore
 import com.noxquill.rewordium.keyboard.ime.input.LocalInputFeedbackController
 import com.noxquill.rewordium.keyboard.ime.nlp.ClipboardSuggestionCandidate
+import com.noxquill.rewordium.keyboard.ime.nlp.EmojiSuggestionCandidate
 import com.noxquill.rewordium.keyboard.ime.nlp.SuggestionCandidate
 import com.noxquill.rewordium.keyboard.ime.theme.FlorisImeUi
 import com.noxquill.rewordium.keyboard.keyboardManager
@@ -101,7 +102,20 @@ fun CandidatesRow(modifier: Modifier = Modifier) {
                     }
             }
             val list = when (displayMode) {
-                CandidatesDisplayMode.CLASSIC -> candidates.subList(0, 3.coerceAtMost(candidates.size))
+                CandidatesDisplayMode.CLASSIC -> {
+                    // Gboard layout: in the fixed 3-slot strip, always reserve
+                    // the rightmost slot for an emoji candidate when present
+                    // (the EmojiSuggestionProvider already caps to 1). Without
+                    // this split, the trailing emoji is dropped whenever the
+                    // text provider fills the first 3 slots.
+                    val emoji = candidates.firstOrNull { it is EmojiSuggestionCandidate }
+                    val text = candidates.filter { it !is EmojiSuggestionCandidate }
+                    if (emoji != null) {
+                        text.take(2) + emoji
+                    } else {
+                        text.take(3)
+                    }
+                }
                 else -> candidates
             }
             for ((n, candidate) in list.withIndex()) {

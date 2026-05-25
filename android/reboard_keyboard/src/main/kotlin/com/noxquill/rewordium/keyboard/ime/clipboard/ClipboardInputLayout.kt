@@ -38,6 +38,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.sizeIn
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
@@ -63,8 +64,11 @@ import androidx.compose.material.icons.filled.TextFields
 import androidx.compose.material.icons.filled.ToggleOff
 import androidx.compose.material.icons.filled.ToggleOn
 import androidx.compose.material.icons.filled.Videocam
+import androidx.compose.material.icons.outlined.ContentPaste
 import androidx.compose.material.icons.outlined.ContentPasteGo
+import androidx.compose.material.icons.outlined.ContentPasteOff
 import androidx.compose.material.icons.outlined.Email
+import androidx.compose.material.icons.outlined.Lock
 import androidx.compose.material.icons.outlined.PushPin
 import androidx.compose.material3.Icon
 import androidx.compose.material3.ripple
@@ -88,6 +92,7 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import com.noxquill.rewordium.keyboard.R
 import com.noxquill.rewordium.keyboard.app.FlorisPreferenceStore
 import com.noxquill.rewordium.keyboard.clipboardManager
@@ -204,20 +209,11 @@ fun ClipboardInputLayout(
                 modifier = Modifier.weight(1f),
                 text = stringRes(R.string.clipboard__header_title),
             )
-            SnyggIconButton(
-                elementName = FlorisImeUi.ClipboardHeaderButton.elementName,
-                onClick = { scope.launch { prefs.clipboard.historyEnabled.set(!historyEnabled) } },
-                modifier = sizeModifier.autoMirrorForRtl(),
-                enabled = !deviceLocked && !isPopupSurfaceActive(),
-            ) {
-                SnyggIcon(
-                    imageVector = if (historyEnabled) {
-                        Icons.Default.ToggleOn
-                    } else {
-                        Icons.Default.ToggleOff
-                    },
-                )
-            }
+            // The history on/off toggle was previously rendered here as a
+            // bare ToggleOn/ToggleOff icon button. That conflicts with the
+            // "Turn on clipboard" CTA in the disabled state — and gives the
+            // user a surface they rarely need on the IME bar. Disabling is
+            // available from Settings; the disabled view exposes enabling.
             SnyggIconButton(
                 elementName = FlorisImeUi.ClipboardHeaderButton.elementName,
                 onClick = { showClearAllHistory = true },
@@ -609,61 +605,84 @@ fun ClipboardInputLayout(
         }
     }
 
+    // ── Placeholder states ──────────────────────────────────────────────────
+    // Shared composable so empty / disabled / locked all share the same
+    // visual rhythm: large outlined icon, headline, subtitle, optional CTA.
+    // Keeps the panel from feeling like dead space when there's nothing
+    // to paste.
     @Composable
-    fun HistoryEmptyView() {
+    fun ClipboardPlaceholder(
+        icon: ImageVector,
+        title: String,
+        message: String,
+        cta: (@Composable () -> Unit)? = null,
+    ) {
         SnyggColumn(FlorisImeUi.ClipboardContent.elementName,
-            modifier = Modifier.fillMaxSize(),
+            modifier = Modifier.fillMaxSize().padding(horizontal = 32.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.Center,
         ) {
-            SnyggText(
-                text = stringRes(R.string.clipboard__empty__title),
+            Icon(
+                imageVector = icon,
+                contentDescription = null,
+                modifier = Modifier.size(48.dp).alpha(0.55f),
+                tint = androidx.compose.material3.MaterialTheme.colorScheme.onSurfaceVariant,
             )
-            SnyggText(
-                text = stringRes(R.string.clipboard__empty__message),
+            Spacer(modifier = Modifier.height(16.dp))
+            androidx.compose.material3.Text(
+                text = title,
+                color = androidx.compose.material3.MaterialTheme.colorScheme.onSurface,
+                fontSize = 16.sp,
+                textAlign = androidx.compose.ui.text.style.TextAlign.Center,
             )
-        }
-    }
-
-    @Composable
-    fun HistoryDisabledView() {
-        SnyggColumn(FlorisImeUi.ClipboardContent.elementName,
-            modifier = Modifier.fillMaxSize(),
-        ) {
-            SnyggText(
-                elementName = FlorisImeUi.ClipboardHistoryDisabledTitle.elementName,
-                modifier = Modifier.padding(bottom = 8.dp),
-                text = stringRes(R.string.clipboard__disabled__title),
+            Spacer(modifier = Modifier.height(6.dp))
+            androidx.compose.material3.Text(
+                text = message,
+                color = androidx.compose.material3.MaterialTheme.colorScheme.onSurfaceVariant,
+                fontSize = 13.sp,
+                textAlign = androidx.compose.ui.text.style.TextAlign.Center,
             )
-            SnyggText(
-                elementName = FlorisImeUi.ClipboardHistoryDisabledMessage.elementName,
-                text = stringRes(R.string.clipboard__disabled__message),
-            )
-            SnyggButton(FlorisImeUi.ClipboardHistoryDisabledButton.elementName,
-                onClick = { scope.launch { prefs.clipboard.historyEnabled.set(true) } },
-                modifier = Modifier.align(Alignment.End),
-            ) {
-                SnyggText(
-                    text = stringRes(R.string.clipboard__disabled__enable_button),
-                )
+            if (cta != null) {
+                Spacer(modifier = Modifier.height(20.dp))
+                cta()
             }
         }
     }
 
     @Composable
+    fun HistoryEmptyView() {
+        ClipboardPlaceholder(
+            icon = Icons.Outlined.ContentPaste,
+            title = stringRes(R.string.clipboard__empty__title).toString(),
+            message = stringRes(R.string.clipboard__empty__message).toString(),
+        )
+    }
+
+    @Composable
+    fun HistoryDisabledView() {
+        ClipboardPlaceholder(
+            icon = Icons.Outlined.ContentPasteOff,
+            title = stringRes(R.string.clipboard__disabled__title).toString(),
+            message = stringRes(R.string.clipboard__disabled__message).toString(),
+            cta = {
+                SnyggButton(FlorisImeUi.ClipboardHistoryDisabledButton.elementName,
+                    onClick = { scope.launch { prefs.clipboard.historyEnabled.set(true) } },
+                ) {
+                    SnyggText(
+                        text = stringRes(R.string.clipboard__disabled__enable_button),
+                    )
+                }
+            },
+        )
+    }
+
+    @Composable
     fun HistoryLockedView() {
-        SnyggColumn(FlorisImeUi.ClipboardContent.elementName,
-            modifier = Modifier.fillMaxSize(),
-            horizontalAlignment = Alignment.CenterHorizontally,
-        ) {
-            SnyggText(
-                elementName = FlorisImeUi.ClipboardHistoryLockedTitle.elementName,
-                text = stringRes(R.string.clipboard__locked__title),
-            )
-            SnyggText(
-                elementName = FlorisImeUi.ClipboardHistoryLockedMessage.elementName,
-                text = stringRes(R.string.clipboard__locked__message),
-            )
-        }
+        ClipboardPlaceholder(
+            icon = Icons.Outlined.Lock,
+            title = stringRes(R.string.clipboard__locked__title).toString(),
+            message = stringRes(R.string.clipboard__locked__message).toString(),
+        )
     }
 
     SnyggColumn(

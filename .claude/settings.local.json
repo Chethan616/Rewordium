@@ -18,7 +18,8 @@
       "WebFetch(domain:keyboardkit.com)",
       "PowerShell(Test-Path *)",
       "PowerShell(Remove-Item *)",
-      "Bash(xargs grep -l \"notifySuggestionAccepted\\\\|appendWord\")"
+      "Bash(xargs grep -l \"notifySuggestionAccepted\\\\|appendWord\")",
+      "Bash(./gradlew :reboard_keyboard:compileDebugKotlin)"
     ]
   }
 }

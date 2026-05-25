@@ -34,6 +34,8 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
+import androidx.compose.foundation.lazy.LazyRow
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
@@ -89,12 +91,14 @@ import androidx.compose.ui.viewinterop.AndroidView
 import androidx.compose.ui.window.Popup
 import androidx.emoji2.text.EmojiCompat
 import androidx.emoji2.widget.EmojiTextView
+import androidx.compose.runtime.DisposableEffect
 import com.noxquill.rewordium.keyboard.R
 import com.noxquill.rewordium.keyboard.app.FlorisPreferenceStore
 import com.noxquill.rewordium.keyboard.editorInstance
 import com.noxquill.rewordium.keyboard.ime.input.LocalInputFeedbackController
 import com.noxquill.rewordium.keyboard.ime.keyboard.FlorisImeSizing
 import com.noxquill.rewordium.keyboard.ime.text.keyboard.TextKeyData
+import com.noxquill.rewordium.keyboard.ime.text.keyboard.TextKeyboardLayout
 import com.noxquill.rewordium.keyboard.ime.theme.FlorisImeUi
 import com.noxquill.rewordium.keyboard.keyboardManager
 import dev.patrickgold.jetpref.datastore.model.observeAsState
@@ -323,11 +327,22 @@ fun EmojiPaletteView(
         }
     }
 
-    // Gboard-style search state. Empty query = show normal pager + tabs.
-    // Non-empty query = swap in a flat results grid, hide pager + tabs.
-    var searchQuery by remember { mutableStateOf("") }
+    // Gboard-style search state lives on the KeyboardManager so the QWERTY
+    // intercept in onInputKeyUp can route keystrokes into this query while
+    // the panel is open. null = not in search mode; non-null = panel shows
+    // the search UI (display + results + embedded keyboard).
+    val searchQueryNullable by keyboardManager.emojiSearchQuery.collectAsState()
+    val isSearchMode = searchQueryNullable != null
+    val searchQuery = searchQueryNullable.orEmpty()
     val trimmedQuery = searchQuery.trim()
-    val isSearching = trimmedQuery.isNotEmpty()
+    val hasResults = trimmedQuery.isNotEmpty()
+
+    // Always reset the search state when the emoji panel goes away. This
+    // covers user-driven exits (tap "ABC", swipe to next IME, host editor
+    // change) without each path needing to remember to clear.
+    DisposableEffect(Unit) {
+        onDispose { keyboardManager.endEmojiSearch() }
+    }
 
     // Flatten the full emoji catalog ONCE per emojiMappings build, with a
     // lowercased searchable key per emoji. Avoids per-keystroke flattening.
@@ -366,8 +381,9 @@ fun EmojiPaletteView(
     ) {
         EmojiSearchBar(
             query = searchQuery,
-            onQueryChange = { searchQuery = it },
-            onClear = { searchQuery = "" },
+            isActive = isSearchMode,
+            onActivate = { keyboardManager.beginEmojiSearch() },
+            onClose = { keyboardManager.endEmojiSearch() },
         )
 
         val pagerState = rememberPagerState(
@@ -379,34 +395,67 @@ fun EmojiPaletteView(
             pagerState.animateScrollToPage(0)
         }
 
-        if (isSearching) {
-            // ─── Search results path ────────────────────────────────────────
-            if (searchResults.isEmpty()) {
-                Column(
+        if (isSearchMode) {
+            // ─── Gboard-style search layout ─────────────────────────────────
+            //
+            //   ┌─────────────────────────────────────┐
+            //   │ [Search bar already rendered above] │
+            //   ├─────────────────────────────────────┤
+            //   │ 😄 😅 😆 😊 ☺️ 😌 →   (results)    │ 64dp horizontal strip
+            //   ├─────────────────────────────────────┤
+            //   │  q w e r t y u i o p                │
+            //   │  ... QWERTY ...                     │  embedded keyboard
+            //   └─────────────────────────────────────┘
+            //
+            // The embedded QWERTY uses the most recent CHARACTERS evaluator
+            // so we always show a real letter layout (never numeric/symbols
+            // even if that was the active sub-mode before MEDIA was opened).
+            val charactersEvaluator by keyboardManager.lastCharactersEvaluator.collectAsState()
+            Column(modifier = Modifier.fillMaxSize()) {
+                Box(
                     modifier = Modifier
-                        .fillMaxSize()
-                        .padding(24.dp),
-                    horizontalAlignment = Alignment.CenterHorizontally,
+                        .fillMaxWidth()
+                        .height(64.dp)
+                        .padding(horizontal = 8.dp),
+                    contentAlignment = Alignment.CenterStart,
                 ) {
-                    androidx.compose.material3.Text(
-                        "No emojis match \"$trimmedQuery\"",
-                        color = androidx.compose.material3.MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
-                }
-            } else {
-                CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Ltr) {
-                    LazyVerticalGrid(
-                        modifier = Modifier.fillMaxSize(),
-                        columns = GridCells.Adaptive(minSize = EmojiBaseWidth),
-                    ) {
-                        items(
-                            items = searchResults,
-                            key = { it.base().value },
-                        ) { emojiSet ->
-                            EmojiKeyWrapper(emojiSet)
+                    when {
+                        !hasResults -> {
+                            androidx.compose.material3.Text(
+                                "Type to search emojis",
+                                color = androidx.compose.material3.MaterialTheme.colorScheme.onSurfaceVariant,
+                                fontSize = 13.sp,
+                                modifier = Modifier.padding(start = 8.dp),
+                            )
+                        }
+                        searchResults.isEmpty() -> {
+                            androidx.compose.material3.Text(
+                                "No emojis match \"$trimmedQuery\"",
+                                color = androidx.compose.material3.MaterialTheme.colorScheme.onSurfaceVariant,
+                                fontSize = 13.sp,
+                                modifier = Modifier.padding(start = 8.dp),
+                            )
+                        }
+                        else -> {
+                            CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Ltr) {
+                                LazyRow(modifier = Modifier.fillMaxSize()) {
+                                    items(
+                                        items = searchResults,
+                                        key = { it.base().value },
+                                    ) { emojiSet ->
+                                        Box(modifier = Modifier.width(EmojiBaseWidth + 4.dp)) {
+                                            EmojiKeyWrapper(emojiSet)
+                                        }
+                                    }
+                                }
+                            }
                         }
                     }
                 }
+                TextKeyboardLayout(
+                    modifier = Modifier.fillMaxWidth(),
+                    evaluator = charactersEvaluator,
+                )
             }
             return@Column
         }
@@ -764,16 +813,25 @@ private fun EmojiHistoryPopup(
 /**
  * Gboard-style emoji search bar.
  *
- * A pill TextField at the top of the emoji panel. Typing immediately filters
- * the catalog (case-insensitive substring on name + keywords) — no submit
- * required. Clear button appears once text is present. Filter logic lives in
- * the caller; this composable is presentation-only.
+ * Two display states driven by [isActive]:
+ *  • Inactive — a clickable pill that reads "Search emoji". Tapping it calls
+ *    [onActivate], which flips the host palette into search mode and brings
+ *    up the embedded QWERTY keyboard.
+ *  • Active — shows the live query text (driven by the parent, populated by
+ *    QWERTY keystrokes the KeyboardManager redirects into the emoji-search
+ *    state) and an X button on the right that calls [onClose] to leave
+ *    search mode.
+ *
+ * We do not use a focusable TextField here because Reboard IS the IME; an
+ * internal TextField could never summon a soft keyboard. The visible cursor
+ * is rendered manually so the bar looks like a real input field while typing.
  */
 @Composable
 private fun EmojiSearchBar(
     query: String,
-    onQueryChange: (String) -> Unit,
-    onClear: () -> Unit,
+    isActive: Boolean,
+    onActivate: () -> Unit,
+    onClose: () -> Unit,
 ) {
     val cs = MaterialTheme.colorScheme
     Box(
@@ -789,6 +847,11 @@ private fun EmojiSearchBar(
                     color = cs.surfaceContainerHigh,
                     shape = RoundedCornerShape(50),
                 )
+                .pointerInput(isActive) {
+                    if (!isActive) {
+                        detectTapGestures { onActivate() }
+                    }
+                }
                 .padding(horizontal = 12.dp),
             contentAlignment = Alignment.CenterStart,
         ) {
@@ -804,26 +867,33 @@ private fun EmojiSearchBar(
                 )
                 androidx.compose.foundation.layout.Spacer(modifier = Modifier.width(10.dp))
                 Box(modifier = Modifier.weight(1f)) {
-                    if (query.isEmpty()) {
-                        androidx.compose.material3.Text(
-                            "Search emoji",
-                            color = cs.onSurfaceVariant.copy(alpha = 0.7f),
-                            fontSize = 14.sp,
-                        )
+                    when {
+                        !isActive -> {
+                            androidx.compose.material3.Text(
+                                "Search emoji",
+                                color = cs.onSurfaceVariant.copy(alpha = 0.7f),
+                                fontSize = 14.sp,
+                            )
+                        }
+                        query.isEmpty() -> {
+                            // Active but no input yet — show a thin caret so it
+                            // reads as a focused field rather than empty space.
+                            androidx.compose.material3.Text(
+                                "│",
+                                color = cs.primary,
+                                fontSize = 14.sp,
+                            )
+                        }
+                        else -> {
+                            androidx.compose.material3.Text(
+                                "$query│",
+                                color = cs.onSurface,
+                                fontSize = 14.sp,
+                            )
+                        }
                     }
-                    BasicTextField(
-                        value = query,
-                        onValueChange = onQueryChange,
-                        singleLine = true,
-                        textStyle = androidx.compose.ui.text.TextStyle(
-                            color = cs.onSurface,
-                            fontSize = 14.sp,
-                        ),
-                        cursorBrush = androidx.compose.ui.graphics.SolidColor(cs.primary),
-                        modifier = Modifier.fillMaxWidth(),
-                    )
                 }
-                if (query.isNotEmpty()) {
+                if (isActive) {
                     androidx.compose.foundation.layout.Spacer(modifier = Modifier.width(6.dp))
                     Box(
                         modifier = Modifier
@@ -833,13 +903,13 @@ private fun EmojiSearchBar(
                                 shape = androidx.compose.foundation.shape.CircleShape,
                             )
                             .pointerInput(Unit) {
-                                detectTapGestures { onClear() }
+                                detectTapGestures { onClose() }
                             },
                         contentAlignment = Alignment.Center,
                     ) {
                         Icon(
                             Icons.Outlined.Close,
-                            contentDescription = "Clear",
+                            contentDescription = "Close search",
                             tint = cs.onSurfaceVariant,
                             modifier = Modifier.size(14.dp),
                         )
