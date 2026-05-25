@@ -119,8 +119,16 @@ class KeyboardManager(context: Context) : InputKeyEventReceiver {
     private val _emojiSearchQuery = MutableStateFlow<String?>(null)
     val emojiSearchQuery get() = _emojiSearchQuery.asStateFlow()
 
-    fun beginEmojiSearch() { _emojiSearchQuery.value = "" }
-    fun endEmojiSearch() { _emojiSearchQuery.value = null }
+    fun beginEmojiSearch() {
+        _emojiSearchQuery.value = ""
+        // Force a re-evaluation so evaluateVisible() picks up the new
+        // search state and hides the emoji-entry key in the bottom row.
+        updateActiveEvaluators()
+    }
+    fun endEmojiSearch() {
+        _emojiSearchQuery.value = null
+        updateActiveEvaluators()
+    }
     fun appendToEmojiSearch(text: String) {
         if (text.isEmpty()) return
         _emojiSearchQuery.value = (_emojiSearchQuery.value ?: "") + text
@@ -774,11 +782,13 @@ class KeyboardManager(context: Context) : InputKeyEventReceiver {
     }
 
     override fun onInputKeyUp(data: KeyData) = activeState.batchEdit {
-        // Emoji-search intercept: when the user has opened the in-panel search,
-        // QWERTY taps build the query instead of committing to the editor.
-        // Layout-switch keys (shift, ?123, etc.) still pass through so the user
-        // can reach symbols/punctuation if they want them in their query.
-        if (_emojiSearchQuery.value != null && activeState.imeUiMode == ImeUiMode.MEDIA) {
+        // Emoji-search intercept: while emoji search is open, QWERTY taps
+        // build the query instead of committing to the host editor. The
+        // overlay is rendered above whatever ImeUiMode is active (typically
+        // TEXT, so the keyboard is full-size) — don't gate on imeUiMode.
+        // Layout-switch keys (shift, ?123, etc.) still pass through so the
+        // user can reach symbols/punctuation for their query.
+        if (_emojiSearchQuery.value != null) {
             when (data.code) {
                 KeyCode.DELETE -> { backspaceEmojiSearch(); return@batchEdit }
                 KeyCode.SPACE -> { appendToEmojiSearch(" "); return@batchEdit }
@@ -789,7 +799,19 @@ class KeyboardManager(context: Context) : InputKeyEventReceiver {
                 KeyCode.VIEW_SYMBOLS,
                 KeyCode.VIEW_SYMBOLS2,
                 KeyCode.VIEW_NUMERIC,
-                KeyCode.VIEW_NUMERIC_ADVANCED -> { /* fall through to normal handling */ }
+                KeyCode.VIEW_NUMERIC_ADVANCED,
+                // Let IME-mode transitions and system keys pass through so
+                // the user can exit search by tapping the language/emoji
+                // icons or backing out via the system input switcher.
+                KeyCode.IME_UI_MODE_TEXT,
+                KeyCode.IME_UI_MODE_MEDIA,
+                KeyCode.IME_UI_MODE_CLIPBOARD,
+                KeyCode.IME_HIDE_UI,
+                KeyCode.IME_SHOW_UI,
+                KeyCode.SYSTEM_INPUT_METHOD_PICKER,
+                KeyCode.SYSTEM_PREV_INPUT_METHOD,
+                KeyCode.SYSTEM_NEXT_INPUT_METHOD,
+                KeyCode.LANGUAGE_SWITCH -> { /* fall through to normal handling */ }
                 else -> {
                     if (data.type == KeyType.CHARACTER || data.type == KeyType.NUMERIC) {
                         appendToEmojiSearch(data.asString(isForDisplay = false))
@@ -1131,6 +1153,13 @@ class KeyboardManager(context: Context) : InputKeyEventReceiver {
             return when (data.code) {
                 KeyCode.IME_UI_MODE_TEXT,
                 KeyCode.IME_UI_MODE_MEDIA -> {
+                    // Hide the emoji entry key (and any "back to text" peer)
+                    // while the emoji-search overlay is active — tapping it
+                    // mid-search would re-enter the media panel and stack a
+                    // confusing second emoji UI on top of the overlay.
+                    // Gboard does the same: in its emoji-search screenshot
+                    // there is no smiley key in the bottom row.
+                    if (_emojiSearchQuery.value != null) return false
                     val tempUtilityKeyAction = when {
                         prefs.keyboard.utilityKeyEnabled.get() -> prefs.keyboard.utilityKeyAction.get()
                         else -> UtilityKeyAction.DISABLED

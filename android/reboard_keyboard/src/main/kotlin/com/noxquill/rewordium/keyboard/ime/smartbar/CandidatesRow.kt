@@ -134,15 +134,20 @@ fun CandidatesRow(modifier: Modifier = Modifier) {
                     displayMode = displayMode,
                     onClick = {
                         inputFeedbackController.keyPress()
-                        // Can't use candidate directly
-                        keyboardManager.commitCandidate(candidates[n])
+                        // Use `candidate` from the displayed `list` — NOT
+                        // `candidates[n]`. After the CLASSIC slot-reservation
+                        // for emoji, the displayed list is reordered
+                        // (e.g. [text1, text2, emoji] from underlying
+                        // [text1, text2, text3, emoji]), so indexing back
+                        // into `candidates` by the displayed slot number
+                        // commits the wrong item — tapping the emoji slot
+                        // committed "text3" (e.g. lol → lollipop bug).
+                        keyboardManager.commitCandidate(candidate)
                     },
                     onLongPress = {
-                        // Can't use candidate directly
-                        val candidateItem = candidates[n]
-                        if (candidateItem.isEligibleForUserRemoval) {
+                        if (candidate.isEligibleForUserRemoval) {
                             inputFeedbackController.keyLongPress()
-                            nlpManager.removeSuggestion(subtypeManager.activeSubtype, candidateItem)
+                            nlpManager.removeSuggestion(subtypeManager.activeSubtype, candidate)
                         } else {
                             false
                         }

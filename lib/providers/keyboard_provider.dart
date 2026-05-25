@@ -654,6 +654,19 @@ class KeyboardProvider extends ChangeNotifier {
     }
   }
 
+  /// Re-read `paraphraser_enabled` from SharedPreferences and notify listeners.
+  /// Called from the onboarding flow after it writes the chosen value, so
+  /// the home-screen keyboard status card reflects the onboarding choice
+  /// without requiring an app restart.
+  Future<void> refreshParaphraserState() async {
+    final prefs = await SharedPreferences.getInstance();
+    final next = prefs.getBool('paraphraser_enabled') ?? false;
+    if (next != _isParaphraserEnabled) {
+      _isParaphraserEnabled = next;
+      notifyListeners();
+    }
+  }
+
   // Toggle paraphraser feature
   void toggleParaphraser() async {
     _isParaphraserEnabled = !_isParaphraserEnabled;

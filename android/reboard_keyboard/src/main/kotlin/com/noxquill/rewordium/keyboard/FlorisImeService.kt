@@ -92,6 +92,7 @@ import com.noxquill.rewordium.keyboard.ime.keyboard.ProvideKeyboardRowBaseHeight
 import com.noxquill.rewordium.keyboard.ime.landscapeinput.LandscapeInputUiMode
 import com.noxquill.rewordium.keyboard.ime.lifecycle.LifecycleInputMethodService
 import com.noxquill.rewordium.keyboard.ime.media.MediaInputLayout
+import com.noxquill.rewordium.keyboard.ime.media.emoji.EmojiSearchOverlay
 import com.noxquill.rewordium.keyboard.ime.nlp.NlpInlineAutofill
 import com.noxquill.rewordium.keyboard.ime.onehanded.OneHandedMode
 import com.noxquill.rewordium.keyboard.ime.onehanded.OneHandedPanel
@@ -763,16 +764,55 @@ class FlorisImeService : LifecycleInputMethodService() {
                         )
                     }
                     CompositionLocalProvider(LocalLayoutDirection provides layoutDirection) {
+                        // Gboard-style emoji search: when the user activates
+                        // search from the emoji panel we keep the host in
+                        // TEXT mode (so the keyboard is full-size, not the
+                        // cramped embedded version) and STACK an emoji
+                        // search overlay above it. This grows the IME view
+                        // — wrapContentHeight on the parent makes that fine.
+                        val emojiSearchActive by keyboardManager.emojiSearchQuery.collectAsState()
                         Box(
                             modifier = Modifier
                                 .weight(keyboardWeight)
                                 .wrapContentHeight(),
                         ) {
-                            when (state.imeUiMode) {
-                                ImeUiMode.TEXT -> TextInputLayout()
-                                ImeUiMode.MEDIA -> MediaInputLayout()
-                                ImeUiMode.CLIPBOARD -> ClipboardInputLayout()
-                                ImeUiMode.AI -> com.noxquill.rewordium.keyboard.ime.ai.AiInputLayout()
+                            androidx.compose.foundation.layout.Column(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .wrapContentHeight(),
+                            ) {
+                                // Smooth glide-up on open, glide-down on close.
+                                // 220ms matches Material standard motion duration
+                                // and matches Gboard's perceived speed.
+                                androidx.compose.animation.AnimatedVisibility(
+                                    visible = emojiSearchActive != null,
+                                    enter = androidx.compose.animation.slideInVertically(
+                                        animationSpec = androidx.compose.animation.core.tween(
+                                            durationMillis = 220,
+                                            easing = androidx.compose.animation.core.FastOutSlowInEasing,
+                                        ),
+                                        initialOffsetY = { fullHeight -> fullHeight },
+                                    ) + androidx.compose.animation.fadeIn(
+                                        animationSpec = androidx.compose.animation.core.tween(durationMillis = 160),
+                                    ),
+                                    exit = androidx.compose.animation.slideOutVertically(
+                                        animationSpec = androidx.compose.animation.core.tween(
+                                            durationMillis = 200,
+                                            easing = androidx.compose.animation.core.FastOutLinearInEasing,
+                                        ),
+                                        targetOffsetY = { fullHeight -> fullHeight },
+                                    ) + androidx.compose.animation.fadeOut(
+                                        animationSpec = androidx.compose.animation.core.tween(durationMillis = 140),
+                                    ),
+                                ) {
+                                    EmojiSearchOverlay()
+                                }
+                                when (state.imeUiMode) {
+                                    ImeUiMode.TEXT -> TextInputLayout()
+                                    ImeUiMode.MEDIA -> MediaInputLayout()
+                                    ImeUiMode.CLIPBOARD -> ClipboardInputLayout()
+                                    ImeUiMode.AI -> com.noxquill.rewordium.keyboard.ime.ai.AiInputLayout()
+                                }
                             }
                         }
                     }

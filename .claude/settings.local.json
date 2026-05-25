@@ -19,7 +19,8 @@
       "PowerShell(Test-Path *)",
       "PowerShell(Remove-Item *)",
       "Bash(xargs grep -l \"notifySuggestionAccepted\\\\|appendWord\")",
-      "Bash(./gradlew :reboard_keyboard:compileDebugKotlin)"
+      "Bash(./gradlew :reboard_keyboard:compileDebugKotlin)",
+      "Bash(flutter analyze *)"
     ]
   }
 }

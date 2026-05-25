@@ -91,14 +91,13 @@ import androidx.compose.ui.viewinterop.AndroidView
 import androidx.compose.ui.window.Popup
 import androidx.emoji2.text.EmojiCompat
 import androidx.emoji2.widget.EmojiTextView
-import androidx.compose.runtime.DisposableEffect
 import com.noxquill.rewordium.keyboard.R
 import com.noxquill.rewordium.keyboard.app.FlorisPreferenceStore
 import com.noxquill.rewordium.keyboard.editorInstance
+import com.noxquill.rewordium.keyboard.ime.ImeUiMode
 import com.noxquill.rewordium.keyboard.ime.input.LocalInputFeedbackController
 import com.noxquill.rewordium.keyboard.ime.keyboard.FlorisImeSizing
 import com.noxquill.rewordium.keyboard.ime.text.keyboard.TextKeyData
-import com.noxquill.rewordium.keyboard.ime.text.keyboard.TextKeyboardLayout
 import com.noxquill.rewordium.keyboard.ime.theme.FlorisImeUi
 import com.noxquill.rewordium.keyboard.keyboardManager
 import dev.patrickgold.jetpref.datastore.model.observeAsState
@@ -327,62 +326,26 @@ fun EmojiPaletteView(
         }
     }
 
-    // Gboard-style search state lives on the KeyboardManager so the QWERTY
-    // intercept in onInputKeyUp can route keystrokes into this query while
-    // the panel is open. null = not in search mode; non-null = panel shows
-    // the search UI (display + results + embedded keyboard).
+    // Search state is owned by KeyboardManager. When the user taps the pill
+    // we transition to TEXT mode (so the full-size keyboard returns) and
+    // the EmojiSearchOverlay renders above it — see FlorisImeService.ImeUi.
+    // EmojiPaletteView itself only shows the pill as an inactive entry-point.
     val searchQueryNullable by keyboardManager.emojiSearchQuery.collectAsState()
-    val isSearchMode = searchQueryNullable != null
-    val searchQuery = searchQueryNullable.orEmpty()
-    val trimmedQuery = searchQuery.trim()
-    val hasResults = trimmedQuery.isNotEmpty()
-
-    // Always reset the search state when the emoji panel goes away. This
-    // covers user-driven exits (tap "ABC", swipe to next IME, host editor
-    // change) without each path needing to remember to clear.
-    DisposableEffect(Unit) {
-        onDispose { keyboardManager.endEmojiSearch() }
-    }
-
-    // Flatten the full emoji catalog ONCE per emojiMappings build, with a
-    // lowercased searchable key per emoji. Avoids per-keystroke flattening.
-    val searchIndex = remember(emojiMappings) {
-        val out = ArrayList<Pair<EmojiSet, String>>(2048)
-        for ((_, list) in emojiMappings) {
-            for (set in list) {
-                val base = set.base()
-                // Index name + keywords joined. Lowercased once, lookup-cheap.
-                val keyText = buildString {
-                    append(base.name.lowercase())
-                    base.keywords.forEach { kw ->
-                        append(' ')
-                        append(kw.lowercase())
-                    }
-                }
-                out.add(set to keyText)
-            }
-        }
-        out
-    }
-    val searchResults = remember(trimmedQuery, searchIndex) {
-        if (trimmedQuery.isEmpty()) emptyList()
-        else {
-            val q = trimmedQuery.lowercase()
-            searchIndex.asSequence()
-                .filter { (_, key) -> key.contains(q) }
-                .map { it.first }
-                .take(200)  // cap so a one-letter query doesn't render 3k cells
-                .toList()
-        }
-    }
 
     Column(
         modifier = modifier
     ) {
         EmojiSearchBar(
-            query = searchQuery,
-            isActive = isSearchMode,
-            onActivate = { keyboardManager.beginEmojiSearch() },
+            query = searchQueryNullable.orEmpty(),
+            isActive = false, // The overlay (not this panel) owns the active UI.
+            onActivate = {
+                keyboardManager.beginEmojiSearch()
+                // Drop out of MEDIA mode so the real keyboard is rendered
+                // at full size below the overlay. Without this the keyboard
+                // would have to fit inside the emoji panel, producing the
+                // cramped/compressed key bug the user reported.
+                keyboardManager.activeState.imeUiMode = ImeUiMode.TEXT
+            },
             onClose = { keyboardManager.endEmojiSearch() },
         )
 
@@ -393,71 +356,6 @@ fun EmojiPaletteView(
         // Reset the pager to the first page when emojiHistory is enabled
         LaunchedEffect(emojiHistoryEnabled) {
             pagerState.animateScrollToPage(0)
-        }
-
-        if (isSearchMode) {
-            // ─── Gboard-style search layout ─────────────────────────────────
-            //
-            //   ┌─────────────────────────────────────┐
-            //   │ [Search bar already rendered above] │
-            //   ├─────────────────────────────────────┤
-            //   │ 😄 😅 😆 😊 ☺️ 😌 →   (results)    │ 64dp horizontal strip
-            //   ├─────────────────────────────────────┤
-            //   │  q w e r t y u i o p                │
-            //   │  ... QWERTY ...                     │  embedded keyboard
-            //   └─────────────────────────────────────┘
-            //
-            // The embedded QWERTY uses the most recent CHARACTERS evaluator
-            // so we always show a real letter layout (never numeric/symbols
-            // even if that was the active sub-mode before MEDIA was opened).
-            val charactersEvaluator by keyboardManager.lastCharactersEvaluator.collectAsState()
-            Column(modifier = Modifier.fillMaxSize()) {
-                Box(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(64.dp)
-                        .padding(horizontal = 8.dp),
-                    contentAlignment = Alignment.CenterStart,
-                ) {
-                    when {
-                        !hasResults -> {
-                            androidx.compose.material3.Text(
-                                "Type to search emojis",
-                                color = androidx.compose.material3.MaterialTheme.colorScheme.onSurfaceVariant,
-                                fontSize = 13.sp,
-                                modifier = Modifier.padding(start = 8.dp),
-                            )
-                        }
-                        searchResults.isEmpty() -> {
-                            androidx.compose.material3.Text(
-                                "No emojis match \"$trimmedQuery\"",
-                                color = androidx.compose.material3.MaterialTheme.colorScheme.onSurfaceVariant,
-                                fontSize = 13.sp,
-                                modifier = Modifier.padding(start = 8.dp),
-                            )
-                        }
-                        else -> {
-                            CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Ltr) {
-                                LazyRow(modifier = Modifier.fillMaxSize()) {
-                                    items(
-                                        items = searchResults,
-                                        key = { it.base().value },
-                                    ) { emojiSet ->
-                                        Box(modifier = Modifier.width(EmojiBaseWidth + 4.dp)) {
-                                            EmojiKeyWrapper(emojiSet)
-                                        }
-                                    }
-                                }
-                            }
-                        }
-                    }
-                }
-                TextKeyboardLayout(
-                    modifier = Modifier.fillMaxWidth(),
-                    evaluator = charactersEvaluator,
-                )
-            }
-            return@Column
         }
 
         EmojiCategoriesTabRow(
@@ -577,14 +475,14 @@ fun EmojiPaletteView(
 }
 
 @Composable
-private fun EmojiKey(
+internal fun EmojiKey(
     emojiSet: EmojiSet,
     emojiCompatInstance: EmojiCompat?,
     preferredSkinTone: EmojiSkinTone,
-    isPinned: Boolean,
-    isRecent: Boolean,
+    isPinned: Boolean = false,
+    isRecent: Boolean = false,
     onEmojiInput: (Emoji) -> Unit,
-    onHistoryAction: () -> Unit,
+    onHistoryAction: () -> Unit = {},
 ) {
     val inputFeedbackController = LocalInputFeedbackController.current
     val base = emojiSet.base(withSkinTone = preferredSkinTone)
@@ -833,7 +731,17 @@ private fun EmojiSearchBar(
     onActivate: () -> Unit,
     onClose: () -> Unit,
 ) {
-    val cs = MaterialTheme.colorScheme
+    // Pull background + foreground from the keyboard's snygg theme so the
+    // search pill matches whatever the user's active keyboard theme uses
+    // (dark/light/AMOLED/custom) instead of MaterialTheme colors that
+    // ignore Snygg entirely. SmartbarActionTile is the closest "raised
+    // button on the smartbar" element — same visual rhythm as our pill.
+    val tileStyle = rememberSnyggThemeQuery(FlorisImeUi.SmartbarActionTile.elementName)
+    val rowStyle = rememberSnyggThemeQuery(FlorisImeUi.SmartbarSharedActionsRow.elementName)
+    val pillBg = tileStyle.background(default = MaterialTheme.colorScheme.surfaceContainerHigh)
+    val pillFg = tileStyle.foreground(default = MaterialTheme.colorScheme.onSurface)
+    val placeholderFg = rowStyle.foreground(default = MaterialTheme.colorScheme.onSurfaceVariant)
+    val accentFg = pillFg
     Box(
         modifier = Modifier
             .fillMaxWidth()
@@ -844,7 +752,7 @@ private fun EmojiSearchBar(
                 .fillMaxWidth()
                 .height(SearchBarHeight)
                 .background(
-                    color = cs.surfaceContainerHigh,
+                    color = pillBg,
                     shape = RoundedCornerShape(50),
                 )
                 .pointerInput(isActive) {
@@ -862,7 +770,7 @@ private fun EmojiSearchBar(
                 Icon(
                     Icons.Outlined.Search,
                     contentDescription = null,
-                    tint = cs.onSurfaceVariant,
+                    tint = placeholderFg,
                     modifier = Modifier.size(18.dp),
                 )
                 androidx.compose.foundation.layout.Spacer(modifier = Modifier.width(10.dp))
@@ -871,7 +779,7 @@ private fun EmojiSearchBar(
                         !isActive -> {
                             androidx.compose.material3.Text(
                                 "Search emoji",
-                                color = cs.onSurfaceVariant.copy(alpha = 0.7f),
+                                color = placeholderFg.copy(alpha = 0.7f),
                                 fontSize = 14.sp,
                             )
                         }
@@ -880,14 +788,14 @@ private fun EmojiSearchBar(
                             // reads as a focused field rather than empty space.
                             androidx.compose.material3.Text(
                                 "│",
-                                color = cs.primary,
+                                color = accentFg,
                                 fontSize = 14.sp,
                             )
                         }
                         else -> {
                             androidx.compose.material3.Text(
                                 "$query│",
-                                color = cs.onSurface,
+                                color = pillFg,
                                 fontSize = 14.sp,
                             )
                         }
@@ -899,7 +807,7 @@ private fun EmojiSearchBar(
                         modifier = Modifier
                             .size(22.dp)
                             .background(
-                                color = cs.onSurface.copy(alpha = 0.08f),
+                                color = pillFg.copy(alpha = 0.10f),
                                 shape = androidx.compose.foundation.shape.CircleShape,
                             )
                             .pointerInput(Unit) {
@@ -910,7 +818,7 @@ private fun EmojiSearchBar(
                         Icon(
                             Icons.Outlined.Close,
                             contentDescription = "Close search",
-                            tint = cs.onSurfaceVariant,
+                            tint = placeholderFg,
                             modifier = Modifier.size(14.dp),
                         )
                     }
