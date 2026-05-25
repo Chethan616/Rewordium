@@ -212,22 +212,15 @@ fun EmojiSearchOverlay() {
                     bg = pillBg,
                     fg = pillFg,
                     onClick = {
-                        // 1) Start the overlay close animation by clearing
-                        //    the search state. The AnimatedVisibility in
-                        //    FlorisImeService.ImeUi reacts to this and runs
-                        //    the shrink-vertically + fadeOut combo (~340ms).
-                        //
-                        // 2) Wait until the close animation has finished
-                        //    BEFORE flipping imeUiMode to MEDIA. Without
-                        //    the delay, MediaInputLayout mounts while the
-                        //    overlay is still shrinking, the keyboard
-                        //    swaps under it, and the user sees a one-frame
-                        //    gap at the bottom of the keyboard.
-                        //
-                        //    340ms = overlay fadeOut(120) + shrink(220).
+                        // Defer imeUiMode flip until the overlay close
+                        // animation has fully run, so MediaInputLayout
+                        // doesn't mount mid-shrink (would cause a layout
+                        // swap during the close transition).
+                        // Tuned to match FlorisImeService.ImeUi exit timing:
+                        // fadeOut(90ms) + shrink(160ms, delay 30ms) = 190ms.
                         keyboardManager.endEmojiSearch()
                         scope.launch {
-                            kotlinx.coroutines.delay(340)
+                            kotlinx.coroutines.delay(190)
                             keyboardManager.activeState.imeUiMode = ImeUiMode.MEDIA
                         }
                     },

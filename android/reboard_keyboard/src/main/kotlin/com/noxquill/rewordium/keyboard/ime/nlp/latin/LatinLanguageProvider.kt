@@ -68,8 +68,15 @@ class LatinLanguageProvider(context: Context) : SpellingProvider, SuggestionProv
         private const val LEARNED_REFRESH_THRESHOLD = 3
         // First-time-seen personal words bootstrap to this frequency so they
         // can actually win against common dict words in glide ranking.
-        // Equivalent to roughly the median dictionary word frequency.
-        private const val NEW_WORD_BOOTSTRAP_FREQ = 30
+        //
+        // 30 was below mid-tier dict words like "veteran" (~70-80) — a glide
+        // of "chethan" would still rank "veteran" first because its frequency
+        // overwhelmed the shape-match advantage. 120 puts personal words
+        // above all mid-frequency dict words and only below the top-tier
+        // English vocabulary ("the", "and", etc.) which is what we want:
+        // personal names should beat shape-similar uncommon words, but a
+        // mis-glide near "the"-shape paths should still surface "the".
+        private const val NEW_WORD_BOOTSTRAP_FREQ = 120
         private const val LEARN_WORD_MIN_LEN = 2
         private const val LEARN_WORD_MAX_LEN = 40
         // Letters + apostrophe only — exclude URLs, numbers, symbols.

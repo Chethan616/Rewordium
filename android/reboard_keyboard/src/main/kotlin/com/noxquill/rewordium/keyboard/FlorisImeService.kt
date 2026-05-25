@@ -780,21 +780,18 @@ class FlorisImeService : LifecycleInputMethodService() {
                             androidx.compose.foundation.layout.Column(
                                 modifier = Modifier
                                     .fillMaxWidth()
-                                    .wrapContentHeight()
-                                    // Smooth the column's own size changes
-                                    // as the overlay grows/shrinks. Without
-                                    // this, each animation frame of the
-                                    // overlay's expandVertically caused a
-                                    // jagged step in the column's reported
-                                    // size; the IME view's wrap-content
-                                    // lagged one frame, leaving a brief
-                                    // gap at the bottom edge.
-                                    .animateContentSize(
-                                        animationSpec = androidx.compose.animation.core.tween(
-                                            durationMillis = 280,
-                                            easing = androidx.compose.animation.core.EaseOutCubic,
-                                        ),
-                                    ),
+                                    .wrapContentHeight(),
+                                // No animateContentSize here. It double-
+                                // animates against AnimatedVisibility's own
+                                // expandVertically: the slot is already
+                                // growing per-frame, and a second smoothing
+                                // pass on the parent introduces a one-frame
+                                // size lag that surfaces as a visible gap
+                                // at the keyboard's bottom edge in hosts
+                                // (Chrome) that re-measure aggressively.
+                                // Letting expandVertically be the only
+                                // height driver keeps the column tightly
+                                // in sync with what's painted.
                             ) {
                                 // Staged Gboard-style transition:
                                 //
@@ -818,30 +815,36 @@ class FlorisImeService : LifecycleInputMethodService() {
                                 // grows the slot in lockstep with the visual,
                                 // so the keyboard glides into its final
                                 // position smoothly.
+                                // Tight ~180ms transitions. The IME view's
+                                // wrapContentHeight reports size to the host
+                                // app per-frame; longer animations expose
+                                // a one-frame sync lag at the keyboard's
+                                // bottom edge. Sub-200ms motion is below
+                                // the perception threshold for that lag.
                                 androidx.compose.animation.AnimatedVisibility(
                                     visible = emojiSearchActive != null,
                                     enter = androidx.compose.animation.expandVertically(
                                         animationSpec = androidx.compose.animation.core.tween(
-                                            durationMillis = 300,
+                                            durationMillis = 180,
                                             easing = androidx.compose.animation.core.EaseOutCubic,
                                         ),
                                         expandFrom = androidx.compose.ui.Alignment.Bottom,
                                     ) + androidx.compose.animation.fadeIn(
                                         animationSpec = androidx.compose.animation.core.tween(
-                                            durationMillis = 200,
-                                            delayMillis = 120,
+                                            durationMillis = 140,
+                                            delayMillis = 60,
                                             easing = androidx.compose.animation.core.EaseOut,
                                         ),
                                     ),
                                     exit = androidx.compose.animation.fadeOut(
                                         animationSpec = androidx.compose.animation.core.tween(
-                                            durationMillis = 120,
+                                            durationMillis = 90,
                                             easing = androidx.compose.animation.core.EaseIn,
                                         ),
                                     ) + androidx.compose.animation.shrinkVertically(
                                         animationSpec = androidx.compose.animation.core.tween(
-                                            durationMillis = 220,
-                                            delayMillis = 60,
+                                            durationMillis = 160,
+                                            delayMillis = 30,
                                             easing = androidx.compose.animation.core.EaseInCubic,
                                         ),
                                         shrinkTowards = androidx.compose.ui.Alignment.Bottom,
