@@ -17,6 +17,7 @@ import androidx.compose.animation.core.infiniteRepeatable
 import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -38,8 +39,12 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.outlined.Close
 import androidx.compose.material.icons.outlined.Search
+import androidx.compose.material3.FilledIconButton
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.IconButtonDefaults
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -170,13 +175,19 @@ fun EmojiSearchOverlay() {
     val displayed: List<EmojiSet> = if (results.isNotEmpty()) results else recentAndPopular
 
     // ── Snygg-driven palette ──────────────────────────────────────────────
+    // Pull every color from the keyboard's snygg theme so the overlay
+    // matches whatever skin the user has (light / dark / AMOLED / custom).
+    // Accent (the cursor color) comes from the SHIFT key's focused style —
+    // that's the same accent the keyboard uses for "active" indicators
+    // (caps lock, selected suggestion, etc.), so it's the closest thing
+    // to a brand color the theme exposes.
     val containerStyle = rememberSnyggThemeQuery(FlorisImeUi.Smartbar.elementName)
     val pillStyle = rememberSnyggThemeQuery(FlorisImeUi.SmartbarActionTile.elementName)
+    val keyStyle = rememberSnyggThemeQuery(FlorisImeUi.Key.elementName)
     val containerBg = containerStyle.background(default = MaterialTheme.colorScheme.surface)
     val pillBg = pillStyle.background(default = MaterialTheme.colorScheme.surfaceContainerHigh)
     val pillFg = pillStyle.foreground(default = MaterialTheme.colorScheme.onSurface)
-    val accent = MaterialTheme.colorScheme.primary
-    val resultsBg = pillBg.copy(alpha = 0.45f)
+    val accent = keyStyle.foreground(default = pillFg)
 
     SnyggBox(
         elementName = FlorisImeUi.Smartbar.elementName,
@@ -201,8 +212,24 @@ fun EmojiSearchOverlay() {
                     bg = pillBg,
                     fg = pillFg,
                     onClick = {
+                        // 1) Start the overlay close animation by clearing
+                        //    the search state. The AnimatedVisibility in
+                        //    FlorisImeService.ImeUi reacts to this and runs
+                        //    the shrink-vertically + fadeOut combo (~340ms).
+                        //
+                        // 2) Wait until the close animation has finished
+                        //    BEFORE flipping imeUiMode to MEDIA. Without
+                        //    the delay, MediaInputLayout mounts while the
+                        //    overlay is still shrinking, the keyboard
+                        //    swaps under it, and the user sees a one-frame
+                        //    gap at the bottom of the keyboard.
+                        //
+                        //    340ms = overlay fadeOut(120) + shrink(220).
                         keyboardManager.endEmojiSearch()
-                        keyboardManager.activeState.imeUiMode = ImeUiMode.MEDIA
+                        scope.launch {
+                            kotlinx.coroutines.delay(340)
+                            keyboardManager.activeState.imeUiMode = ImeUiMode.MEDIA
+                        }
                     },
                 )
                 Spacer(modifier = Modifier.width(12.dp))
@@ -215,11 +242,13 @@ fun EmojiSearchOverlay() {
             }
 
             // ─── Results grid ────────────────────────────────────────
+            // No background container — emojis sit directly on the overlay
+            // surface like the Gboard reference. Background tints around
+            // result strips look cluttered next to the smartbar's keys.
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(96.dp)
-                    .background(color = resultsBg, shape = RoundedCornerShape(12.dp))
                     .padding(horizontal = 4.dp, vertical = 4.dp),
             ) {
                 when {
@@ -239,16 +268,19 @@ fun EmojiSearchOverlay() {
                                         emojiCompatInstance = null,
                                         preferredSkinTone = EmojiSkinTone.DEFAULT,
                                         onEmojiInput = { emoji ->
-                                            // Bypass the keyboard event dispatcher:
-                                            // inputEventDispatcher.sendDownUp is
-                                            // synchronous (runBlocking) and would
-                                            // route the emoji through onInputKeyUp
-                                            // — where our own emoji-search intercept
-                                            // would treat the emoji char as a
-                                            // search query character and APPEND it
-                                            // to the query instead of inserting it
-                                            // into the host editor.
-                                            keyboardManager.endEmojiSearch()
+                                            // Commit directly to the host
+                                            // editor (bypassing the keyboard
+                                            // event dispatcher whose synchronous
+                                            // runBlocking would otherwise route
+                                            // the emoji char through our own
+                                            // emoji-search intercept and append
+                                            // it to the query).
+                                            //
+                                            // We DON'T end the search here —
+                                            // multi-pick is the expected UX.
+                                            // User can keep tapping emojis;
+                                            // overlay stays until they hit
+                                            // the back button.
                                             editorInstance.commitText(emoji.value)
                                             scope.launch {
                                                 EmojiHistoryHelper.markEmojiUsed(prefs, emoji)
@@ -303,17 +335,22 @@ private fun ThemedRoundButton(
     fg: Color,
     onClick: () -> Unit,
 ) {
-    Box(
-        modifier = Modifier
-            .size(36.dp)
-            .background(color = bg, shape = CircleShape)
-            .pointerInput(Unit) { detectTapGestures { onClick() } },
-        contentAlignment = Alignment.Center,
+    // FilledIconButton is the M3 component for the "tonal circular icon
+    // button" pattern — gets ripple, proper touch target (48dp), and
+    // accessibility role baked in. Sizing forced to 36dp via Modifier.size
+    // to match the Gboard back-chip footprint while keeping the 48dp
+    // touch slop M3 provides under the hood.
+    FilledIconButton(
+        onClick = onClick,
+        modifier = Modifier.size(36.dp),
+        colors = IconButtonDefaults.filledIconButtonColors(
+            containerColor = bg,
+            contentColor = fg,
+        ),
     ) {
         Icon(
             imageVector = icon,
             contentDescription = contentDescription,
-            tint = fg,
             modifier = Modifier.size(18.dp),
         )
     }
@@ -391,22 +428,20 @@ private fun EmojiSearchPill(
             }
         }
         if (query.isNotEmpty()) {
-            Box(
+            // M3 IconButton gives a 48dp touch target with built-in ripple.
+            // Visually constrained to ~32dp via the wrapping Box so it sits
+            // cleanly inside the pill while still being easy to hit.
+            IconButton(
+                onClick = onClear,
                 modifier = Modifier
                     .align(Alignment.CenterEnd)
-                    .size(24.dp)
-                    .background(
-                        color = pillFg.copy(alpha = 0.10f),
-                        shape = CircleShape,
-                    )
-                    .pointerInput(Unit) { detectTapGestures { onClear() } },
-                contentAlignment = Alignment.Center,
+                    .size(32.dp),
             ) {
                 Icon(
                     imageVector = Icons.Outlined.Close,
                     contentDescription = "Clear search",
                     tint = pillFg.copy(alpha = 0.7f),
-                    modifier = Modifier.size(14.dp),
+                    modifier = Modifier.size(16.dp),
                 )
             }
         }

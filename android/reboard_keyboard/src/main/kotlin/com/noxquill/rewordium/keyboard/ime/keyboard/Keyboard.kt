@@ -59,6 +59,7 @@ abstract class Keyboard {
         keyboardHeight: Float,
         desiredKey: Key,
         extendTouchBoundariesDownwards: Boolean,
+        firstRowHeightFactor: Float = 1f,
     )
 }
 

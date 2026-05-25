@@ -33,6 +33,7 @@ import androidx.compose.foundation.layout.wrapContentSize
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateListOf
@@ -116,6 +117,16 @@ fun TextKeyboardLayout(
     val context = LocalContext.current
     val configuration = LocalConfiguration.current
     val glideTypingManager by context.glideTypingManager()
+    val keyboardManager by context.keyboardManager()
+    // Observe emoji-search state. This drives two things:
+    //  1. Recomposition on toggle (so the for-loop in the body picks up the
+    //     newly computed flay properties when emoji search starts/ends).
+    //  2. The layout-remember below depends on this state so keyboard.layout()
+    //     RE-RUNS when search toggles — which redistributes key widths after
+    //     refreshEmojiKeyVisibility() has reset flayWidthFactor to 0 (hide)
+    //     or back to normal (show). Without the remember invalidation, the
+    //     cached touchBounds keep the old (hidden / zero-width) values.
+    val emojiSearchActive by keyboardManager.emojiSearchQuery.collectAsState()
 
     val keyboard = evaluator.keyboard as TextKeyboard
     val glideEnabledInternal by prefs.glide.enabled.observeAsState()
@@ -222,10 +233,14 @@ fun TextKeyboardLayout(
         val keyMarginH by prefs.keyboard.keySpacingHorizontal.observeAsTransformingState { it.dp.toPx() }
         val keyMarginV by prefs.keyboard.keySpacingVertical.observeAsTransformingState { it.dp.toPx() }
         val keyboardRowBaseHeight = FlorisImeSizing.keyboardRowBaseHeight
+        // Uniform row heights — Gboard reference shows the digit row at the
+        // same height as the letter rows. An earlier 30% reduction made
+        // Reboard look visibly off; reverted to match 1:1.
+        val firstRowFactor = 1f
 
         val desiredKey = remember(
             keyboard, keyboardWidth, keyboardHeight, keyMarginH, keyMarginV,
-            keyboardRowBaseHeight, evaluator
+            keyboardRowBaseHeight, evaluator, emojiSearchActive,
         ) {
             TextKey(data = TextKeyData.UNSPECIFIED).also { desiredKey ->
                 desiredKey.touchBounds.apply {
@@ -242,7 +257,7 @@ fun TextKeyboardLayout(
                     }
                 }
                 desiredKey.visibleBounds.applyFrom(desiredKey.touchBounds).deflateBy(keyMarginH, keyMarginV)
-                keyboard.layout(keyboardWidth, keyboardHeight, desiredKey, true)
+                keyboard.layout(keyboardWidth, keyboardHeight, desiredKey, true, firstRowFactor)
             }
         }
 

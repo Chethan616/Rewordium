@@ -121,13 +121,11 @@ class KeyboardManager(context: Context) : InputKeyEventReceiver {
 
     fun beginEmojiSearch() {
         _emojiSearchQuery.value = ""
-        // Force a re-evaluation so evaluateVisible() picks up the new
-        // search state and hides the emoji-entry key in the bottom row.
-        updateActiveEvaluators()
+        refreshEmojiKeyVisibility()
     }
     fun endEmojiSearch() {
         _emojiSearchQuery.value = null
-        updateActiveEvaluators()
+        refreshEmojiKeyVisibility()
     }
     fun appendToEmojiSearch(text: String) {
         if (text.isEmpty()) return
@@ -136,10 +134,35 @@ class KeyboardManager(context: Context) : InputKeyEventReceiver {
     fun backspaceEmojiSearch() {
         val current = _emojiSearchQuery.value ?: return
         if (current.isEmpty()) {
-            // Gboard parity: backspacing on an empty query exits search.
-            _emojiSearchQuery.value = null
-        } else {
-            _emojiSearchQuery.value = current.dropLast(1)
+            // No-op when already empty. Auto-closing on backspace-empty
+            // caused a subtle bug: users would backspace one char too many,
+            // search would silently close, and their next keystroke would
+            // leak into the host editor. Now closing requires an explicit
+            // back-button tap, which matches user mental model better.
+            return
+        }
+        _emojiSearchQuery.value = current.dropLast(1)
+    }
+
+    /**
+     * Surgical visibility refresh for the IME-mode keys (emoji-entry + the
+     * mirror "back to text" key). [TextKey.isVisible] is cached via
+     * [TextKey.compute] so a bare flow change won't surface the new state.
+     * Walking the FULL key list and rebuilding the evaluator is what caused
+     * the Chrome flicker, so we touch ONLY the two keys whose visibility is
+     * actually affected by emoji-search state — extremely cheap, no flicker.
+     */
+    private fun refreshEmojiKeyVisibility() {
+        val evaluator = _activeEvaluator.value
+        val keyboard = evaluator.keyboard as? com.noxquill.rewordium.keyboard.ime.text.keyboard.TextKeyboard ?: return
+        for (key in keyboard.keys()) {
+            // After initial layout `computedData` carries the resolved code;
+            // it's the cheapest non-suspending way to identify a key without
+            // re-running evaluator.computeLabel etc.
+            val code = key.computedData.code
+            if (code == KeyCode.IME_UI_MODE_MEDIA || code == KeyCode.IME_UI_MODE_TEXT) {
+                key.compute(evaluator)
+            }
         }
     }
 
@@ -329,6 +352,14 @@ class KeyboardManager(context: Context) : InputKeyEventReceiver {
     }
 
     fun commitGesture(word: String) {
+        // Glide-typed words should also be redirected into the emoji search
+        // when the overlay is open. Without this gate the user would swipe
+        // "happy", expect 😊 results to filter live, and instead see the
+        // word land in their host text field.
+        if (_emojiSearchQuery.value != null) {
+            appendToEmojiSearch(word)
+            return
+        }
         editorInstance.commitGesture(fixCase(word))
         // Adaptive learned swipe typing: glide-typed words feed into personal
         // vocabulary too. Without this, a word the user only ever swipes
