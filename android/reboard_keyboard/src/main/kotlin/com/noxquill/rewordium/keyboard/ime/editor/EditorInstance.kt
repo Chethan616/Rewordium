@@ -64,6 +64,18 @@ class EditorInstance(context: Context) : AbstractEditorInstance(context) {
     val phantomSpace = PhantomSpaceState()
     val massSelection = MassSelectionState()
 
+    /**
+     * Length (in chars) of the text inserted by the last [commitGesture] call,
+     * or 0 if the most recent commit was anything else. Used by
+     * [deleteBackwards] as a fallback when [EditorContent.currentWord] is
+     * invalid — e.g. inside Chrome / Instagram WebView fields that don't
+     * report a composing region back to us. With this we can still
+     * "backspace deletes the whole gesture word" without relying on the
+     * editor's word-boundary tracking. Cleared on any non-gesture mutation
+     * (manual char commit, setSelection, host-driven selection update).
+     */
+    private var lastGestureCommitLength: Int = 0
+
     private fun currentInputConnection() = FlorisImeService.currentInputConnection()
 
     override fun handleStartInputView(editorInfo: FlorisEditorInfo, isRestart: Boolean) {
@@ -132,6 +144,13 @@ class EditorInstance(context: Context) : AbstractEditorInstance(context) {
     override fun handleSelectionUpdate(oldSelection: EditorRange, newSelection: EditorRange, composing: EditorRange) {
         autoSpace.setInactiveFromUpdate()
         phantomSpace.setInactiveFromUpdate()
+        // If the host moved the cursor away from where we just committed
+        // the gesture, the fallback word-delete would target the wrong span.
+        // The phantom-space check above already handles intent; cursor-jump
+        // is the other signal we need to invalidate on.
+        if (oldSelection != newSelection && !phantomSpace.isGestureTriggered) {
+            lastGestureCommitLength = 0
+        }
         if (massSelection.isActive) {
             super.handleMassSelectionUpdate(newSelection, composing)
         } else {
@@ -162,6 +181,9 @@ class EditorInstance(context: Context) : AbstractEditorInstance(context) {
      * @return True on success or if the selection is already at specified position, false otherwise.
      */
     fun setSelection(start: Int, end: Int): Boolean {
+        // Cursor move — the just-committed gesture word is no longer the
+        // tail of the editor's text, so the fallback word-delete is unsafe.
+        lastGestureCommitLength = 0
         autoSpace.setInactive()
         phantomSpace.setInactive()
         val selection = EditorRange.normalized(start, end)
@@ -216,6 +238,9 @@ class EditorInstance(context: Context) : AbstractEditorInstance(context) {
     }
 
     override fun commitChar(char: String): Boolean {
+        // Any manual char commit means the user has moved past the gesture —
+        // we no longer want the next backspace to wipe the swiped word.
+        lastGestureCommitLength = 0
         ghostTextManager.cancelGhostText(clearComposing = true)
         // Smart Quotes: transform straight quotes to curly quotes
         val effectiveChar = if (prefs.correction.smartQuotes.get()) transformSmartQuote(char) else char
@@ -268,6 +293,9 @@ class EditorInstance(context: Context) : AbstractEditorInstance(context) {
      * @return True on success, false if an error occurred or the input connection is invalid.
      */
     override fun commitText(text: String): Boolean {
+        // Non-gesture text commit (autocorrect pick, paste, emoji, etc.)
+        // moves us past the gesture — invalidate the word-delete fallback.
+        lastGestureCommitLength = 0
         val isPhantomSpaceActive = phantomSpace.determine(text)
         autoSpace.setInactive()
         phantomSpace.setInactive()
@@ -335,13 +363,21 @@ class EditorInstance(context: Context) : AbstractEditorInstance(context) {
             showComposingRegion = true,
             source = PhantomSpaceState.Source.GESTURE,
         )
-        return if (isPhantomSpaceActive) {
+        val committed = if (isPhantomSpaceActive) {
             super.commitText("$SPACE$text")
         } else {
             super.commitText(text)
-        }.also {
+        }
+        if (committed) {
+            // Remember exactly how many chars the gesture inserted so
+            // [deleteBackwards] can word-delete in editors that don't expose
+            // currentWord (e.g. Chrome / Instagram WebView fields). The
+            // leading auto-space is NOT counted — backspace should leave
+            // existing spacing intact and only remove the swiped word.
+            lastGestureCommitLength = text.length
             updateLastCommitPosition()
         }
+        return committed
     }
 
     /**
@@ -397,10 +433,37 @@ class EditorInstance(context: Context) : AbstractEditorInstance(context) {
             if (
                 prefs.glide.enabled.get() &&
                 prefs.glide.immediateBackspaceDeletesWord.get() &&
-                phantomSpace.isGestureTriggered &&
-                content.currentWord.isValid
+                phantomSpace.isGestureTriggered
             ) {
-                return deleteBackwards(OperationUnit.WORDS)
+                // Preferred path: the editor reports a valid currentWord, so
+                // the standard WORDS delete uses BreakIterator-correct
+                // boundaries. This works in WhatsApp, Telegram, native
+                // EditText fields, etc.
+                if (content.currentWord.isValid) {
+                    return deleteBackwards(OperationUnit.WORDS)
+                }
+                // Fallback for WebView-backed editors (Chrome address bar,
+                // Instagram comment box, etc.) that don't expose a composing
+                // region or currentWord. We still know exactly how many
+                // chars the last gesture inserted, so we issue a single
+                // surrounding-text delete of that span directly. Without
+                // this branch, those apps fall through to single-char
+                // backspace and the "swipe-then-backspace deletes the
+                // word" UX silently breaks.
+                if (lastGestureCommitLength > 0) {
+                    val ic = currentInputConnection()
+                    if (ic != null) {
+                        val n = lastGestureCommitLength
+                        lastGestureCommitLength = 0
+                        autoSpace.setInactive()
+                        phantomSpace.setInactive()
+                        ic.beginBatchEdit()
+                        ic.finishComposingText()
+                        val ok = ic.deleteSurroundingText(n, 0)
+                        ic.endBatchEdit()
+                        return ok
+                    }
+                }
             }
         }
         autoSpace.setInactive()

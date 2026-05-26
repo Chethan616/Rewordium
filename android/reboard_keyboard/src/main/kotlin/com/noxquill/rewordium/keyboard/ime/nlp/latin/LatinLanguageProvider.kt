@@ -66,17 +66,17 @@ class LatinLanguageProvider(context: Context) : SpellingProvider, SuggestionProv
         // every 3 newly learned words so a freshly-typed name surfaces in
         // glide candidates within seconds rather than after dozens of commits.
         private const val LEARNED_REFRESH_THRESHOLD = 3
-        // First-time-seen personal words bootstrap to this frequency so they
-        // can actually win against common dict words in glide ranking.
+        // First-time-seen personal words bootstrap to MAX frequency so they
+        // can decisively win shape-based glide ranking against any dict word.
         //
-        // 30 was below mid-tier dict words like "veteran" (~70-80) — a glide
-        // of "chethan" would still rank "veteran" first because its frequency
-        // overwhelmed the shape-match advantage. 120 puts personal words
-        // above all mid-frequency dict words and only below the top-tier
-        // English vocabulary ("the", "and", etc.) which is what we want:
-        // personal names should beat shape-similar uncommon words, but a
-        // mis-glide near "the"-shape paths should still surface "the".
-        private const val NEW_WORD_BOOTSTRAP_FREQ = 120
+        // Earlier we tried 30 (lost to most dict words) and then 120 (still
+        // lost to top-tier vocabulary like "chatham" / "tropical" for shape-
+        // similar personal names like "chethan" / "rupak"). The product call
+        // is: when a user types a personal word, they almost certainly want
+        // it back — so we tie on frequency with the top vocabulary and let
+        // the geometric shape + length-match bonus decide. Mistyped one-offs
+        // are demoted via notifySuggestionReverted (-3 per revert).
+        private const val NEW_WORD_BOOTSTRAP_FREQ = 255
         private const val LEARN_WORD_MIN_LEN = 2
         private const val LEARN_WORD_MAX_LEN = 40
         // Letters + apostrophe only — exclude URLs, numbers, symbols.
@@ -239,15 +239,9 @@ class LatinLanguageProvider(context: Context) : SpellingProvider, SuggestionProv
         if (!LEARN_WORD_PATTERN.matches(word)) return
 
         // First-time-seen words (NOT in built-in dict, NOT previously learned)
-        // get bootstrapped to a competitive frequency floor. Without this,
-        // a freshly-typed personal word like "evaru" has freq 1/255 ≈ 0.004
-        // — far below common dict words — and the glide shape-matcher's
-        // frequency-weighted ranking puts dict words above it every time,
-        // even when "evaru" geometrically matches the swipe better.
-        //
-        // 30 puts the new word in the mid-frequency band where it can win
-        // a clear shape match while still ranking below truly common words
-        // for ambiguous swipes.
+        // get bootstrapped to NEW_WORD_BOOTSTRAP_FREQ so they immediately
+        // compete with the top dict tier on next swipe — see the constant
+        // docstring for the rationale on tying with max frequency.
         val isNewWord: Boolean
         wordData.withLock { data ->
             val current = data[word] ?: 0

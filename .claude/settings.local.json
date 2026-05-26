@@ -20,7 +20,8 @@
       "PowerShell(Remove-Item *)",
       "Bash(xargs grep -l \"notifySuggestionAccepted\\\\|appendWord\")",
       "Bash(./gradlew :reboard_keyboard:compileDebugKotlin)",
-      "Bash(flutter analyze *)"
+      "Bash(flutter analyze *)",
+      "Bash(./gradlew :reboard_keyboard:compileDebugKotlin --no-daemon -q)"
     ]
   }
 }

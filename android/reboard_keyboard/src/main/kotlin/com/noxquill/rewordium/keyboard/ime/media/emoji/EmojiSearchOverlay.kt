@@ -275,6 +275,12 @@ fun EmojiSearchOverlay() {
                                             // overlay stays until they hit
                                             // the back button.
                                             editorInstance.commitText(emoji.value)
+                                            // Drop the query that surfaced
+                                            // this emoji so the search pill
+                                            // resets to a fresh empty state
+                                            // (Gboard-style: pick, query
+                                            // clears, type your next search).
+                                            keyboardManager.clearEmojiSearch()
                                             scope.launch {
                                                 EmojiHistoryHelper.markEmojiUsed(prefs, emoji)
                                             }
@@ -314,7 +320,7 @@ fun EmojiSearchOverlay() {
                 pillBg = pillBg,
                 pillFg = pillFg,
                 accent = accent,
-                onClear = { keyboardManager.backspaceEmojiSearch() },
+                onClear = { keyboardManager.clearEmojiSearch() },
             )
         }
     }
