@@ -291,7 +291,16 @@ abstract class AbstractEditorInstance(context: Context) {
     abstract fun determineComposer(composerName: ExtensionComponentName): Composer
 
     protected open fun shouldDetermineComposingRegion(editorInfo: FlorisEditorInfo): Boolean {
-        return editorInfo.isRichInputEditor && !editorInfo.inputAttributes.flagTextNoSuggestions
+        // Many apps (Chrome address bar, Instagram comment box, various
+        // WebView editors) set flagTextNoSuggestions too aggressively,
+        // which previously suppressed our composing region — and with no
+        // composing region we couldn't surface text suggestions OR run the
+        // "glide-then-backspace deletes the word" UX. Gboard ignores this
+        // flag in the same kinds of fields. Password-style fields stay
+        // excluded via the KeyVariation.PASSWORD path that handles
+        // isComposingEnabled separately in [EditorInstance], so dropping
+        // the gate here is safe.
+        return editorInfo.isRichInputEditor
     }
 
     private suspend fun determineLocalComposing(

@@ -145,6 +145,17 @@ class KeyboardManager(context: Context) : InputKeyEventReceiver {
     }
 
     /**
+     * Clear the entire emoji-search query without closing the overlay. Used
+     * by the X button inside the search pill and after an emoji is picked
+     * from the results grid (so the typed-in query disappears, ready for
+     * the next search).
+     */
+    fun clearEmojiSearch() {
+        if (_emojiSearchQuery.value == null) return
+        _emojiSearchQuery.value = ""
+    }
+
+    /**
      * Surgical visibility refresh for the IME-mode keys (emoji-entry + the
      * mirror "back to text" key). [TextKey.isVisible] is cached via
      * [TextKey.compute] so a bare flow change won't surface the new state.

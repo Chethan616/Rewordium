@@ -146,10 +146,14 @@ class StatisticalGlideTypingClassifier(context: Context) : GlideTypingClassifier
         /**
          * Length-match bonus: candidates whose ideal path length matches the user's gesture
          * length within [LENGTH_MATCH_FALLOFF_KEYS] key-widths get up to this multiplicative
-         * confidence advantage. Direct fix for "tomorrow's" being preferred over "tomorrow":
-         * the user's gesture length matches "tomorrow" much more closely.
+         * confidence advantage.
+         *
+         * Raised 1.6 → 2.0 alongside the length-pruner tightening: when a personal short word
+         * like "rupak" ties shape-wise with a dict word like "tropical", we want the
+         * length-matching candidate to win decisively rather than be edged out by the dict
+         * word's frequency.
          */
-        private const val LENGTH_MATCH_MAX_BONUS = 1.6f
+        private const val LENGTH_MATCH_MAX_BONUS = 2.0f
         private const val LENGTH_MATCH_FALLOFF_KEYS = 1.5f
 
         /**
@@ -168,6 +172,19 @@ class StatisticalGlideTypingClassifier(context: Context) : GlideTypingClassifier
          * For multiple subtypes, the pruner is cached.
          */
         private const val PRUNER_CACHE_SIZE = 8
+
+        /**
+         * Size of the per-Pruner LRU cache holding `generateIdealGestures` results.
+         * 1024 entries handily covers a typing session's working vocabulary while
+         * keeping memory bounded (≈ word.length × few-hundred-bytes per entry).
+         */
+        private const val IDEAL_GESTURES_CACHE_SIZE = 1024
+
+        /**
+         * Maximum number of words scored per mid-stroke preview after the extremities
+         * + length pruners have run. See call-site for rationale.
+         */
+        private const val MAX_SCORING_CANDIDATES = 256
     }
 
     override fun addGesturePoint(position: GlideTypingGesture.Detector.Position) {
@@ -294,10 +311,29 @@ class StatisticalGlideTypingClassifier(context: Context) : GlideTypingClassifier
         val userGesture = smoothedGesture.resample(SAMPLING_POINTS)
         val normalizedUserGesture: Gesture = userGesture.normalizeByBoxSide()
         val lengthCandidates = pruner.pruneByLength(gesture, extremityCandidates, keysByCharacter, keys)
-        val remainingWords = if (lengthCandidates.isNotEmpty()) {
+        val preCappedWords = if (lengthCandidates.isNotEmpty()) {
             lengthCandidates
         } else {
             extremityCandidates
+        }
+        // Per-stroke ceiling on scored candidates. Mid-stroke previews need to finish in
+        // well under the preview-refresh delay (150ms) or the keyboard feels laggy. On
+        // ambiguous prefixes the extremities+length pruner can still return 500-1000
+        // words; without a cap the inner scoring loop dominates the frame.
+        //
+        // Keep the highest-frequency MAX_SCORING_CANDIDATES of them — high-freq words
+        // are the ones the user is overwhelmingly likely to actually be swiping, and
+        // shape-match scoring decides among them. A long-tail rarity that happened to
+        // pass both pruners but isn't in the user's top vocabulary is almost certainly
+        // not what they meant.
+        val remainingWords = if (preCappedWords.size <= MAX_SCORING_CANDIDATES) {
+            preCappedWords
+        } else {
+            preCappedWords
+                .asSequence()
+                .sortedByDescending { wordFrequencies.getOrDefault(it, 0.0) }
+                .take(MAX_SCORING_CANDIDATES)
+                .toCollection(ArrayList(MAX_SCORING_CANDIDATES))
         }
 
         // Velocity-aware LOCATION_STD: widen the location distribution for fast gestures
@@ -322,7 +358,8 @@ class StatisticalGlideTypingClassifier(context: Context) : GlideTypingClassifier
 
         for (i in remainingWords.indices) {
             val word = remainingWords[i]
-            val idealGestures = Gesture.generateIdealGestures(word, keysByCharacter)
+            // Shared cache with pruneByLength — same word, same layout, identical result.
+            val idealGestures = pruner.getIdealGestures(word, keysByCharacter)
 
             for (idealGesture in idealGestures) {
                 val wordGesture = idealGesture.resample(SAMPLING_POINTS)
@@ -508,6 +545,25 @@ class StatisticalGlideTypingClassifier(context: Context) : GlideTypingClassifier
         private val wordTree = Collections.synchronizedMap(HashMap<Pair<Int, Int>, ArrayList<String>>())
 
         /**
+         * Per-word LRU cache of [Gesture.generateIdealGestures] results. Without this the
+         * ideal-path walk runs twice per word per scoring pass — once in [pruneByLength]
+         * and again in the main scoring loop — and the cost compounds with every
+         * mid-stroke preview refresh. The cache is per-Pruner, which is per-Subtype, so
+         * layout switches naturally rebuild and don't see stale entries.
+         *
+         * 1024 entries comfortably covers a typing session's active vocabulary; older
+         * words drop out and are recomputed if the user circles back to them.
+         */
+        private val idealGesturesCache = LruCache<String, List<Gesture>>(IDEAL_GESTURES_CACHE_SIZE)
+
+        fun getIdealGestures(word: String, keysByCharacter: SparseArrayCompat<TextKey>): List<Gesture> {
+            idealGesturesCache.get(word)?.let { return it }
+            val computed = Gesture.generateIdealGestures(word, keysByCharacter)
+            idealGesturesCache.put(word, computed)
+            return computed
+        }
+
+        /**
          * Finds the words whose start and end letter are closest to the start and end points of the
          * user gesture.
          *
@@ -560,15 +616,20 @@ class StatisticalGlideTypingClassifier(context: Context) : GlideTypingClassifier
             val radius = min(key.visibleBounds.height, key.visibleBounds.width)
             val userLength = userGesture.getLength()
             // Asymmetric tolerance: when the word's ideal path is LONGER than the user gesture
-            // (i.e., they under-shot), allow up to 1.8x the standard threshold. When the word
-            // is SHORTER than the user gesture, keep the original threshold. This admits
-            // "hello" / "tomorrow" / "because" into candidate scoring even when the user's
-            // fast swipe under-shot the final letters.
+            // (i.e., they under-shot), allow up to 1.25x the standard threshold. When the word
+            // is SHORTER than the user gesture, keep the original threshold.
+            //
+            // Tightened from 1.8 → 1.25 because the wider window was admitting much-longer
+            // dictionary words ("tropical", ~8 letters) into candidate scoring against short
+            // personal swipes ("rupak", 5 letters); their high frequency then beat the
+            // length-match bonus. 1.25 still admits genuine under-shoots like a fast "hello"
+            // swipe that stopped 1 key short of the final 'o' without admitting words that
+            // are twice as long as the gesture.
             val longerTolerance =
-                if (BuildConfig.ENABLE_GESTURE_LENGTH_ASYMMETRY) lengthThreshold * 1.8 else lengthThreshold
+                if (BuildConfig.ENABLE_GESTURE_LENGTH_ASYMMETRY) lengthThreshold * 1.25 else lengthThreshold
             val shorterTolerance = lengthThreshold
             for (word in words) {
-                val idealGestures = Gesture.generateIdealGestures(word, keysByCharacter)
+                val idealGestures = getIdealGestures(word, keysByCharacter)
                 for (idealGesture in idealGestures) {
                     val wordIdealLength = getCachedIdealLength(word, idealGesture)
                     val diff = wordIdealLength - userLength

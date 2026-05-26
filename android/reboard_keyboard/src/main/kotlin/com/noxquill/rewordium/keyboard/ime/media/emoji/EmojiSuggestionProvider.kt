@@ -65,6 +65,27 @@ class EmojiSuggestionProvider(private val context: Context) : SuggestionProvider
     @Volatile private var lastSuggestedQuery: String = ""
     @Volatile private var lastSuggestedValues: List<String> = emptyList()
 
+    /**
+     * Emojis surfaced for the **current composing word** that the user has
+     * not yet accepted. When the composing word ends (commit, cursor move,
+     * non-extending query), this set is drained into [sessionRejected] —
+     * an implicit "you saw it, you didn't pick it, so stop showing it".
+     *
+     * Reset is detected in [suggest] by comparing the new query against
+     * [lastSuggestedQuery]: anything that isn't a prefix-extension of the
+     * previous query counts as a new word session.
+     */
+    private val pendingShown = java.util.Collections.synchronizedSet(HashSet<String>())
+
+    /**
+     * IME-session-scoped rejection list. Once an emoji is in here, it is
+     * filtered out of every future suggestion strip for the rest of the
+     * IME's lifetime — matches Gboard's "I implicitly said no" behavior.
+     * Cleared when [notifySuggestionAccepted] explicitly accepts the emoji
+     * (positive signal overrides past rejection).
+     */
+    private val sessionRejected = java.util.Collections.synchronizedSet(HashSet<String>())
+
     override suspend fun create() {
     }
 
@@ -89,17 +110,32 @@ class EmojiSuggestionProvider(private val context: Context) : SuggestionProvider
     ): List<SuggestionCandidate> {
         val preferredSkinTone = prefs.emoji.preferredSkinTone.get()
         val showName = prefs.emoji.suggestionCandidateShowName.get()
-        val query = validateInputQuery(content.composingText) ?: return emptyList()
+        val rawQuery = validateInputQuery(content.composingText)
+        if (rawQuery == null) {
+            // Composing text is empty / invalid — a word boundary. Flush any
+            // unconfirmed emojis from the last word into session-rejected.
+            flushPendingToRejected()
+            lastSuggestedQuery = ""
+            return emptyList()
+        }
+        val query = rawQuery
         // Emoji names + keywords are short. Anything past ~20 chars cannot
         // be a substring of an emoji name, so the entire scan is wasted —
         // and on glide-typed long words this scan ran on every keystroke
         // and made the suggestion bar feel laggy.
         if (query.length > MAX_QUERY_LENGTH) return emptyList()
         val emojis = cachedEmojiMappings.get(subtype.primaryLocale)?.get(preferredSkinTone) ?: emptyList()
-        // Snapshot the suppression list once per call so the hot stream below
-        // doesn't synchronize for every emoji.
-        val suppressed = synchronized(recentlyCommitted) { recentlyCommitted.toSet() }
         val q = query.lowercase()
+        // Word-boundary flush happens only when composing empties (handled
+        // above in the rawQuery==null branch). Within a single composing
+        // word, even if the user backspaces a character, we do NOT flush —
+        // they're still working on the same word and the previously-shown
+        // emoji shouldn't be banned mid-edit.
+        // Snapshot the suppression list once per call so the hot stream below
+        // doesn't synchronize for every emoji. Includes both the anti-spam
+        // recent-commit window and the implicit-reject session set.
+        val suppressed = synchronized(recentlyCommitted) { recentlyCommitted.toSet() } +
+            synchronized(sessionRejected) { sessionRejected.toSet() }
         val candidates = withContext(Dispatchers.Default) {
             emojis.parallelStream()
                 // Drop emojis the user just committed (matches Gboard's
@@ -132,7 +168,27 @@ class EmojiSuggestionProvider(private val context: Context) : SuggestionProvider
         }
         lastSuggestedQuery = q
         lastSuggestedValues = candidateValues
+        // Record what was surfaced for this composing word so that if the
+        // user moves on without picking any of them, they get implicitly
+        // rejected on the next word boundary.
+        if (candidateValues.isNotEmpty()) {
+            synchronized(pendingShown) { pendingShown.addAll(candidateValues) }
+        }
         return candidates
+    }
+
+    /**
+     * Drain the per-word pending-shown set into the session-wide rejection
+     * set. Called on word boundaries (composing emptied, query reset, new
+     * field). The session set persists for the rest of the IME's lifetime
+     * unless [notifySuggestionAccepted] explicitly clears an entry.
+     */
+    private fun flushPendingToRejected() {
+        synchronized(pendingShown) {
+            if (pendingShown.isEmpty()) return
+            synchronized(sessionRejected) { sessionRejected.addAll(pendingShown) }
+            pendingShown.clear()
+        }
     }
 
     /**
@@ -237,6 +293,11 @@ class EmojiSuggestionProvider(private val context: Context) : SuggestionProvider
                 recentlyCommitted.removeLast()
             }
         }
+        // Positive signal overrides any prior implicit rejection of this
+        // emoji — drop it from both the per-word pending list and the
+        // session-wide rejection set so it stays eligible going forward.
+        synchronized(pendingShown) { pendingShown.remove(candidate.emoji.value) }
+        synchronized(sessionRejected) { sessionRejected.remove(candidate.emoji.value) }
         if (prefs.emoji.suggestionUpdateHistory.get()) {
             EmojiHistoryHelper.markEmojiUsed(prefs, candidate.emoji)
         }
