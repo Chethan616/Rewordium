@@ -8,6 +8,12 @@
     <!-- Permission needed to create notifications on devices running Android 13+ -->
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS"/>
 
+    <!-- Optional. When granted (Spelling → "Use contact names") we tokenize
+         the user's contact list and add the names as personal-vocab unigrams
+         to the native dict so they appear in the suggestion bar / glide.
+         Never auto-requested — the user must grant it from settings. -->
+    <uses-permission android:name="android.permission.READ_CONTACTS"/>
+
     <!-- Android 11+ only: Define that ReBoard requests to see all apps that
           ship with an IME or Spell Check service. This is used to guide the user
           in the Settings Ui why ReBoard may not be working.

@@ -48,9 +48,12 @@
 #include "dictionary/utils/format_utils.h"
 #include "suggest/core/dictionary/dictionary.h"
 #include "suggest/core/layout/proximity_info.h"
+#include "suggest/core/policy/suggest_policy.h"
 #include "suggest/core/result/suggestion_results.h"
 #include "suggest/core/session/dic_traverse_session.h"
 #include "suggest/core/suggest_options.h"
+#include "suggest/policyimpl/gesture/gesture_suggest_policy_factory.h"
+#include "suggest/policyimpl/typing/typing_suggest_policy_factory.h"
 #include "utils/int_array_view.h"
 
 namespace {
@@ -62,13 +65,29 @@ using ::latinime::DictionaryHeaderStructurePolicy;
 using ::latinime::DictionaryStructureWithBufferPolicy;
 using ::latinime::DictionaryStructureWithBufferPolicyFactory;
 using ::latinime::FormatUtils;
+using ::latinime::GestureSuggestPolicyFactory;
 using ::latinime::HistoricalInfo;
 using ::latinime::NgramContext;
 using ::latinime::NgramProperty;
 using ::latinime::ProximityInfo;
 using ::latinime::SuggestionResults;
 using ::latinime::SuggestOptions;
+using ::latinime::SuggestPolicy;
+using ::latinime::TypingSuggestPolicyFactory;
 using ::latinime::UnigramProperty;
+
+// Defensive: AOSP open-source ships a stub GestureSuggestPolicyFactory whose
+// factory method is NEVER registered (Google kept the gesture decoder
+// proprietary). If anything ever calls Dictionary::getSuggestions with
+// IS_GESTURE=true, Dictionary's mGestureSuggest wraps a NULL SuggestPolicy
+// and the call deref-crashes. We register the typing policy as the gesture
+// fallback so the pipeline at least has a valid (if useless-for-gesture)
+// policy and returns gracefully instead of segfaulting. The actual gesture
+// path on the Kotlin side dispatches StatisticalGlideTypingClassifier — see
+// GlideTypingManager and ENABLE_NATIVE_GLIDE doc in build.gradle.kts.
+const SuggestPolicy* GestureFallbackToTyping() {
+    return TypingSuggestPolicyFactory::getTypingSuggestPolicy();
+}
 
 // Convert a Java String into a contiguous std::vector<int> of Unicode code
 // points. AOSP's APIs all take code-point arrays (not UTF-16) so we expand
@@ -127,6 +146,15 @@ ProximityInfo* ProximityInfoFromHandle(jlong handle) {
 }  // namespace
 
 extern "C" {
+
+// Library entry point. Runs once when System.loadLibrary("rewordium_latinime")
+// returns. Registers the typing-policy-as-gesture fallback so a Dictionary
+// built later doesn't end up with a NULL gesture SuggestPolicy.
+JNIEXPORT jint JNICALL JNI_OnLoad(JavaVM* /* vm */, void* /* reserved */) {
+    GestureSuggestPolicyFactory::setGestureSuggestPolicyFactoryMethod(
+            &GestureFallbackToTyping);
+    return JNI_VERSION_1_6;
+}
 
 JNIEXPORT jstring JNICALL
 Java_com_noxquill_rewordium_keyboard_ime_nlp_engine_LatinImeNative_helloFromNative(

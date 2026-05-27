@@ -542,7 +542,7 @@
     <string name="pref__spelling__active_spellchecker__summary_none">No inline text spell checker service set. Tap to change.</string>
     <string name="pref__spelling__language_mode__label" comment="Label of Language mode pref">Languages</string>
     <string name="pref__spelling__use_contacts__label" comment="Label of Use contact list pref">Use names from contacts</string>
-    <string name="pref__spelling__use_contacts__summary" comment="Summary of Use contact list pref">Look up names from your contact list</string>
+    <string name="pref__spelling__use_contacts__summary" comment="Summary of Use contact list pref">Show your contacts\' names in typing and glide suggestions. Requires Contacts permission.</string>
     <string name="pref__spelling__use_udm_entries__label" comment="Label of Use user dictionary entries pref">Use user dictionary entries</string>
     <string name="pref__spelling__use_udm_entries__summary" comment="Summary of Use user dictionary entries pref">Look up entries from the user dictionaries</string>
 

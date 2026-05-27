@@ -47,7 +47,10 @@
       "Bash(sed -n '37,42p' android/reboard_keyboard/src/main/cpp/aosp/native/jni/src/suggest/core/result/suggestion_results.h)",
       "Bash(./gradlew :reboard_keyboard:assembleDebug :reboard_keyboard:assembleRelease --no-daemon --console=plain)",
       "Bash(./gradlew :reboard_keyboard:assembleRelease --no-daemon --console=plain)",
-      "PowerShell(Out-File *)"
+      "PowerShell(Out-File *)",
+      "Bash(adb devices *)",
+      "Bash(adb shell *)",
+      "Bash(adb logcat *)"
     ]
   }
 }
