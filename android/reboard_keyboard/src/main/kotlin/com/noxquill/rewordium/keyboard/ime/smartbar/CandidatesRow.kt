@@ -16,20 +16,33 @@
 
 package com.noxquill.rewordium.keyboard.ime.smartbar
 
+import android.content.Intent
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.awaitEachGesture
 import androidx.compose.foundation.gestures.awaitFirstDown
 import androidx.compose.foundation.gestures.waitForUpOrCancellation
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.layout.wrapContentWidth
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.Close
+import androidx.compose.material.icons.outlined.Person
+import androidx.compose.material3.Icon
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -39,16 +52,20 @@ import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import com.noxquill.rewordium.keyboard.app.ContactsPermissionActivity
 import com.noxquill.rewordium.keyboard.app.FlorisPreferenceStore
 import com.noxquill.rewordium.keyboard.ime.input.LocalInputFeedbackController
 import com.noxquill.rewordium.keyboard.ime.nlp.ClipboardSuggestionCandidate
 import com.noxquill.rewordium.keyboard.ime.nlp.EmojiSuggestionCandidate
 import com.noxquill.rewordium.keyboard.ime.nlp.SuggestionCandidate
+import com.noxquill.rewordium.keyboard.ime.nlp.engine.ContactsLoader
 import com.noxquill.rewordium.keyboard.ime.theme.FlorisImeUi
 import com.noxquill.rewordium.keyboard.keyboardManager
 import com.noxquill.rewordium.keyboard.nlpManager
 import com.noxquill.rewordium.keyboard.subtypeManager
 import dev.patrickgold.jetpref.datastore.model.observeAsState
+import kotlinx.coroutines.launch
 import org.florisboard.lib.compose.conditional
 import org.florisboard.lib.compose.florisHorizontalScroll
 import org.florisboard.lib.snygg.SnyggSelector
@@ -58,6 +75,7 @@ import org.florisboard.lib.snygg.ui.SnyggIcon
 import org.florisboard.lib.snygg.ui.SnyggRow
 import org.florisboard.lib.snygg.ui.SnyggSpacer
 import org.florisboard.lib.snygg.ui.SnyggText
+import org.florisboard.lib.snygg.ui.rememberSnyggThemeQuery
 
 val CandidatesRowScrollbarHeight = 2.dp
 
@@ -69,9 +87,20 @@ fun CandidatesRow(modifier: Modifier = Modifier) {
     val keyboardManager by context.keyboardManager()
     val nlpManager by context.nlpManager()
     val subtypeManager by context.subtypeManager()
+    val scope = rememberCoroutineScope()
 
     val displayMode by prefs.suggestion.displayMode.observeAsState()
     val candidates by nlpManager.activeCandidatesFlow.collectAsState()
+
+    // Show contacts prompt in the smartbar when: contacts pref is on, permission
+    // not yet granted, prompt not dismissed, and no active suggestion candidates
+    // (so it doesn't crowd out results while the user is typing).
+    val useContacts by prefs.spelling.useContacts.observeAsState()
+    val contactsPromptDismissed by prefs.spelling.contactsPromptDismissed.observeAsState()
+    val showContactsPrompt = useContacts &&
+        !contactsPromptDismissed &&
+        !ContactsLoader.hasPermission(context) &&
+        candidates.isEmpty()
 
     SnyggRow(
         elementName = FlorisImeUi.SmartbarCandidatesRow.elementName,
@@ -86,7 +115,19 @@ fun CandidatesRow(modifier: Modifier = Modifier) {
             Arrangement.Center
         },
     ) {
-        if (candidates.isNotEmpty()) {
+        if (showContactsPrompt) {
+            ContactsPromptBanner(
+                onAllow = {
+                    context.startActivity(
+                        Intent(context, ContactsPermissionActivity::class.java)
+                            .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK),
+                    )
+                },
+                onDismiss = {
+                    scope.launch { prefs.spelling.contactsPromptDismissed.set(true) }
+                },
+            )
+        } else if (candidates.isNotEmpty()) {
             val candidateModifier = if (candidates.size == 1) {
                 Modifier
                     .fillMaxHeight()
@@ -155,7 +196,48 @@ fun CandidatesRow(modifier: Modifier = Modifier) {
                     longPressDelay = prefs.keyboard.longPressDelay.get().toLong(),
                 )
             }
-        }
+        } // end else if (candidates.isNotEmpty())
+    }
+}
+
+@Composable
+private fun ContactsPromptBanner(
+    onAllow: () -> Unit,
+    onDismiss: () -> Unit,
+) {
+    val style = rememberSnyggThemeQuery(FlorisImeUi.SmartbarCandidateWord.elementName)
+    val fg = style.foreground(default = MaterialTheme.colorScheme.onSurface)
+
+    Row(
+        modifier = Modifier
+            .fillMaxSize()
+            .clickable(onClick = onAllow)
+            .padding(horizontal = 8.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Icon(
+            imageVector = Icons.Outlined.Person,
+            contentDescription = null,
+            tint = fg.copy(alpha = 0.65f),
+            modifier = Modifier.size(15.dp),
+        )
+        Spacer(Modifier.width(6.dp))
+        Text(
+            text = "Allow contacts for better suggestions",
+            color = fg.copy(alpha = 0.85f),
+            fontSize = 12.sp,
+            maxLines = 1,
+            modifier = Modifier.weight(1f),
+        )
+        Icon(
+            imageVector = Icons.Outlined.Close,
+            contentDescription = "Dismiss",
+            tint = fg.copy(alpha = 0.5f),
+            modifier = Modifier
+                .size(28.dp)
+                .clickable(onClick = onDismiss)
+                .padding(6.dp),
+        )
     }
 }
 

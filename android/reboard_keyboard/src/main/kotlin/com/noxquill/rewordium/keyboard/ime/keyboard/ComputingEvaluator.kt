@@ -263,7 +263,7 @@ fun ComputingEvaluator.computeImageVector(data: KeyData): ImageVector? {
             Icons.Outlined.Mood
         }
         KeyCode.IME_UI_MODE_CLIPBOARD -> {
-            Icons.Outlined.Notes
+            Icons.Outlined.ContentPaste
         }
         KeyCode.LANGUAGE_SWITCH -> {
             Icons.Outlined.Language

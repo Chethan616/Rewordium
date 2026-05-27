@@ -50,7 +50,10 @@
       "PowerShell(Out-File *)",
       "Bash(adb devices *)",
       "Bash(adb shell *)",
-      "Bash(adb logcat *)"
+      "Bash(adb logcat *)",
+      "Bash(grep -E \"\\\\.\\(kt|dart\\)$\")",
+      "Bash(grep -E \"\\\\.dart$\")",
+      "Bash(grep -E \"\\\\.\\(kt|java\\)$\")"
     ]
   }
 }

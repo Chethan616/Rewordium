@@ -170,6 +170,22 @@ class NlpManager(context: Context) {
     }
 
     /**
+     * Hot-reload contact names into the native dict after READ_CONTACTS is
+     * granted at runtime. Triggers a fresh suggestion cycle so the user sees
+     * contact-aware candidates on the very next keypress.
+     */
+    fun reloadContactsNow() {
+        scope.launch {
+            val subtype = subtypeManager.activeSubtype
+            val provider = getSuggestionProvider(subtype)
+            if (provider is LatinLanguageProvider) {
+                provider.reloadContacts(subtype)
+            }
+            suggest(subtype, editorInstance.activeContent)
+        }
+    }
+
+    /**
      * Forwards [LatinLanguageProvider.wordDataDirtyFlow] up to the IME so
      * the glide-typing manager can rebuild its classifier index when enough
      * personal words have been learned to warrant it.

@@ -20,6 +20,7 @@ object KeyboardConstants {
     const val KEY_AI_SUGGESTIONS = "ai_suggestions"
     const val KEY_KEYBOARD_SELECTED_AS_DEFAULT = "keyboard_selected_as_default"
     const val KEY_PERSONAS = "personas"
+    const val KEY_USE_CONTACTS = "use_contacts"
     
     // Broadcast actions
     const val ACTION_SETTINGS_UPDATED = "com.noxquill.rewordium.ACTION_SETTINGS_UPDATED"

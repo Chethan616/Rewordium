@@ -87,4 +87,43 @@ object ContactsLoader {
         flogDebug { "ContactsLoader: extracted ${tokens.size} unique name tokens" }
         return tokens
     }
+
+    /**
+     * For each contact whose display name has two or more valid tokens, returns
+     * (token[i], token[i+1]) pairs so the caller can seed contact-name bigrams
+     * into the native dictionary. This lets the suggester predict "Smith" after
+     * the user types (or swipes) "John" for a contact named "John Smith".
+     *
+     * Returns empty list when permission is missing or the cursor fails.
+     */
+    fun loadNameBigrams(context: Context): List<Pair<String, String>> {
+        if (!hasPermission(context)) return emptyList()
+        val bigrams = ArrayList<Pair<String, String>>(256)
+        runCatching {
+            val cursor = context.contentResolver.query(
+                ContactsContract.Contacts.CONTENT_URI,
+                arrayOf(ContactsContract.Contacts.DISPLAY_NAME),
+                null,
+                null,
+                null,
+            ) ?: return@runCatching
+            cursor.use { c ->
+                val col = c.getColumnIndex(ContactsContract.Contacts.DISPLAY_NAME)
+                if (col < 0) return@use
+                while (c.moveToNext()) {
+                    val name = c.getString(col) ?: continue
+                    val parts = name.split(Regex("\\s+"))
+                        .map { it.trim().lowercase() }
+                        .filter { it.length in MIN_TOKEN_LEN..MAX_TOKEN_LEN && TOKEN_PATTERN.matches(it) }
+                    for (i in 0 until parts.size - 1) {
+                        bigrams.add(parts[i] to parts[i + 1])
+                    }
+                }
+            }
+        }.onFailure { e ->
+            flogDebug { "ContactsLoader: bigrams query failed: $e" }
+        }
+        flogDebug { "ContactsLoader: extracted ${bigrams.size} name bigrams" }
+        return bigrams
+    }
 }

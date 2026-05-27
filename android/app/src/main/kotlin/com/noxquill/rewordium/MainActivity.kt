@@ -395,6 +395,30 @@ class MainActivity : FlutterActivity() {
                     updateSetting(KeyboardConstants.KEY_SPACEBAR_NAVIGATION_ENABLED, enabled)
                     result.success(true)
                 }
+                "getContactsPermissionStatus" -> {
+                    val granted = androidx.core.content.ContextCompat.checkSelfPermission(
+                        this, android.Manifest.permission.READ_CONTACTS,
+                    ) == android.content.pm.PackageManager.PERMISSION_GRANTED
+                    result.success(if (granted) "granted" else "not_granted")
+                }
+                "requestContactsPermission" -> {
+                    startActivity(
+                        Intent(this, com.noxquill.rewordium.keyboard.app.ContactsPermissionActivity::class.java)
+                            .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK),
+                    )
+                    result.success(true)
+                }
+                "setUseContactsForSuggestions" -> {
+                    val enabled = call.argument<Boolean>("enabled") ?: true
+                    updateSetting(KeyboardConstants.KEY_USE_CONTACTS, enabled)
+                    // Mirror to keyboard prefs so the IME reads the new value
+                    // on the next onStartInputView call.
+                    getSharedPreferences("FlutterSharedPreferences", Context.MODE_PRIVATE)
+                        .edit()
+                        .putBoolean("flutter.keyboard_use_contacts", enabled)
+                        .apply()
+                    result.success(true)
+                }
                 "updateKeyboardPersonas" -> {
                     try {
                         val personas = call.argument<List<String>>("personas")
