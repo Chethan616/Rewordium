@@ -31,6 +31,29 @@ class WhatsNewSheet {
   // Add a new entry for each release. Older entries are kept for reference
   // but only the *current* version's items are displayed.
   static final Map<String, List<_WhatsNewItem>> _features = {
+    '2.9.2+76': [
+      const _WhatsNewItem(
+        icon: CupertinoIcons.search_circle_fill,
+        color: Color(0xFF8B5CF6),
+        title: 'Modernized Emoji Search',
+        description:
+            'Completely overhauled the emoji search panel with fluid, Gboard-style morphing animations and row-first filling.',
+      ),
+      const _WhatsNewItem(
+        icon: CupertinoIcons.sparkles,
+        color: Color(0xFF10B981),
+        title: 'Seamless UI Transitions',
+        description:
+            'Fixed an issue where the keyboard window would jump or tear at the bottom when opening or closing the emoji panel. The keyboard now glides into place seamlessly.',
+      ),
+      const _WhatsNewItem(
+        icon: CupertinoIcons.paintbrush_fill,
+        color: Color(0xFFF59E0B),
+        title: 'Harmonized Themes',
+        description:
+            'Emoji text and search pill colors now automatically adapt to maintain perfect readability across all day and night themes.',
+      ),
+    ],
     '2.9.1+75': [
       const _WhatsNewItem(
         icon: CupertinoIcons.bolt_fill,

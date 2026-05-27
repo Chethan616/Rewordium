@@ -320,10 +320,17 @@ class FlorisImeService : LifecycleInputMethodService() {
             updateInputViewShown()
         }
         @Suppress("DEPRECATION") // We do not retrieve the wallpaper but only listen to changes
-        registerReceiver(wallpaperChangeReceiver, IntentFilter(Intent.ACTION_WALLPAPER_CHANGED))
-        registerReceiver(
+        androidx.core.content.ContextCompat.registerReceiver(
+            this,
+            wallpaperChangeReceiver,
+            IntentFilter(Intent.ACTION_WALLPAPER_CHANGED),
+            androidx.core.content.ContextCompat.RECEIVER_EXPORTED
+        )
+        androidx.core.content.ContextCompat.registerReceiver(
+            this,
             contactsReloadReceiver,
             IntentFilter(com.noxquill.rewordium.keyboard.app.ContactsPermissionActivity.ACTION_RELOAD_CONTACTS),
+            androidx.core.content.ContextCompat.RECEIVER_NOT_EXPORTED
         )
     }
 
