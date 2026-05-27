@@ -16,6 +16,9 @@
 
 package com.noxquill.rewordium.keyboard.ime.media.emoji
 
+import androidx.compose.animation.animateContentSize
+import androidx.compose.animation.core.animateDpAsState
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -37,6 +40,7 @@ import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.pager.HorizontalPager
+import androidx.compose.foundation.pager.PagerState
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -51,8 +55,11 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
+import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -69,6 +76,8 @@ import com.noxquill.rewordium.keyboard.ime.text.keyboard.TextKeyData
 import com.noxquill.rewordium.keyboard.ime.theme.FlorisImeUi
 import com.noxquill.rewordium.keyboard.keyboardManager
 import com.noxquill.rewordium.keyboard.subtypeManager
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.launch
 import org.florisboard.lib.snygg.ui.SnyggBox
 import org.florisboard.lib.snygg.ui.rememberSnyggThemeQuery
@@ -148,6 +157,39 @@ fun GboardEmojiPanel(
     val containerBg = mediaStyle.background(default = MaterialTheme.colorScheme.surface)
     val onContainer = mediaStyle.foreground(default = MaterialTheme.colorScheme.onSurface)
 
+    // Accent color from the keyboard's Enter key background — this is the
+    // theme's "brand" color (green by default) that tints shift, enter, and
+    // active indicators. Using it here replaces the hardcoded
+    // MaterialTheme.colorScheme.primary (purple) that didn't match the
+    // keyboard skin.
+    val enterKeyStyle = rememberSnyggThemeQuery(
+        elementName = FlorisImeUi.Key.elementName,
+        attributes = mapOf(FlorisImeUi.Attr.Code to KeyCode.ENTER.toString()),
+    )
+    val accentColor = enterKeyStyle.background(default = onContainer)
+
+    // Search-pill collapse: mirrors EmojiSearchOverlay's behaviour —
+    // collapses to a circle while the user swipes through categories,
+    // expands back ~300ms after the scroll settles.
+    var searchPillExpanded by remember { mutableStateOf(true) }
+    LaunchedEffect(pagerState) {
+        // Skip the initial false→false emission that fires on first
+        // composition (pager isn't scrolling yet). Without this the
+        // pill would briefly collapse and re-expand on mount.
+        var hasSeenScroll = false
+        snapshotFlow { pagerState.isScrollInProgress }
+            .distinctUntilChanged()
+            .collect { scrolling ->
+                if (scrolling) {
+                    hasSeenScroll = true
+                    searchPillExpanded = false
+                } else if (hasSeenScroll) {
+                    delay(300)
+                    searchPillExpanded = true
+                }
+            }
+    }
+
     SnyggBox(
         elementName = FlorisImeUi.Media.elementName,
         modifier = modifier.fillMaxSize(),
@@ -157,11 +199,14 @@ fun GboardEmojiPanel(
                 categories = pagerCategories,
                 activeIndex = pagerState.currentPage,
                 fg = onContainer,
+                accent = accentColor,
+                searchPillExpanded = searchPillExpanded,
                 onBackClick = {
                     keyboardManager.activeState.imeUiMode = ImeUiMode.TEXT
                 },
                 onSearchClick = {
                     keyboardManager.beginEmojiSearch()
+                    keyboardManager.activeState.imeUiMode = ImeUiMode.TEXT
                 },
                 onCategoryClick = { idx ->
                     scope.launch { pagerState.animateScrollToPage(idx) }
@@ -191,6 +236,7 @@ fun GboardEmojiPanel(
 
             EmojiPanelBottomBar(
                 fg = onContainer,
+                accent = accentColor,
                 onAbcClick = {
                     keyboardManager.activeState.imeUiMode = ImeUiMode.TEXT
                 },
@@ -211,13 +257,29 @@ private fun EmojiPanelHeader(
     categories: List<EmojiCategory>,
     activeIndex: Int,
     fg: Color,
+    accent: Color,
+    searchPillExpanded: Boolean,
     onBackClick: () -> Unit,
     onSearchClick: () -> Unit,
     onCategoryClick: (Int) -> Unit,
 ) {
     val chipBg = fg.copy(alpha = 0.08f)
     val pillBg = fg.copy(alpha = 0.08f)
-    val activeChipBg = MaterialTheme.colorScheme.primary.copy(alpha = 0.25f)
+    val activeChipBg = accent.copy(alpha = 0.25f)
+
+    // Animate the pill width between circle (36dp) and full-width.
+    // Using a single composable avoids the jarring swap that
+    // AnimatedContent produces.
+    val pillWidth by animateDpAsState(
+        targetValue = if (searchPillExpanded) 200.dp else 36.dp,
+        animationSpec = tween(durationMillis = 200),
+        label = "pill-width",
+    )
+    val pillCorner by animateDpAsState(
+        targetValue = if (searchPillExpanded) 18.dp else 18.dp,
+        animationSpec = tween(durationMillis = 200),
+        label = "pill-corner",
+    )
 
     Row(
         modifier = Modifier
@@ -244,18 +306,18 @@ private fun EmojiPanelHeader(
         }
         Spacer(Modifier.width(8.dp))
 
-        // Search pill — taps trigger the existing emoji-search overlay
-        // (keyboardManager.beginEmojiSearch). Pill takes ~40% of the
-        // header's horizontal real estate to mirror Gboard's proportions.
+        // Search pill — single composable that smoothly morphs
+        // between full pill (with "Search" label) and a 36dp circle
+        // (just the icon). Width is animated via animateDpAsState.
         Box(
             modifier = Modifier
-                .weight(0.42f)
+                .width(pillWidth)
                 .height(36.dp)
-                .clip(RoundedCornerShape(50))
+                .clip(RoundedCornerShape(pillCorner))
                 .background(pillBg)
                 .clickable(onClick = onSearchClick)
-                .padding(horizontal = 12.dp),
-            contentAlignment = Alignment.CenterStart,
+                .padding(horizontal = if (searchPillExpanded) 12.dp else 0.dp),
+            contentAlignment = if (searchPillExpanded) Alignment.CenterStart else Alignment.Center,
         ) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Icon(
@@ -264,12 +326,14 @@ private fun EmojiPanelHeader(
                     tint = fg.copy(alpha = 0.55f),
                     modifier = Modifier.size(16.dp),
                 )
-                Spacer(Modifier.width(8.dp))
-                Text(
-                    text = "Search",
-                    color = fg.copy(alpha = 0.55f),
-                    fontSize = 14.sp,
-                )
+                if (searchPillExpanded) {
+                    Spacer(Modifier.width(8.dp))
+                    Text(
+                        text = "Search",
+                        color = fg.copy(alpha = 0.55f),
+                        fontSize = 14.sp,
+                    )
+                }
             }
         }
         Spacer(Modifier.width(8.dp))
@@ -277,7 +341,7 @@ private fun EmojiPanelHeader(
         // Category icons. Horizontal scroll so the full set fits even on
         // narrow devices. Active one gets a tinted disc background.
         LazyRow(
-            modifier = Modifier.weight(0.58f),
+            modifier = Modifier.weight(1f),
             horizontalArrangement = Arrangement.spacedBy(2.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
@@ -294,7 +358,7 @@ private fun EmojiPanelHeader(
                     Icon(
                         imageVector = category.icon(),
                         contentDescription = category.id,
-                        tint = if (isActive) MaterialTheme.colorScheme.primary else fg.copy(alpha = 0.7f),
+                        tint = if (isActive) accent else fg.copy(alpha = 0.7f),
                         modifier = Modifier.size(20.dp),
                     )
                 }
@@ -370,10 +434,11 @@ private fun CategoryEmojiGrid(
 @Composable
 private fun EmojiPanelBottomBar(
     fg: Color,
+    accent: Color,
     onAbcClick: () -> Unit,
     onDeleteClick: () -> Unit,
 ) {
-    val activePillBg = MaterialTheme.colorScheme.primary.copy(alpha = 0.25f)
+    val activePillBg = accent.copy(alpha = 0.25f)
 
     Row(
         modifier = Modifier

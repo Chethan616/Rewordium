@@ -145,14 +145,24 @@ android {
         // length-match bonus (LENGTH_MATCH_MAX_BONUS) is the principled replacement.
         buildConfigField("boolean", "ENABLE_GESTURE_PREFIX_BIAS", "false")
         buildConfigField("boolean", "ENABLE_GESTURE_LENGTH_ASYMMETRY", "true")
-        // Native-engine rollout (Phase 8). Both ON by default — the AOSP
-        // native engine is now the primary suggest + glide path. The
-        // StatisticalGlideTypingClassifier stays in the tree as a fallback
-        // that GlideTypingManager picks if LatinImeNative.ensureLoaded()
-        // returns false (e.g. a broken native build), so the keyboard
-        // never bricks even if the .so fails to load.
+        // Native-engine rollout (Phase 8).
+        //
+        // ENABLE_NATIVE_SUGGESTER = true → tap-input suggestions go through
+        //   AOSP's typing Suggest pipeline (typing policy is real and shipped
+        //   in open source). Working.
+        //
+        // ENABLE_NATIVE_GLIDE     = false → gesture decoding stays on the
+        //   Kotlin StatisticalGlideTypingClassifier. AOSP open-source ships
+        //   GestureSuggestPolicyFactory as an UNREGISTERED stub (Google kept
+        //   the real gesture decoder proprietary), so routing gestures
+        //   through native crashes with a null SuggestPolicy deref. The
+        //   crash itself is defended against by JNI_OnLoad in
+        //   latinime_jni.cpp registering the typing policy as a fallback,
+        //   but typing-as-gesture produces garbage results — Statistical is
+        //   the actually-working option. Flip back to true only after
+        //   wiring a real gesture suggest policy (substantial undertaking).
         buildConfigField("boolean", "ENABLE_NATIVE_SUGGESTER", "true")
-        buildConfigField("boolean", "ENABLE_NATIVE_GLIDE", "true")
+        buildConfigField("boolean", "ENABLE_NATIVE_GLIDE", "false")
         // Phase 7: when true, MediaInputLayout uses the androidx.emoji2
         // emojipicker-based NativeEmojiPanel instead of the legacy hand-
         // rolled EmojiPaletteView.

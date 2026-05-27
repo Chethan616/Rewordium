@@ -16,6 +16,9 @@
 
 package com.noxquill.rewordium.keyboard.app.settings.typing
 
+import android.Manifest
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
@@ -26,10 +29,15 @@ import androidx.compose.material.icons.filled.SpaceBar
 import androidx.compose.material3.Card
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
+import kotlinx.coroutines.launch
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
+import com.noxquill.rewordium.keyboard.ime.nlp.engine.ContactsLoader
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.vectorResource
 import androidx.compose.ui.unit.dp
@@ -81,6 +89,42 @@ fun TypingScreen() = FlorisScreen {
                 summary = stringRes(R.string.pref__suggestion__block_possibly_offensive__summary),
                 enabledIf = { prefs.suggestion.enabled isEqualTo true },
             )
+
+            // Contact-name suggestions. Tokens are loaded from
+            // ContactsProvider once per IME process (at preload) and pushed
+            // into the native dict so contact names rank above common-word
+            // shape collisions in both tap and glide suggestions.
+            //
+            // We hook a LaunchedEffect on the pref value so toggling on
+            // triggers a runtime READ_CONTACTS request. If the user denies,
+            // we flip the pref back off. The actual ingestion happens at
+            // LatinLanguageProvider.preload() — taking effect on next IME
+            // bind, not instantaneously.
+            val context = LocalContext.current
+            val scope = rememberCoroutineScope()
+            val useContacts by prefs.spelling.useContacts.observeAsState()
+            val contactsPermLauncher = rememberLauncherForActivityResult(
+                ActivityResultContracts.RequestPermission(),
+            ) { granted ->
+                if (!granted) {
+                    // jetpref's set() is suspend — launch on the screen scope
+                    // so the denial undo runs off the callback thread.
+                    scope.launch { prefs.spelling.useContacts.set(false) }
+                }
+            }
+            LaunchedEffect(useContacts) {
+                if (useContacts && !ContactsLoader.hasPermission(context)) {
+                    contactsPermLauncher.launch(Manifest.permission.READ_CONTACTS)
+                }
+            }
+            SwitchPreference(
+                prefs.spelling.useContacts,
+                icon = Icons.Default.Contacts,
+                title = stringRes(R.string.pref__spelling__use_contacts__label),
+                summary = stringRes(R.string.pref__spelling__use_contacts__summary),
+                enabledIf = { prefs.suggestion.enabled isEqualTo true },
+            )
+
             SwitchPreference(
                 prefs.suggestion.api30InlineSuggestionsEnabled,
                 title = stringRes(R.string.pref__suggestion__api30_inline_suggestions_enabled__label),
@@ -152,14 +196,8 @@ fun TypingScreen() = FlorisScreen {
                 entries = enumDisplayEntriesOf(SpellingLanguageMode::class),
                 enabledIf = { florisSpellCheckerEnabled.value },
             )
-            SwitchPreference(
-                prefs.spelling.useContacts,
-                icon = Icons.Default.Contacts,
-                title = stringRes(R.string.pref__spelling__use_contacts__label),
-                summary = stringRes(R.string.pref__spelling__use_contacts__summary),
-                enabledIf = { florisSpellCheckerEnabled.value },
-                visibleIf = { false }, // For now
-            )
+            // useContacts moved up into the Suggestions group — its real
+            // home now that the toggle is wired into the native suggester.
             SwitchPreference(
                 prefs.spelling.useUdmEntries,
                 icon = Icons.AutoMirrored.Filled.LibraryBooks,

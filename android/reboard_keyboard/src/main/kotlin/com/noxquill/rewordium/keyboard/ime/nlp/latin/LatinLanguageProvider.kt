@@ -35,6 +35,7 @@ import com.noxquill.rewordium.keyboard.ime.nlp.SpellingResult
 import com.noxquill.rewordium.keyboard.ime.nlp.SuggestionCandidate
 import com.noxquill.rewordium.keyboard.ime.nlp.SuggestionProvider
 import com.noxquill.rewordium.keyboard.ime.nlp.WordSuggestionCandidate
+import com.noxquill.rewordium.keyboard.ime.nlp.engine.ContactsLoader
 import com.noxquill.rewordium.keyboard.ime.nlp.engine.NativeDictionary
 import com.noxquill.rewordium.keyboard.BuildConfig
 import com.noxquill.rewordium.keyboard.lib.devtools.flogDebug
@@ -81,6 +82,11 @@ class LatinLanguageProvider(context: Context) : SpellingProvider, SuggestionProv
         private const val NEW_WORD_BOOTSTRAP_FREQ = 255
         private const val LEARN_WORD_MIN_LEN = 2
         private const val LEARN_WORD_MAX_LEN = 40
+        // Contact name tokens get a probability between common-word range
+        // (low 100s) and the bootstrap freq for words the user has actually
+        // typed (255). 220 keeps them competitive without overriding the
+        // user's actual typing history.
+        private const val CONTACT_NAME_PROBABILITY = 220
         // Letters + apostrophe only — exclude URLs, numbers, symbols.
         private val LEARN_WORD_PATTERN = Regex("^[A-Za-z']+$")
     }
@@ -232,6 +238,21 @@ class LatinLanguageProvider(context: Context) : SpellingProvider, SuggestionProv
                         if (nativeDictionary.addLearnedWord(word, entry.f)) merged++
                     }
                     flogDebug { "LatinLanguageProvider: merged $merged learned words into native dict" }
+
+                    // Seed contact display-name tokens. Contact names get a
+                    // high probability (220) so they win over common-word
+                    // shape collisions but stay just below the absolute-top
+                    // bootstrap (255) reserved for words the user has
+                    // explicitly typed at least once. No-op when the
+                    // useContacts pref is off or READ_CONTACTS isn't granted.
+                    if (prefs.spelling.useContacts.get()) {
+                        val tokens = ContactsLoader.loadNameTokens(appContext)
+                        var added = 0
+                        for (token in tokens) {
+                            if (nativeDictionary.addLearnedWord(token, CONTACT_NAME_PROBABILITY)) added++
+                        }
+                        flogDebug { "LatinLanguageProvider: added $added contact name tokens" }
+                    }
                 }
             }.onFailure { e ->
                 flogDebug { "LatinLanguageProvider: native dict load threw: $e" }
