@@ -1,0 +1,3 @@
+[submodule "android/reboard_keyboard/src/main/cpp/aosp"]
+	path = android/reboard_keyboard/src/main/cpp/aosp
+	url = https://android.googlesource.com/platform/packages/inputmethods/LatinIME

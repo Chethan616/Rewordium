@@ -109,6 +109,19 @@ android {
             debugSymbolLevel = "SYMBOL_TABLE"
         }
 
+        // Native suggester / gesture decoder lives under src/main/cpp/. Phase 1
+        // ships a minimal JNI smoke-test surface; phase 2 layers AOSP LatinIME
+        // decoder sources on top of the same library.
+        externalNativeBuild {
+            cmake {
+                targets("rewordium_latinime")
+                arguments(
+                    "-DCMAKE_ANDROID_API=$minSdk",
+                    "-DCMAKE_SHARED_LINKER_FLAGS=-Wl,-z,max-page-size=16384",
+                )
+            }
+        }
+
         buildConfigField("String", "BUILD_COMMIT_HASH", "\"${getGitCommitHash().get()}\"")
         buildConfigField("String", "FLADDONS_API_VERSION", "\"v~draft2\"")
         buildConfigField("String", "FLADDONS_STORE_URL", "\"www.rewordium.tech/extensions\"")
@@ -132,6 +145,23 @@ android {
         // length-match bonus (LENGTH_MATCH_MAX_BONUS) is the principled replacement.
         buildConfigField("boolean", "ENABLE_GESTURE_PREFIX_BIAS", "false")
         buildConfigField("boolean", "ENABLE_GESTURE_LENGTH_ASYMMETRY", "true")
+        // Native-engine rollout (Phase 8). Both ON by default — the AOSP
+        // native engine is now the primary suggest + glide path. The
+        // StatisticalGlideTypingClassifier stays in the tree as a fallback
+        // that GlideTypingManager picks if LatinImeNative.ensureLoaded()
+        // returns false (e.g. a broken native build), so the keyboard
+        // never bricks even if the .so fails to load.
+        buildConfigField("boolean", "ENABLE_NATIVE_SUGGESTER", "true")
+        buildConfigField("boolean", "ENABLE_NATIVE_GLIDE", "true")
+        // Phase 7: when true, MediaInputLayout uses the androidx.emoji2
+        // emojipicker-based NativeEmojiPanel instead of the legacy hand-
+        // rolled EmojiPaletteView.
+        buildConfigField("boolean", "ENABLE_NATIVE_EMOJI_PANEL", "true")
+        // Phase 7r: when true, MediaInputLayout uses the Gboard-style
+        // custom Compose panel (GboardEmojiPanel) — header with back +
+        // search pill + category icons, paged grid, compact 6-slot
+        // bottom bar. Wins over ENABLE_NATIVE_EMOJI_PANEL when both on.
+        buildConfigField("boolean", "ENABLE_GBOARD_EMOJI_PANEL", "true")
 
         sourceSets {
             maybeCreate("main").apply {
@@ -148,6 +178,13 @@ android {
     buildFeatures {
         buildConfig = true
         compose = true
+    }
+
+    externalNativeBuild {
+        cmake {
+            version = tools.versions.cmake.get()
+            path("src/main/cpp/CMakeLists.txt")
+        }
     }
 
     // 16 KB page size support - ensure uncompressed native libraries
@@ -215,6 +252,10 @@ dependencies {
     implementation(libs.androidx.core.splashscreen)
     implementation(libs.androidx.emoji2)
     implementation(libs.androidx.emoji2.views)
+    // Phase 7: official AOSP/Google emoji picker. Apache 2.0. We host it via
+    // Compose AndroidView in NativeEmojiPanel.kt; the original hand-rolled
+    // EmojiPaletteView stays in the tree until phase 8 retires it.
+    implementation(libs.androidx.emoji2.emojipicker)
     implementation(libs.androidx.exifinterface)
     implementation(libs.androidx.navigation.compose)
     implementation(libs.androidx.profileinstaller)

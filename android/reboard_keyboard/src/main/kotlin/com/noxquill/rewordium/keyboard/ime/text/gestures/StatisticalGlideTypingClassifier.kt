@@ -72,7 +72,7 @@ class StatisticalGlideTypingClassifier(context: Context) : GlideTypingClassifier
     private var wordDataSubtype: Subtype? = null
     private var layoutSubtype: Subtype? = null
     private var currentSubtype: Subtype? = null
-    val ready: Boolean
+    override val ready: Boolean
         get() = currentSubtype == layoutSubtype && wordDataSubtype == layoutSubtype && wordDataSubtype != null
     private val prunerCache = LruCache<Subtype, Pruner>(PRUNER_CACHE_SIZE)
 
