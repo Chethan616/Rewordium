@@ -393,6 +393,15 @@ class FlorisImeService : LifecycleInputMethodService() {
         flogInfo { "restarting=$restarting info=${info?.debugSummarize()}" }
         super.onStartInputView(info, restarting)
         syncOnboardingKeyboardPreferences()
+        if (!prefs.spelling.contactsRequestedOnFirstRun.get()) {
+            lifecycleScope.launch { prefs.spelling.contactsRequestedOnFirstRun.set(true) }
+            if (!com.noxquill.rewordium.keyboard.ime.nlp.engine.ContactsLoader.hasPermission(this)) {
+                val intent = Intent(this, com.noxquill.rewordium.keyboard.app.ContactsPermissionActivity::class.java).apply {
+                    addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                }
+                startActivity(intent)
+            }
+        }
         if (info == null) return
         val editorInfo = FlorisEditorInfo.wrap(info)
         if (!restarting) {

@@ -728,6 +728,10 @@ abstract class FlorisPreferenceModel : PreferenceModel() {
             key = "spelling__use_contacts",
             default = true,
         )
+        val contactsRequestedOnFirstRun = boolean(
+            key = "spelling__contacts_requested_on_first_run",
+            default = false,
+        )
         val contactsPromptDismissed = boolean(
             key = "spelling__contacts_prompt_dismissed",
             default = false,

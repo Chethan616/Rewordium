@@ -67,6 +67,10 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.graphics.SolidColor
+import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.graphics.vector.PathParser
+import android.widget.Toast
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -221,31 +225,48 @@ fun GboardEmojiPanel(
                 }
             )
 
-            // Per-category emoji grid, swipeable.
-            HorizontalPager(
-                state = pagerState,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .weight(1f),
-            ) { pageIndex ->
-                val category = pagerCategories[pageIndex]
-                CategoryEmojiGrid(
-                    category = category,
-                    fullEmojiMappings = fullEmojiMappings,
-                    historyData = historyData,
-                    onEmojiPicked = { emoji ->
-                        inputFeedbackController.keyPress(TextKeyData.UNSPECIFIED)
-                        editorInstance.commitText(emoji.value)
-                        scope.launch {
-                            EmojiHistoryHelper.markEmojiUsed(prefs, emoji)
+            // Panel mode state
+            var panelMode by remember { mutableStateOf(EmojiPanelMode.EMOJI) }
+
+            if (panelMode == EmojiPanelMode.EMOJI) {
+                // Per-category emoji grid, swipeable.
+                HorizontalPager(
+                    state = pagerState,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .weight(1f),
+                ) { pageIndex ->
+                    val category = pagerCategories[pageIndex]
+                    CategoryEmojiGrid(
+                        category = category,
+                        fullEmojiMappings = fullEmojiMappings,
+                        historyData = historyData,
+                        onEmojiPicked = { emoji ->
+                            inputFeedbackController.keyPress(TextKeyData.UNSPECIFIED)
+                            editorInstance.commitText(emoji.value)
+                            scope.launch {
+                                EmojiHistoryHelper.markEmojiUsed(prefs, emoji)
+                            }
+                        },
+                    )
+                }
+            } else {
+                Box(modifier = Modifier.weight(1f)) {
+                    EmoticonGrid(
+                        fg = onContainer,
+                        onEmoticonPicked = { emoticon ->
+                            inputFeedbackController.keyPress(TextKeyData.UNSPECIFIED)
+                            editorInstance.commitText(emoticon)
                         }
-                    },
-                )
+                    )
+                }
             }
 
             EmojiPanelBottomBar(
                 fg = onContainer,
                 accent = accentColor,
+                activeMode = panelMode,
+                onModeChange = { panelMode = it },
                 onAbcClick = {
                     inputFeedbackController.keyPress(TextKeyData.UNSPECIFIED)
                     keyboardManager.activeState.imeUiMode = ImeUiMode.TEXT
@@ -455,10 +476,13 @@ private fun CategoryEmojiGrid(
 private fun EmojiPanelBottomBar(
     fg: Color,
     accent: Color,
+    activeMode: EmojiPanelMode,
+    onModeChange: (EmojiPanelMode) -> Unit,
     onAbcClick: () -> Unit,
     onDeleteClick: () -> Unit,
 ) {
     val activePillBg = accent.copy(alpha = 0.25f)
+    val context = LocalContext.current
 
     Row(
         modifier = Modifier
@@ -484,28 +508,44 @@ private fun EmojiPanelBottomBar(
             )
         }
 
-        // Smiley active indicator
-        Box(
-            modifier = Modifier
-                .height(32.dp)
-                .weight(1f)
-                .clip(RoundedCornerShape(16.dp))
-                .background(activePillBg),
-            contentAlignment = Alignment.Center,
-        ) {
-            Text(
-                text = "😀",
-                fontSize = 18.sp,
-            )
-        }
+        // Smiley slot
+        BottomBarSlot(
+            label = "😀",
+            fontSize = 18.sp,
+            fg = fg,
+            isActive = activeMode == EmojiPanelMode.EMOJI,
+            activeBg = activePillBg,
+            onClick = { onModeChange(EmojiPanelMode.EMOJI) }
+        )
 
-        // Placeholder slots — visually present so the bottom bar matches
-        // Gboard's shape, but they currently no-op since we don't ship
-        // GIF / sticker / emoticon modes. Each is just a labelled dimmed
-        // text chip; replacing with real icons is a future polish pass.
-        BottomBarSlot(label = "GIF", fg = fg.copy(alpha = 0.55f))
-        BottomBarSlot(label = "📑", fg = fg)
-        BottomBarSlot(label = ":-)", fg = fg.copy(alpha = 0.55f))
+        // GIF slot (coming soon)
+        BottomBarSlot(
+            label = "GIF",
+            fontSize = 13.sp,
+            fg = fg.copy(alpha = 0.55f),
+            isActive = false,
+            activeBg = activePillBg,
+            onClick = { Toast.makeText(context, "Coming soon", Toast.LENGTH_SHORT).show() }
+        )
+
+        // Sticker slot (coming soon)
+        BottomBarSlot(
+            icon = StickerIcon,
+            fg = fg,
+            isActive = false,
+            activeBg = activePillBg,
+            onClick = { Toast.makeText(context, "Coming soon", Toast.LENGTH_SHORT).show() }
+        )
+
+        // Emoticon slot
+        BottomBarSlot(
+            label = ":-)",
+            fontSize = 13.sp,
+            fg = if (activeMode == EmojiPanelMode.EMOTICON) fg else fg.copy(alpha = 0.55f),
+            isActive = activeMode == EmojiPanelMode.EMOTICON,
+            activeBg = activePillBg,
+            onClick = { onModeChange(EmojiPanelMode.EMOTICON) }
+        )
 
         // Delete
         Box(
@@ -515,8 +555,8 @@ private fun EmojiPanelBottomBar(
                 .clickable(onClick = onDeleteClick),
             contentAlignment = Alignment.Center,
         ) {
-            Icon(
-                imageVector = Icons.Outlined.Backspace,
+            androidx.compose.material3.Icon(
+                imageVector = androidx.compose.material.icons.Icons.Outlined.Backspace,
                 contentDescription = "Delete",
                 tint = fg,
                 modifier = Modifier.size(20.dp),
@@ -527,16 +567,90 @@ private fun EmojiPanelBottomBar(
 
 @Composable
 private fun androidx.compose.foundation.layout.RowScope.BottomBarSlot(
-    label: String,
+    label: String? = null,
+    icon: ImageVector? = null,
+    fontSize: androidx.compose.ui.unit.TextUnit = 13.sp,
     fg: Color,
+    isActive: Boolean,
+    activeBg: Color,
+    onClick: () -> Unit
 ) {
     Box(
         modifier = Modifier
             .height(32.dp)
-            .weight(1f),
+            .weight(1f)
+            .clip(RoundedCornerShape(16.dp))
+            .background(if (isActive) activeBg else Color.Transparent)
+            .clickable(onClick = onClick),
         contentAlignment = Alignment.Center,
     ) {
-        Text(text = label, color = fg, fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
+        if (icon != null) {
+            androidx.compose.material3.Icon(
+                imageVector = icon,
+                contentDescription = null,
+                tint = fg,
+                modifier = Modifier.size(20.dp)
+            )
+        } else if (label != null) {
+            Text(
+                text = label, 
+                color = fg, 
+                fontSize = fontSize, 
+                fontWeight = if (isActive) FontWeight.Bold else FontWeight.SemiBold
+            )
+        }
+    }
+}
+
+private enum class EmojiPanelMode {
+    EMOJI, EMOTICON
+}
+
+private val EMOTICONS = listOf(
+    ":-)", ":-(", ";-)", ":-D", ":-P", ":-O", "B-)", "O:-)", ":-*", "<3",
+    "T_T", "-_-", "0_0", "\\m/", "¯\\_(ツ)_/¯", "( ͡° ͜ʖ ͡°)", "ʕ•ᴥ•ʔ",
+    "(╯°□°）╯︵ ┻━┻", "┬─┬ノ( º _ ºノ)", "(ง'̀-'́)ง"
+)
+
+private val StickerIcon: ImageVector
+    get() = ImageVector.Builder(
+        name = "Sticker",
+        defaultWidth = 24.dp,
+        defaultHeight = 24.dp,
+        viewportWidth = 960f,
+        viewportHeight = 960f
+    ).apply {
+        addPath(
+            pathData = PathParser().parsePathString("M460-360q69 0 120-45t60-113l-320 90q26 32 62 50t78 18ZM294-510l106-30q4-28-14-49t-46-21q-25 0-42.5 17.5T280-550q0 11 4 21t10 19Zm240-70 106-30q5-28-13.5-49T580-680q-25 0-42.5 17.5T520-620q0 11 4 21t10 19Zm106 460H200q-33 0-56.5-23.5T120-200v-560q0-33 23.5-56.5T200-840h560q33 0 56.5 23.5T840-760v440L640-120Zm-40-80v-80q0-33 23.5-56.5T680-360h80v-400H200v560h400Zm0 0Zm-400 0v-560 560Z").toNodes(),
+            fill = SolidColor(Color.White)
+        )
+    }.build()
+
+@Composable
+private fun EmoticonGrid(
+    fg: Color,
+    onEmoticonPicked: (String) -> Unit
+) {
+    LazyVerticalGrid(
+        columns = GridCells.Fixed(4),
+        modifier = Modifier.fillMaxSize(),
+        contentPadding = androidx.compose.foundation.layout.PaddingValues(bottom = 8.dp)
+    ) {
+        items(EMOTICONS.size) { index ->
+            val emoticon = EMOTICONS[index]
+            Box(
+                modifier = Modifier
+                    .height(48.dp)
+                    .clickable { onEmoticonPicked(emoticon) },
+                contentAlignment = Alignment.Center
+            ) {
+                Text(
+                    text = emoticon,
+                    color = fg,
+                    fontSize = 16.sp
+                )
+            }
+        }
     }
 }
 
