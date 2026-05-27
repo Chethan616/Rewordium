@@ -213,6 +213,37 @@ class LatinLanguageProvider(context: Context) : SpellingProvider, SuggestionProv
             }
         }.onFailure { e -> flogDebug { "Failed to merge user dictionary: ${e.message}" } }
 
+        // Seed contact display-name tokens. Contact names get a
+        // high probability (220) so they win over common-word
+        // shape collisions but stay just below the absolute-top
+        // bootstrap (255) reserved for words the user has
+        // explicitly typed at least once. No-op when the
+        // useContacts pref is off or READ_CONTACTS isn't granted.
+        var contactTokens: Set<String>? = null
+        var contactBigrams: List<Pair<String, String>>? = null
+        if (prefs.spelling.useContacts.get()) {
+            contactTokens = ContactsLoader.loadNameTokens(appContext)
+            if (contactTokens.isNotEmpty()) {
+                wordData.withLock { data ->
+                    for (token in contactTokens) {
+                        val current = data[token] ?: 0
+                        data[token] = maxOf(current, CONTACT_NAME_PROBABILITY)
+                    }
+                }
+            }
+            contactBigrams = ContactsLoader.loadNameBigrams(appContext)
+            if (contactBigrams.isNotEmpty()) {
+                bigramData.withLock { data ->
+                    for ((prev, next) in contactBigrams) {
+                        val inner = (data[prev] as? MutableMap<String, Int>) ?: data[prev]?.toMutableMap() ?: mutableMapOf()
+                        val current = inner[next] ?: 0
+                        inner[next] = maxOf(current, CONTACT_NAME_PROBABILITY)
+                        data[prev] = inner
+                    }
+                }
+            }
+        }
+
         // Phase 4b: kick off native AOSP dict population. This runs on the
         // same IO context as the Kotlin path above so by the time preload()
         // returns, the native dict is ready. ~100-300ms cost on first call;
@@ -239,19 +270,17 @@ class LatinLanguageProvider(context: Context) : SpellingProvider, SuggestionProv
                     }
                     flogDebug { "LatinLanguageProvider: merged $merged learned words into native dict" }
 
-                    // Seed contact display-name tokens. Contact names get a
-                    // high probability (220) so they win over common-word
-                    // shape collisions but stay just below the absolute-top
-                    // bootstrap (255) reserved for words the user has
-                    // explicitly typed at least once. No-op when the
-                    // useContacts pref is off or READ_CONTACTS isn't granted.
-                    if (prefs.spelling.useContacts.get()) {
-                        val tokens = ContactsLoader.loadNameTokens(appContext)
+                    if (contactTokens != null) {
                         var added = 0
-                        for (token in tokens) {
+                        for (token in contactTokens) {
                             if (nativeDictionary.addLearnedWord(token, CONTACT_NAME_PROBABILITY)) added++
                         }
-                        flogDebug { "LatinLanguageProvider: added $added contact name tokens" }
+                        flogDebug { "LatinLanguageProvider: added $added contact name tokens to native dict" }
+                    }
+                    if (contactBigrams != null) {
+                        for ((_, next) in contactBigrams) {
+                            nativeDictionary.addLearnedWord(next, CONTACT_NAME_PROBABILITY)
+                        }
                     }
                 }
             }.onFailure { e ->
