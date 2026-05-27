@@ -262,7 +262,7 @@ class EditorInstance(context: Context) : AbstractEditorInstance(context) {
             || effectiveChar == "\n"
             || (effectiveChar.length == 1 && !effectiveChar[0].isLetter() && !effectiveChar[0].isDigit())
         val composingBeforeCommit = if (terminatesWord) {
-            activeContent.composingText.toString()
+            activeContent.composingText.toString().ifBlank { activeContent.currentWordText.trim() }
         } else ""
         val result = super.commitChar(
             char = effectiveChar,
@@ -296,14 +296,29 @@ class EditorInstance(context: Context) : AbstractEditorInstance(context) {
         // Non-gesture text commit (autocorrect pick, paste, emoji, etc.)
         // moves us past the gesture — invalidate the word-delete fallback.
         lastGestureCommitLength = 0
+        
+        // Adaptive learned swipe typing: capture the in-progress composing
+        // word BEFORE the commit if this is a word terminator (like space).
+        val terminatesWord = text == SPACE
+            || text == "\n"
+            || (text.length == 1 && !text[0].isLetter() && !text[0].isDigit())
+        val composingBeforeCommit = if (terminatesWord) {
+            activeContent.composingText.toString().ifBlank { activeContent.currentWordText.trim() }
+        } else ""
+
         val isPhantomSpaceActive = phantomSpace.determine(text)
         autoSpace.setInactive()
         phantomSpace.setInactive()
-        return if (isPhantomSpaceActive) {
+        val result = if (isPhantomSpaceActive) {
             super.commitText("$SPACE$text")
         } else {
             super.commitText(text)
         }
+        
+        if (result && composingBeforeCommit.isNotBlank()) {
+            nlpManager.learnWord(subtypeManager.activeSubtype, composingBeforeCommit)
+        }
+        return result
     }
 
     /**

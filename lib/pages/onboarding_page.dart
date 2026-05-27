@@ -135,6 +135,7 @@ class _OnboardingPageState extends State<OnboardingPage>
   bool _subscribeToNews = false;
 
   bool _numberRowEnabled = true;
+  bool _contactsSuggestionsEnabled = true;
   bool _clipboardSuggestionsEnabled = true;
   bool _keyboardAiDefaultEnabled = true;
   bool _keyboardHapticsEnabled = true;
@@ -303,6 +304,7 @@ class _OnboardingPageState extends State<OnboardingPage>
       _llmMode = _LlmMode.managedDefault;
       _subscribeToNews = false;
       _numberRowEnabled = true;
+      _contactsSuggestionsEnabled = true;
       _clipboardSuggestionsEnabled = true;
       _keyboardAiDefaultEnabled = true;
       _keyboardHapticsEnabled = true;
@@ -638,6 +640,10 @@ class _OnboardingPageState extends State<OnboardingPage>
     final prefs = await SharedPreferences.getInstance();
     await prefs.setBool('onboarding_keyboard_number_row', _numberRowEnabled);
     await prefs.setBool(
+      'spelling__use_contacts',
+      _contactsSuggestionsEnabled,
+    );
+    await prefs.setBool(
       'onboarding_keyboard_clipboard_suggestions',
       _clipboardSuggestionsEnabled,
     );
@@ -658,6 +664,7 @@ class _OnboardingPageState extends State<OnboardingPage>
     // preferences but skip the platform channel calls on iOS.
     if (_isAndroid) {
       await RewordiumKeyboardService.setHapticFeedback(_keyboardHapticsEnabled);
+      await RewordiumKeyboardService.setUseContactsForSuggestions(_contactsSuggestionsEnabled);
       final aiApplied =
           await _keyboardService.setAiSuggestions(_keyboardAiDefaultEnabled);
       await prefs.setBool('paraphraser_enabled', _keyboardAiDefaultEnabled);
@@ -1551,6 +1558,18 @@ class _OnboardingPageState extends State<OnboardingPage>
           sublabel: 'Visible number keys above the alphabet.',
           value: _numberRowEnabled,
           onChanged: (value) => setState(() => _numberRowEnabled = value),
+        ),
+        _quietSwitch(
+          context: context,
+          label: 'Learn from contacts (no data is collected or sent to our servers)',
+          sublabel: 'Suggest contact names when typing or swiping.',
+          value: _contactsSuggestionsEnabled,
+          onChanged: (value) async {
+            setState(() => _contactsSuggestionsEnabled = value);
+            if (value && _isAndroid) {
+              await RewordiumKeyboardService.requestContactsPermission();
+            }
+          },
         ),
         _quietSwitch(
           context: context,

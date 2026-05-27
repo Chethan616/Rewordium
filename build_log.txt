@@ -1,0 +1,156 @@
+﻿
+> Configure project :gradle
+WARNING: Unsupported Kotlin plugin version.
+The `embedded-kotlin` and `kotlin-dsl` plugins rely on features of Kotlin `2.0.21` that might work differently than in the requested version `2.2.20`.
+
+> Task :gradle:checkKotlinGradlePluginConfigurationErrors SKIPPED
+> Task :gradle:compileKotlin UP-TO-DATE
+> Task :gradle:compileJava NO-SOURCE
+> Task :gradle:compileGroovy NO-SOURCE
+> Task :gradle:pluginDescriptors UP-TO-DATE
+> Task :gradle:processResources UP-TO-DATE
+> Task :gradle:classes UP-TO-DATE
+> Task :gradle:jar UP-TO-DATE
+
+> Configure project :app
+WARNING: The option 'android.bundle.enableUncompressedNativeLibs' is deprecated.
+The current default is 'true'.
+It was removed in version 8.1 of the Android Gradle plugin.
+.\gradlew.bat : Warning: Flutter support for your project's Kotlin version (2.1.21) will soon be dropped. Please 
+upgrade your Kotlin version to a version of at least 2.2.20 soon.
+At line:1 char:1
++ .\gradlew.bat :reboard_keyboard:compileDebugKotlin 2>&1 | Out-File -E ...
++ ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (Warning: Flutte...st 2.2.20 soon.:String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+Alternatively, use the flag "--android-skip-build-dependency-validation" to bypass this check.
+
+Potential fix: Your project's KGP version is typically defined in the plugins block of the `settings.gradle` file 
+(C:\Users\cheth\OneDrive\Desktop\PC2\rewordium\rewordium\rewordium\rewordium\android/settings.gradle), by a plugin 
+with the id of org.jetbrains.kotlin.android. 
+If you don't see a plugins block, your project was likely created with an older template version, in which case it is 
+most likely defined in the top-level build.gradle file 
+(C:\Users\cheth\OneDrive\Desktop\PC2\rewordium\rewordium\rewordium\rewordium\android/build.gradle) by the 
+ext.kotlin_version property.
+
+WARNING: Your Android app project: app located at: 
+C:\Users\cheth\OneDrive\Desktop\PC2\rewordium\rewordium\rewordium\rewordium\android\app\build.gradle.kts
+applies the Kotlin Gradle Plugin, which will cause build failures in future versions of Flutter. 
+Please migrate your app to Built-in Kotlin using this guide: 
+https://docs.flutter.dev/release/breaking-changes/migrate-to-built-in-kotlin/for-app-developers
+
+WARNING: Your app uses the following plugins that apply Kotlin Gradle Plugin (KGP): cunning_document_scanner, 
+device_info_plus, dynamic_color, file_picker, google_sign_in_android, in_app_purchase_android, package_info_plus, 
+quill_native_bridge_android, reboard_keyboard, share_plus, shared_preferences_android, android, color, compose, 
+native, snygg
+Future versions of Flutter will fail to build if your app uses plugins that apply KGP.
+
+Please check the changelogs of these plugins and upgrade to a version that supports Built-in Kotlin.
+If no such version exists, report the issue to the plugin. If necessary, here is a guide on filing 
+an issue against a plugin: https://docs.flutter.dev/release/breaking-changes/migrate-to-built-in-kotlin/for-app-develop
+ers#report-incompatible-kotlin-gradle-plugin-usage-to-plugin-authors
+
+If you are a plugin author, please migrate your plugin to Built-in Kotlin using this guide: 
+https://docs.flutter.dev/release/breaking-changes/migrate-to-built-in-kotlin/for-plugin-authors
+Couldn't find provided path in: 'C:\Users\cheth\.gradle\daemon\8.14.4\src\main\config' or 'C:\Users\cheth\OneDrive\Desktop\PC2\rewordium\rewordium\rewordium\rewordium\android\src\main\config'
+
+> Task :reboard_lib:kotlin:checkKotlinGradlePluginConfigurationErrors SKIPPED
+> Task :reboard_lib:kotlin:compileKotlin UP-TO-DATE
+> Task :reboard_lib:kotlin:compileJava NO-SOURCE
+> Task :reboard_lib:kotlin:processResources NO-SOURCE
+> Task :reboard_lib:kotlin:classes UP-TO-DATE
+> Task :reboard_lib:kotlin:jar UP-TO-DATE
+> Task :reboard_keyboard:checkKotlinGradlePluginConfigurationErrors SKIPPED
+> Task :reboard_keyboard:preBuild UP-TO-DATE
+> Task :reboard_keyboard:preDebugBuild UP-TO-DATE
+> Task :reboard_keyboard:generateDebugBuildConfig UP-TO-DATE
+> Task :reboard_keyboard:generateDebugResValues UP-TO-DATE
+> Task :reboard_keyboard:generateDebugResources UP-TO-DATE
+> Task :reboard_keyboard:collectDependencies UP-TO-DATE
+
+> Task :reboard_keyboard:prepareLibraryDefinitionsDebug UP-TO-DATE
+Couldn't find provided path in: 'C:\Users\cheth\.gradle\daemon\8.14.4\src\main\config' or 'C:\Users\cheth\OneDrive\Desktop\PC2\rewordium\rewordium\rewordium\rewordium\android\src\main\config'
+
+> Task :reboard_keyboard:packageDebugResources UP-TO-DATE
+> Task :reboard_keyboard:processDebugNavigationResources UP-TO-DATE
+> Task :reboard_keyboard:parseDebugLocalResources UP-TO-DATE
+> Task :reboard_keyboard:generateDebugRFile UP-TO-DATE
+> Task :reboard_lib:android:checkKotlinGradlePluginConfigurationErrors SKIPPED
+> Task :reboard_lib:android:preBuild UP-TO-DATE
+> Task :reboard_lib:android:preDebugBuild UP-TO-DATE
+> Task :reboard_lib:android:generateDebugResValues UP-TO-DATE
+> Task :reboard_lib:android:generateDebugResources UP-TO-DATE
+> Task :reboard_lib:android:packageDebugResources UP-TO-DATE
+> Task :reboard_lib:android:processDebugNavigationResources UP-TO-DATE
+> Task :reboard_lib:android:parseDebugLocalResources UP-TO-DATE
+> Task :reboard_lib:android:generateDebugRFile UP-TO-DATE
+> Task :reboard_lib:android:compileDebugKotlin UP-TO-DATE
+> Task :reboard_lib:android:javaPreCompileDebug UP-TO-DATE
+> Task :reboard_lib:android:compileDebugJavaWithJavac NO-SOURCE
+> Task :reboard_lib:android:bundleLibCompileToJarDebug UP-TO-DATE
+> Task :reboard_lib:color:checkKotlinGradlePluginConfigurationErrors SKIPPED
+> Task :reboard_lib:color:preBuild UP-TO-DATE
+> Task :reboard_lib:color:preDebugBuild UP-TO-DATE
+> Task :reboard_lib:color:generateDebugResValues UP-TO-DATE
+> Task :reboard_lib:color:generateDebugResources UP-TO-DATE
+> Task :reboard_lib:color:packageDebugResources UP-TO-DATE
+> Task :reboard_lib:color:processDebugNavigationResources UP-TO-DATE
+> Task :reboard_lib:color:parseDebugLocalResources UP-TO-DATE
+> Task :reboard_lib:color:generateDebugRFile UP-TO-DATE
+> Task :reboard_lib:color:compileDebugKotlin UP-TO-DATE
+> Task :reboard_lib:color:javaPreCompileDebug UP-TO-DATE
+> Task :reboard_lib:color:compileDebugJavaWithJavac NO-SOURCE
+> Task :reboard_lib:color:bundleLibCompileToJarDebug UP-TO-DATE
+> Task :reboard_lib:compose:checkKotlinGradlePluginConfigurationErrors SKIPPED
+> Task :reboard_lib:compose:preBuild UP-TO-DATE
+> Task :reboard_lib:compose:preDebugBuild UP-TO-DATE
+> Task :reboard_lib:compose:generateDebugResValues UP-TO-DATE
+> Task :reboard_lib:compose:generateDebugResources UP-TO-DATE
+> Task :reboard_lib:compose:packageDebugResources UP-TO-DATE
+> Task :reboard_lib:compose:processDebugNavigationResources UP-TO-DATE
+> Task :reboard_lib:compose:parseDebugLocalResources UP-TO-DATE
+> Task :reboard_lib:compose:generateDebugRFile UP-TO-DATE
+> Task :reboard_lib:compose:compileDebugKotlin UP-TO-DATE
+> Task :reboard_lib:compose:javaPreCompileDebug UP-TO-DATE
+> Task :reboard_lib:compose:compileDebugJavaWithJavac NO-SOURCE
+> Task :reboard_lib:compose:bundleLibCompileToJarDebug UP-TO-DATE
+> Task :reboard_lib:native:checkKotlinGradlePluginConfigurationErrors SKIPPED
+> Task :reboard_lib:native:preBuild UP-TO-DATE
+> Task :reboard_lib:native:preDebugBuild UP-TO-DATE
+> Task :reboard_lib:native:generateDebugResValues UP-TO-DATE
+> Task :reboard_lib:native:generateDebugResources UP-TO-DATE
+> Task :reboard_lib:native:packageDebugResources UP-TO-DATE
+> Task :reboard_lib:native:processDebugNavigationResources UP-TO-DATE
+> Task :reboard_lib:native:parseDebugLocalResources UP-TO-DATE
+> Task :reboard_lib:native:generateDebugRFile UP-TO-DATE
+> Task :reboard_lib:native:compileDebugKotlin UP-TO-DATE
+> Task :reboard_lib:native:javaPreCompileDebug UP-TO-DATE
+> Task :reboard_lib:native:compileDebugJavaWithJavac NO-SOURCE
+> Task :reboard_lib:native:bundleLibCompileToJarDebug UP-TO-DATE
+> Task :reboard_lib:snygg:checkKotlinGradlePluginConfigurationErrors SKIPPED
+> Task :reboard_lib:snygg:preBuild UP-TO-DATE
+> Task :reboard_lib:snygg:preDebugBuild UP-TO-DATE
+> Task :reboard_lib:snygg:generateDebugResValues UP-TO-DATE
+> Task :reboard_lib:snygg:generateDebugResources UP-TO-DATE
+> Task :reboard_lib:snygg:packageDebugResources UP-TO-DATE
+> Task :reboard_lib:snygg:processDebugNavigationResources UP-TO-DATE
+> Task :reboard_lib:snygg:parseDebugLocalResources UP-TO-DATE
+> Task :reboard_lib:snygg:generateDebugRFile UP-TO-DATE
+> Task :reboard_lib:snygg:compileDebugKotlin UP-TO-DATE
+> Task :reboard_lib:snygg:javaPreCompileDebug UP-TO-DATE
+> Task :reboard_lib:snygg:compileDebugJavaWithJavac NO-SOURCE
+> Task :reboard_lib:snygg:bundleLibCompileToJarDebug UP-TO-DATE
+> Task :reboard_keyboard:kspDebugKotlin UP-TO-DATE
+> Task :reboard_keyboard:compileDebugKotlin UP-TO-DATE
+
+[Incubating] Problems report is available at: file:///C:/Users/cheth/OneDrive/Desktop/PC2/rewordium/rewordium/rewordium/rewordium/build/reports/problems/problems-report.html
+
+Deprecated Gradle features were used in this build, making it incompatible with Gradle 9.0.
+
+You can use '--warning-mode all' to show the individual deprecation warnings and determine if they come from your own scripts or plugins.
+
+For more on this, please refer to https://docs.gradle.org/8.14.4/userguide/command_line_interface.html#sec:command_line_warnings in the Gradle documentation.
+
+BUILD SUCCESSFUL in 9s
+62 actionable tasks: 62 up-to-date

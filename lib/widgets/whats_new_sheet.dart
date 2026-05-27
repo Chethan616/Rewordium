@@ -53,6 +53,13 @@ class WhatsNewSheet {
         description:
             'Emoji text and search pill colors now automatically adapt to maintain perfect readability across all day and night themes.',
       ),
+      const _WhatsNewItem(
+        icon: CupertinoIcons.keyboard,
+        color: Color(0xFFEF4444),
+        title: 'Keyboard Upgrades',
+        description:
+            'Improved keyboard performance, smarter emoji search, contacts as suggestions, enhanced glide typing, and new emoticons support.',
+      ),
     ],
     '2.9.1+75': [
       const _WhatsNewItem(
