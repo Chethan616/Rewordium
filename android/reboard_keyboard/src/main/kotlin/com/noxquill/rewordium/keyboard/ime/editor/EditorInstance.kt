@@ -75,6 +75,7 @@ class EditorInstance(context: Context) : AbstractEditorInstance(context) {
      * (manual char commit, setSelection, host-driven selection update).
      */
     private var lastGestureCommitLength: Int = 0
+    private var lastCommittedNovelWord: String? = null
 
     private fun currentInputConnection() = FlorisImeService.currentInputConnection()
 
@@ -270,9 +271,12 @@ class EditorInstance(context: Context) : AbstractEditorInstance(context) {
             insertSpaceBeforeChar = isInsertAutoSpaceBeforeChar || isPhantomSpaceActive,
             insertSpaceAfterChar = isInsertAutoSpaceAfterChar,
         )
-        if (result && composingBeforeCommit.isNotBlank()) {
+        if (result && composingBeforeCommit.isNotBlank() && !activeState.isIncognitoMode) {
             // Fire-and-forget; provider does validation + threshold logic.
+            lastCommittedNovelWord = composingBeforeCommit
             nlpManager.learnWord(subtypeManager.activeSubtype, composingBeforeCommit)
+        } else if (result && !terminatesWord) {
+            lastCommittedNovelWord = null
         }
         if (result && effectiveChar == SPACE) {
             ghostTextManager.requestGhostText()
@@ -315,8 +319,11 @@ class EditorInstance(context: Context) : AbstractEditorInstance(context) {
             super.commitText(text)
         }
         
-        if (result && composingBeforeCommit.isNotBlank()) {
+        if (result && composingBeforeCommit.isNotBlank() && !activeState.isIncognitoMode) {
+            lastCommittedNovelWord = composingBeforeCommit
             nlpManager.learnWord(subtypeManager.activeSubtype, composingBeforeCommit)
+        } else if (result && !terminatesWord) {
+            lastCommittedNovelWord = null
         }
         return result
     }
@@ -443,6 +450,11 @@ class EditorInstance(context: Context) : AbstractEditorInstance(context) {
      * @return True on success, false if an error occurred or the input connection is invalid.
      */
     fun deleteBackwards(unit: OperationUnit): Boolean {
+        if (lastCommittedNovelWord != null) {
+            nlpManager.unlearnWord(subtypeManager.activeSubtype, lastCommittedNovelWord!!)
+            lastCommittedNovelWord = null
+        }
+
         val content = activeContent
         if (unit == OperationUnit.CHARACTERS) {
             if (

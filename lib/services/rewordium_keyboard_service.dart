@@ -308,6 +308,17 @@ class RewordiumKeyboardService {
     }
   }
 
+  static Future<bool> hasContactsPermission() async {
+    if (!_isAndroid) return false;
+    try {
+      final bool? result = await _channel.invokeMethod<bool>('hasContactsPermission');
+      return result ?? false;
+    } on PlatformException catch (e) {
+      print('Error checking contacts permission: ${e.message}');
+      return false;
+    }
+  }
+
   /// Launches the contacts-permission rationale dialog from the keyboard module.
   /// The dialog explains why contacts access helps and then shows the system prompt.
   static Future<void> requestContactsPermission() async {

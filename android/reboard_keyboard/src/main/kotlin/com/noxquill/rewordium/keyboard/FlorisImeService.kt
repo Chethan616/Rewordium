@@ -851,16 +851,10 @@ class FlorisImeService : LifecycleInputMethodService() {
                                 // app per-frame; longer animations expose
                                 // a one-frame sync lag at the keyboard's
                                 // bottom edge. Sub-200ms motion is below
-                                // the perception threshold for that lag.
+                                // the perception threshold for that lag
                                 androidx.compose.animation.AnimatedVisibility(
                                     visible = emojiSearchActive != null,
-                                    enter = androidx.compose.animation.expandVertically(
-                                        animationSpec = androidx.compose.animation.core.tween(
-                                            durationMillis = 180,
-                                            easing = androidx.compose.animation.core.EaseOutCubic,
-                                        ),
-                                        expandFrom = androidx.compose.ui.Alignment.Bottom,
-                                    ) + androidx.compose.animation.fadeIn(
+                                    enter = androidx.compose.animation.fadeIn(
                                         animationSpec = androidx.compose.animation.core.tween(
                                             durationMillis = 140,
                                             delayMillis = 60,
@@ -872,13 +866,6 @@ class FlorisImeService : LifecycleInputMethodService() {
                                             durationMillis = 90,
                                             easing = androidx.compose.animation.core.EaseIn,
                                         ),
-                                    ) + androidx.compose.animation.shrinkVertically(
-                                        animationSpec = androidx.compose.animation.core.tween(
-                                            durationMillis = 160,
-                                            delayMillis = 30,
-                                            easing = androidx.compose.animation.core.EaseInCubic,
-                                        ),
-                                        shrinkTowards = androidx.compose.ui.Alignment.Bottom,
                                     ),
                                 ) {
                                     EmojiSearchOverlay()

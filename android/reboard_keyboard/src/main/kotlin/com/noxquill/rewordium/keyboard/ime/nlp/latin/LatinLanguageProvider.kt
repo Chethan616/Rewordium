@@ -373,43 +373,72 @@ class LatinLanguageProvider(context: Context) : SpellingProvider, SuggestionProv
         // get bootstrapped to NEW_WORD_BOOTSTRAP_FREQ so they immediately
         // compete with the top dict tier on next swipe — see the constant
         // docstring for the rationale on tying with max frequency.
-        val isNewWord: Boolean
+        val isFirstTime: Boolean
+        val isGraduating: Boolean
         wordData.withLock { data ->
             val current = data[word] ?: 0
-            isNewWord = current == 0
-            val next = if (isNewWord) NEW_WORD_BOOTSTRAP_FREQ else (current + 1).coerceAtMost(255)
+            isFirstTime = current == 0
+            isGraduating = current == 1
+            val next = if (current == 0) {
+                1
+            } else if (current == 1) {
+                NEW_WORD_BOOTSTRAP_FREQ
+            } else {
+                (current + 1).coerceAtMost(255)
+            }
             data[word] = next
         }
-        // Persist using a larger delta on first learn so the learned-store
-        // row reflects the bootstrap (otherwise an IME restart would drop
-        // the word back to freq=1).
+        // Persist using a larger delta on graduation so the learned-store
+        // row reflects the bootstrap.
         learnedStore.bump(
             subtype.primaryLocale,
             word,
-            freqDelta = if (isNewWord) NEW_WORD_BOOTSTRAP_FREQ else 1,
+            freqDelta = if (isGraduating) NEW_WORD_BOOTSTRAP_FREQ else 1,
         )
+        if (learnedSinceLastRefresh.incrementAndGet() >= LEARNED_REFRESH_THRESHOLD) {
+            learnedSinceLastRefresh.set(0)
+            _wordDataDirtyFlow.tryEmit(subtype)
+        }
 
         // Phase 6 incremental update: push the same word into the native
         // dict so the AOSP-backed suggest (Phase 4) + glide (Phase 5) paths
-        // see it on the very next call. Gated on the same flag as the
-        // initial dict population; when off, the existing Kotlin paths
-        // continue to track it via wordData (already done above).
+        // see it on the very next call.
         if (BuildConfig.ENABLE_NATIVE_SUGGESTER && nativeDictionary.isLoaded) {
-            val nativeFreq = if (isNewWord) NEW_WORD_BOOTSTRAP_FREQ else 255
-            nativeDictionary.addLearnedWord(word, nativeFreq)
+            if (!isFirstTime) {
+                // If it's the second time (graduating) or later, boost it to 255.
+                // We skip the first time to avoid demoting existing high-freq system words to 1.
+                nativeDictionary.addLearnedWord(word, 255)
+            }
         }
 
-        // First-time-seen personal words deserve an immediate Pruner rebuild
-        // so the user sees the effect on their next swipe — not after they
-        // commit three random words. For repeat reinforcement, still
+        // Graduating personal words (typed 2 times) deserve an immediate Pruner rebuild
+        // so the user sees the effect on their next swipe. For repeat reinforcement, still
         // debounce via the threshold to avoid rebuilding for every keystroke.
-        if (isNewWord) {
-            learnedSinceLastRefresh.set(0)
-            _wordDataDirtyFlow.tryEmit(subtype)
-        } else if (learnedSinceLastRefresh.incrementAndGet() >= LEARNED_REFRESH_THRESHOLD) {
+        // We DO NOT rebuild on `isFirstTime` because that triggers for every normal dictionary word typed!
+        if (isGraduating) {
             learnedSinceLastRefresh.set(0)
             _wordDataDirtyFlow.tryEmit(subtype)
         }
+    }
+
+    suspend fun unlearnWord(subtype: Subtype, rawWord: String) {
+        val word = rawWord.trim().lowercase()
+        if (word.length < LEARN_WORD_MIN_LEN || word.length > LEARN_WORD_MAX_LEN) return
+        if (!LEARN_WORD_PATTERN.matches(word)) return
+
+        wordData.withLock { data ->
+            data.remove(word)
+        }
+
+        // Bumping by -255 completely removes it from the learnedStore database
+        learnedStore.bump(
+            subtype.primaryLocale,
+            word,
+            freqDelta = -255,
+        )
+        
+        // Immediately force rebuild so it disappears from glide
+        _wordDataDirtyFlow.tryEmit(subtype)
     }
 
     // ── Binary dictionary cache helpers ─────────────────────────────────────

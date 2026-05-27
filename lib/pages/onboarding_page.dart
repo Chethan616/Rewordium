@@ -63,7 +63,7 @@ enum _LlmMode { managedDefault, bringYourOwn }
 
 enum _KeyboardHapticsMode { followSystem, alwaysVibrate }
 
-enum _SystemSetupStage { idle, keyboardEnable, keyboardSelect, accessibility }
+enum _SystemSetupStage { idle, contacts, keyboardEnable, keyboardSelect, accessibility }
 
 // Logical onboarding step ids. The active list depends on platform — the
 // Android variant adds assistant-mode and keyboard steps that map to system
@@ -488,6 +488,22 @@ class _OnboardingPageState extends State<OnboardingPage>
     if (!_isAndroid) {
       await _finalizeOnboardingCompletion();
       return;
+    }
+
+    if (_contactsSuggestionsEnabled) {
+      final contactsGranted = await RewordiumKeyboardService.hasContactsPermission();
+      if (!contactsGranted) {
+        final transitioningToContacts = _systemSetupStage != _SystemSetupStage.contacts;
+        _systemSetupStage = _SystemSetupStage.contacts;
+        if (mounted) {
+          setState(() => _isSaving = false);
+        }
+        _showMessage('Allow ReBoard to access your contacts for personalized suggestions.');
+        if (openSystemScreens && (!fromResume || transitioningToContacts)) {
+          await RewordiumKeyboardService.requestContactsPermission();
+        }
+        return;
+      }
     }
 
     if (_usesKeyboard) {
@@ -1564,11 +1580,8 @@ class _OnboardingPageState extends State<OnboardingPage>
           label: 'Learn from contacts (no data is collected or sent to our servers)',
           sublabel: 'Suggest contact names when typing or swiping.',
           value: _contactsSuggestionsEnabled,
-          onChanged: (value) async {
+          onChanged: (value) {
             setState(() => _contactsSuggestionsEnabled = value);
-            if (value && _isAndroid) {
-              await RewordiumKeyboardService.requestContactsPermission();
-            }
           },
         ),
         _quietSwitch(
