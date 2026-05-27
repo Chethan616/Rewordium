@@ -188,6 +188,23 @@ class NlpManager(context: Context) {
             ?: MutableSharedFlow<Subtype>(replay = 0).asSharedFlow()
     }
 
+    /**
+     * Current AOSP native dictionary handle from [LatinLanguageProvider], or
+     * 0 (== [LatinImeNative.INVALID_HANDLE]) if the native dict isn't loaded
+     * yet (process still in preload, or `ENABLE_NATIVE_SUGGESTER` is off).
+     *
+     * Used by [NativeGlideTypingClassifier] to drive AOSP's gesture-aware
+     * Suggest pipeline from the same trie that powers text suggestions.
+     * Cheap to call — no locks held across the read; the underlying value
+     * is a single volatile Long on the provider side.
+     */
+    val nativeDictHandle: Long get() {
+        val latin = runBlocking {
+            providers.withLock { it[LatinLanguageProvider.ProviderId] }?.provider
+        } as? LatinLanguageProvider
+        return latin?.nativeDictionary?.handle ?: 0L
+    }
+
     fun preload(subtype: Subtype) {
         scope.launch {
             emojiSuggestionProvider.preload(subtype)

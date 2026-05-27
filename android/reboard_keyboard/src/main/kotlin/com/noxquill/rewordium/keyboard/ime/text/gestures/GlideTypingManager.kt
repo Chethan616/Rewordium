@@ -20,6 +20,7 @@ import android.content.Context
 import com.noxquill.rewordium.keyboard.BuildConfig
 import com.noxquill.rewordium.keyboard.app.FlorisPreferenceStore
 import com.noxquill.rewordium.keyboard.ime.nlp.WordSuggestionCandidate
+import com.noxquill.rewordium.keyboard.ime.nlp.engine.LatinImeNative
 import com.noxquill.rewordium.keyboard.ime.text.keyboard.TextKey
 import com.noxquill.rewordium.keyboard.keyboardManager
 import com.noxquill.rewordium.keyboard.nlpManager
@@ -49,7 +50,18 @@ class GlideTypingManager(context: Context) : GlideTypingGesture.Listener {
     private val subtypeManager by context.subtypeManager()
 
     private val scope = CoroutineScope(Dispatchers.Default + SupervisorJob())
-    private var glideTypingClassifier = StatisticalGlideTypingClassifier(context)
+    // Phase 5f: dispatch on ENABLE_NATIVE_GLIDE. When the flag is on AND the
+    // native library loaded successfully, route gestures through AOSP's
+    // Suggest pipeline via NativeGlideTypingClassifier. Otherwise keep the
+    // hand-rolled Kotlin shape matcher so the keyboard still works if the
+    // native build is missing or rolled back. Default-off until on-device
+    // calibration confirms parity.
+    private var glideTypingClassifier: GlideTypingClassifier =
+        if (BuildConfig.ENABLE_NATIVE_GLIDE && LatinImeNative.ensureLoaded()) {
+            NativeGlideTypingClassifier(context)
+        } else {
+            StatisticalGlideTypingClassifier(context)
+        }
     private var lastTime = System.currentTimeMillis()
 
     init {
@@ -125,14 +137,14 @@ class GlideTypingManager(context: Context) : GlideTypingGesture.Listener {
                 val suggestionList = buildList {
                     if (startIndex < endIndex) {
                         suggestions.subList(startIndex, endIndex)
-                            .map { keyboardManager.fixCase(it) }
+                            .map { keyboardManager.fixCase(it.toString()) }
                             .forEach { add(WordSuggestionCandidate(it, confidence = 1.0)) }
                     }
                 }
 
                 nlpManager.suggestDirectly(suggestionList)
                 if (commit && suggestions.isNotEmpty()) {
-                    keyboardManager.commitGesture(suggestions.first())
+                    keyboardManager.commitGesture(suggestions.first().toString())
                 }
                 callback.invoke(true)
             }

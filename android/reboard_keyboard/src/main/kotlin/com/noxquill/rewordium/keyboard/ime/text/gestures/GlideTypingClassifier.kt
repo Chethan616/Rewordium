@@ -25,6 +25,14 @@ import com.noxquill.rewordium.keyboard.ime.text.keyboard.TextKey
  */
 interface GlideTypingClassifier {
     /**
+     * True once the classifier has all the state it needs to produce
+     * suggestions for the active subtype (word data loaded, layout known).
+     * [GlideTypingManager] polls this to decide whether to call setWordData
+     * or just proceed with [getSuggestions].
+     */
+    val ready: Boolean
+
+    /**
      * Called to notify gesture classifier that it can add a new point to the gesture.
      *
      * @param position The position to add

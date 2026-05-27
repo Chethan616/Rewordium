@@ -52,7 +52,10 @@ import com.noxquill.rewordium.keyboard.ime.input.LocalInputFeedbackController
 import com.noxquill.rewordium.keyboard.ime.keyboard.FlorisImeSizing
 import com.noxquill.rewordium.keyboard.ime.keyboard.KeyData
 import com.noxquill.rewordium.keyboard.ime.media.emoji.EmojiData
+import com.noxquill.rewordium.keyboard.BuildConfig
 import com.noxquill.rewordium.keyboard.ime.media.emoji.EmojiPaletteView
+import com.noxquill.rewordium.keyboard.ime.media.emoji.GboardEmojiPanel
+import com.noxquill.rewordium.keyboard.ime.media.emoji.NativeEmojiPanel
 import com.noxquill.rewordium.keyboard.ime.text.keyboard.TextKeyData
 import com.noxquill.rewordium.keyboard.ime.theme.FlorisImeUi
 import com.noxquill.rewordium.keyboard.keyboardManager
@@ -81,37 +84,72 @@ fun MediaInputLayout(
                 .fillMaxWidth()
                 .height(FlorisImeSizing.imeUiHeight()),
         ) {
-            EmojiPaletteView(
-                modifier = Modifier.weight(1f),
-                fullEmojiMappings = emojiLayoutDataMap,
-            )
-            SnyggRow(
-                elementName = FlorisImeUi.MediaBottomRow.elementName,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(FlorisImeSizing.keyboardRowBaseHeight * 0.8f),
-            ) {
-                KeyboardLikeButton(
-                    elementName = FlorisImeUi.MediaBottomRowButton.elementName,
-                    inputEventDispatcher = keyboardManager.inputEventDispatcher,
-                    keyData = TextKeyData.IME_UI_MODE_TEXT,
-                    modifier = Modifier.weight(1f).fillMaxHeight(),
-                ) {
-                    Text(
-                        text = "ABC",
-                        fontWeight = FontWeight.Bold,
+            // Phase 7r: Gboard-style custom Compose panel wins when its
+            // flag is on (owns its own bottom bar — see GboardEmojiPanel
+            // doc; rendered with full weight, no outer SnyggRow). Falls
+            // back to the androidx picker (Phase 7) or the legacy hand-
+            // rolled palette otherwise. Both fallbacks keep the same call
+            // surface and are wrapped by the outer SnyggRow with ABC +
+            // DELETE buttons below.
+            when {
+                BuildConfig.ENABLE_GBOARD_EMOJI_PANEL -> {
+                    // Owns its own compact bottom bar (ABC | smiley | GIF | sticker
+                    // | :-) | ⌫), so we let it take the full IME height and skip
+                    // the outer ABC+Backspace row that the legacy/native panels
+                    // still rely on.
+                    GboardEmojiPanel(
+                        modifier = Modifier.fillMaxWidth().weight(1f),
+                        fullEmojiMappings = emojiLayoutDataMap,
                     )
                 }
-                Spacer(modifier = Modifier.weight(1f))
-                KeyboardLikeButton(
-                    elementName = FlorisImeUi.MediaBottomRowButton.elementName,
-                    inputEventDispatcher = keyboardManager.inputEventDispatcher,
-                    keyData = TextKeyData.DELETE,
-                    modifier = Modifier.weight(1f).fillMaxHeight(),
-                ) {
-                    Icon(imageVector = Icons.AutoMirrored.Outlined.Backspace, contentDescription = null)
+                BuildConfig.ENABLE_NATIVE_EMOJI_PANEL -> {
+                    NativeEmojiPanel(
+                        modifier = Modifier.weight(1f),
+                        fullEmojiMappings = emojiLayoutDataMap,
+                    )
+                    LegacyMediaBottomRow(keyboardManager.inputEventDispatcher)
+                }
+                else -> {
+                    EmojiPaletteView(
+                        modifier = Modifier.weight(1f),
+                        fullEmojiMappings = emojiLayoutDataMap,
+                    )
+                    LegacyMediaBottomRow(keyboardManager.inputEventDispatcher)
                 }
             }
+        }
+    }
+}
+
+@Composable
+private fun LegacyMediaBottomRow(
+    inputEventDispatcher: InputEventDispatcher,
+) {
+    SnyggRow(
+        elementName = FlorisImeUi.MediaBottomRow.elementName,
+        modifier = Modifier
+            .fillMaxWidth()
+            .height(FlorisImeSizing.keyboardRowBaseHeight * 0.8f),
+    ) {
+        KeyboardLikeButton(
+            elementName = FlorisImeUi.MediaBottomRowButton.elementName,
+            inputEventDispatcher = inputEventDispatcher,
+            keyData = TextKeyData.IME_UI_MODE_TEXT,
+            modifier = Modifier.weight(1f).fillMaxHeight(),
+        ) {
+            Text(
+                text = "ABC",
+                fontWeight = FontWeight.Bold,
+            )
+        }
+        Spacer(modifier = Modifier.weight(1f))
+        KeyboardLikeButton(
+            elementName = FlorisImeUi.MediaBottomRowButton.elementName,
+            inputEventDispatcher = inputEventDispatcher,
+            keyData = TextKeyData.DELETE,
+            modifier = Modifier.weight(1f).fillMaxHeight(),
+        ) {
+            Icon(imageVector = Icons.AutoMirrored.Outlined.Backspace, contentDescription = null)
         }
     }
 }

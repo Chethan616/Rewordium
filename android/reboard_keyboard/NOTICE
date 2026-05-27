@@ -1,0 +1,24 @@
+Rewordium Keyboard
+==================
+
+This module includes third-party code redistributed under permissive licenses.
+Each third-party component retains its original copyright and license headers
+inside its source files. This NOTICE summarizes the components and points at
+their license texts.
+
+-------------------------------------------------------------------------------
+AOSP LatinIME (native gesture decoder + suggestion engine)
+-------------------------------------------------------------------------------
+Location in tree:  src/main/cpp/aosp/  (git submodule)
+Upstream:          https://android.googlesource.com/platform/packages/inputmethods/LatinIME
+Pinned at:         android-16.0.0_r4
+License:           Apache License, Version 2.0
+Copyright:         Copyright (C) The Android Open Source Project
+
+The submodule contents are unmodified upstream sources. The full Apache 2.0
+license text is reproduced in THIRD_PARTY_LICENSES.md. Per Section 4 of the
+Apache 2.0 license, the original copyright, attribution, and license notices
+contained within each source file are preserved verbatim.
+
+Our integration code under src/main/cpp/jni/ and src/main/kotlin/.../nlp/engine/
+is original work by the ReBoard Contributors, also under Apache 2.0.

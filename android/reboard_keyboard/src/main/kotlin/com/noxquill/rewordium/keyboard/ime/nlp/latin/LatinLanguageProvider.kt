@@ -35,6 +35,8 @@ import com.noxquill.rewordium.keyboard.ime.nlp.SpellingResult
 import com.noxquill.rewordium.keyboard.ime.nlp.SuggestionCandidate
 import com.noxquill.rewordium.keyboard.ime.nlp.SuggestionProvider
 import com.noxquill.rewordium.keyboard.ime.nlp.WordSuggestionCandidate
+import com.noxquill.rewordium.keyboard.ime.nlp.engine.NativeDictionary
+import com.noxquill.rewordium.keyboard.BuildConfig
 import com.noxquill.rewordium.keyboard.lib.devtools.flogDebug
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableSharedFlow
@@ -112,6 +114,13 @@ class LatinLanguageProvider(context: Context) : SpellingProvider, SuggestionProv
     // boosts personal words. Bumped on every word commit via learnWord().
     private val learnedStore = LearnedWordsStore(context)
     private val learnedSinceLastRefresh = AtomicInteger(0)
+
+    // Phase 4: native AOSP-backed dictionary. Loaded asynchronously during
+    // preload() when ENABLE_NATIVE_SUGGESTER is on. While [nativeDictionary
+    // .isLoaded] is false, suggest()/spell() fall through to the existing
+    // Kotlin path so a slow first-load doesn't break the keyboard. Once
+    // loaded, phase 4d will route the active path to native.
+    internal val nativeDictionary = NativeDictionary()
     private val _wordDataDirtyFlow = MutableSharedFlow<Subtype>(
         replay = 0,
         extraBufferCapacity = 1,
@@ -197,6 +206,37 @@ class LatinLanguageProvider(context: Context) : SpellingProvider, SuggestionProv
                 }
             }
         }.onFailure { e -> flogDebug { "Failed to merge user dictionary: ${e.message}" } }
+
+        // Phase 4b: kick off native AOSP dict population. This runs on the
+        // same IO context as the Kotlin path above so by the time preload()
+        // returns, the native dict is ready. ~100-300ms cost on first call;
+        // subsequent preload() calls are no-ops (NativeDictionary guards
+        // with its own load mutex). Gated behind ENABLE_NATIVE_SUGGESTER —
+        // when off, the native dict never opens and downstream phase 4d
+        // routing decisions evaluate to "use Kotlin path".
+        //
+        // Phase 6: after the base dict loads, also merge in this locale's
+        // LearnedWordsStore entries so personal vocab (chethan, rupak, …)
+        // is in the SAME native dict from the very first suggest / glide
+        // call after process start. This avoids the second-BinaryDictionary
+        // + DictionaryFacilitator dance — the in-memory v4 dict is
+        // mutable, so we just push entries into it.
+        if (BuildConfig.ENABLE_NATIVE_SUGGESTER) {
+            runCatching {
+                val ok = nativeDictionary.loadFromAssets(appContext)
+                flogDebug { "LatinLanguageProvider: native dict load = $ok" }
+                if (ok && nativeDictionary.isLoaded) {
+                    val learnedSnapshot = learnedStore.snapshot(subtype.primaryLocale)
+                    var merged = 0
+                    for ((word, entry) in learnedSnapshot) {
+                        if (nativeDictionary.addLearnedWord(word, entry.f)) merged++
+                    }
+                    flogDebug { "LatinLanguageProvider: merged $merged learned words into native dict" }
+                }
+            }.onFailure { e ->
+                flogDebug { "LatinLanguageProvider: native dict load threw: $e" }
+            }
+        }
         Unit
     }
 
@@ -257,6 +297,16 @@ class LatinLanguageProvider(context: Context) : SpellingProvider, SuggestionProv
             word,
             freqDelta = if (isNewWord) NEW_WORD_BOOTSTRAP_FREQ else 1,
         )
+
+        // Phase 6 incremental update: push the same word into the native
+        // dict so the AOSP-backed suggest (Phase 4) + glide (Phase 5) paths
+        // see it on the very next call. Gated on the same flag as the
+        // initial dict population; when off, the existing Kotlin paths
+        // continue to track it via wordData (already done above).
+        if (BuildConfig.ENABLE_NATIVE_SUGGESTER && nativeDictionary.isLoaded) {
+            val nativeFreq = if (isNewWord) NEW_WORD_BOOTSTRAP_FREQ else 255
+            nativeDictionary.addLearnedWord(word, nativeFreq)
+        }
 
         // First-time-seen personal words deserve an immediate Pruner rebuild
         // so the user sees the effect on their next swipe — not after they
@@ -535,6 +585,38 @@ class LatinLanguageProvider(context: Context) : SpellingProvider, SuggestionProv
                 textBeforeCursor
             }
         )
+
+        // Phase 4d: native suggest path. Active only when the feature flag
+        // is on AND the dict actually loaded AND the user has typed
+        // something. With a BLANK composing word we'd otherwise call native
+        // with an empty prefix → native returns the top-K unigrams by raw
+        // frequency (the/of/and/to/…) every time → "too generic, same
+        // suggestions at start" bug. For blank composing we instead fall
+        // through to the existing bigram-only prediction path below.
+        if (BuildConfig.ENABLE_NATIVE_SUGGESTER && nativeDictionary.isLoaded
+                && composingWord.isNotBlank()) {
+            val nativeResults = nativeDictionary.getCompletions(
+                prefix = composingWord,
+                prevWord = previousWord ?: "",
+                maxResults = maxCandidateCount,
+            )
+            if (nativeResults.isNotEmpty()) {
+                // Confidence falls off linearly across the top-K so the
+                // smartbar's "best guess" highlight lands on the right
+                // candidate. Native results are already AOSP-probability-
+                // ranked, so position-based confidence preserves that order.
+                return nativeResults.mapIndexed { index, word ->
+                    val confidence = 1.0 - (index.toDouble() / maxCandidateCount.coerceAtLeast(1))
+                    WordSuggestionCandidate(
+                        text = word,
+                        confidence = confidence.coerceIn(0.0, 1.0),
+                        isEligibleForAutoCommit = false,
+                        sourceProvider = this,
+                    )
+                }
+            }
+            // else fall through to Kotlin path
+        }
 
         // Get bigram suggestions for the previous word
         val bigramSuggestions = if (previousWord != null) {
