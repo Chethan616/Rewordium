@@ -1,4 +1,4 @@
-﻿package com.noxquill.rewordium
+package com.noxquill.rewordium
 
 import android.content.BroadcastReceiver
 import android.content.ComponentName
@@ -400,6 +400,13 @@ class MainActivity : FlutterActivity() {
                         this, android.Manifest.permission.READ_CONTACTS,
                     ) == android.content.pm.PackageManager.PERMISSION_GRANTED
                     result.success(if (granted) "granted" else "not_granted")
+                }
+                "hasContactsPermission" -> {
+                    val granted = androidx.core.content.ContextCompat.checkSelfPermission(
+                        this,
+                        android.Manifest.permission.READ_CONTACTS
+                    ) == android.content.pm.PackageManager.PERMISSION_GRANTED
+                    result.success(granted)
                 }
                 "requestContactsPermission" -> {
                     startActivity(

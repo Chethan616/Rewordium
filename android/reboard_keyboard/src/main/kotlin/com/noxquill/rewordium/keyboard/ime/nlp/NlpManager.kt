@@ -154,6 +154,16 @@ class NlpManager(context: Context) {
         }
     }
 
+    fun unlearnWord(subtype: Subtype, word: String) {
+        if (word.isBlank()) return
+        scope.launch {
+            val provider = getSuggestionProvider(subtype)
+            if (provider is LatinLanguageProvider) {
+                provider.unlearnWord(subtype, word)
+            }
+        }
+    }
+
     /**
      * Forwards an explicit User Dictionary add (from Settings UI) into the
      * Latin provider's wordData so the glide-classifier picks the new word
