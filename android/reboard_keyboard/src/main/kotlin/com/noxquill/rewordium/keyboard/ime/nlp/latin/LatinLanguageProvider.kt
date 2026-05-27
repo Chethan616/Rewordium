@@ -262,6 +262,47 @@ class LatinLanguageProvider(context: Context) : SpellingProvider, SuggestionProv
     }
 
     /**
+     * Hot-reload contact name tokens into an already-loaded native dict after
+     * the user grants READ_CONTACTS at runtime (via the smartbar prompt or the
+     * native app). Does not require an IME restart.
+     *
+     * Adds individual name tokens at [CONTACT_NAME_PROBABILITY] and also seeds
+     * adjacent-name bigrams (e.g. "john"→"smith") so the suggester can predict
+     * last names after the user types a contact's first name. Triggers a glide
+     * classifier rebuild so swipe input benefits immediately.
+     */
+    suspend fun reloadContacts(subtype: Subtype) = withContext(Dispatchers.IO) {
+        if (!prefs.spelling.useContacts.get()) return@withContext
+        val tokens = ContactsLoader.loadNameTokens(appContext)
+        if (tokens.isEmpty()) return@withContext
+
+        // Push into the Kotlin word-frequency table (Kotlin suggestion path).
+        wordData.withLock { data ->
+            for (token in tokens) {
+                val current = data[token] ?: 0
+                data[token] = maxOf(current, CONTACT_NAME_PROBABILITY)
+            }
+        }
+
+        // Push into native dict (native suggestion/glide path).
+        if (BuildConfig.ENABLE_NATIVE_SUGGESTER && nativeDictionary.isLoaded) {
+            var added = 0
+            for (token in tokens) {
+                if (nativeDictionary.addLearnedWord(token, CONTACT_NAME_PROBABILITY)) added++
+            }
+            // Seed first→last name bigrams for sequence prediction.
+            val bigrams = ContactsLoader.loadNameBigrams(appContext)
+            for ((prev, next) in bigrams) {
+                nativeDictionary.addLearnedWord(next, CONTACT_NAME_PROBABILITY)
+            }
+            flogDebug { "LatinLanguageProvider: reloadContacts added $added tokens, ${bigrams.size} bigram pairs" }
+        }
+
+        // Rebuild glide classifier so swipe picks up the new vocab.
+        _wordDataDirtyFlow.tryEmit(subtype)
+    }
+
+    /**
      * Live import a single User Dictionary entry into [wordData] and trigger
      * a glide-classifier rebuild. Called from UserDictionaryScreen after the
      * Room insert succeeds so the user sees the new word in glide without

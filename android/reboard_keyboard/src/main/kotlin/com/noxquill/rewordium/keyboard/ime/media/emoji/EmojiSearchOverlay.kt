@@ -67,7 +67,8 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.noxquill.rewordium.keyboard.app.FlorisPreferenceStore
 import com.noxquill.rewordium.keyboard.editorInstance
-import com.noxquill.rewordium.keyboard.ime.ImeUiMode
+import com.noxquill.rewordium.keyboard.ime.input.LocalInputFeedbackController
+import com.noxquill.rewordium.keyboard.ime.text.keyboard.TextKeyData
 import com.noxquill.rewordium.keyboard.ime.theme.FlorisImeUi
 import com.noxquill.rewordium.keyboard.keyboardManager
 import com.noxquill.rewordium.keyboard.subtypeManager
@@ -77,35 +78,6 @@ import kotlinx.coroutines.launch
 import org.florisboard.lib.snygg.ui.SnyggBox
 import org.florisboard.lib.snygg.ui.rememberSnyggThemeQuery
 
-/**
- * Gboard-style emoji search overlay (Phase 7r.3).
- *
- * Renders ABOVE the smartbar + QWERTY when emoji search is active — the
- * keyboard itself stays mounted underneath so the user can keep typing into
- * the search field via normal key presses. Layout matches gboard_emoji_search.jpeg:
- *
- *  ┌──────────────────────────────────────────┐
- *  │ ◯←  Search emoji                          │  header (back + title)
- *  │ ╭──────────────────────────────────────╮ │
- *  │ │ 🙏 🎊 🍫 🌹 🤧 😭 💀 ▶︎               │ │  2-row scrollable strip,
- *  │ │ 🙌 🕊 😑 💥 🔴 🫥 🚗 …                │ │  rounded container
- *  │ │ ──────────────────────────────────── │ │  hairline divider
- *  │ │ 🔍 Search                            │ │  collapses to circle on scroll
- *  │ ╰──────────────────────────────────────╯ │
- *  └──────────────────────────────────────────┘
- *
- * UX details vs the previous iteration:
- *  - 2-row strip and search pill are wrapped in ONE rounded container with
- *    a hairline divider between them, so they read as one unit (Gboard does
- *    the same — the pill isn't a separate widget floating below).
- *  - **Pill collapses to a 40dp circle** while the strip is actively
- *    scrolling. Tapping the circle re-expands to full width. Frees up
- *    visual space for emoji browsing without losing the search affordance.
- *  - All colors driven by [rememberSnyggThemeQuery] — the overlay tracks
- *    whatever skin the user has chosen.
- *  - The cursor inside the search pill is a real 2dp animated bar so it
- *    doesn't masquerade as a trailing space character.
- */
 @Composable
 fun EmojiSearchOverlay() {
     val prefs by FlorisPreferenceStore
@@ -114,12 +86,12 @@ fun EmojiSearchOverlay() {
     val subtypeManager by context.subtypeManager()
     val editorInstance by context.editorInstance()
     val scope = rememberCoroutineScope()
+    val inputFeedbackController = LocalInputFeedbackController.current
 
     val queryNullable by keyboardManager.emojiSearchQuery.collectAsState()
     val query = queryNullable.orEmpty()
     val trimmed = query.trim()
 
-    // Locale-specific keyword file — root.txt has no keywords.
     var fullEmojiMappings by remember { mutableStateOf(EmojiData.Fallback) }
     LaunchedEffect(subtypeManager.activeSubtype) {
         val locale = subtypeManager.activeSubtype.primaryLocale
@@ -174,14 +146,10 @@ fun EmojiSearchOverlay() {
 
     val displayed: List<EmojiSet> = if (results.isNotEmpty()) results else recentAndPopular
 
-    // Reorder items for row-first fill in the 2-row LazyHorizontalGrid.
-    // By default LazyHorizontalGrid fills column-first (top→bottom per
-    // column). The user expects row-first: fill row 1 left→right, then
-    // row 2. We interleave indices so the visual order is correct.
     val displayedRowFirst = remember(displayed) {
         val n = displayed.size
         if (n <= 2) return@remember displayed
-        val cols = (n + 1) / 2 // ceil(n/2)
+        val cols = (n + 1) / 2
         val reordered = ArrayList<EmojiSet>(n)
         for (col in 0 until cols) {
             for (row in 0 until 2) {
@@ -192,35 +160,24 @@ fun EmojiSearchOverlay() {
         reordered
     }
 
-    // ── Snygg-driven palette ──────────────────────────────────────────────
-    // Pull every color from the keyboard's snygg theme so the overlay
-    // matches whatever skin is active. Smartbar = container BG; key style
-    // = pill BG + foreground; the shift-focus accent is what the rest of
-    // the keyboard uses for "active" markers (caps lock, selected
-    // suggestion), so it's the closest thing to a brand color the theme
-    // exposes — perfect for the cursor.
     val containerStyle = rememberSnyggThemeQuery(FlorisImeUi.Smartbar.elementName)
     val pillStyle = rememberSnyggThemeQuery(FlorisImeUi.SmartbarActionTile.elementName)
     val keyStyle = rememberSnyggThemeQuery(FlorisImeUi.Key.elementName)
-    // Enter key accent — the keyboard theme's "brand" color, used for
-    // the blinking caret. Matches the accent used in GboardEmojiPanel.
+    
     val enterKeyStyle = rememberSnyggThemeQuery(
         elementName = FlorisImeUi.Key.elementName,
         attributes = mapOf(FlorisImeUi.Attr.Code to com.noxquill.rewordium.keyboard.ime.text.key.KeyCode.ENTER.toString()),
     )
     val containerBg = containerStyle.background(default = MaterialTheme.colorScheme.surface)
     val pillBg = pillStyle.background(default = MaterialTheme.colorScheme.surfaceContainerHigh)
-    val pillFg = pillStyle.foreground(default = MaterialTheme.colorScheme.onSurface)
-    val accent = enterKeyStyle.background(default = keyStyle.foreground(default = pillFg))
-    // The rounded-rect container that wraps the 2-row strip + pill. We tone
-    // it a notch darker than the smartbar background so it reads as a
-    // distinct surface without looking like a floating modal.
+    // Use keyStyle foreground to guarantee text readability in all themes (day/night)
+    val pillFg = keyStyle.foreground(default = MaterialTheme.colorScheme.onSurface)
+    // For accent, fall back to Material primary if the enter key has no background
+    val accent = enterKeyStyle.background(default = MaterialTheme.colorScheme.primary)
+    
     val cardBg = pillBg.copy(alpha = 0.85f)
     val dividerColor = pillFg.copy(alpha = 0.1f)
 
-    // Pill expand/collapse state. Starts expanded. Collapses while the
-    // emoji strip is actively scrolling (frees visual space); expands again
-    // on tap (or when the user lifts the finger and the strip rests).
     var pillExpanded by remember { mutableStateOf(true) }
     val gridState = rememberLazyGridState()
     LaunchedEffect(gridState) {
@@ -230,9 +187,6 @@ fun EmojiSearchOverlay() {
                 if (scrolling) {
                     pillExpanded = false
                 } else {
-                    // Give the user a brief moment after scroll-end before
-                    // re-expanding so a quick flick doesn't whip the pill
-                    // back open immediately.
                     delay(220)
                     pillExpanded = true
                 }
@@ -249,7 +203,6 @@ fun EmojiSearchOverlay() {
                 .padding(horizontal = 8.dp, vertical = 6.dp),
             verticalArrangement = Arrangement.spacedBy(6.dp),
         ) {
-            // ─── Header ──────────────────────────────────────────────
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -263,16 +216,7 @@ fun EmojiSearchOverlay() {
                     bg = pillBg,
                     fg = pillFg,
                     onClick = {
-                        // Switch to MEDIA first while the overlay is still
-                        // fully visible — this swaps the keyboard underneath
-                        // from QWERTY back to the emoji panel, but the user
-                        // can't see it because the overlay covers everything.
-                        // THEN close the overlay (endEmojiSearch triggers
-                        // AnimatedVisibility's exit: shrinkVertically from
-                        // top ~160ms). The user sees the overlay slide up
-                        // revealing the emoji panel already in place — zero
-                        // lag, zero flash.
-                        keyboardManager.activeState.imeUiMode = ImeUiMode.MEDIA
+                        inputFeedbackController.keyPress(TextKeyData.UNSPECIFIED)
                         keyboardManager.endEmojiSearch()
                     },
                 )
@@ -285,7 +229,6 @@ fun EmojiSearchOverlay() {
                 )
             }
 
-            // ─── Card: strip + divider + pill ───────────────────────
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -293,8 +236,6 @@ fun EmojiSearchOverlay() {
                     .background(cardBg)
                     .padding(vertical = 6.dp),
             ) {
-                // 2-row horizontally-scrollable emoji strip. Sized 96dp so
-                // each cell gets a comfortable ~44dp tap target.
                 Box(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -319,9 +260,6 @@ fun EmojiSearchOverlay() {
                                             emojiCompatInstance = null,
                                             preferredSkinTone = EmojiSkinTone.DEFAULT,
                                             onEmojiInput = { emoji ->
-                                                // Commit directly so we don't
-                                                // recurse through our own emoji-
-                                                // search intercept.
                                                 editorInstance.commitText(emoji.value)
                                                 keyboardManager.clearEmojiSearch()
                                                 scope.launch {
@@ -354,8 +292,6 @@ fun EmojiSearchOverlay() {
                     }
                 }
 
-                // Hairline divider between strip and pill (visible in the
-                // reference screenshot; helps the two read as one card).
                 Spacer(
                     modifier = Modifier
                         .padding(horizontal = 12.dp)
@@ -365,17 +301,20 @@ fun EmojiSearchOverlay() {
                         .background(dividerColor),
                 )
 
-                // ─── Search pill ──────────────────────────────────
-                // Collapses to a circle while the strip is being scrolled,
-                // expands back when the scroll settles or the user taps it.
                 CollapsiblePill(
                     expanded = pillExpanded,
-                    onExpandRequest = { pillExpanded = true },
+                    onExpandRequest = {
+                        inputFeedbackController.keyPress(TextKeyData.UNSPECIFIED)
+                        pillExpanded = true
+                    },
                     query = query,
                     pillBg = pillBg,
                     pillFg = pillFg,
                     accent = accent,
-                    onClear = { keyboardManager.clearEmojiSearch() },
+                    onClear = {
+                        inputFeedbackController.keyPress(TextKeyData.DELETE)
+                        keyboardManager.clearEmojiSearch()
+                    },
                 )
             }
         }
@@ -406,14 +345,6 @@ private fun ThemedRoundButton(
     }
 }
 
-/**
- * Pill that shrinks to a search-icon circle when [expanded] is false. Tapping
- * the circle expands it back (via [onExpandRequest]). When expanded, shows
- * the query text + animated caret + clear button (if query non-empty).
- *
- * Width animation is driven by [animateDpAsState] so it ties into the same
- * frame budget as the rest of the overlay — no manual Animatable juggling.
- */
 @Composable
 private fun CollapsiblePill(
     expanded: Boolean,
@@ -435,11 +366,6 @@ private fun CollapsiblePill(
         label = "caret-alpha",
     )
 
-    // The pill animates between two visual modes:
-    //   - expanded: full-width 40dp rounded rect with search icon + query + caret
-    //   - collapsed: 40dp circle with just the search icon
-    // We use a Box overlay so the position stays consistent (always at the
-    // start) regardless of width.
     val horizontalPadding = animateDpAsState(
         targetValue = if (expanded) 12.dp else 0.dp,
         label = "pill-padding",
@@ -473,10 +399,6 @@ private fun CollapsiblePill(
                     )
                     Spacer(modifier = Modifier.width(10.dp))
                     if (query.isEmpty()) {
-                        // Empty state: just the blinking caret next to
-                        // the search icon. No "Search" hint — cleaner,
-                        // more minimal, the icon alone is a sufficient
-                        // affordance.
                         Spacer(modifier = Modifier.width(2.dp))
                         Box(
                             modifier = Modifier
@@ -518,8 +440,6 @@ private fun CollapsiblePill(
                 }
             }
         } else {
-            // Collapsed: just a 40dp circle on the left with the search icon.
-            // Tapping it re-expands the pill.
             FilledIconButton(
                 onClick = onExpandRequest,
                 modifier = Modifier.size(40.dp),

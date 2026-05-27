@@ -296,6 +296,40 @@ class RewordiumKeyboardService {
     }
   }
 
+  /// Returns "granted" if READ_CONTACTS is granted, "not_granted" otherwise.
+  static Future<String> getContactsPermissionStatus() async {
+    if (!_isAndroid) return 'not_granted';
+    try {
+      final result = await _channel.invokeMethod<String>('getContactsPermissionStatus');
+      return result ?? 'not_granted';
+    } on PlatformException catch (e) {
+      print('Error checking contacts permission: ${e.message}');
+      return 'not_granted';
+    }
+  }
+
+  /// Launches the contacts-permission rationale dialog from the keyboard module.
+  /// The dialog explains why contacts access helps and then shows the system prompt.
+  static Future<void> requestContactsPermission() async {
+    if (!_isAndroid) return;
+    try {
+      await _channel.invokeMethod('requestContactsPermission');
+    } on PlatformException catch (e) {
+      print('Error requesting contacts permission: ${e.message}');
+    }
+  }
+
+  /// Enable or disable contact-name suggestions. When enabled and permission
+  /// is granted, contact names appear in swipe and tap suggestions.
+  static Future<void> setUseContactsForSuggestions(bool enabled) async {
+    if (!_isAndroid) return;
+    try {
+      await _channel.invokeMethod('setUseContactsForSuggestions', {'enabled': enabled});
+    } on PlatformException catch (e) {
+      print('Error setting use contacts for suggestions: ${e.message}');
+    }
+  }
+
   /// Toggle glide typing (FlorisBoard integration)
   static Future<void> setGlideTypingEnabled(bool enabled) async {
     if (!_isAndroid) return;

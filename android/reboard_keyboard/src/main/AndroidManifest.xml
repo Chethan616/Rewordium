@@ -85,6 +85,13 @@
             </intent-filter>
         </activity>
 
+        <!-- Contacts permission rationale + system dialog trampoline.
+             Transparent theme so only the AlertDialog is visible. -->
+        <activity
+            android:name="com.noxquill.rewordium.keyboard.app.ContactsPermissionActivity"
+            android:theme="@style/FlorisAppTheme.Transparent"
+            android:exported="false"/>
+
         <!-- Crash Dialog Activity -->
         <activity
             android:name="com.noxquill.rewordium.keyboard.lib.crashutility.CrashDialogActivity"

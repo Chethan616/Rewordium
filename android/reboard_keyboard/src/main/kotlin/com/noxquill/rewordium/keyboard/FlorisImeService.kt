@@ -42,7 +42,6 @@ import android.widget.inline.InlinePresentationSpec
 import androidx.annotation.RequiresApi
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.animation.animateContentSize
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
@@ -287,6 +286,14 @@ class FlorisImeService : LifecycleInputMethodService() {
 
     private val wallpaperChangeReceiver = WallpaperChangeReceiver()
 
+    private val contactsReloadReceiver = object : android.content.BroadcastReceiver() {
+        override fun onReceive(context: android.content.Context?, intent: android.content.Intent?) {
+            if (intent?.action == com.noxquill.rewordium.keyboard.app.ContactsPermissionActivity.ACTION_RELOAD_CONTACTS) {
+                nlpManager.reloadContactsNow()
+            }
+        }
+    }
+
     init {
         setTheme(R.style.FlorisImeTheme)
     }
@@ -314,6 +321,10 @@ class FlorisImeService : LifecycleInputMethodService() {
         }
         @Suppress("DEPRECATION") // We do not retrieve the wallpaper but only listen to changes
         registerReceiver(wallpaperChangeReceiver, IntentFilter(Intent.ACTION_WALLPAPER_CHANGED))
+        registerReceiver(
+            contactsReloadReceiver,
+            IntentFilter(com.noxquill.rewordium.keyboard.app.ContactsPermissionActivity.ACTION_RELOAD_CONTACTS),
+        )
     }
 
     override fun onCreateInputView(): View {
@@ -358,6 +369,7 @@ class FlorisImeService : LifecycleInputMethodService() {
     override fun onDestroy() {
         super.onDestroy()
         unregisterReceiver(wallpaperChangeReceiver)
+        unregisterReceiver(contactsReloadReceiver)
         FlorisImeServiceReference = WeakReference(null)
         inputWindowView = null
     }
@@ -391,6 +403,14 @@ class FlorisImeService : LifecycleInputMethodService() {
 
     private fun syncOnboardingKeyboardPreferences() {
         val flutterPrefs = getSharedPreferences(FLUTTER_PREFS_NAME, Context.MODE_PRIVATE)
+
+        // Persist use-contacts setting written by Flutter app immediately (no
+        // clear-after-sync — the app can toggle it repeatedly).
+        if (flutterPrefs.contains("flutter.keyboard_use_contacts")) {
+            val useContacts = flutterPrefs.getBoolean("flutter.keyboard_use_contacts", true)
+            lifecycleScope.launch { prefs.spelling.useContacts.set(useContacts) }
+        }
+
         val hasOnboardingKeyboardPrefs = flutterPrefs.contains(KEY_ONBOARDING_NUMBER_ROW) ||
             flutterPrefs.contains(KEY_ONBOARDING_CLIPBOARD_SUGGESTIONS) ||
             flutterPrefs.contains(KEY_ONBOARDING_HAPTICS_ENABLED) ||
@@ -772,6 +792,12 @@ class FlorisImeService : LifecycleInputMethodService() {
                         // search overlay above it. This grows the IME view
                         // — wrapContentHeight on the parent makes that fine.
                         val emojiSearchActive by keyboardManager.emojiSearchQuery.collectAsState()
+                        // Derive effective mode from the single emojiSearchActive state so
+                        // the AnimatedVisibility and the keyboard switch below always change
+                        // in the same recomposition frame — eliminating the race condition
+                        // that caused intermittent tearing when two separate StateFlows
+                        // (imeUiMode + emojiSearchQuery) landed in different frames.
+                        val effectiveImeMode = if (emojiSearchActive != null) ImeUiMode.TEXT else state.imeUiMode
                         Box(
                             modifier = Modifier
                                 .weight(keyboardWeight)
@@ -781,17 +807,6 @@ class FlorisImeService : LifecycleInputMethodService() {
                                 modifier = Modifier
                                     .fillMaxWidth()
                                     .wrapContentHeight(),
-                                // No animateContentSize here. It double-
-                                // animates against AnimatedVisibility's own
-                                // expandVertically: the slot is already
-                                // growing per-frame, and a second smoothing
-                                // pass on the parent introduces a one-frame
-                                // size lag that surfaces as a visible gap
-                                // at the keyboard's bottom edge in hosts
-                                // (Chrome) that re-measure aggressively.
-                                // Letting expandVertically be the only
-                                // height driver keeps the column tightly
-                                // in sync with what's painted.
                             ) {
                                 // Staged Gboard-style transition:
                                 //
@@ -852,7 +867,7 @@ class FlorisImeService : LifecycleInputMethodService() {
                                 ) {
                                     EmojiSearchOverlay()
                                 }
-                                when (state.imeUiMode) {
+                                when (effectiveImeMode) {
                                     ImeUiMode.TEXT -> TextInputLayout()
                                     ImeUiMode.MEDIA -> MediaInputLayout()
                                     ImeUiMode.CLIPBOARD -> ClipboardInputLayout()

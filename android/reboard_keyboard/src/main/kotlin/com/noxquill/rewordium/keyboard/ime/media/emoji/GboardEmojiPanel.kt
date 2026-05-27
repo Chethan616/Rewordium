@@ -33,12 +33,14 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.GridItemSpan
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.PagerState
 import androidx.compose.foundation.pager.rememberPagerState
@@ -71,6 +73,7 @@ import androidx.compose.ui.unit.sp
 import com.noxquill.rewordium.keyboard.app.FlorisPreferenceStore
 import com.noxquill.rewordium.keyboard.editorInstance
 import com.noxquill.rewordium.keyboard.ime.ImeUiMode
+import com.noxquill.rewordium.keyboard.ime.input.LocalInputFeedbackController
 import com.noxquill.rewordium.keyboard.ime.text.key.KeyCode
 import com.noxquill.rewordium.keyboard.ime.text.keyboard.TextKeyData
 import com.noxquill.rewordium.keyboard.ime.theme.FlorisImeUi
@@ -125,6 +128,7 @@ fun GboardEmojiPanel(
     val subtypeManager by context.subtypeManager()
     val prefs by FlorisPreferenceStore
     val scope = rememberCoroutineScope()
+    val inputFeedbackController = LocalInputFeedbackController.current
     // Snapshot history once per panel mount. The panel rebuilds on
     // open/close so we don't need a reactive subscription — when the user
     // picks an emoji and the panel re-renders, the next snapshot includes
@@ -168,26 +172,24 @@ fun GboardEmojiPanel(
     )
     val accentColor = enterKeyStyle.background(default = onContainer)
 
-    // Search-pill collapse: mirrors EmojiSearchOverlay's behaviour —
-    // collapses to a circle while the user swipes through categories,
-    // expands back ~300ms after the scroll settles.
+    // Search-pill collapse: collapses to a circle while the user swipes
+    // through categories or tabs. Only re-expands if the user explicitly taps it.
     var searchPillExpanded by remember { mutableStateOf(true) }
-    LaunchedEffect(pagerState) {
-        // Skip the initial false→false emission that fires on first
-        // composition (pager isn't scrolling yet). Without this the
-        // pill would briefly collapse and re-expand on mount.
-        var hasSeenScroll = false
-        snapshotFlow { pagerState.isScrollInProgress }
-            .distinctUntilChanged()
-            .collect { scrolling ->
-                if (scrolling) {
-                    hasSeenScroll = true
-                    searchPillExpanded = false
-                } else if (hasSeenScroll) {
-                    delay(300)
-                    searchPillExpanded = true
+    val categoryListState = rememberLazyListState()
+
+    LaunchedEffect(pagerState, categoryListState) {
+        launch {
+            snapshotFlow { pagerState.isScrollInProgress }
+                .collect { scrolling ->
+                    if (scrolling) searchPillExpanded = false
                 }
-            }
+        }
+        launch {
+            snapshotFlow { categoryListState.isScrollInProgress }
+                .collect { scrolling ->
+                    if (scrolling) searchPillExpanded = false
+                }
+        }
     }
 
     SnyggBox(
@@ -201,16 +203,22 @@ fun GboardEmojiPanel(
                 fg = onContainer,
                 accent = accentColor,
                 searchPillExpanded = searchPillExpanded,
+                categoryListState = categoryListState,
                 onBackClick = {
+                    inputFeedbackController.keyPress(TextKeyData.UNSPECIFIED)
                     keyboardManager.activeState.imeUiMode = ImeUiMode.TEXT
                 },
                 onSearchClick = {
+                    inputFeedbackController.keyPress(TextKeyData.UNSPECIFIED)
                     keyboardManager.beginEmojiSearch()
-                    keyboardManager.activeState.imeUiMode = ImeUiMode.TEXT
                 },
                 onCategoryClick = { idx ->
+                    inputFeedbackController.keyPress(TextKeyData.UNSPECIFIED)
                     scope.launch { pagerState.animateScrollToPage(idx) }
                 },
+                onSearchPillTapToExpand = {
+                    searchPillExpanded = true
+                }
             )
 
             // Per-category emoji grid, swipeable.
@@ -226,6 +234,7 @@ fun GboardEmojiPanel(
                     fullEmojiMappings = fullEmojiMappings,
                     historyData = historyData,
                     onEmojiPicked = { emoji ->
+                        inputFeedbackController.keyPress(TextKeyData.UNSPECIFIED)
                         editorInstance.commitText(emoji.value)
                         scope.launch {
                             EmojiHistoryHelper.markEmojiUsed(prefs, emoji)
@@ -238,9 +247,11 @@ fun GboardEmojiPanel(
                 fg = onContainer,
                 accent = accentColor,
                 onAbcClick = {
+                    inputFeedbackController.keyPress(TextKeyData.UNSPECIFIED)
                     keyboardManager.activeState.imeUiMode = ImeUiMode.TEXT
                 },
                 onDeleteClick = {
+                    inputFeedbackController.keyPress(TextKeyData.DELETE)
                     keyboardManager.inputEventDispatcher.sendDownUp(TextKeyData.DELETE)
                 },
             )
@@ -259,9 +270,11 @@ private fun EmojiPanelHeader(
     fg: Color,
     accent: Color,
     searchPillExpanded: Boolean,
+    categoryListState: LazyListState,
     onBackClick: () -> Unit,
     onSearchClick: () -> Unit,
     onCategoryClick: (Int) -> Unit,
+    onSearchPillTapToExpand: () -> Unit,
 ) {
     val chipBg = fg.copy(alpha = 0.08f)
     val pillBg = fg.copy(alpha = 0.08f)
@@ -315,7 +328,13 @@ private fun EmojiPanelHeader(
                 .height(36.dp)
                 .clip(RoundedCornerShape(pillCorner))
                 .background(pillBg)
-                .clickable(onClick = onSearchClick)
+                .clickable(onClick = {
+                    if (searchPillExpanded) {
+                        onSearchClick()
+                    } else {
+                        onSearchPillTapToExpand()
+                    }
+                })
                 .padding(horizontal = if (searchPillExpanded) 12.dp else 0.dp),
             contentAlignment = if (searchPillExpanded) Alignment.CenterStart else Alignment.Center,
         ) {
@@ -341,6 +360,7 @@ private fun EmojiPanelHeader(
         // Category icons. Horizontal scroll so the full set fits even on
         // narrow devices. Active one gets a tinted disc background.
         LazyRow(
+            state = categoryListState,
             modifier = Modifier.weight(1f),
             horizontalArrangement = Arrangement.spacedBy(2.dp),
             verticalAlignment = Alignment.CenterVertically,
