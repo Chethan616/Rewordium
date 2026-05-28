@@ -77,6 +77,8 @@ import org.florisboard.lib.snygg.ui.SnyggSpacer
 import org.florisboard.lib.snygg.ui.SnyggText
 import org.florisboard.lib.snygg.ui.rememberSnyggThemeQuery
 
+import androidx.compose.runtime.rememberUpdatedState
+
 val CandidatesRowScrollbarHeight = 2.dp
 
 @Composable
@@ -251,6 +253,8 @@ private fun CandidateItem(
     longPressDelay: Long,
 ) = with(LocalDensity.current) {
     var isPressed by remember { mutableStateOf(false) }
+    val currentOnClick by rememberUpdatedState(onClick)
+    val currentOnLongPress by rememberUpdatedState(onLongPress)
 
     val elementName = if (candidate is ClipboardSuggestionCandidate) {
         FlorisImeUi.SmartbarCandidateClip
@@ -277,14 +281,14 @@ private fun CandidateItem(
                         }
                         upOrCancel?.let { if (it.pressed != it.previousPressed) it.consume() }
                     } catch (_: PointerEventTimeoutCancellationException) {
-                        if (onLongPress()) {
+                        if (currentOnLongPress()) {
                             upOrCancel = null
                             isPressed = false
                         }
                         waitForUpOrCancellation()?.let { if (it.pressed != it.previousPressed) it.consume() }
                     }
                     if (upOrCancel != null) {
-                        onClick()
+                        currentOnClick()
                     }
                     isPressed = false
                 }
