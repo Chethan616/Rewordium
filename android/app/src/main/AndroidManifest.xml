@@ -127,6 +127,17 @@
                 <data android:scheme="rewordium" android:host="tools"/>
                 <data android:scheme="rewordium" android:host="jade_ai"/>
             </intent-filter>
+            
+            <!-- Android App Links for rewordium.tech -->
+            <intent-filter android:autoVerify="true">
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="http" />
+                <data android:scheme="https" />
+                <data android:host="rewordium.tech" />
+                <data android:host="www.rewordium.tech" />
+            </intent-filter>
             <!-- App Shortcuts meta-data -->
             <meta-data
                 android:name="android.app.shortcuts"
