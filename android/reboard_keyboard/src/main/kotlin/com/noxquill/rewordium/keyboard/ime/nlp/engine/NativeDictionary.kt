@@ -174,6 +174,25 @@ class NativeDictionary {
         return LatinImeNative.nativeAddUnigram(handleRef, word, clamped)
     }
 
+    /**
+     * Drop a previously-added unigram so the native suggest path stops
+     * surfacing it in the current session. Mirrors [addLearnedWord]; called
+     * from the unlearn path in [LatinLanguageProvider] when the user signals
+     * "no, not that word" via an immediate backspace right after committing.
+     *
+     * Without this, an unlearn that updates the in-memory map + learnedStore
+     * still leaves the native dict pushing the rejected word until the next
+     * IME process restart.
+     *
+     * No-op when the native dict isn't loaded. Returns false on invalid
+     * handle, empty word, or "word not present" — all treatable as success
+     * by the caller.
+     */
+    fun removeLearnedWord(word: String): Boolean {
+        if (!loaded || word.isEmpty()) return false
+        return LatinImeNative.nativeRemoveUnigram(handleRef, word)
+    }
+
     private fun populateFromAssets(context: Context, h: Long): Boolean {
         val json = Json { ignoreUnknownKeys = true }
         // Unigrams: { "word": 0..255, ... }

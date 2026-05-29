@@ -185,6 +185,7 @@ class EditorInstance(context: Context) : AbstractEditorInstance(context) {
         // Cursor move — the just-committed gesture word is no longer the
         // tail of the editor's text, so the fallback word-delete is unsafe.
         lastGestureCommitLength = 0
+        lastCommittedNovelWord = null
         autoSpace.setInactive()
         phantomSpace.setInactive()
         val selection = EditorRange.normalized(start, end)
@@ -379,6 +380,7 @@ class EditorInstance(context: Context) : AbstractEditorInstance(context) {
      * @return True on success, false if an error occurred or the input connection is invalid.
      */
     fun commitGesture(text: String): Boolean {
+        lastCommittedNovelWord = null
         if (text.isEmpty() || activeInfo.isRawInputEditor) return false
         val isPhantomSpaceActive = phantomSpace.determine(text, forceActive = true)
         phantomSpace.setActive(
@@ -510,6 +512,7 @@ class EditorInstance(context: Context) : AbstractEditorInstance(context) {
      * @return True on success, false if an error occurred or the input connection is invalid.
      */
     fun deleteForwards(unit: OperationUnit): Boolean {
+        lastCommittedNovelWord = null
         val content = activeContent
         autoSpace.setInactive()
         phantomSpace.setInactive()
@@ -521,6 +524,7 @@ class EditorInstance(context: Context) : AbstractEditorInstance(context) {
     }
 
     fun setSelectionSurrounding(n: Int, unit: OperationUnit, scope: OperationScope): Boolean {
+        lastCommittedNovelWord = null
         autoSpace.setInactive()
         phantomSpace.setInactive()
         val content = activeContent
@@ -564,6 +568,7 @@ class EditorInstance(context: Context) : AbstractEditorInstance(context) {
      * @return True on success, false if an error occurred or the input connection is invalid.
      */
     fun performClipboardCut(): Boolean {
+        lastCommittedNovelWord = null
         autoSpace.setInactive()
         phantomSpace.setInactive()
         val text = activeContent.selectedText.ifBlank { currentInputConnection()?.getSelectedText(0) }
@@ -582,6 +587,7 @@ class EditorInstance(context: Context) : AbstractEditorInstance(context) {
      * @return True on success, false if an error occurred or the input connection is invalid.
      */
     fun performClipboardCopy(): Boolean {
+        lastCommittedNovelWord = null
         autoSpace.setInactive()
         phantomSpace.setInactive()
         val text = activeContent.selectedText.ifBlank { currentInputConnection()?.getSelectedText(0) }
@@ -601,6 +607,7 @@ class EditorInstance(context: Context) : AbstractEditorInstance(context) {
      * @return True on success, false if an error occurred or the input connection is invalid.
      */
     fun performClipboardPaste(): Boolean {
+        lastCommittedNovelWord = null
         autoSpace.setInactive()
         phantomSpace.setInactive()
         return commitClipboardItem(clipboardManager.primaryClip).also { result ->
@@ -617,6 +624,7 @@ class EditorInstance(context: Context) : AbstractEditorInstance(context) {
      * @return True on success, false if an error occurred or the input connection is invalid.
      */
     fun performClipboardSelectAll(): Boolean {
+        lastCommittedNovelWord = null
         autoSpace.setInactive()
         phantomSpace.setInactive()
         val ic = currentInputConnection() ?: return false
@@ -634,6 +642,7 @@ class EditorInstance(context: Context) : AbstractEditorInstance(context) {
      * @return True on success, false if an error occurred or the input connection is invalid.
      */
     fun performEnter(): Boolean {
+        lastCommittedNovelWord = null
         autoSpace.setInactive()
         phantomSpace.setInactive()
         return if (activeInfo.isRawInputEditor) {
@@ -659,6 +668,7 @@ class EditorInstance(context: Context) : AbstractEditorInstance(context) {
      * @return True on success, false if an error occurred or the input connection is invalid.
      */
     fun performEnterAction(action: ImeOptions.Action): Boolean {
+        lastCommittedNovelWord = null
         autoSpace.setInactive()
         phantomSpace.setInactive()
         val ic = currentInputConnection() ?: return false
@@ -671,6 +681,7 @@ class EditorInstance(context: Context) : AbstractEditorInstance(context) {
      * @return True on success, false if an error occurred or the input connection is invalid.
      */
     fun performUndo(): Boolean {
+        lastCommittedNovelWord = null
         autoSpace.setInactive()
         phantomSpace.setInactive()
         return sendDownUpKeyEvent(KeyEvent.KEYCODE_Z, meta(ctrl = true))
@@ -682,6 +693,7 @@ class EditorInstance(context: Context) : AbstractEditorInstance(context) {
      * @return True on success, false if an error occurred or the input connection is invalid.
      */
     fun performRedo(): Boolean {
+        lastCommittedNovelWord = null
         autoSpace.setInactive()
         phantomSpace.setInactive()
         return sendDownUpKeyEvent(KeyEvent.KEYCODE_Z, meta(ctrl = true, shift = true))
@@ -689,6 +701,7 @@ class EditorInstance(context: Context) : AbstractEditorInstance(context) {
 
     override fun reset() {
         super.reset()
+        lastCommittedNovelWord = null
         autoSpace.setInactive()
         phantomSpace.setInactive()
         massSelection.reset()

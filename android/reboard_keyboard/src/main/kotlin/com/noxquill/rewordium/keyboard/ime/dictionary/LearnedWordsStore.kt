@@ -135,6 +135,24 @@ class LearnedWordsStore(private val context: Context) {
     }
 
     /**
+     * Returns the [n] most-recently-typed words for [locale] (highest `t`).
+     * Used by the glide classifier to break ties between top-tier candidates
+     * (e.g. graduated personal word "okays" vs dict word "okra" — both at the
+     * frequency cap, identical shape, so without a recency signal the dict
+     * word can win after a context reset). Recency persists across IME
+     * process restarts because the timestamp lives on disk.
+     */
+    fun mostRecent(locale: FlorisLocale, n: Int): Set<String> {
+        if (n <= 0) return emptySet()
+        val sub = perLocale[locale.languageTag()] ?: return emptySet()
+        return sub.entries
+            .sortedByDescending { it.value.t }
+            .asSequence()
+            .take(n)
+            .mapTo(HashSet(n.coerceAtMost(sub.size))) { it.key }
+    }
+
+    /**
      * Bump the frequency of [word] under [locale]. Non-suspending. Hot path
      * called once per word commit — must be cheap and non-blocking.
      */

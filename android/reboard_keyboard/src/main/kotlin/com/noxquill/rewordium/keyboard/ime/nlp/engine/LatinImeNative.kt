@@ -35,7 +35,7 @@ import com.noxquill.rewordium.keyboard.lib.devtools.flogError
  */
 object LatinImeNative {
     /** Bump in lockstep with `nativeAbiVersion` in `latinime_jni.cpp`. */
-    private const val EXPECTED_ABI_VERSION = 5
+    private const val EXPECTED_ABI_VERSION = 6
 
     /** Sentinel for "open failed" — Kotlin must not pass 0 back to native. */
     const val INVALID_HANDLE: Long = 0L
@@ -121,6 +121,16 @@ object LatinImeNative {
      * handle, empty word, or AOSP rejection.
      */
     external fun nativeAddUnigram(handle: Long, word: String, probability: Int): Boolean
+
+    /**
+     * Remove a unigram entry. Used by the unlearn path so a word the user
+     * explicitly rejected (immediate backspace after committing a learned
+     * word) is purged from the native suggest path in the same session,
+     * not just from the persistent learnedStore. Returns false on invalid
+     * handle, empty word, or "word not present" — the caller can treat
+     * those as no-ops.
+     */
+    external fun nativeRemoveUnigram(handle: Long, word: String): Boolean
 
     /**
      * Add a bigram entry chaining [prevWord] → [word]. Both endpoints

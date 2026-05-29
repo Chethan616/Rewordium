@@ -53,7 +53,10 @@
       "Bash(adb logcat *)",
       "Bash(grep -E \"\\\\.\\(kt|dart\\)$\")",
       "Bash(grep -E \"\\\\.dart$\")",
-      "Bash(grep -E \"\\\\.\\(kt|java\\)$\")"
+      "Bash(grep -E \"\\\\.\\(kt|java\\)$\")",
+      "Bash(xargs grep -l \"suggestion\" -i)",
+      "Bash(xargs grep -l \"SmartbarUI\\\\|SuggestionStrip\")",
+      "Bash(./gradlew :reboard_keyboard:externalNativeBuildDebug)"
     ]
   }
 }
