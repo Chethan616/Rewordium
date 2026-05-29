@@ -28,6 +28,7 @@ import java.io.File
 import java.util.concurrent.atomic.AtomicInteger
 import com.noxquill.rewordium.keyboard.ime.core.Subtype
 import com.noxquill.rewordium.keyboard.ime.dictionary.DictionaryManager
+import com.noxquill.rewordium.keyboard.ime.dictionary.LearnedBigramsStore
 import com.noxquill.rewordium.keyboard.ime.dictionary.LearnedWordsStore
 import com.noxquill.rewordium.keyboard.ime.editor.EditorContent
 import com.noxquill.rewordium.keyboard.ime.nlp.SpellingProvider
@@ -38,6 +39,7 @@ import com.noxquill.rewordium.keyboard.ime.nlp.WordSuggestionCandidate
 import com.noxquill.rewordium.keyboard.ime.nlp.engine.ContactsLoader
 import com.noxquill.rewordium.keyboard.ime.nlp.engine.NativeDictionary
 import com.noxquill.rewordium.keyboard.BuildConfig
+import com.noxquill.rewordium.keyboard.lib.FlorisLocale
 import com.noxquill.rewordium.keyboard.lib.devtools.flogDebug
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableSharedFlow
@@ -54,10 +56,16 @@ class LatinLanguageProvider(context: Context) : SpellingProvider, SuggestionProv
     companion object {
         const val ProviderId = "org.florisboard.nlp.providers.latin"
         private const val LEARNED_BIGRAMS_PREFS = "reboard_learned_bigrams"
-        private const val MAX_LEARNED_SCORE = 200
         private const val BIGRAM_BOOST_FACTOR = 2.0
         private const val RECENCY_BOOST = 30
         private const val MAX_RECENCY_WORDS = 20
+        // Multiplicative boost applied to recently-learned words in the
+        // glide-classifier's frequency map. Breaks ties between graduated
+        // personal words (cap = 1.0) and shape-similar dict words also at
+        // cap. 1.15 is small enough that it never lets a low-freq word beat
+        // a much higher-freq one, but large enough to consistently win
+        // against equally-frequent stale candidates.
+        private const val GLIDE_RECENCY_BOOST = 1.15
 
         // Binary cache magic header — bump when format changes.
         private const val CACHE_MAGIC = 0x52420002.toInt() // 'RB' + version 2
@@ -104,9 +112,12 @@ class LatinLanguageProvider(context: Context) : SpellingProvider, SuggestionProv
         MapSerializer(String.serializer(), Int.serializer())
     )
 
-    // User-learned bigrams stored in SharedPreferences
-    private val learnedBigrams = guardedByLock { mutableMapOf<String, MutableMap<String, Int>>() }
-    private var learnedBigramsPrefs: SharedPreferences? = null
+    // User-learned bigrams: persisted per-locale via [LearnedBigramsStore]
+    // (atomic JSON file at filesDir/learned_bigrams.json). Replaces the
+    // older SharedPreferences-backed scheme — we still open the legacy prefs
+    // once at preload time so existing users get migrated, then we clear it.
+    private val learnedBigramsStore = LearnedBigramsStore(context)
+    private var legacyLearnedBigramsPrefs: SharedPreferences? = null
 
     // Track the last committed word for bigram learning
     private var lastCommittedWord: String? = null
@@ -168,11 +179,17 @@ class LatinLanguageProvider(context: Context) : SpellingProvider, SuggestionProv
                 }
             }
         }
-        // Load user-learned bigrams from SharedPreferences
-        if (learnedBigramsPrefs == null) {
-            learnedBigramsPrefs = appContext.getSharedPreferences(LEARNED_BIGRAMS_PREFS, Context.MODE_PRIVATE)
+        // Load user-learned bigrams from the persistent JSON store. On the
+        // very first call after upgrade, [ensureLoaded] also reads the
+        // legacy SharedPreferences file and folds those entries in before
+        // clearing the prefs, so existing users keep their bigram history.
+        if (legacyLearnedBigramsPrefs == null) {
+            legacyLearnedBigramsPrefs = appContext.getSharedPreferences(
+                LEARNED_BIGRAMS_PREFS,
+                Context.MODE_PRIVATE,
+            )
         }
-        loadLearnedBigrams()
+        learnedBigramsStore.ensureLoaded(legacyLearnedBigramsPrefs)
 
         // Merge persisted personal vocabulary into wordData so the glide
         // decoder sees user-learned words on the very first suggestion call
@@ -426,18 +443,34 @@ class LatinLanguageProvider(context: Context) : SpellingProvider, SuggestionProv
         if (word.length < LEARN_WORD_MIN_LEN || word.length > LEARN_WORD_MAX_LEN) return
         if (!LEARN_WORD_PATTERN.matches(word)) return
 
-        wordData.withLock { data ->
-            data.remove(word)
+        // Only unlearn words that the user actually taught us. The caller
+        // (EditorInstance.deleteBackwards via lastCommittedNovelWord) already
+        // scopes this to "the word the user just committed and immediately
+        // backspaced", but that word may still be a built-in dict entry the
+        // user happened to type then delete — touching that would be wrong.
+        // The learnedStore is the source of truth for "what we learned".
+        val wasLearned = learnedStore.snapshot(subtype.primaryLocale).containsKey(word)
+        if (!wasLearned) return
+
+        // Symmetric purge across all three suggestion sources so the rejected
+        // word stops surfacing IMMEDIATELY (Kotlin suggest path, native
+        // suggest path, and glide classifier) — not just after the next
+        // IME process restart.
+        wordData.withLock { data -> data.remove(word) }
+
+        if (BuildConfig.ENABLE_NATIVE_SUGGESTER && nativeDictionary.isLoaded) {
+            nativeDictionary.removeLearnedWord(word)
         }
 
-        // Bumping by -255 completely removes it from the learnedStore database
+        // -255 fully removes the entry from the persisted learnedStore so
+        // it won't be restored on the next process restart.
         learnedStore.bump(
             subtype.primaryLocale,
             word,
             freqDelta = -255,
         )
-        
-        // Immediately force rebuild so it disappears from glide
+
+        // Force a glide-classifier rebuild so swipe input drops the word too.
         _wordDataDirtyFlow.tryEmit(subtype)
     }
 
@@ -550,43 +583,12 @@ class LatinLanguageProvider(context: Context) : SpellingProvider, SuggestionProv
     }
 
     /**
-     * Load user-learned bigrams from SharedPreferences.
-     * Format: key = "prev_word", value = "next1:score1,next2:score2,..."
+     * Persist a `prevWord → nextWord` transition for [locale]. Delegates to
+     * [LearnedBigramsStore.bump]; that path is non-blocking and debounces
+     * disk writes by 2s under the hood.
      */
-    private suspend fun loadLearnedBigrams() {
-        learnedBigrams.withLock { data ->
-            if (data.isEmpty()) {
-                learnedBigramsPrefs?.all?.forEach { (key, value) ->
-                    if (value is String && value.isNotBlank()) {
-                        val nextWords = mutableMapOf<String, Int>()
-                        value.split(",").forEach { entry ->
-                            val parts = entry.split(":")
-                            if (parts.size == 2) {
-                                nextWords[parts[0]] = parts[1].toIntOrNull() ?: 1
-                            }
-                        }
-                        if (nextWords.isNotEmpty()) {
-                            data[key] = nextWords
-                        }
-                    }
-                }
-            }
-        }
-    }
-
-    /**
-     * Save a learned bigram to SharedPreferences.
-     */
-    private suspend fun saveLearnedBigram(prevWord: String, nextWord: String) {
-        learnedBigrams.withLock { data ->
-            val nextWords = data.getOrPut(prevWord) { mutableMapOf() }
-            val current = nextWords.getOrDefault(nextWord, 0)
-            nextWords[nextWord] = (current + 5).coerceAtMost(MAX_LEARNED_SCORE)
-
-            // Persist to SharedPreferences
-            val serialized = nextWords.entries.joinToString(",") { "${it.key}:${it.value}" }
-            learnedBigramsPrefs?.edit()?.putString(prevWord, serialized)?.apply()
-        }
+    private fun saveLearnedBigram(locale: FlorisLocale, prevWord: String, nextWord: String) {
+        learnedBigramsStore.bump(locale, prevWord, nextWord)
     }
 
     /**
@@ -740,7 +742,7 @@ class LatinLanguageProvider(context: Context) : SpellingProvider, SuggestionProv
 
         // Get bigram suggestions for the previous word
         val bigramSuggestions = if (previousWord != null) {
-            getBigramSuggestions(previousWord, composingWord)
+            getBigramSuggestions(subtype.primaryLocale, previousWord, composingWord)
         } else {
             emptyMap()
         }
@@ -849,7 +851,11 @@ class LatinLanguageProvider(context: Context) : SpellingProvider, SuggestionProv
      * Get combined bigram suggestions from both static and learned bigrams.
      * If composingWord is non-blank, only returns bigrams that start with it.
      */
-    private suspend fun getBigramSuggestions(previousWord: String, composingWord: String): Map<String, Int> {
+    private suspend fun getBigramSuggestions(
+        locale: FlorisLocale,
+        previousWord: String,
+        composingWord: String,
+    ): Map<String, Int> {
         val prev = previousWord.lowercase()
         val result = mutableMapOf<String, Int>()
 
@@ -862,13 +868,13 @@ class LatinLanguageProvider(context: Context) : SpellingProvider, SuggestionProv
             }
         }
 
-        // Learned bigrams (higher weight since personalized)
-        learnedBigrams.withLock { data ->
-            data[prev]?.forEach { (word, score) ->
-                if (composingWord.isBlank() || word.startsWith(composingWord)) {
-                    val learnedBoost = (score * 1.2).toInt() // Slightly favor learned patterns
-                    result[word] = (result.getOrDefault(word, 0) + learnedBoost).coerceAtMost(255)
-                }
+        // Learned bigrams from the persistent JSON store. Higher weight than
+        // static bigrams because the user's own typing history is a stronger
+        // signal than corpus frequencies.
+        learnedBigramsStore.snapshot(locale)[prev]?.forEach { (word, score) ->
+            if (composingWord.isBlank() || word.startsWith(composingWord)) {
+                val learnedBoost = (score * 1.2).toInt()
+                result[word] = (result.getOrDefault(word, 0) + learnedBoost).coerceAtMost(255)
             }
         }
 
@@ -909,7 +915,7 @@ class LatinLanguageProvider(context: Context) : SpellingProvider, SuggestionProv
         // Learn bigram: if we have a previous word, save the pair
         lastCommittedWord?.let { prev ->
             if (prev.isNotBlank() && prev != accepted) {
-                saveLearnedBigram(prev, accepted)
+                saveLearnedBigram(subtype.primaryLocale, prev, accepted)
             }
         }
 
@@ -959,7 +965,29 @@ class LatinLanguageProvider(context: Context) : SpellingProvider, SuggestionProv
     }
 
     override suspend fun getFrequencyMap(subtype: Subtype): Map<String, Double> {
-        return wordData.withLock { data -> data.mapValues { it.value / 255.0 } }
+        // Recency boost: words the user has typed most recently get a small
+        // multiplier so they reliably outrank shape-similar dict words at
+        // the same nominal frequency. Without this, after a context reset
+        // (Send / clear), a graduated personal word at freq=255 ties with
+        // top-tier dict entries also at freq=255 — shape decides — and the
+        // user's word often loses by a hair. With the boost, "okays" stays
+        // ahead of "okra" / "okay" / "owners" until the user actually starts
+        // typing other words.
+        //
+        // Recency lives in [learnedStore], so this boost is persistent
+        // across IME process restarts — not just within a session.
+        //
+        // This map is consumed exclusively by the glide classifier
+        // ([StatisticalGlideTypingClassifier.setWordData]); returning values
+        // marginally above 1.0 is intentional and fits the classifier's
+        // multiplicative scoring at line 384.
+        val recent = learnedStore.mostRecent(subtype.primaryLocale, MAX_RECENCY_WORDS)
+        return wordData.withLock { data ->
+            data.mapValues { (word, freq) ->
+                val base = freq / 255.0
+                if (word in recent) base * GLIDE_RECENCY_BOOST else base
+            }
+        }
     }
 
     override suspend fun destroy() {

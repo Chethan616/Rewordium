@@ -170,7 +170,7 @@ Java_com_noxquill_rewordium_keyboard_ime_nlp_engine_LatinImeNative_nativeAbiVers
     // changed signatures). The Kotlin side asserts against an expected value
     // at load time so we fail fast on a stale .so / .kt mismatch rather than
     // crashing later inside a real call.
-    return 5;
+    return 6;
 }
 
 // ─── ProximityInfo lifecycle (Phase 5d.1) ─────────────────────────────────
@@ -270,6 +270,17 @@ Java_com_noxquill_rewordium_keyboard_ime_nlp_engine_LatinImeNative_nativeAddUnig
             HistoricalInfo());
     const CodePointArrayView view(codePoints.data(), codePoints.size());
     return dict->addUnigramEntry(view, &unigramProperty) ? JNI_TRUE : JNI_FALSE;
+}
+
+JNIEXPORT jboolean JNICALL
+Java_com_noxquill_rewordium_keyboard_ime_nlp_engine_LatinImeNative_nativeRemoveUnigram(
+        JNIEnv* env, jobject /* this */, jlong handle, jstring word) {
+    Dictionary* dict = DictFromHandle(handle);
+    if (dict == nullptr) return JNI_FALSE;
+    const std::vector<int> codePoints = JStringToCodePoints(env, word);
+    if (codePoints.empty()) return JNI_FALSE;
+    const CodePointArrayView view(codePoints.data(), codePoints.size());
+    return dict->removeUnigramEntry(view) ? JNI_TRUE : JNI_FALSE;
 }
 
 JNIEXPORT jboolean JNICALL
