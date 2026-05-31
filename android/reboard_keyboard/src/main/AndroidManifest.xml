@@ -14,6 +14,9 @@
          Never auto-requested — the user must grant it from settings. -->
     <uses-permission android:name="android.permission.READ_CONTACTS"/>
 
+    <!-- Required for the GIF picker (KLIPY API). All requests are HTTPS. -->
+    <uses-permission android:name="android.permission.INTERNET"/>
+
     <!-- Android 11+ only: Define that ReBoard requests to see all apps that
           ship with an IME or Spell Check service. This is used to guide the user
           in the Settings Ui why ReBoard may not be working.
@@ -25,6 +28,12 @@
         <intent>
             <action android:name="android.service.textservice.SpellCheckerService"/>
         </intent>
+        <!-- Android 11+ package visibility: allow querying WhatsApp's sticker
+             content provider for the sticker panel's "WhatsApp packs" tier.
+             When WhatsApp isn't installed or denies access, the reader falls
+             back to user-imported stickers only. -->
+        <package android:name="com.whatsapp"/>
+        <package android:name="com.whatsapp.w4b"/>
     </queries>
 
     <application>
@@ -110,6 +119,15 @@
                 <data android:mimeType="image/*"/>
             </intent-filter>
         </activity>
+
+        <!-- Sticker Import Activity — transparent trampoline that hosts the
+             system image picker. The keyboard's InputMethodService can't use
+             rememberLauncherForActivityResult, so this thin Activity bridges
+             the gap. -->
+        <activity
+            android:name="com.noxquill.rewordium.keyboard.ime.media.sticker.StickerImportActivity"
+            android:theme="@android:style/Theme.Translucent.NoTitleBar"
+            android:exported="false"/>
 
         <!-- Clipboard Media File Provider -->
         <provider

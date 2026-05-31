@@ -807,13 +807,15 @@ class FlorisImeService : LifecycleInputMethodService() {
                         // cramped embedded version) and STACK an emoji
                         // search overlay above it. This grows the IME view
                         // — wrapContentHeight on the parent makes that fine.
-                        val emojiSearchActive by keyboardManager.emojiSearchQuery.collectAsState()
-                        // Derive effective mode from the single emojiSearchActive state so
-                        // the AnimatedVisibility and the keyboard switch below always change
-                        // in the same recomposition frame — eliminating the race condition
-                        // that caused intermittent tearing when two separate StateFlows
-                        // (imeUiMode + emojiSearchQuery) landed in different frames.
-                        val effectiveImeMode = if (emojiSearchActive != null) ImeUiMode.TEXT else state.imeUiMode
+                        val mediaSearchMode by keyboardManager.mediaSearchMode.collectAsState()
+                        val emojiSearchVisible = mediaSearchMode == com.noxquill.rewordium.keyboard.ime.keyboard.KeyboardManager.MediaSearchMode.EMOJI
+                        val mediaSearchActive = mediaSearchMode != com.noxquill.rewordium.keyboard.ime.keyboard.KeyboardManager.MediaSearchMode.NONE
+                        // GIF/sticker search reuses the keyboard's existing keystroke
+                        // routing — the QWERTY needs to be visible to feed the query.
+                        // Emoji search is a richer fullscreen overlay; the keyboard
+                        // below stays in TEXT so it's full-size, not the cramped
+                        // embedded variant.
+                        val effectiveImeMode = if (mediaSearchActive) ImeUiMode.TEXT else state.imeUiMode
                         Box(
                             modifier = Modifier
                                 .weight(keyboardWeight)
@@ -853,7 +855,7 @@ class FlorisImeService : LifecycleInputMethodService() {
                                 // bottom edge. Sub-200ms motion is below
                                 // the perception threshold for that lag
                                 androidx.compose.animation.AnimatedVisibility(
-                                    visible = emojiSearchActive != null,
+                                    visible = emojiSearchVisible,
                                     enter = androidx.compose.animation.fadeIn(
                                         animationSpec = androidx.compose.animation.core.tween(
                                             durationMillis = 140,
@@ -869,6 +871,28 @@ class FlorisImeService : LifecycleInputMethodService() {
                                     ),
                                 ) {
                                     EmojiSearchOverlay()
+                                }
+                                // GIF/sticker search overlay — stacks above the
+                                // QWERTY the same way emoji search does, but
+                                // renders the media-specific search experience.
+                                androidx.compose.animation.AnimatedVisibility(
+                                    visible = mediaSearchMode == com.noxquill.rewordium.keyboard.ime.keyboard.KeyboardManager.MediaSearchMode.GIF ||
+                                        mediaSearchMode == com.noxquill.rewordium.keyboard.ime.keyboard.KeyboardManager.MediaSearchMode.STICKER,
+                                    enter = androidx.compose.animation.fadeIn(
+                                        animationSpec = androidx.compose.animation.core.tween(
+                                            durationMillis = 140,
+                                            delayMillis = 60,
+                                            easing = androidx.compose.animation.core.EaseOut,
+                                        ),
+                                    ),
+                                    exit = androidx.compose.animation.fadeOut(
+                                        animationSpec = androidx.compose.animation.core.tween(
+                                            durationMillis = 90,
+                                            easing = androidx.compose.animation.core.EaseIn,
+                                        ),
+                                    ),
+                                ) {
+                                    com.noxquill.rewordium.keyboard.ime.media.MediaSearchOverlay()
                                 }
                                 when (effectiveImeMode) {
                                     ImeUiMode.TEXT -> TextInputLayout()

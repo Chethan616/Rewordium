@@ -48,7 +48,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.outlined.Backspace
+import androidx.compose.material.icons.automirrored.outlined.Backspace
 import androidx.compose.material.icons.outlined.Search
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -76,6 +76,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.noxquill.rewordium.keyboard.app.FlorisPreferenceStore
 import com.noxquill.rewordium.keyboard.editorInstance
+import com.noxquill.rewordium.keyboard.nlpManager
 import com.noxquill.rewordium.keyboard.ime.ImeUiMode
 import com.noxquill.rewordium.keyboard.ime.input.LocalInputFeedbackController
 import com.noxquill.rewordium.keyboard.ime.text.key.KeyCode
@@ -130,6 +131,7 @@ fun GboardEmojiPanel(
     val keyboardManager by context.keyboardManager()
     val editorInstance by context.editorInstance()
     val subtypeManager by context.subtypeManager()
+    val nlpManager by context.nlpManager()
     val prefs by FlorisPreferenceStore
     val scope = rememberCoroutineScope()
     val inputFeedbackController = LocalInputFeedbackController.current
@@ -181,6 +183,9 @@ fun GboardEmojiPanel(
     var searchPillExpanded by remember { mutableStateOf(true) }
     val categoryListState = rememberLazyListState()
 
+    // Panel mode state — lifted here so the header can adapt its search pill.
+    var panelMode by remember { mutableStateOf(EmojiPanelMode.EMOJI) }
+
     LaunchedEffect(pagerState, categoryListState) {
         launch {
             snapshotFlow { pagerState.isScrollInProgress }
@@ -201,6 +206,12 @@ fun GboardEmojiPanel(
         modifier = modifier.fillMaxSize(),
     ) {
         Column(modifier = Modifier.fillMaxSize()) {
+            // Single header used across emoji / GIF / sticker / emoticon
+            // modes. In emoji mode it carries the horizontal category strip
+            // for the pager; in every other mode that strip collapses away
+            // so the search pill takes precedence. The pill itself looks the
+            // same in every mode — tapping routes to whichever
+            // [KeyboardManager.MediaSearchMode] matches the active panel.
             EmojiPanelHeader(
                 categories = pagerCategories,
                 activeIndex = pagerState.currentPage,
@@ -208,13 +219,19 @@ fun GboardEmojiPanel(
                 accent = accentColor,
                 searchPillExpanded = searchPillExpanded,
                 categoryListState = categoryListState,
+                showCategories = panelMode == EmojiPanelMode.EMOJI,
                 onBackClick = {
                     inputFeedbackController.keyPress(TextKeyData.UNSPECIFIED)
                     keyboardManager.activeState.imeUiMode = ImeUiMode.TEXT
                 },
                 onSearchClick = {
                     inputFeedbackController.keyPress(TextKeyData.UNSPECIFIED)
-                    keyboardManager.beginEmojiSearch()
+                    val target = when (panelMode) {
+                        EmojiPanelMode.GIF -> com.noxquill.rewordium.keyboard.ime.keyboard.KeyboardManager.MediaSearchMode.GIF
+                        EmojiPanelMode.STICKER -> com.noxquill.rewordium.keyboard.ime.keyboard.KeyboardManager.MediaSearchMode.STICKER
+                        else -> com.noxquill.rewordium.keyboard.ime.keyboard.KeyboardManager.MediaSearchMode.EMOJI
+                    }
+                    keyboardManager.beginMediaSearch(target)
                 },
                 onCategoryClick = { idx ->
                     inputFeedbackController.keyPress(TextKeyData.UNSPECIFIED)
@@ -225,40 +242,79 @@ fun GboardEmojiPanel(
                 }
             )
 
-            // Panel mode state
-            var panelMode by remember { mutableStateOf(EmojiPanelMode.EMOJI) }
-
-            if (panelMode == EmojiPanelMode.EMOJI) {
-                // Per-category emoji grid, swipeable.
-                HorizontalPager(
-                    state = pagerState,
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .weight(1f),
-                ) { pageIndex ->
-                    val category = pagerCategories[pageIndex]
-                    CategoryEmojiGrid(
-                        category = category,
-                        fullEmojiMappings = fullEmojiMappings,
-                        historyData = historyData,
-                        onEmojiPicked = { emoji ->
-                            inputFeedbackController.keyPress(TextKeyData.UNSPECIFIED)
-                            editorInstance.commitText(emoji.value)
-                            scope.launch {
-                                EmojiHistoryHelper.markEmojiUsed(prefs, emoji)
-                            }
-                        },
-                    )
+            when (panelMode) {
+                EmojiPanelMode.EMOJI -> {
+                    // Per-category emoji grid, swipeable.
+                    HorizontalPager(
+                        state = pagerState,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .weight(1f),
+                    ) { pageIndex ->
+                        val category = pagerCategories[pageIndex]
+                        CategoryEmojiGrid(
+                            category = category,
+                            fullEmojiMappings = fullEmojiMappings,
+                            historyData = historyData,
+                            onEmojiPicked = { emoji ->
+                                inputFeedbackController.keyPress(TextKeyData.UNSPECIFIED)
+                                // Capture previousWord context BEFORE the commit
+                                // changes textBeforeSelection — once the emoji is
+                                // appended, the "previous word" we'd extract is the
+                                // word + emoji, not what came before.
+                                nlpManager.notifyEmojiPickedFromPalette(
+                                    subtypeManager.activeSubtype, emoji.value,
+                                )
+                                editorInstance.commitText(emoji.value)
+                                scope.launch {
+                                    EmojiHistoryHelper.markEmojiUsed(prefs, emoji)
+                                }
+                            },
+                        )
+                    }
                 }
-            } else {
-                Box(modifier = Modifier.weight(1f)) {
-                    EmoticonGrid(
-                        fg = onContainer,
-                        onEmoticonPicked = { emoticon ->
-                            inputFeedbackController.keyPress(TextKeyData.UNSPECIFIED)
-                            editorInstance.commitText(emoticon)
-                        }
-                    )
+                EmojiPanelMode.EMOTICON -> {
+                    Box(modifier = Modifier.weight(1f)) {
+                        EmoticonGrid(
+                            fg = onContainer,
+                            onEmoticonPicked = { emoticon ->
+                                inputFeedbackController.keyPress(TextKeyData.UNSPECIFIED)
+                                editorInstance.commitText(emoticon)
+                            }
+                        )
+                    }
+                }
+                EmojiPanelMode.GIF -> {
+                    Box(modifier = Modifier.weight(1f)) {
+                        com.noxquill.rewordium.keyboard.ime.media.gif.GifPanel(
+                            fg = onContainer,
+                            accent = accentColor,
+                            onGifPicked = { uri, description ->
+                                inputFeedbackController.keyPress(TextKeyData.UNSPECIFIED)
+                                editorInstance.commitMedia(
+                                    uri = uri,
+                                    mimeType = "image/gif",
+                                    description = description.ifBlank { "GIF" },
+                                )
+                            },
+                        )
+                    }
+                }
+                EmojiPanelMode.STICKER -> {
+                    Box(modifier = Modifier.weight(1f)) {
+                        com.noxquill.rewordium.keyboard.ime.media.sticker.StickerPanel(
+                            fg = onContainer,
+                            accent = accentColor,
+                            onStickerPicked = { uri, mime, description ->
+                                inputFeedbackController.keyPress(TextKeyData.UNSPECIFIED)
+                                editorInstance.commitMedia(
+                                    uri = uri,
+                                    mimeType = mime,
+                                    description = description.ifBlank { "Sticker" },
+                                )
+                            },
+                        )
+                    }
                 }
             }
 
@@ -292,6 +348,7 @@ private fun EmojiPanelHeader(
     accent: Color,
     searchPillExpanded: Boolean,
     categoryListState: LazyListState,
+    showCategories: Boolean,
     onBackClick: () -> Unit,
     onSearchClick: () -> Unit,
     onCategoryClick: (Int) -> Unit,
@@ -301,18 +358,13 @@ private fun EmojiPanelHeader(
     val pillBg = fg.copy(alpha = 0.08f)
     val activeChipBg = accent.copy(alpha = 0.25f)
 
-    // Animate the pill width between circle (36dp) and full-width.
-    // Using a single composable avoids the jarring swap that
-    // AnimatedContent produces.
+    // Pill width animation is only meaningful in emoji mode — when the
+    // category strip is hidden, the pill takes the full remaining row width
+    // via weight(1f) instead.
     val pillWidth by animateDpAsState(
         targetValue = if (searchPillExpanded) 200.dp else 36.dp,
         animationSpec = tween(durationMillis = 200),
         label = "pill-width",
-    )
-    val pillCorner by animateDpAsState(
-        targetValue = if (searchPillExpanded) 18.dp else 18.dp,
-        animationSpec = tween(durationMillis = 200),
-        label = "pill-corner",
     )
 
     Row(
@@ -340,24 +392,29 @@ private fun EmojiPanelHeader(
         }
         Spacer(Modifier.width(8.dp))
 
-        // Search pill — single composable that smoothly morphs
-        // between full pill (with "Search" label) and a 36dp circle
-        // (just the icon). Width is animated via animateDpAsState.
+        // Search pill — same M3 surface across emoji / GIF / sticker /
+        // emoticon. In emoji mode (showCategories=true) it collapses to a
+        // 36dp circle while the user scrolls the category strip; in every
+        // other mode it stretches to fill the row.
+        val pillModifier = if (showCategories) {
+            Modifier.width(pillWidth)
+        } else {
+            Modifier.weight(1f)
+        }
         Box(
-            modifier = Modifier
-                .width(pillWidth)
+            modifier = pillModifier
                 .height(36.dp)
-                .clip(RoundedCornerShape(pillCorner))
+                .clip(RoundedCornerShape(18.dp))
                 .background(pillBg)
                 .clickable(onClick = {
-                    if (searchPillExpanded) {
+                    if (searchPillExpanded || !showCategories) {
                         onSearchClick()
                     } else {
                         onSearchPillTapToExpand()
                     }
                 })
-                .padding(horizontal = if (searchPillExpanded) 12.dp else 0.dp),
-            contentAlignment = if (searchPillExpanded) Alignment.CenterStart else Alignment.Center,
+                .padding(horizontal = if (searchPillExpanded || !showCategories) 12.dp else 0.dp),
+            contentAlignment = if (searchPillExpanded || !showCategories) Alignment.CenterStart else Alignment.Center,
         ) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Icon(
@@ -366,7 +423,7 @@ private fun EmojiPanelHeader(
                     tint = fg.copy(alpha = 0.55f),
                     modifier = Modifier.size(16.dp),
                 )
-                if (searchPillExpanded) {
+                if (searchPillExpanded || !showCategories) {
                     Spacer(Modifier.width(8.dp))
                     Text(
                         text = "Search",
@@ -376,37 +433,40 @@ private fun EmojiPanelHeader(
                 }
             }
         }
-        Spacer(Modifier.width(8.dp))
 
-        // Category icons. Horizontal scroll so the full set fits even on
-        // narrow devices. Active one gets a tinted disc background.
-        LazyRow(
-            state = categoryListState,
-            modifier = Modifier.weight(1f),
-            horizontalArrangement = Arrangement.spacedBy(2.dp),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            itemsIndexed(categories) { idx, category ->
-                val isActive = idx == activeIndex
-                Box(
-                    modifier = Modifier
-                        .size(36.dp)
-                        .clip(CircleShape)
-                        .background(if (isActive) activeChipBg else Color.Transparent)
-                        .clickable { onCategoryClick(idx) },
-                    contentAlignment = Alignment.Center,
-                ) {
-                    Icon(
-                        imageVector = category.icon(),
-                        contentDescription = category.id,
-                        tint = if (isActive) accent else fg.copy(alpha = 0.7f),
-                        modifier = Modifier.size(20.dp),
-                    )
+        if (showCategories) {
+            Spacer(Modifier.width(8.dp))
+            // Category icons. Horizontal scroll so the full set fits even on
+            // narrow devices. Active one gets a tinted disc background.
+            LazyRow(
+                state = categoryListState,
+                modifier = Modifier.weight(1f),
+                horizontalArrangement = Arrangement.spacedBy(2.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                itemsIndexed(categories) { idx, category ->
+                    val isActive = idx == activeIndex
+                    Box(
+                        modifier = Modifier
+                            .size(36.dp)
+                            .clip(CircleShape)
+                            .background(if (isActive) activeChipBg else Color.Transparent)
+                            .clickable { onCategoryClick(idx) },
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        Icon(
+                            imageVector = category.icon(),
+                            contentDescription = category.id,
+                            tint = if (isActive) accent else fg.copy(alpha = 0.7f),
+                            modifier = Modifier.size(20.dp),
+                        )
+                    }
                 }
             }
         }
     }
 }
+
 
 /**
  * Per-category vertical emoji grid. Recently-used pulls from the user's
@@ -518,23 +578,23 @@ private fun EmojiPanelBottomBar(
             onClick = { onModeChange(EmojiPanelMode.EMOJI) }
         )
 
-        // GIF slot (coming soon)
+        // GIF slot — KLIPY-backed picker (Task D).
         BottomBarSlot(
             label = "GIF",
             fontSize = 13.sp,
-            fg = fg.copy(alpha = 0.55f),
-            isActive = false,
+            fg = if (activeMode == EmojiPanelMode.GIF) fg else fg.copy(alpha = 0.55f),
+            isActive = activeMode == EmojiPanelMode.GIF,
             activeBg = activePillBg,
-            onClick = { Toast.makeText(context, "Coming soon", Toast.LENGTH_SHORT).show() }
+            onClick = { onModeChange(EmojiPanelMode.GIF) }
         )
 
-        // Sticker slot (coming soon)
+        // Sticker slot — user-imported + WhatsApp packs (Task E).
         BottomBarSlot(
             icon = StickerIcon,
             fg = fg,
-            isActive = false,
+            isActive = activeMode == EmojiPanelMode.STICKER,
             activeBg = activePillBg,
-            onClick = { Toast.makeText(context, "Coming soon", Toast.LENGTH_SHORT).show() }
+            onClick = { onModeChange(EmojiPanelMode.STICKER) }
         )
 
         // Emoticon slot
@@ -556,7 +616,7 @@ private fun EmojiPanelBottomBar(
             contentAlignment = Alignment.Center,
         ) {
             androidx.compose.material3.Icon(
-                imageVector = androidx.compose.material.icons.Icons.Outlined.Backspace,
+                imageVector = Icons.AutoMirrored.Outlined.Backspace,
                 contentDescription = "Delete",
                 tint = fg,
                 modifier = Modifier.size(20.dp),
@@ -585,17 +645,22 @@ private fun androidx.compose.foundation.layout.RowScope.BottomBarSlot(
         contentAlignment = Alignment.Center,
     ) {
         if (icon != null) {
+            // Match the active/inactive treatment used for text labels so an
+            // icon slot doesn't optically over-weight its neighbours. Filled
+            // glyphs (the sticker mark in particular) read as bolder than
+            // text at the same tint, so we dim the inactive variant.
+            val iconTint = if (isActive) fg else fg.copy(alpha = 0.55f)
             androidx.compose.material3.Icon(
                 imageVector = icon,
                 contentDescription = null,
-                tint = fg,
+                tint = iconTint,
                 modifier = Modifier.size(20.dp)
             )
         } else if (label != null) {
             Text(
-                text = label, 
-                color = fg, 
-                fontSize = fontSize, 
+                text = label,
+                color = fg,
+                fontSize = fontSize,
                 fontWeight = if (isActive) FontWeight.Bold else FontWeight.SemiBold
             )
         }
@@ -603,7 +668,7 @@ private fun androidx.compose.foundation.layout.RowScope.BottomBarSlot(
 }
 
 private enum class EmojiPanelMode {
-    EMOJI, EMOTICON
+    EMOJI, EMOTICON, GIF, STICKER
 }
 
 private val EMOTICONS = listOf(

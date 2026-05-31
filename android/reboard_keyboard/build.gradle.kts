@@ -26,14 +26,14 @@ plugins {
     id("com.mikepenz.aboutlibraries.plugin")
 }
 
-// Function to get property from local.properties, gradle.properties, or environment
-fun getGroqApiKey(): String {
+// Function to get property from local.properties, .env, or environment
+fun getApiKey(envName: String): String {
     // Try local.properties first
     val localPropertiesFile = rootProject.file("local.properties")
     if (localPropertiesFile.exists()) {
         val props = Properties()
         props.load(localPropertiesFile.inputStream())
-        val value = props.getProperty("GROQ_API_KEY")
+        val value = props.getProperty(envName)
         if (!value.isNullOrBlank()) return value
     }
     
@@ -41,14 +41,14 @@ fun getGroqApiKey(): String {
     val envFile = rootProject.file("../.env")
     if (envFile.exists()) {
         envFile.readLines().forEach { line ->
-            if (line.startsWith("GROQ_API_KEY=")) {
+            if (line.startsWith("$envName=")) {
                 return line.substringAfter("=").trim()
             }
         }
     }
     
     // Try environment variable
-    val envVar = System.getenv("GROQ_API_KEY")
+    val envVar = System.getenv(envName)
     if (!envVar.isNullOrBlank()) return envVar
     
     // Return empty string if not found
@@ -125,7 +125,7 @@ android {
         buildConfigField("String", "BUILD_COMMIT_HASH", "\"${getGitCommitHash().get()}\"")
         buildConfigField("String", "FLADDONS_API_VERSION", "\"v~draft2\"")
         buildConfigField("String", "FLADDONS_STORE_URL", "\"www.rewordium.tech/extensions\"")
-        buildConfigField("String", "GROQ_API_KEY", "\"${getGroqApiKey()}\"")
+        buildConfigField("String", "GROQ_API_KEY", "\"${getApiKey("GROQ_API_KEY")}\"")
 
         // Feature flags — toggle here for gradual rollout; true = enabled in all builds.
         buildConfigField("boolean", "ENABLE_PATH_SMOOTHER", "true")
@@ -172,6 +172,17 @@ android {
         // search pill + category icons, paged grid, compact 6-slot
         // bottom bar. Wins over ENABLE_NATIVE_EMOJI_PANEL when both on.
         buildConfigField("boolean", "ENABLE_GBOARD_EMOJI_PANEL", "true")
+
+        // KLIPY API key for the GIF panel. KLIPY is the post-Tenor successor
+        // (Tenor sunsetting 2026-06-30, new keys closed 2026-01-13); free
+        // lifetime tier; sign up at klipy.com/developers and create an app.
+        // Empty default means the GIF tab renders an "API key not configured"
+        // hint instead of crashing — useful for local builds without keys.
+        // Override per-build via a -PklipyApiKey=... gradle property or set
+        // it in your local.properties or .env file (do NOT commit a real key).
+        val klipyKey = (findProperty("klipyApiKey") as String?)?.takeIf { it.isNotBlank() } 
+            ?: getApiKey("KLIPY_API_KEY")
+        buildConfigField("String", "KLIPY_API_KEY", "\"$klipyKey\"")
 
         sourceSets {
             maybeCreate("main").apply {
@@ -293,6 +304,11 @@ dependencies {
     // Network dependencies for AI features
     implementation("com.squareup.okhttp3:okhttp:4.11.0")
     implementation("com.google.code.gson:gson:2.10.1")
+
+    // Image loading for the GIF / Sticker panels. coil-compose drives
+    // AsyncImage{}; coil-gif decodes animated GIFs (Tenor thumbnails).
+    implementation("io.coil-kt:coil-compose:2.7.0")
+    implementation("io.coil-kt:coil-gif:2.7.0")
     api(platform("com.google.firebase:firebase-bom:34.10.0"))
     implementation("com.google.firebase:firebase-auth")
     implementation("com.google.firebase:firebase-firestore")

@@ -22,6 +22,7 @@ import java.util.stream.Collectors
 import android.content.Context
 import com.noxquill.rewordium.keyboard.app.FlorisPreferenceStore
 import com.noxquill.rewordium.keyboard.ime.core.Subtype
+import com.noxquill.rewordium.keyboard.ime.dictionary.LearnedEmojiAssociationsStore
 import com.noxquill.rewordium.keyboard.ime.editor.EditorContent
 import com.noxquill.rewordium.keyboard.ime.nlp.EmojiSuggestionCandidate
 import com.noxquill.rewordium.keyboard.ime.nlp.SuggestionCandidate
@@ -45,6 +46,22 @@ class EmojiSuggestionProvider(private val context: Context) : SuggestionProvider
     private val lettersRegex = "^[A-Za-z]*$".toRegex()
 
     private val cachedEmojiMappings = Cache.Builder().build<FlorisLocale, EmojiDataBySkinTone>()
+
+    /**
+     * Persistent store of `previousWord → emoji` associations the user has
+     * built up by picking emojis from the smartbar over time. Drives the
+     * context-aware boost in [scoreFor] and the blank-composing prediction
+     * branch in [suggest]. Loaded lazily on first [preload].
+     */
+    private val learnedAssociations = LearnedEmojiAssociationsStore(context)
+
+    /**
+     * Last previous word seen on the most recent [suggest] call. We need
+     * this on [notifySuggestionAccepted] (which only receives the candidate,
+     * not the editor content) so we can persist the `(prev, emoji)` pair the
+     * user just committed.
+     */
+    @Volatile private var lastPreviousWord: String = ""
 
     /**
      * Rolling window of recently-committed emoji values, used to suppress
@@ -99,6 +116,9 @@ class EmojiSuggestionProvider(private val context: Context) : SuggestionProvider
         // this, the first emoji-panel open pays a ~200KB asset parse on top
         // of the supported-emoji filter and the panel feels frozen.
         EmojiData.get(context, "ime/media/emoji/root.txt")
+        // Read learned (prevWord → emoji) associations off disk so the very
+        // first suggest() call after process start can already use them.
+        learnedAssociations.ensureLoaded()
     }
 
     override suspend fun suggest(
@@ -110,12 +130,41 @@ class EmojiSuggestionProvider(private val context: Context) : SuggestionProvider
     ): List<SuggestionCandidate> {
         val preferredSkinTone = prefs.emoji.preferredSkinTone.get()
         val showName = prefs.emoji.suggestionCandidateShowName.get()
+        // Extract the previous committed word so we can both bias scoring on
+        // active composing AND surface learned associations on a blank
+        // composing region (e.g. user just typed "lol " and we predict 😂
+        // before any character of the next word is typed).
+        val previousWord = extractPreviousWord(content.textBeforeSelection).orEmpty()
+        lastPreviousWord = previousWord
+        val effectiveMax = maxCandidateCount.coerceAtMost(GBOARD_MAX_CANDIDATES)
         val rawQuery = validateInputQuery(content.composingText)
         if (rawQuery == null) {
             // Composing text is empty / invalid — a word boundary. Flush any
             // unconfirmed emojis from the last word into session-rejected.
             flushPendingToRejected()
             lastSuggestedQuery = ""
+            // Blank-composing branch: if we have a known previous word and
+            // the user has historically picked emojis after it, surface the
+            // top learned associations as pure next-token predictions.
+            if (previousWord.isNotBlank() && prefs.emoji.suggestionEnabled.get()) {
+                val emojis = cachedEmojiMappings.get(subtype.primaryLocale)
+                    ?.get(preferredSkinTone) ?: return emptyList()
+                val learnedTop = learnedAssociations.topEmojisFor(
+                    subtype.primaryLocale, previousWord, effectiveMax,
+                )
+                if (learnedTop.isEmpty()) return emptyList()
+                val byValue = emojis.associateBy { it.value }
+                val predictions = learnedTop.mapNotNull { value ->
+                    byValue[value]?.let { emoji ->
+                        EmojiSuggestionCandidate(
+                            emoji = emoji,
+                            showName = showName,
+                            sourceProvider = this@EmojiSuggestionProvider,
+                        )
+                    }
+                }
+                return predictions
+            }
             return emptyList()
         }
         val query = rawQuery
@@ -136,12 +185,26 @@ class EmojiSuggestionProvider(private val context: Context) : SuggestionProvider
         // recent-commit window and the implicit-reject session set.
         val suppressed = synchronized(recentlyCommitted) { recentlyCommitted.toSet() } +
             synchronized(sessionRejected) { sessionRejected.toSet() }
+        val locale = subtype.primaryLocale
         val candidates = withContext(Dispatchers.Default) {
             emojis.parallelStream()
                 // Drop emojis the user just committed (matches Gboard's
                 // anti-spam behavior — no 😂😂😂 stream).
                 .filter { it.value !in suppressed }
-                .map { emoji -> emoji to scoreFor(emoji, q) }
+                .map { emoji ->
+                    val base = scoreFor(emoji, q)
+                    // Context boost: if the user has historically picked
+                    // this emoji after the current previousWord, nudge the
+                    // confidence up. Saturated learned score (100) buys a
+                    // +0.10 boost — enough to flip a tier-3 (0.80) keyword
+                    // match into the same band as a tier-2 (0.88) prefix
+                    // match, but never enough to surface a 0.0 stranger.
+                    val boost = if (base > 0.0 && previousWord.isNotBlank()) {
+                        val learned = learnedAssociations.scoreFor(locale, previousWord, emoji.value)
+                        if (learned > 0) (learned / 100.0) * LEARNED_ASSOC_BOOST else 0.0
+                    } else 0.0
+                    emoji to (base + boost).coerceAtMost(1.0)
+                }
                 // High-confidence filter: anything below MIN_CONFIDENCE is
                 // considered a weak guess and gets dropped. Gboard is quiet
                 // by default; this is what enforces that.
@@ -150,7 +213,7 @@ class EmojiSuggestionProvider(private val context: Context) : SuggestionProvider
                 // Hard-cap to the lesser of the caller's max and our
                 // absolute ceiling. Emojis share the suggestion strip
                 // with text candidates; we never crowd words out.
-                .limit(maxCandidateCount.coerceAtMost(GBOARD_MAX_CANDIDATES).toLong())
+                .limit(effectiveMax.toLong())
                 .map { (emoji, _) ->
                     EmojiSuggestionCandidate(
                         emoji = emoji,
@@ -254,12 +317,22 @@ class EmojiSuggestionProvider(private val context: Context) : SuggestionProvider
         )
 
         /**
-         * Hard cap on emojis in any single suggestion strip. In Reboard's
-         * classic 3-column smartbar we want text to own the first 2 slots
-         * and emoji to peek into at most the trailing slot — exactly how
-         * Gboard behaves. Allowing 2 emojis would crowd words out.
+         * Hard cap on emojis in any single suggestion strip. Two is the
+         * Gboard sweet spot — one strong pick + one alternate (e.g. typing
+         * "fire" surfaces 🔥 + 🚒), without crowding text candidates out of
+         * the strip. The actual count honours both this ceiling and the
+         * caller's [maxCandidateCount] argument.
          */
-        const val GBOARD_MAX_CANDIDATES = 1
+        const val GBOARD_MAX_CANDIDATES = 2
+
+        /**
+         * Multiplicative boost applied to [scoreFor]'s base confidence when
+         * the candidate emoji has been historically picked after the active
+         * previousWord. 0.10 at saturation (learned=100) is enough to flip
+         * a borderline candidate into the kept set, but cannot promote a
+         * zero-base candidate into the strip on context alone.
+         */
+        const val LEARNED_ASSOC_BOOST = 0.10
 
         /**
          * Anything below this confidence is treated as a guess and dropped.
@@ -301,10 +374,33 @@ class EmojiSuggestionProvider(private val context: Context) : SuggestionProvider
         if (prefs.emoji.suggestionUpdateHistory.get()) {
             EmojiHistoryHelper.markEmojiUsed(prefs, candidate.emoji)
         }
+        // Persist the (previousWord → emoji) association so future strips
+        // weight this emoji higher when the same previousWord shows up
+        // again. Survives IME restart via the JSON-backed store.
+        val prev = lastPreviousWord
+        if (prev.isNotBlank()) {
+            learnedAssociations.bump(subtype.primaryLocale, prev, candidate.emoji.value)
+        }
     }
 
     override suspend fun notifySuggestionReverted(subtype: Subtype, candidate: SuggestionCandidate) {
         // No-op
+    }
+
+    /**
+     * Called by [NlpManager.notifyEmojiPickedFromPalette] when the user picks
+     * an emoji directly from the panel (vs. accepting one from the smartbar
+     * strip). Persists the `(previousWord → emojiValue)` association so the
+     * smartbar can predict the same emoji in the same context next time.
+     *
+     * Lower delta than `notifySuggestionAccepted` (2 vs 3) because a palette
+     * pick is a weaker context signal — the user opened the panel and
+     * browsed, the previous word didn't drive the choice as directly as
+     * accepting an inline suggestion did.
+     */
+    fun recordPalettePick(subtype: Subtype, emojiValue: String, previousWord: String) {
+        if (emojiValue.isBlank() || previousWord.isBlank()) return
+        learnedAssociations.bump(subtype.primaryLocale, previousWord, emojiValue, delta = 2)
     }
 
     override suspend fun removeSuggestion(subtype: Subtype, candidate: SuggestionCandidate) = false
@@ -315,6 +411,21 @@ class EmojiSuggestionProvider(private val context: Context) : SuggestionProvider
 
     override suspend fun destroy() {
         cachedEmojiMappings.invalidateAll()
+    }
+
+    /**
+     * Extracts the last whitespace-delimited word from [textBeforeCursor].
+     * Mirrors the helper in [LatinLanguageProvider.extractPreviousWord] so
+     * emoji context-prediction uses the same notion of "previous word" as
+     * text bigram prediction.
+     */
+    private fun extractPreviousWord(textBeforeCursor: CharSequence): String? {
+        val text = textBeforeCursor.toString().trimEnd()
+        if (text.isBlank()) return null
+        val lastSpace = text.lastIndexOf(' ')
+        val word = if (lastSpace >= 0) text.substring(lastSpace + 1) else text
+        val cleaned = word.lowercase().trim { !it.isLetter() && it != '\'' }
+        return cleaned.takeIf { it.isNotEmpty() }
     }
 
     /**
