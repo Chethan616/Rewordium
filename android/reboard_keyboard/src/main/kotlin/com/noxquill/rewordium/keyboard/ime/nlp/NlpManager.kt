@@ -165,6 +165,30 @@ class NlpManager(context: Context) {
     }
 
     /**
+     * Forwards a panel-driven emoji pick to the emoji suggestion provider so
+     * it can persist a `(previousWord → emoji)` association. Smartbar accepts
+     * already flow through `notifySuggestionAccepted` — this is the parallel
+     * entry point for the emoji palette, where there's no SuggestionCandidate
+     * round-trip but the context is still meaningful.
+     *
+     * `previousWord` is extracted from the active editor content at the
+     * pick site so a stale `lastPreviousWord` in the provider doesn't lead
+     * us to record an association against the wrong context.
+     */
+    fun notifyEmojiPickedFromPalette(subtype: Subtype, emojiValue: String) {
+        if (emojiValue.isBlank()) return
+        val textBefore = editorInstance.activeContent.textBeforeSelection.toString().trimEnd()
+        if (textBefore.isBlank()) return
+        val lastSpace = textBefore.lastIndexOf(' ')
+        val raw = if (lastSpace >= 0) textBefore.substring(lastSpace + 1) else textBefore
+        val previousWord = raw.lowercase().trim { !it.isLetter() && it != '\'' }
+        if (previousWord.isEmpty()) return
+        scope.launch {
+            emojiSuggestionProvider.recordPalettePick(subtype, emojiValue, previousWord)
+        }
+    }
+
+    /**
      * Forwards an explicit User Dictionary add (from Settings UI) into the
      * Latin provider's wordData so the glide-classifier picks the new word
      * up immediately — no IME restart needed.

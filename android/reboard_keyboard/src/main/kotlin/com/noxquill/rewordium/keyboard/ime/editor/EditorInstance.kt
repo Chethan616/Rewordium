@@ -405,6 +405,51 @@ class EditorInstance(context: Context) : AbstractEditorInstance(context) {
     }
 
     /**
+     * Commit a content URI to the host editor as rich media (GIF, sticker,
+     * any `image/<sub>` MIME). Used by the GIF panel after a downloaded KLIPY
+     * GIF has been cloned into [ClipboardFileStorage], and by the sticker
+     * panel for both user-imported and WhatsApp-pack stickers.
+     *
+     * Reuses the same `InputContentInfoCompat` + `commitContent` path as
+     * clipboard image paste — the host editor sees a standard rich-content
+     * insert. Falls back to copying [fallbackText] to the clipboard when
+     * the editor doesn't advertise rich-content support (most non-IM hosts).
+     *
+     * @param uri          Content URI exposing the media file. MUST be one
+     *                     we have permission to grant — typically a
+     *                     [ClipboardMediaProvider] URI.
+     * @param mimeType     Concrete MIME (e.g. "image/gif", "image/webp").
+     * @param description  Short label surfaced to accessibility services.
+     * @param fallbackText URL or hint text copied to clipboard when the
+     *                     host doesn't accept rich content. Blank → no
+     *                     fallback (silent failure on incompatible hosts).
+     */
+    fun commitMedia(
+        uri: android.net.Uri,
+        mimeType: String,
+        description: String,
+        fallbackText: String = "",
+    ): Boolean {
+        val ic = currentInputConnection() ?: return false
+        val inputContentInfo = InputContentInfoCompat(
+            uri,
+            ClipDescription(description, arrayOf(mimeType)),
+            null,
+        )
+        ic.finishComposingText()
+        val flags = InputConnectionCompat.INPUT_CONTENT_GRANT_READ_URI_PERMISSION
+        val ok = InputConnectionCompat.commitContent(ic, activeInfo.base, inputContentInfo, flags, null)
+        if (!ok && fallbackText.isNotBlank()) {
+            // Host editor didn't accept the rich-content commit — most chat
+            // apps support it, but plain text fields don't. Copy a URL/hint
+            // to the clipboard so the user can still share something.
+            clipboardManager.addNewPlaintext(fallbackText)
+            appContext.showShortToastSync("Pasted link to clipboard")
+        }
+        return ok
+    }
+
+    /**
      * Commits the given [ClipboardItem]. If the clip data is text (incl. HTML), it delegates to [commitText].
      * If the item has a content URI (and the EditText supports it), the item is committed as rich data.
      * This allows for committing (e.g) images.

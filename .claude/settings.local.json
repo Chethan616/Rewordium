@@ -56,7 +56,21 @@
       "Bash(grep -E \"\\\\.\\(kt|java\\)$\")",
       "Bash(xargs grep -l \"suggestion\" -i)",
       "Bash(xargs grep -l \"SmartbarUI\\\\|SuggestionStrip\")",
-      "Bash(./gradlew :reboard_keyboard:externalNativeBuildDebug)"
+      "Bash(./gradlew :reboard_keyboard:externalNativeBuildDebug)",
+      "Bash(xargs grep -l \"GIF\\\\|Tenor\\\\|Giphy\")",
+      "Bash(Get-ChildItem -Path \"C:\\\\Users\\\\cheth\\\\OneDrive\\\\Desktop\\\\PC2\\\\rewordium\\\\rewordium\\\\rewordium\\\\rewordium\\\\android\\\\reboard_keyboard\" -Recurse -Directory)",
+      "Bash(Select-Object FullName)",
+      "PowerShell(Get-ChildItem -Path \"C:\\\\Users\\\\cheth\\\\OneDrive\\\\Desktop\\\\PC2\\\\rewordium\\\\rewordium\\\\rewordium\\\\rewordium\\\\android\\\\reboard_keyboard\" -Directory | Select-Object -First 20 | ForEach-Object { $_.FullName })",
+      "Bash(xargs grep -l \"suggestionEnabled\")",
+      "PowerShell(head *)",
+      "Bash(./gradlew :reboard_keyboard:assembleDebug)",
+      "WebSearch",
+      "WebFetch(domain:docs.klipy.com)",
+      "WebFetch(domain:zuplo.com)",
+      "WebFetch(domain:pub.dev)",
+      "Bash(curl -s \"https://api.klipy.com/api/v1/KLIPY_API_KEY_REDACTED/gifs/trending?per_page=4&customer_id=rewordium-android\")",
+      "Bash(curl -s \"https://api.klipy.com/api/v1/KLIPY_API_KEY_REDACTED/gifs/categories?customer_id=rewordium-android\")",
+      "Bash(./gradlew :reboard_keyboard:compileReleaseKotlin)"
     ]
   }
 }

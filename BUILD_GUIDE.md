@@ -37,6 +37,39 @@
 
 ---
 
+## Media-panel feature configuration
+
+### KLIPY GIF API key
+
+The GIF tab uses the [KLIPY v1 REST API](https://klipy.com/developers). We originally targeted Tenor v2, but Google announced its sunset (new sign-ups closed **2026-01-13**, full shutdown **2026-06-30**), so all GIF traffic is on KLIPY — the ex-Tenor team's drop-in replacement that Discord and WhatsApp are also moving to.
+
+1. Sign up at **klipy.com/developers** and create an app to get an API key.
+2. Pass it at build time via a Gradle property:
+
+```bash
+./gradlew :reboard_keyboard:assembleDebug -PklipyApiKey=your_key_here
+```
+
+Or set it in your project-local `gradle.properties` (do **not** commit a real key — add to `.gitignore` if not already excluded):
+
+```properties
+klipyApiKey=your_key_here
+```
+
+When the key is missing or blank, the GIF tab renders an inline "Set KLIPY_API_KEY" hint instead of crashing — useful for fresh checkouts and CI builds.
+
+KLIPY's free tier is lifetime; the API key embeds in the URL path (no header auth) and supports trending, search, and category endpoints — all wired in `KlipyClient.kt`.
+
+### WhatsApp sticker packs
+
+The Sticker tab reads installed packs from WhatsApp's public sticker content provider (`com.whatsapp.provider.sticker_content_provider`). No API key or permission prompt is needed — WhatsApp exports the provider for any installed app that lists `com.whatsapp` in its `<queries>` block (we do, see `AndroidManifest.xml`).
+
+WhatsApp Business (`com.whatsapp.w4b`) is also queried. If neither app is installed, the panel falls back to the "User" tab only (stickers the user imported themselves via the `+` tile or share-sheet).
+
+User-imported stickers live in `filesDir/user_stickers/` with a manifest at `filesDir/user_stickers/manifest.json` — atomic writes (tmp + rename) protect against partial writes on a process kill.
+
+---
+
 ## Building on a New Computer
 
 ### Prerequisites (All Platforms)

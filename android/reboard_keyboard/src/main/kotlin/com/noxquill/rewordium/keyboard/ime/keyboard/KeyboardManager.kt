@@ -112,27 +112,65 @@ class KeyboardManager(context: Context) : InputKeyEventReceiver {
     private val _lastCharactersEvaluator = MutableStateFlow<ComputingEvaluator>(DefaultComputingEvaluator)
     val lastCharactersEvaluator get() = _lastCharactersEvaluator.asStateFlow()
 
-    // Gboard-style emoji search: when non-null, the EmojiPaletteView shows
-    // a stripped-down panel (search display + horizontal results + QWERTY
-    // keyboard) and key events from that QWERTY route into this query
-    // instead of committing to the host editor. null = search not active.
+    // Gboard-style media search: when [mediaSearchMode] is non-NONE, the
+    // active media panel (emoji, GIF, or sticker) shows a stripped-down
+    // search view and key events from the QWERTY route into [mediaSearchQuery]
+    // instead of committing to the host editor.
+    //
+    // emojiSearchQuery is kept as an alias for back-compat with components
+    // (EmojiSearchOverlay, TextKeyboardLayout) that branch on whether
+    // emoji search specifically is active — those code paths still need to
+    // distinguish emoji-search from GIF/sticker search to render the right UI.
+    enum class MediaSearchMode { NONE, EMOJI, GIF, STICKER }
+
+    private val _mediaSearchMode = MutableStateFlow(MediaSearchMode.NONE)
+    val mediaSearchMode get() = _mediaSearchMode.asStateFlow()
+
+    private val _mediaSearchQuery = MutableStateFlow("")
+    val mediaSearchQuery get() = _mediaSearchQuery.asStateFlow()
+
+    // Legacy API surface kept stable for EmojiSearchOverlay & friends:
+    // returns null when search is not active, "" or query text otherwise.
     private val _emojiSearchQuery = MutableStateFlow<String?>(null)
     val emojiSearchQuery get() = _emojiSearchQuery.asStateFlow()
 
-    fun beginEmojiSearch() {
+    fun beginEmojiSearch() = beginMediaSearch(MediaSearchMode.EMOJI)
+    fun endEmojiSearch() = endMediaSearch()
+
+    fun beginMediaSearch(mode: MediaSearchMode) {
+        if (mode == MediaSearchMode.NONE) {
+            endMediaSearch()
+            return
+        }
+        _mediaSearchMode.value = mode
+        _mediaSearchQuery.value = ""
+        // Mirror onto the legacy emoji-search flow so existing callers
+        // (TextKeyboardLayout, EmojiSearchOverlay) that gate on null/non-null
+        // continue to work — the emoji-search overlay still only renders
+        // when mode == EMOJI (FlorisImeService branches on the mode), but
+        // the keystroke router below reads this flow.
         _emojiSearchQuery.value = ""
         refreshEmojiKeyVisibility()
     }
-    fun endEmojiSearch() {
+
+    fun endMediaSearch() {
+        _mediaSearchMode.value = MediaSearchMode.NONE
+        _mediaSearchQuery.value = ""
         _emojiSearchQuery.value = null
         refreshEmojiKeyVisibility()
     }
+
     fun appendToEmojiSearch(text: String) {
         if (text.isEmpty()) return
-        _emojiSearchQuery.value = (_emojiSearchQuery.value ?: "") + text
+        if (_mediaSearchMode.value == MediaSearchMode.NONE) return
+        val next = _mediaSearchQuery.value + text
+        _mediaSearchQuery.value = next
+        _emojiSearchQuery.value = next
     }
+
     fun backspaceEmojiSearch() {
-        val current = _emojiSearchQuery.value ?: return
+        if (_mediaSearchMode.value == MediaSearchMode.NONE) return
+        val current = _mediaSearchQuery.value
         if (current.isEmpty()) {
             // No-op when already empty. Auto-closing on backspace-empty
             // caused a subtle bug: users would backspace one char too many,
@@ -141,17 +179,19 @@ class KeyboardManager(context: Context) : InputKeyEventReceiver {
             // back-button tap, which matches user mental model better.
             return
         }
-        _emojiSearchQuery.value = current.dropLast(1)
+        val next = current.dropLast(1)
+        _mediaSearchQuery.value = next
+        _emojiSearchQuery.value = next
     }
 
     /**
-     * Clear the entire emoji-search query without closing the overlay. Used
-     * by the X button inside the search pill and after an emoji is picked
-     * from the results grid (so the typed-in query disappears, ready for
-     * the next search).
+     * Clear the entire media-search query without closing the overlay. Used
+     * by the X button inside the search pill and after a result is picked
+     * (so the typed-in query disappears, ready for the next search).
      */
     fun clearEmojiSearch() {
-        if (_emojiSearchQuery.value == null) return
+        if (_mediaSearchMode.value == MediaSearchMode.NONE) return
+        _mediaSearchQuery.value = ""
         _emojiSearchQuery.value = ""
     }
 
