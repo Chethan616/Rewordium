@@ -1,0 +1,252 @@
+[
+  {
+    "slug": "cat_face",
+    "name": "Cat face",
+    "category": "animals"
+  },
+  {
+    "slug": "dog_face",
+    "name": "Dog face",
+    "category": "animals"
+  },
+  {
+    "slug": "panda",
+    "name": "Panda",
+    "category": "animals"
+  },
+  {
+    "slug": "pig_face",
+    "name": "Pig face",
+    "category": "animals"
+  },
+  {
+    "slug": "unicorn",
+    "name": "Unicorn",
+    "category": "animals"
+  },
+  {
+    "slug": "birthday_cake",
+    "name": "Birthday cake",
+    "category": "food"
+  },
+  {
+    "slug": "hot_beverage",
+    "name": "Hot beverage",
+    "category": "food"
+  },
+  {
+    "slug": "pizza",
+    "name": "Pizza",
+    "category": "food"
+  },
+  {
+    "slug": "clapping_hands",
+    "name": "Clapping hands",
+    "category": "hands"
+  },
+  {
+    "slug": "crossed_fingers",
+    "name": "Crossed fingers",
+    "category": "hands"
+  },
+  {
+    "slug": "folded_hands",
+    "name": "Folded hands",
+    "category": "hands"
+  },
+  {
+    "slug": "love_you_gesture",
+    "name": "Love-you gesture",
+    "category": "hands"
+  },
+  {
+    "slug": "ok_hand",
+    "name": "OK hand",
+    "category": "hands"
+  },
+  {
+    "slug": "raising_hands",
+    "name": "Raising hands",
+    "category": "hands"
+  },
+  {
+    "slug": "thumbs_down",
+    "name": "Thumbs down",
+    "category": "hands"
+  },
+  {
+    "slug": "thumbs_up",
+    "name": "Thumbs up",
+    "category": "hands"
+  },
+  {
+    "slug": "victory_hand",
+    "name": "Victory hand",
+    "category": "hands"
+  },
+  {
+    "slug": "waving_hand",
+    "name": "Waving hand",
+    "category": "hands"
+  },
+  {
+    "slug": "beating_heart",
+    "name": "Beating heart",
+    "category": "hearts"
+  },
+  {
+    "slug": "heart_on_fire",
+    "name": "Heart on fire",
+    "category": "hearts"
+  },
+  {
+    "slug": "red_heart",
+    "name": "Red heart",
+    "category": "hearts"
+  },
+  {
+    "slug": "sparkling_heart",
+    "name": "Sparkling heart",
+    "category": "hearts"
+  },
+  {
+    "slug": "two_hearts",
+    "name": "Two hearts",
+    "category": "hearts"
+  },
+  {
+    "slug": "beaming_face_with_smiling_eyes",
+    "name": "Beaming face with smiling eyes",
+    "category": "smileys"
+  },
+  {
+    "slug": "cold_face",
+    "name": "Cold face",
+    "category": "smileys"
+  },
+  {
+    "slug": "exploding_head",
+    "name": "Exploding head",
+    "category": "smileys"
+  },
+  {
+    "slug": "face_blowing_a_kiss",
+    "name": "Face blowing a kiss",
+    "category": "smileys"
+  },
+  {
+    "slug": "face_with_rolling_eyes",
+    "name": "Face with rolling eyes",
+    "category": "smileys"
+  },
+  {
+    "slug": "face_with_tears_of_joy",
+    "name": "Face with tears of joy",
+    "category": "smileys"
+  },
+  {
+    "slug": "grinning_face",
+    "name": "Grinning face",
+    "category": "smileys"
+  },
+  {
+    "slug": "hot_face",
+    "name": "Hot face",
+    "category": "smileys"
+  },
+  {
+    "slug": "loudly_crying_face",
+    "name": "Loudly crying face",
+    "category": "smileys"
+  },
+  {
+    "slug": "partying_face",
+    "name": "Partying face",
+    "category": "smileys"
+  },
+  {
+    "slug": "pleading_face",
+    "name": "Pleading face",
+    "category": "smileys"
+  },
+  {
+    "slug": "pouting_face",
+    "name": "Pouting face",
+    "category": "smileys"
+  },
+  {
+    "slug": "rolling_on_the_floor_laughing",
+    "name": "Rolling on the floor laughing",
+    "category": "smileys"
+  },
+  {
+    "slug": "smiling_face_with_heart_eyes",
+    "name": "Smiling face with heart-eyes",
+    "category": "smileys"
+  },
+  {
+    "slug": "smiling_face_with_hearts",
+    "name": "Smiling face with hearts",
+    "category": "smileys"
+  },
+  {
+    "slug": "smiling_face_with_sunglasses",
+    "name": "Smiling face with sunglasses",
+    "category": "smileys"
+  },
+  {
+    "slug": "star_struck",
+    "name": "Star-struck",
+    "category": "smileys"
+  },
+  {
+    "slug": "thinking_face",
+    "name": "Thinking face",
+    "category": "smileys"
+  },
+  {
+    "slug": "woozy_face",
+    "name": "Woozy face",
+    "category": "smileys"
+  },
+  {
+    "slug": "zany_face",
+    "name": "Zany face",
+    "category": "smileys"
+  },
+  {
+    "slug": "crown",
+    "name": "Crown",
+    "category": "symbols"
+  },
+  {
+    "slug": "fire",
+    "name": "Fire",
+    "category": "symbols"
+  },
+  {
+    "slug": "hundred_points",
+    "name": "Hundred points",
+    "category": "symbols"
+  },
+  {
+    "slug": "party_popper",
+    "name": "Party popper",
+    "category": "symbols"
+  },
+  {
+    "slug": "sparkles",
+    "name": "Sparkles",
+    "category": "symbols"
+  },
+  {
+    "slug": "star",
+    "name": "Star",
+    "category": "symbols"
+  },
+  {
+    "slug": "rocket",
+    "name": "Rocket",
+    "category": "travel"
+  }
+]

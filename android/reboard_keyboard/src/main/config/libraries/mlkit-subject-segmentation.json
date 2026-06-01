@@ -1,0 +1,15 @@
+{
+  "uniqueId": "mlkit-subject-segmentation",
+  "name": "ML Kit Subject Segmentation",
+  "developers": [
+    {
+      "name": "Google LLC",
+      "organisationUrl": "https://developers.google.com/ml-kit"
+    }
+  ],
+  "description": "On-device subject segmentation model, used by the Sticker Studio's one-tap background removal. The model itself ships from Play Services on first use.",
+  "website": "https://developers.google.com/ml-kit/vision/subject-segmentation",
+  "licenses": [
+    "Apache-2.0"
+  ]
+}

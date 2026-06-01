@@ -77,12 +77,19 @@ fun MediaInputLayout(
         emojiLayoutDataMap = EmojiData.get(context, "ime/media/emoji/root.txt")
     }
 
+    // The media panel doubles as the emoji / GIF / sticker / emoticon
+    // surface, so we give it 1.5x the normal IME height — the QWERTY rows
+    // it replaces are denser than emoji/GIF/sticker thumbnails, and at the
+    // default height the staggered grids felt cramped. The IME view is
+    // wrapContentHeight at the FlorisImeService level so the host editor
+    // automatically resizes to accommodate the taller panel.
+    val mediaPanelHeight = FlorisImeSizing.imeUiHeight() * 1.5f
     CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Ltr) {
         SnyggColumn(
             elementName = FlorisImeUi.Media.elementName,
             modifier = modifier
                 .fillMaxWidth()
-                .height(FlorisImeSizing.imeUiHeight()),
+                .height(mediaPanelHeight),
         ) {
             // Phase 7r: Gboard-style custom Compose panel wins when its
             // flag is on (owns its own bottom bar — see GboardEmojiPanel

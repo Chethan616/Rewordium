@@ -39,11 +39,10 @@ import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.GridItemSpan
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
+import androidx.compose.foundation.lazy.grid.rememberLazyGridState
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
-import androidx.compose.foundation.pager.HorizontalPager
-import androidx.compose.foundation.pager.PagerState
-import androidx.compose.foundation.pager.rememberPagerState
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -141,25 +140,60 @@ fun GboardEmojiPanel(
     // the newly-recorded usage. Saves a jetpref subscription on the hot path.
     val historyData = remember { prefs.emoji.historyData.get() }
 
-    // Categories we render in the pager (Recently-Used first, then the
-    // standard groups in the order Gboard shows them).
+    // Categories rendered as section headers stacked vertically — Gboard's
+    // single-scroll layout. Recently-Used first (with the "Recent" label),
+    // then the standard groups in display order.
     val pagerCategories = remember {
         EmojiCategory.entries.toList()
     }
-    // Gboard opens on the clock/recents tab when there's any history, otherwise
-    // smileys. Mirrors the reference screenshot where the clock is the active
-    // chip on launch.
-    val initialPage = remember(historyData) {
-        val recentsIdx = pagerCategories.indexOf(EmojiCategory.RECENTLY_USED)
-        val smileysIdx = pagerCategories.indexOf(EmojiCategory.SMILEYS_EMOTION)
-            .coerceAtLeast(0)
-        if (recentsIdx >= 0 && (historyData.pinned.isNotEmpty() || historyData.recent.isNotEmpty())) {
-            recentsIdx
-        } else {
-            smileysIdx
+
+    // Build the flat item list: each non-empty category produces a header
+    // item (spanning all EMOJI_COLUMNS columns) followed by its emoji
+    // cells. `sections` tracks each header's grid index so the chip strip
+    // can `animateScrollToItem(headerIndex)` to jump to a section.
+    val sections = remember(fullEmojiMappings, historyData) {
+        buildList {
+            var cursor = 0
+            for (category in pagerCategories) {
+                val emojis = if (category == EmojiCategory.RECENTLY_USED) {
+                    (historyData.pinned + historyData.recent).distinctBy { it.value }
+                        .map { EmojiSet(listOf(it)) }
+                } else {
+                    fullEmojiMappings.byCategory[category].orEmpty()
+                }
+                if (emojis.isEmpty()) continue
+                val headerIndex = cursor
+                add(EmojiSection(category, emojis, headerIndex))
+                cursor += 1 + emojis.size
+            }
         }
     }
-    val pagerState = rememberPagerState(initialPage = initialPage) { pagerCategories.size }
+
+    val lazyGridState = rememberLazyGridState()
+
+    // Gboard opens on whichever section is first non-empty — usually
+    // Recents if the user has history, otherwise Smileys.
+    LaunchedEffect(sections) {
+        if (sections.isNotEmpty()) {
+            lazyGridState.scrollToItem(sections.first().headerIndex)
+        }
+    }
+
+    // Track which section the user is currently looking at so the chip
+    // strip highlights the right category. Picks the section whose header
+    // is the most-recent one at or above the first visible item.
+    val activeSectionIndex by remember(sections) {
+        derivedStateOf {
+            val firstVisible = lazyGridState.firstVisibleItemIndex
+            val idx = sections.indexOfLast { it.headerIndex <= firstVisible }
+            idx.coerceAtLeast(0)
+        }
+    }
+    val activeChipIndex = remember(activeSectionIndex, sections) {
+        val activeCat = sections.getOrNull(activeSectionIndex)?.category
+            ?: return@remember 0
+        pagerCategories.indexOf(activeCat).coerceAtLeast(0)
+    }
 
     // Surface colors pulled from the active Snygg theme so the panel
     // matches whatever skin the user has set.
@@ -186,9 +220,9 @@ fun GboardEmojiPanel(
     // Panel mode state — lifted here so the header can adapt its search pill.
     var panelMode by remember { mutableStateOf(EmojiPanelMode.EMOJI) }
 
-    LaunchedEffect(pagerState, categoryListState) {
+    LaunchedEffect(lazyGridState, categoryListState) {
         launch {
-            snapshotFlow { pagerState.isScrollInProgress }
+            snapshotFlow { lazyGridState.isScrollInProgress }
                 .collect { scrolling ->
                     if (scrolling) searchPillExpanded = false
                 }
@@ -214,7 +248,7 @@ fun GboardEmojiPanel(
             // [KeyboardManager.MediaSearchMode] matches the active panel.
             EmojiPanelHeader(
                 categories = pagerCategories,
-                activeIndex = pagerState.currentPage,
+                activeIndex = activeChipIndex,
                 fg = onContainer,
                 accent = accentColor,
                 searchPillExpanded = searchPillExpanded,
@@ -235,7 +269,16 @@ fun GboardEmojiPanel(
                 },
                 onCategoryClick = { idx ->
                     inputFeedbackController.keyPress(TextKeyData.UNSPECIFIED)
-                    scope.launch { pagerState.animateScrollToPage(idx) }
+                    // Map the clicked category to its section header index
+                    // in the flat grid, then scroll there. Categories with
+                    // no emoji (rare — only RECENTLY_USED on a fresh
+                    // install) get clamped to the first available section.
+                    val targetCat = pagerCategories.getOrNull(idx) ?: return@EmojiPanelHeader
+                    val section = sections.firstOrNull { it.category == targetCat }
+                    val headerIdx = section?.headerIndex
+                        ?: sections.firstOrNull()?.headerIndex
+                        ?: return@EmojiPanelHeader
+                    scope.launch { lazyGridState.animateScrollToItem(headerIdx) }
                 },
                 onSearchPillTapToExpand = {
                     searchPillExpanded = true
@@ -244,34 +287,29 @@ fun GboardEmojiPanel(
 
             when (panelMode) {
                 EmojiPanelMode.EMOJI -> {
-                    // Per-category emoji grid, swipeable.
-                    HorizontalPager(
-                        state = pagerState,
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .weight(1f),
-                    ) { pageIndex ->
-                        val category = pagerCategories[pageIndex]
-                        CategoryEmojiGrid(
-                            category = category,
-                            fullEmojiMappings = fullEmojiMappings,
-                            historyData = historyData,
-                            onEmojiPicked = { emoji ->
-                                inputFeedbackController.keyPress(TextKeyData.UNSPECIFIED)
-                                // Capture previousWord context BEFORE the commit
-                                // changes textBeforeSelection — once the emoji is
-                                // appended, the "previous word" we'd extract is the
-                                // word + emoji, not what came before.
-                                nlpManager.notifyEmojiPickedFromPalette(
-                                    subtypeManager.activeSubtype, emoji.value,
-                                )
-                                editorInstance.commitText(emoji.value)
-                                scope.launch {
-                                    EmojiHistoryHelper.markEmojiUsed(prefs, emoji)
-                                }
-                            },
-                        )
-                    }
+                    // Single vertical grid spanning every category, with
+                    // a full-width header per section ("Recent emoji",
+                    // "Smileys and emotions", …). Replaces the horizontal
+                    // pager — Gboard's actual layout.
+                    VerticalEmojiSections(
+                        sections = sections,
+                        gridState = lazyGridState,
+                        onEmojiPicked = { emoji ->
+                            inputFeedbackController.keyPress(TextKeyData.UNSPECIFIED)
+                            // Capture previousWord context BEFORE the commit
+                            // changes textBeforeSelection — once the emoji is
+                            // appended, the "previous word" we'd extract is the
+                            // word + emoji, not what came before.
+                            nlpManager.notifyEmojiPickedFromPalette(
+                                subtypeManager.activeSubtype, emoji.value,
+                            )
+                            editorInstance.commitText(emoji.value)
+                            scope.launch {
+                                EmojiHistoryHelper.markEmojiUsed(prefs, emoji)
+                            }
+                        },
+                        modifier = Modifier.fillMaxWidth().weight(1f),
+                    )
                 }
                 EmojiPanelMode.EMOTICON -> {
                     Box(modifier = Modifier.weight(1f)) {
@@ -322,7 +360,10 @@ fun GboardEmojiPanel(
                 fg = onContainer,
                 accent = accentColor,
                 activeMode = panelMode,
-                onModeChange = { panelMode = it },
+                onModeChange = {
+                    inputFeedbackController.keyPress(TextKeyData.UNSPECIFIED)
+                    panelMode = it
+                },
                 onAbcClick = {
                     inputFeedbackController.keyPress(TextKeyData.UNSPECIFIED)
                     keyboardManager.activeState.imeUiMode = ImeUiMode.TEXT
@@ -468,59 +509,78 @@ private fun EmojiPanelHeader(
 }
 
 
+/** Materialised representation of one section the vertical grid renders. */
+private data class EmojiSection(
+    val category: EmojiCategory,
+    val emojis: List<EmojiSet>,
+    /** Index of this section's header item in the flat [LazyVerticalGrid]. */
+    val headerIndex: Int,
+)
+
+/** Display label for a section header (Gboard-style). */
+private fun EmojiCategory.sectionTitle(): String = when (this) {
+    EmojiCategory.RECENTLY_USED -> "Recent"
+    EmojiCategory.SMILEYS_EMOTION -> "Smileys and emotions"
+    EmojiCategory.PEOPLE_BODY -> "People"
+    EmojiCategory.ANIMALS_NATURE -> "Animals and nature"
+    EmojiCategory.FOOD_DRINK -> "Food and drink"
+    EmojiCategory.TRAVEL_PLACES -> "Travel and places"
+    EmojiCategory.ACTIVITIES -> "Activities"
+    EmojiCategory.OBJECTS -> "Objects"
+    EmojiCategory.SYMBOLS -> "Symbols"
+    EmojiCategory.FLAGS -> "Flags"
+}
+
 /**
- * Per-category vertical emoji grid. Recently-used pulls from the user's
- * history pref (pinned + recent, deduplicated). Everything else reads
- * straight from [EmojiData.byCategory].
+ * Vertical-scroll emoji panel — one big [LazyVerticalGrid] that stacks
+ * every category, separated by full-width section headers. Replaces the
+ * old [HorizontalPager] approach. The chip strip at the top calls
+ * `lazyGridState.animateScrollToItem(section.headerIndex)` to jump,
+ * and the strip's active-chip state mirrors `firstVisibleItemIndex`
+ * → section lookup.
  */
 @Composable
-private fun CategoryEmojiGrid(
-    category: EmojiCategory,
-    fullEmojiMappings: EmojiData,
-    historyData: EmojiHistory,
+private fun VerticalEmojiSections(
+    sections: List<EmojiSection>,
+    gridState: androidx.compose.foundation.lazy.grid.LazyGridState,
     onEmojiPicked: (Emoji) -> Unit,
+    modifier: Modifier = Modifier,
 ) {
-    val emojis = remember(category, fullEmojiMappings, historyData) {
-        if (category == EmojiCategory.RECENTLY_USED) {
-            val combined = (historyData.pinned + historyData.recent).distinctBy { it.value }
-            combined.map { EmojiSet(listOf(it)) }
-        } else {
-            fullEmojiMappings.byCategory[category].orEmpty()
-        }
-    }
-
     LazyVerticalGrid(
         columns = GridCells.Fixed(EMOJI_COLUMNS),
-        modifier = Modifier
-            .fillMaxSize()
-            .padding(horizontal = 4.dp),
+        state = gridState,
+        modifier = modifier.padding(horizontal = 4.dp),
         verticalArrangement = Arrangement.spacedBy(2.dp),
         horizontalArrangement = Arrangement.spacedBy(2.dp),
     ) {
-        if (category == EmojiCategory.RECENTLY_USED) {
-            // Gboard prints a small "Recent emoji" label above the grid on
-            // the clock tab. Full-width grid item so it spans all columns.
-            item(span = { GridItemSpan(EMOJI_COLUMNS) }) {
+        sections.forEach { section ->
+            item(
+                key = "header_${section.category.id}",
+                span = { GridItemSpan(EMOJI_COLUMNS) },
+            ) {
                 Text(
-                    text = "Recent emoji",
+                    text = section.category.sectionTitle(),
                     color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f),
                     fontSize = 12.sp,
                     fontWeight = FontWeight.Medium,
-                    modifier = Modifier.padding(start = 4.dp, top = 6.dp, bottom = 4.dp),
+                    modifier = Modifier.padding(start = 4.dp, top = 8.dp, bottom = 4.dp),
                 )
             }
-        }
-        items(items = emojis, key = { it.base().value }) { emojiSet ->
-            Box(
-                modifier = Modifier
-                    .size(40.dp)
-                    .clickable { onEmojiPicked(emojiSet.base()) },
-                contentAlignment = Alignment.Center,
-            ) {
-                Text(
-                    text = emojiSet.base().value,
-                    fontSize = 24.sp,
-                )
+            items(
+                items = section.emojis,
+                key = { "${section.category.id}_${it.base().value}" },
+            ) { emojiSet ->
+                Box(
+                    modifier = Modifier
+                        .size(40.dp)
+                        .clickable { onEmojiPicked(emojiSet.base()) },
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Text(
+                        text = emojiSet.base().value,
+                        fontSize = 24.sp,
+                    )
+                }
             }
         }
     }

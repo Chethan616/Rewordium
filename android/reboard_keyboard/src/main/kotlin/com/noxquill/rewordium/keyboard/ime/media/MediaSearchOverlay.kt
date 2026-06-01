@@ -84,7 +84,10 @@ import coil.request.ImageRequest
 import com.noxquill.rewordium.keyboard.editorInstance
 import com.noxquill.rewordium.keyboard.ime.input.LocalInputFeedbackController
 import com.noxquill.rewordium.keyboard.ime.keyboard.KeyboardManager
+import com.noxquill.rewordium.keyboard.ime.media.gif.GifCollectionStore
 import com.noxquill.rewordium.keyboard.ime.media.gif.KlipyClient
+import com.noxquill.rewordium.keyboard.ime.media.sticker.StickerCollectionStore
+import com.noxquill.rewordium.keyboard.ime.media.sticker.StickerRef
 import com.noxquill.rewordium.keyboard.ime.media.sticker.UserStickerStore
 import com.noxquill.rewordium.keyboard.ime.media.sticker.WhatsAppStickerReader
 import com.noxquill.rewordium.keyboard.ime.text.key.KeyCode
@@ -351,6 +354,7 @@ private fun GifSearchResults(
     val context = LocalContext.current
     val client = remember { KlipyClient() }
     val scope = rememberCoroutineScope()
+    val recentsStore = remember { GifCollectionStore.recents(context) }
     val imageLoader = remember {
         ImageLoader.Builder(context)
             .components {
@@ -369,6 +373,7 @@ private fun GifSearchResults(
         }
         return
     }
+    LaunchedEffect(Unit) { recentsStore.ensureLoaded() }
     LaunchedEffect(query) {
         loading = true
         results = client.search(query)
@@ -403,6 +408,7 @@ private fun GifSearchResults(
                         .background(fg.copy(alpha = 0.05f))
                         .clickable {
                             scope.launch {
+                                recentsStore.add(gif)
                                 val uri = downloadAndStore(context, gif.gifUrl)
                                 if (uri != null) onGifPicked(uri, gif.contentDescription)
                             }
@@ -433,12 +439,14 @@ private fun StickerSearchResults(
     val context = LocalContext.current
     val store = remember { UserStickerStore.get(context) }
     val whatsapp = remember { WhatsAppStickerReader(context) }
+    val recentsStore = remember { StickerCollectionStore.recents(context) }
     val scope = rememberCoroutineScope()
     val userEntries by store.entriesFlow.collectAsState()
     var waPacks by remember { mutableStateOf<List<WhatsAppStickerReader.Pack>>(emptyList()) }
     val dim = fg.copy(alpha = 0.55f)
     LaunchedEffect(Unit) {
         store.ensureLoaded()
+        recentsStore.ensureLoaded()
         waPacks = whatsapp.packs()
     }
 
@@ -498,6 +506,7 @@ private fun StickerSearchResults(
                             when (item) {
                                 is StickerSearchItem.User -> {
                                     store.touch(item.entry)
+                                    recentsStore.add(StickerRef.User(item.entry.id))
                                     val file = store.fileFor(item.entry)
                                     if (!file.exists()) return@launch
                                     val uri = withContext(Dispatchers.IO) {
@@ -506,6 +515,9 @@ private fun StickerSearchResults(
                                     onStickerPicked(uri, item.entry.mime, "Sticker")
                                 }
                                 is StickerSearchItem.WhatsApp -> {
+                                    recentsStore.add(
+                                        StickerRef.WhatsApp(item.sticker.uri.toString(), item.sticker.emojis),
+                                    )
                                     val uri = withContext(Dispatchers.IO) {
                                         cloneToClipboardStore(context, item.sticker.uri)
                                     } ?: return@launch

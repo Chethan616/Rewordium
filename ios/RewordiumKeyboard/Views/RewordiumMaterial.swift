@@ -37,12 +37,12 @@ enum RewordiumTokens {
 
 /// Background material for the toolbar surface.
 ///
-/// iOS 15+: `.ultraThinMaterial` matches the system predictive bar.
-/// iOS 26+: the SwiftUI `.glassEffect()` modifier applies the Liquid Glass
-/// material — a subtle refraction/edge-light treatment that the system itself
-/// uses on toolbars + sheets in 26. We pick the more diffuse `.regular`
-/// variant so the bar reads as a calm surface above the keyboard, not a
-/// flashy element competing for attention.
+/// iOS 15-25: `.ultraThinMaterial` matches the system predictive bar.
+/// iOS 26+:   `.glassEffect()` applies Liquid Glass — a subtle refraction
+///            + edge-light treatment that the system itself uses on
+///            toolbars and sheets. We pick the more diffuse `.regular`
+///            variant so the bar reads as a calm surface above the
+///            keyboard, not a flashy element competing for attention.
 struct RewordiumSurface: ViewModifier {
     func body(content: Content) -> some View {
         content
@@ -70,37 +70,134 @@ struct RewordiumSurface: ViewModifier {
 }
 
 /// Chip background — flat, hairline border, faint primary tint when pressed.
+///
+/// On iOS 26 we adopt `.glassEffect(.regular, in: …)` so the chip refracts
+/// the toolbar surface beneath it. The `GlassEffectContainer` wrapping the
+/// whole AIToolbar coalesces neighboring chips so they blend instead of
+/// stacking glass-on-glass.
 struct RewordiumChipSurface: ViewModifier {
     var isPressed: Bool = false
     var isHighlighted: Bool = false
 
     func body(content: Content) -> some View {
-        content
-            .background(
-                RoundedRectangle(cornerRadius: RewordiumTokens.Radius.chip, style: .continuous)
-                    .fill(.background.opacity(isHighlighted ? 0.0 : 0.6))
-            )
-            .background(
-                RoundedRectangle(cornerRadius: RewordiumTokens.Radius.chip, style: .continuous)
-                    .fill(Color.accentColor.opacity(isHighlighted ? 0.10 : 0.0))
-            )
-            .overlay(
-                RoundedRectangle(cornerRadius: RewordiumTokens.Radius.chip, style: .continuous)
-                    .strokeBorder(
-                        isHighlighted ? Color.accentColor.opacity(0.7) : Color.primary.opacity(0.12),
-                        lineWidth: isHighlighted ? 1.2 : RewordiumTokens.Stroke.hairline
+        if #available(iOS 26.0, *) {
+            content
+                .background(
+                    RoundedRectangle(cornerRadius: RewordiumTokens.Radius.chip, style: .continuous)
+                        .fill(Color.accentColor.opacity(isHighlighted ? 0.18 : 0.0))
+                )
+                .glassEffect(
+                    isHighlighted ? .regular.tint(.accentColor.opacity(0.15)) : .regular,
+                    in: RoundedRectangle(cornerRadius: RewordiumTokens.Radius.chip, style: .continuous)
+                )
+                .overlay(
+                    RoundedRectangle(cornerRadius: RewordiumTokens.Radius.chip, style: .continuous)
+                        .strokeBorder(
+                            isHighlighted ? Color.accentColor.opacity(0.7) : Color.primary.opacity(0.08),
+                            lineWidth: isHighlighted ? 1.2 : RewordiumTokens.Stroke.hairline
+                        )
+                )
+                .scaleEffect(isPressed ? 0.96 : 1.0)
+                .animation(RewordiumTokens.AnimationCurve.tap, value: isPressed)
+        } else {
+            content
+                .background(
+                    RoundedRectangle(cornerRadius: RewordiumTokens.Radius.chip, style: .continuous)
+                        .fill(.background.opacity(isHighlighted ? 0.0 : 0.6))
+                )
+                .background(
+                    RoundedRectangle(cornerRadius: RewordiumTokens.Radius.chip, style: .continuous)
+                        .fill(Color.accentColor.opacity(isHighlighted ? 0.10 : 0.0))
+                )
+                .overlay(
+                    RoundedRectangle(cornerRadius: RewordiumTokens.Radius.chip, style: .continuous)
+                        .strokeBorder(
+                            isHighlighted ? Color.accentColor.opacity(0.7) : Color.primary.opacity(0.12),
+                            lineWidth: isHighlighted ? 1.2 : RewordiumTokens.Stroke.hairline
+                        )
+                )
+                .scaleEffect(isPressed ? 0.96 : 1.0)
+                .animation(RewordiumTokens.AnimationCurve.tap, value: isPressed)
+        }
+    }
+}
+
+/// Pill surface for persona chips, suggestion-strip slots, and small CTAs.
+/// Same Liquid Glass treatment as a chip but with a pill radius and a tint
+/// when selected.
+struct RewordiumPillSurface: ViewModifier {
+    var isSelected: Bool = false
+
+    func body(content: Content) -> some View {
+        if #available(iOS 26.0, *) {
+            content
+                .glassEffect(
+                    isSelected ? .regular.tint(.accentColor.opacity(0.22)) : .regular,
+                    in: Capsule()
+                )
+                .overlay(
+                    Capsule().strokeBorder(
+                        isSelected ? Color.accentColor.opacity(0.7) : Color.primary.opacity(0.10),
+                        lineWidth: isSelected ? 1.0 : RewordiumTokens.Stroke.hairline
                     )
-            )
-            .scaleEffect(isPressed ? 0.96 : 1.0)
-            .animation(RewordiumTokens.AnimationCurve.tap, value: isPressed)
+                )
+        } else {
+            content
+                .background(
+                    Capsule().fill(isSelected
+                        ? Color.accentColor.opacity(0.18)
+                        : Color.primary.opacity(0.06))
+                )
+                .overlay(
+                    Capsule().strokeBorder(
+                        isSelected ? Color.accentColor.opacity(0.6) : Color.primary.opacity(0.10),
+                        lineWidth: isSelected ? 1.0 : RewordiumTokens.Stroke.hairline
+                    )
+                )
+        }
+    }
+}
+
+/// Card surface used by the AI result panel. Slightly taller corner radius
+/// and a subtle accent tint to set it apart from the chip grid.
+struct RewordiumCardSurface: ViewModifier {
+    func body(content: Content) -> some View {
+        if #available(iOS 26.0, *) {
+            content
+                .glassEffect(
+                    .regular.tint(.accentColor.opacity(0.08)),
+                    in: RoundedRectangle(cornerRadius: RewordiumTokens.Radius.card, style: .continuous)
+                )
+                .overlay(
+                    RoundedRectangle(cornerRadius: RewordiumTokens.Radius.card, style: .continuous)
+                        .strokeBorder(Color.primary.opacity(0.08), lineWidth: RewordiumTokens.Stroke.hairline)
+                )
+        } else {
+            content
+                .background(
+                    RoundedRectangle(cornerRadius: RewordiumTokens.Radius.card, style: .continuous)
+                        .fill(.ultraThinMaterial)
+                )
+                .overlay(
+                    RoundedRectangle(cornerRadius: RewordiumTokens.Radius.card, style: .continuous)
+                        .strokeBorder(Color.primary.opacity(0.10), lineWidth: RewordiumTokens.Stroke.hairline)
+                )
+        }
     }
 }
 
 extension View {
     func rewordiumSurface() -> some View { modifier(RewordiumSurface()) }
+
     func rewordiumChip(isPressed: Bool = false, isHighlighted: Bool = false) -> some View {
         modifier(RewordiumChipSurface(isPressed: isPressed, isHighlighted: isHighlighted))
     }
+
+    func rewordiumPill(isSelected: Bool = false) -> some View {
+        modifier(RewordiumPillSurface(isSelected: isSelected))
+    }
+
+    func rewordiumCard() -> some View { modifier(RewordiumCardSurface()) }
 
     /// Prominent CTA button style. On iOS 26 we adopt the Liquid Glass
     /// `glassProminent` style (matches the upstream KeyboardKit demo). Older
@@ -110,6 +207,18 @@ extension View {
     func rewordiumProminentStyle() -> some View {
         if #available(iOS 26.0, *) {
             self.buttonStyle(.glassProminent)
+        } else {
+            self
+        }
+    }
+
+    /// Wraps content in a `GlassEffectContainer` on iOS 26 so neighboring
+    /// glass surfaces coalesce into one refraction layer instead of
+    /// stacking. No-op on earlier OSes.
+    @ViewBuilder
+    func rewordiumGlassContainer() -> some View {
+        if #available(iOS 26.0, *) {
+            GlassEffectContainer { self }
         } else {
             self
         }

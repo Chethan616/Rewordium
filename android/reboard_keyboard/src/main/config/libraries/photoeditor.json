@@ -1,0 +1,15 @@
+{
+  "uniqueId": "photoeditor",
+  "name": "PhotoEditor",
+  "developers": [
+    {
+      "name": "Burhanuddin Rashid",
+      "organisationUrl": "https://github.com/burhanrashid52"
+    }
+  ],
+  "description": "Lightweight Android photo editor SDK powering the Sticker Studio canvas (brush, text, image overlays, undo/redo).",
+  "website": "https://github.com/burhanrashid52/PhotoEditor",
+  "licenses": [
+    "MIT"
+  ]
+}

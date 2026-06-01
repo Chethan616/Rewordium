@@ -70,6 +70,11 @@ import com.noxquill.rewordium.keyboard.app.settings.localization.LocalizationScr
 import com.noxquill.rewordium.keyboard.app.settings.localization.SelectLocaleScreen
 import com.noxquill.rewordium.keyboard.app.settings.localization.SubtypeEditorScreen
 import com.noxquill.rewordium.keyboard.app.settings.media.MediaScreen
+import com.noxquill.rewordium.keyboard.app.settings.stickerstudio.AnimatedStickerImportScreen
+import com.noxquill.rewordium.keyboard.app.settings.stickerstudio.MyStickersScreen
+import com.noxquill.rewordium.keyboard.app.settings.stickerstudio.PremadeLibraryScreen
+import com.noxquill.rewordium.keyboard.app.settings.stickerstudio.StickerEditorScreen
+import com.noxquill.rewordium.keyboard.app.settings.stickerstudio.StickerStudioScreen
 import com.noxquill.rewordium.keyboard.app.settings.smartbar.SmartbarScreen
 import com.noxquill.rewordium.keyboard.app.settings.theme.ThemeManagerScreen
 import com.noxquill.rewordium.keyboard.app.settings.theme.ThemeManagerScreenAction
@@ -171,6 +176,32 @@ object Routes {
         @Serializable
         @Deeplink("settings/media")
         object Media
+
+        // Sticker Studio — full editor + premade library, all writing
+        // through the existing UserStickerStore that the IME panel
+        // already subscribes to (entriesFlow). No IPC needed.
+        @Serializable
+        @Deeplink("settings/sticker-studio")
+        object StickerStudio
+
+        @Serializable
+        @Deeplink("settings/sticker-studio/my-stickers")
+        object MyStickers
+
+        @Serializable
+        @Deeplink("settings/sticker-studio/editor")
+        data class StickerEditor(
+            /** Optional source URI to load as the base layer. Null = blank. */
+            val sourceUri: String? = null,
+        )
+
+        @Serializable
+        @Deeplink("settings/sticker-studio/premade")
+        object PremadeLibrary
+
+        @Serializable
+        @Deeplink("settings/sticker-studio/animated")
+        object AnimatedStickerImport
 
         @Serializable
         @Deeplink("settings/other")
@@ -313,6 +344,15 @@ object Routes {
             composableWithDeepLink(Settings.Clipboard::class) { ClipboardScreen() }
 
             composableWithDeepLink(Settings.Media::class) { MediaScreen() }
+
+            composableWithDeepLink(Settings.StickerStudio::class) { StickerStudioScreen() }
+            composableWithDeepLink(Settings.MyStickers::class) { MyStickersScreen() }
+            composableWithDeepLink(Settings.StickerEditor::class) { navBackStack ->
+                val payload = navBackStack.toRoute<Settings.StickerEditor>()
+                StickerEditorScreen(sourceUri = payload.sourceUri)
+            }
+            composableWithDeepLink(Settings.PremadeLibrary::class) { PremadeLibraryScreen() }
+            composableWithDeepLink(Settings.AnimatedStickerImport::class) { AnimatedStickerImportScreen() }
 
             composableWithDeepLink(Settings.Other::class) { OtherScreen() }
             composableWithDeepLink(Settings.PhysicalKeyboard::class) { PhysicalKeyboardScreen() }

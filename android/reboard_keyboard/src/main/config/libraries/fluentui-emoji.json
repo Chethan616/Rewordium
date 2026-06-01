@@ -1,0 +1,15 @@
+{
+  "uniqueId": "fluentui-emoji",
+  "name": "Microsoft Fluent UI Emoji",
+  "developers": [
+    {
+      "name": "Microsoft Corporation",
+      "organisationUrl": "https://github.com/microsoft"
+    }
+  ],
+  "description": "A subset of Microsoft's Fluent UI Emoji graphics is bundled as the Sticker Studio's premade library. All images remain under the upstream MIT license.",
+  "website": "https://github.com/microsoft/fluentui-emoji",
+  "licenses": [
+    "MIT"
+  ]
+}
