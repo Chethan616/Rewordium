@@ -62,13 +62,67 @@ workflows:
           rm -rf ios/Pods ios/Podfile.lock ios/.symlinks
           rm -rf ios/Flutter/ephemeral
 
-          # cloud_firestore is pinned to exact 6.1.3 in pubspec.yaml.
-          # The lock may still hold a newer entry (6.3.0 / 6.4.1) from
-          # prior runs that bumped it. `flutter pub downgrade` refreshes
-          # the lock to the lowest version satisfying the constraint —
-          # for an exact pin that's 6.1.3.
-          flutter pub downgrade cloud_firestore cloud_firestore_platform_interface cloud_firestore_web
+          # cloud_firestore constraint is now ^6.3.0 (back from the brief
+          # exact 6.1.3 pin that broke the Android Dart compile against
+          # cloud_firestore_platform_interface 7.x). The iOS Pipeline
+          # parser breakage that 6.3.x ships is patched out below.
+          # `pub upgrade` refreshes the lock to the highest allowed version.
+          flutter pub upgrade cloud_firestore cloud_firestore_platform_interface cloud_firestore_web
           flutter pub get
+
+      - name: Stub FLTPipelineParser.m (iOS Firestore Pipeline workaround)
+        script: |
+          # WHY THIS EXISTS:
+          #   cloud_firestore 6.2.0+ added FLTPipelineParser.m which calls
+          #   selectors `-initWithRef:firestore:` and `-initWithCollectionId:`
+          #   on FIRCollectionSourceStageBridge / FIRCollectionGroupSourceStage
+          #   Bridge. Those classes were introduced in firebase-ios-sdk 12.x.
+          #   Our firebase_core 4.x line resolves an older iOS SDK that
+          #   lacks those selectors, so the build fails with
+          #   "ARC Semantic Issue: No visible @interface ... declares the
+          #    selector ..." — see prior CI runs.
+          #
+          #   Rewordium does not use Firestore Pipelines anywhere in lib/.
+          #   Replacing the .m with a no-op stub satisfies the linker and
+          #   removes the Pipeline functionality we never call.
+          #
+          # This step runs AFTER `flutter pub get` (which downloads
+          # cloud_firestore into ~/.pub-cache) and BEFORE `flutter build ios`
+          # (which triggers `pod install` to copy plugin sources into Pods).
+          # Patching the pub-cache source means the stub flows into Pods on
+          # the next pod install.
+          set -e
+          PIPELINE_FILE=$(find "$HOME/.pub-cache/hosted/pub.dev" \
+            -path "*cloud_firestore-*" \
+            -name "FLTPipelineParser.m" \
+            -type f 2>/dev/null | head -1)
+          if [ -z "$PIPELINE_FILE" ]; then
+            echo "No FLTPipelineParser.m found in pub-cache. Either Firestore"
+            echo "is no longer pinned to a 6.2.x+ version, or pub-cache wasn't"
+            echo "populated yet. Skipping the stub — if iOS build fails on"
+            echo "FIRCollectionSourceStageBridge selectors, this step's"
+            echo "lookup needs adjustment."
+            exit 0
+          fi
+          echo "Stubbing $PIPELINE_FILE"
+          cat > "$PIPELINE_FILE" <<'STUB'
+          // Intentionally stubbed by codemagic.yaml.
+          //
+          // The upstream FLTPipelineParser references Firestore Pipeline
+          // bridge selectors only present in firebase-ios-sdk 12.x. With
+          // firebase_core 4.x (which Rewordium pins via firebase_core: ^4.5.0),
+          // CocoaPods resolves an older firebase-ios-sdk that doesn't expose
+          // those selectors, causing ARC Semantic Issue errors at build time.
+          //
+          // Rewordium does not call Firestore Pipeline APIs anywhere — see
+          // `git grep "\.pipeline("` returning zero matches — so replacing
+          // this translation unit with an empty one removes a class we
+          // never instantiate. If Rewordium ever needs Pipelines, bump
+          // firebase_core to a release that pulls in firebase-ios-sdk 12.x
+          // and drop this stub.
+          #import <Foundation/Foundation.h>
+          STUB
+          echo "Stub installed (size: $(wc -c < "$PIPELINE_FILE") bytes)."
 
       - name: Prepare .env for CI
         script: |
