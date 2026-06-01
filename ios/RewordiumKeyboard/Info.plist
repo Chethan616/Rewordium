@@ -35,8 +35,19 @@
 		</dict>
 		<key>NSExtensionPointIdentifier</key>
 		<string>com.apple.keyboard-service</string>
+		<!--
+		    Hardcoded module name. The previous $(PRODUCT_MODULE_NAME)
+		    indirection depended on Xcode build settings resolving the
+		    variable at build time; if PRODUCT_MODULE_NAME ever resolved
+		    to empty (which can happen if DEFINES_MODULE is ever flipped
+		    or PRODUCT_NAME drift occurs), the principal class becomes
+		    ".KeyboardViewController" — an invalid identifier — and iOS
+		    silently refuses to instantiate the extension, falling back
+		    to the system keyboard. Hardcoding the literal removes that
+		    failure mode entirely.
+		-->
 		<key>NSExtensionPrincipalClass</key>
-		<string>$(PRODUCT_MODULE_NAME).KeyboardViewController</string>
+		<string>RewordiumKeyboard.KeyboardViewController</string>
 	</dict>
 </dict>
 </plist>
