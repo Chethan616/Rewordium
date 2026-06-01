@@ -124,6 +124,34 @@ workflows:
 
       - name: Build iOS app (no codesign)
         script: |
+          # Read the canonical version from pubspec.yaml so the Runner app
+          # and the keyboard extension agree on CFBundleVersion.
+          #
+          # WHY THIS MATTERS:
+          #   iOS REFUSES TO LOAD an app extension whose CFBundleVersion
+          #   doesn't match its parent app's. Previously this step passed
+          #   --build-number="${CM_BUILD_NUMBER:-75}" with a hardcoded 75
+          #   fallback, while the keyboard extension's Ruby setup script
+          #   reads `pubspec_build` (currently 78 from `version: 2.9.4+78`).
+          #   Result: Runner = 75, extension = 78 → iOS silently disables
+          #   the keyboard so the user sees a stub (no AI panel, no emoji
+          #   panel, no suggestion strip, no spacebar label, globe key skips
+          #   to other keyboards instead of staying on Rewordium).
+          #
+          # Strategy: extract version from pubspec.yaml once, export it
+          # into the environment so BOTH `flutter build` and any subsequent
+          # tooling pick up the same value. Codemagic's CM_BUILD_NUMBER (if
+          # set) still wins via the env-var precedence the Ruby script
+          # already honors.
+          PUBSPEC_VERSION_LINE=$(grep -E '^version:' pubspec.yaml | head -1 | awk '{print $2}')
+          PUBSPEC_MARKETING="${PUBSPEC_VERSION_LINE%+*}"
+          PUBSPEC_BUILD="${PUBSPEC_VERSION_LINE##*+}"
+
+          FLUTTER_BUILD_NAME_VAL="${FCI_BUILD_NAME:-${PUBSPEC_MARKETING}}"
+          FLUTTER_BUILD_NUMBER_VAL="${CM_BUILD_NUMBER:-${PUBSPEC_BUILD}}"
+
+          echo "Build version: ${FLUTTER_BUILD_NAME_VAL}+${FLUTTER_BUILD_NUMBER_VAL}"
+
           # Two-stage build:
           #  1. `flutter build ios --release --no-codesign` runs to generate
           #     Flutter's iOS scaffolding (Generated.xcconfig, pod install,
@@ -140,12 +168,12 @@ workflows:
           #
           # Building for device (`-sdk iphoneos`) sidesteps the MLKit
           # arm64-simulator problem entirely — MLKit ships full
-          # arm64-iphoneos slices, so OCR works on real iPhones.
+          # arm64-iphoneos slices, so OCR works on real iPhones and iPads.
           # Liquid Glass / iOS 26 SDK code paths are reachable on any iOS 26
           # device installed via Sideloadly.
           flutter build ios --release --no-codesign \
-            --build-name="${FCI_BUILD_NAME:-2.9.1}" \
-            --build-number="${CM_BUILD_NUMBER:-75}" \
+            --build-name="${FLUTTER_BUILD_NAME_VAL}" \
+            --build-number="${FLUTTER_BUILD_NUMBER_VAL}" \
             || echo "(flutter post-build validation failed — continuing with our own xcodebuild, see codemagic.yaml comment)"
 
           xcodebuild -workspace "$XCODE_WORKSPACE" -scheme "$XCODE_SCHEME" \
