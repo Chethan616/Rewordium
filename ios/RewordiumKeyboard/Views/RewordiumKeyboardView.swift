@@ -36,6 +36,16 @@ struct RewordiumKeyboardView: View {
         // root replacing itself with a stock-looking layout that would mask
         // the failure.
         VStack(spacing: 0) {
+            // 22pt top inset: the UIKit diagnostic banner that
+            // KeyboardViewController installs in viewDidLoad sits at the top
+            // of self.view with height 22. The SwiftUI hierarchy lives
+            // inside the SAME self.view (KeyboardKit's hosting controller
+            // makes it a subview), so without this inset the SwiftUI
+            // content draws over the UIKit banner. The inset is invisible
+            // to the user — they just see the purple UIKit banner above a
+            // slightly-shifted SwiftUI hierarchy.
+            Color.clear.frame(height: 22)
+
             BuildBanner()
             AIToolbar(aiService: aiService, controller: controller)
             SuggestionStrip(controller: controller)

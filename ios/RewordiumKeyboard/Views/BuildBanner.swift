@@ -1,15 +1,29 @@
 import SwiftUI
 
-/// Always-visible diagnostic banner pinned to the top of the keyboard.
+/// Secondary "SwiftUI is alive" indicator beneath the UIKit diagnostic
+/// banner that `KeyboardViewController` installs in `viewDidLoad`.
 ///
-/// Purpose: give the user an unmistakable visual signal that the Rewordium
-/// extension binary is actually loading. If the user sees this banner, the
-/// keyboard binary is running. If they don't, the system is either showing
-/// the stock iOS keyboard, an older installed build, or our extension is
-/// being terminated before SwiftUI can render.
+/// Loading-state legend:
+///
+///   1. UIKit purple banner visible (from KeyboardViewController.viewDidLoad)
+///      AND this SwiftUI banner visible (with version + "rew test")
+///      → everything's wired. The keyboard is fully loaded.
+///
+///   2. UIKit purple banner visible, SwiftUI banner NOT visible
+///      → KeyboardViewController ran but KeyboardKit / SwiftUI setup
+///        failed. We never reached `setupKeyboardView`. Inspect Console.app
+///        on the device, filter on "[RewordiumKeyboard]", and look for a
+///        "setupKeyboardKit FAILED" line.
+///
+///   3. Neither banner visible
+///      → the extension binary never instantiated KeyboardViewController.
+///        The failure is at the iOS extension-loading layer: principal
+///        class lookup, entitlement / signing mismatch, or memory ceiling
+///        crash. The Codemagic build succeeded but something at install
+///        time is wrong.
 ///
 /// Reads CFBundleShortVersionString + CFBundleVersion from the extension's
-/// Info.plist (the values setup_keyboard_target.rb injects at build time),
+/// Info.plist (values that setup_keyboard_target.rb injects at build time),
 /// so the banner text follows whatever IPA the user actually has installed.
 struct BuildBanner: View {
 
@@ -23,15 +37,13 @@ struct BuildBanner: View {
 
     var body: some View {
         HStack(spacing: 6) {
-            // Tinted leading bar — instantly recognizable, never matches any
-            // stock keyboard chrome.
             Rectangle()
                 .fill(Color.accentColor)
-                .frame(width: 3, height: 14)
+                .frame(width: 3, height: 12)
                 .clipShape(Capsule())
 
-            Text("Rewordium")
-                .font(.system(size: 11, weight: .semibold, design: .rounded))
+            Text("SwiftUI ready")
+                .font(.system(size: 10, weight: .semibold, design: .rounded))
                 .foregroundStyle(.primary)
 
             Text("v\(marketingVersion) (\(buildNumber))")
@@ -45,11 +57,11 @@ struct BuildBanner: View {
                 .foregroundStyle(.secondary)
         }
         .padding(.horizontal, 10)
-        .padding(.vertical, 4)
+        .padding(.vertical, 3)
         .frame(maxWidth: .infinity)
         .background(
             ZStack {
-                Color.accentColor.opacity(0.12)
+                Color.accentColor.opacity(0.10)
                 Rectangle()
                     .frame(height: 0.5)
                     .foregroundStyle(.quaternary)
