@@ -152,19 +152,28 @@ workflows:
 
           echo "Build version: ${FLUTTER_BUILD_NAME_VAL}+${FLUTTER_BUILD_NUMBER_VAL}"
 
-          # Two-stage build:
-          #  1. `flutter build ios --release --no-codesign` runs to generate
-          #     Flutter's iOS scaffolding (Generated.xcconfig, pod install,
-          #     Flutter framework). On Xcode 26 / iOS 26 SDK, flutter_tools
-          #     added a strict post-build validation that demands
-          #     DEVELOPMENT_TEAM be set even when --no-codesign is passed.
-          #     The actual xcodebuild *inside* the flutter command succeeds —
-          #     only the trailing validation step trips. We tolerate that
-          #     failure with `|| echo` because:
-          #  2. Our own explicit xcodebuild below re-runs the build into a
-          #     directory we control with CODE_SIGNING_ALLOWED=NO etc.
-          #     forced at the command line — those override anything in
-          #     pbxproj that the post-build validator complained about.
+          # Single-stage build. `flutter build ios --release --no-codesign`
+          # invokes Xcode with the right configuration and produces a fully
+          # built Runner.app at build/ios/iphoneos/Runner.app with the
+          # keyboard extension already embedded under PlugIns/ via the
+          # `Embed Foundation Extensions` build phase wired by
+          # setup_keyboard_target.rb.
+          #
+          # On Xcode 26 / iOS 26 SDK, flutter_tools added a strict
+          # post-build validation that demands DEVELOPMENT_TEAM be set even
+          # when --no-codesign is passed. The actual xcodebuild *inside*
+          # flutter succeeds — only the trailing validation trips. We
+          # tolerate that failure with `|| echo`; the artifacts are present.
+          #
+          # WHY WE DROPPED THE SECOND XCODEBUILD STAGE:
+          #   The previous yaml ran an explicit `xcodebuild clean build`
+          #   after the flutter step. `clean` wipes DerivedData and the
+          #   follow-up build recompiles everything from scratch —
+          #   Firebase + MLKit + KeyboardKit + Flutter framework — which
+          #   added ~10 minutes per run on top of the 3–4 minute flutter
+          #   build. Flutter's invocation already produces the same .app
+          #   with --no-codesign honored, so the second pass was duplicate
+          #   work. Saved every CI run by not doing it twice.
           #
           # Building for device (`-sdk iphoneos`) sidesteps the MLKit
           # arm64-simulator problem entirely — MLKit ships full
@@ -174,22 +183,29 @@ workflows:
           flutter build ios --release --no-codesign \
             --build-name="${FLUTTER_BUILD_NAME_VAL}" \
             --build-number="${FLUTTER_BUILD_NUMBER_VAL}" \
-            || echo "(flutter post-build validation failed — continuing with our own xcodebuild, see codemagic.yaml comment)"
+            || echo "(flutter post-build validation failed — Runner.app artifacts are present, continuing)"
 
-          xcodebuild -workspace "$XCODE_WORKSPACE" -scheme "$XCODE_SCHEME" \
-            -configuration Release -sdk iphoneos \
-            -destination 'generic/platform=iOS' \
-            -derivedDataPath build/ios/DerivedData \
-            -clonedSourcePackagesDirPath build/ios/SourcePackages \
-            -quiet clean build \
-            CODE_SIGNING_ALLOWED=NO CODE_SIGN_IDENTITY="" \
-            CODE_SIGNING_REQUIRED=NO DEVELOPMENT_TEAM=""
+          # Sanity: the .app must exist with the extension embedded under
+          # PlugIns/. If either is missing the build is broken regardless
+          # of flutter's exit code, so fail loudly here rather than ship
+          # an IPA that won't load the keyboard.
+          if [ ! -d build/ios/iphoneos/Runner.app ]; then
+            echo "ERROR: build/ios/iphoneos/Runner.app missing after flutter build"
+            exit 1
+          fi
+          if [ ! -d build/ios/iphoneos/Runner.app/PlugIns/RewordiumKeyboard.appex ]; then
+            echo "ERROR: RewordiumKeyboard.appex was not embedded into Runner.app/PlugIns/"
+            exit 1
+          fi
+          echo "OK: Runner.app + RewordiumKeyboard.appex present"
 
       - name: Package unsigned IPA for Sideloadly
         script: |
+          # Source the Runner.app from flutter's output path now that we no
+          # longer run a second xcodebuild that wrote to build/ios/DerivedData.
           rm -rf Payload rewordium-unsigned.ipa
           mkdir -p Payload
-          mv build/ios/DerivedData/Build/Products/Release-iphoneos/Runner.app Payload/
+          cp -R build/ios/iphoneos/Runner.app Payload/
           # The .appex is already nested inside Runner.app/PlugIns/ from the
           # Embed Foundation Extensions phase — nothing else to copy.
           zip -r -q rewordium-unsigned.ipa Payload
