@@ -33,27 +33,40 @@ workflows:
     scripts:
       - name: Install dependencies
         script: |
-          # Flutter's SPM integration rsyncs plugin sources into these dirs
-          # during pub get — they must exist on a fresh checkout.
+          # Disable Flutter's plugin Swift Package Manager integration.
+          #
+          # WHY: with SPM enabled, Flutter auto-adds SPM-capable plugins
+          # (firebase_core, firebase_auth, firebase_messaging, cloud_firestore,
+          # …) to ios/Flutter/ephemeral/Packages AND the Podfile's
+          # `flutter_install_all_ios_pods` ALSO installs them as CocoaPods.
+          # Both paths emit the same Objective-C symbols, so the Runner
+          # binary fails to link with "25 duplicate symbol" errors (see
+          # firebase_core.o vs firebase_core_shared.o in prior CI run).
+          #
+          # The keyboard extension's KeyboardKit SPM dependency is wired
+          # by ios/scripts/setup_keyboard_target.rb (XCSwiftPackageProduct-
+          # Dependency on the extension target only), independent of
+          # Flutter's plugin-SPM machinery — so this flag does NOT affect
+          # KeyboardKit, only the host-app plugin resolution.
+          flutter config --no-enable-swift-package-manager
+
+          # Flutter's SPM integration used to rsync plugin sources into
+          # these dirs during pub get. Harmless to leave the mkdirs in
+          # case future Flutter versions still expect them.
           mkdir -p build/ios/SourcePackages
           mkdir -p build/macos/SourcePackages
 
           # Wipe any cached iOS build state from a previous failed run so
-          # SwiftPM and CocoaPods resolve fresh against the current pubspec.
-          # The cache key only covers .pub-cache + DerivedData/SourcePackages —
-          # these directories are workspace-local and would otherwise hold
-          # half-resolved plugin sources from the prior cloud_firestore
-          # break.
+          # CocoaPods resolves fresh against the current pubspec, and any
+          # ephemeral SPM packages from prior SPM-enabled runs are dropped.
           rm -rf ios/Pods ios/Podfile.lock ios/.symlinks
           rm -rf ios/Flutter/ephemeral
 
-          # cloud_firestore is pinned to exact 6.1.3 in pubspec.yaml. The
-          # lock might still hold a newer entry (6.3.0 / 6.4.1) from prior
-          # runs. `flutter pub downgrade` refreshes the lock to the lowest
-          # version permitted by the constraint — for an exact pin that's
-          # 6.1.3, which is what we want. Plain `pub get` would error with
-          # "constraint not satisfied" when the lock entry is above the
-          # exact pin.
+          # cloud_firestore is pinned to exact 6.1.3 in pubspec.yaml.
+          # The lock may still hold a newer entry (6.3.0 / 6.4.1) from
+          # prior runs that bumped it. `flutter pub downgrade` refreshes
+          # the lock to the lowest version satisfying the constraint —
+          # for an exact pin that's 6.1.3.
           flutter pub downgrade cloud_firestore cloud_firestore_platform_interface cloud_firestore_web
           flutter pub get
 
