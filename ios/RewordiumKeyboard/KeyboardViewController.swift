@@ -11,35 +11,40 @@ import KeyboardKit
 ///     hierarchy expects.
 ///   * `viewWillSetupKeyboardView` → call `setupKeyboardView { controller in … }`
 ///     returning the SwiftUI view. Don't call super here (per demo comment).
+///
+/// All lifecycle methods NSLog their entry so that filtering Console.app on
+/// "[RewordiumKeyboard]" reveals exactly which steps fired on the device —
+/// the cheapest diagnostic for "the keyboard isn't loading" reports.
 final class KeyboardViewController: KeyboardInputViewController {
 
     /// Lives for the lifetime of the keyboard. The SwiftUI hierarchy reads it
     /// by reference and observes via `@Observable` macro tracking.
     private let aiService = AIService()
 
-    /// Becomes `true` if the KeyboardKit boot threw. The view layer reads this
-    /// and renders a minimal QWERTY fallback so iOS still sees a working
-    /// keyboard — extensions that show a broken view get pulled from the
-    /// globe-cycle rotation on the next launch.
-    private var setupDidFail: Bool = false
-
     // MARK: - Lifecycle
+
+    override func viewDidLoad() {
+        super.viewDidLoad()
+        NSLog("[RewordiumKeyboard] viewDidLoad — bundleId=\(Bundle.main.bundleIdentifier ?? "?") version=\(Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "?")+\(Bundle.main.object(forInfoDictionaryKey: "CFBundleVersion") as? String ?? "?")")
+    }
 
     /// Called once when the keyboard extension launches. Configure services
     /// and state here. Anything view-related belongs in viewWillSetupKeyboardView.
     override func viewWillSetupKeyboardKit() {
+        NSLog("[RewordiumKeyboard] viewWillSetupKeyboardKit — beginning setup")
         setupKeyboardKit(for: rewordiumApp) { [weak self] result in
             guard let self else { return }
             switch result {
             case .success:
+                NSLog("[RewordiumKeyboard] setupKeyboardKit succeeded")
                 self.applyDefaultStateTweaks()
             case .failure(let error):
-                // Don't silently swallow — iOS will still ask us to render
-                // a view, and if the SwiftUI hierarchy assumes KeyboardKit
-                // services are wired we'd crash. Flag the failure so the
-                // view path can fall back to a stock layout.
-                NSLog("[RewordiumKeyboard] setup failed: \(error)")
-                self.setupDidFail = true
+                // Log loudly. We do NOT swap in a stock-looking fallback —
+                // doing that previously masked the failure as "extension
+                // looks like iOS stock keyboard." The full hierarchy renders
+                // either way; individual views handle service-unavailable
+                // cases locally.
+                NSLog("[RewordiumKeyboard] setupKeyboardKit FAILED: \(error)")
             }
         }
     }
@@ -47,26 +52,16 @@ final class KeyboardViewController: KeyboardInputViewController {
     /// Called whenever KeyboardKit needs to (re)build the keyboard view —
     /// includes orientation changes, locale changes, dark/light flips.
     override func viewWillSetupKeyboardView() {
+        NSLog("[RewordiumKeyboard] viewWillSetupKeyboardView — installing SwiftUI hierarchy")
         // Per demo: don't call super; we replace the view entirely.
         setupKeyboardView { [unowned self] controller in
             RewordiumKeyboardView(
                 services: controller.services,
                 state: controller.state,
                 controller: controller,
-                aiService: self.aiService,
-                setupDidFail: self.setupDidFail
+                aiService: self.aiService
             )
         }
-    }
-
-    /// Wired to the in-keyboard globe button. Tap = advance to next keyboard;
-    /// long-press = show the system picker. Mirrors the system convention.
-    func handleNextKeyboardTap(from view: UIView, with event: UIEvent?) {
-        advanceToNextInputMode()
-    }
-
-    func handleNextKeyboardLongPress(from view: UIView, with event: UIEvent?) {
-        handleInputModeList(from: view, with: event ?? UIEvent())
     }
 
     // MARK: - KeyboardApp

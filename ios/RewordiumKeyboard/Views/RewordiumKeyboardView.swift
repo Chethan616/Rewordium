@@ -5,35 +5,43 @@ import KeyboardKit
 /// Root SwiftUI hierarchy for the keyboard.
 ///
 /// Structure (top-to-bottom):
-///   1. AIToolbar       — morphing surface (collapsed pill / action grid / result)
-///   2. SuggestionStrip — predictive bar (UITextChecker + recent words)
-///   3. KeyboardView    — KeyboardKit's stock QWERTY with overridden:
-///        - `.space` → CustomSpacebar (renders the "rew testing" build label)
-///        - `.nextKeyboard` → GlobeButton (explicit, with system long-press picker)
-///        - `emojiKeyboard` → RewordiumEmojiPanel
+///   1. BuildBanner     — always-visible "Rewordium vX (build) • rew test"
+///                        diagnostic. If you don't see this, the extension
+///                        binary isn't loading.
+///   2. AIToolbar       — morphing surface (collapsed pill / action grid /
+///                        result), with the ✨ AI button that opens it.
+///   3. SuggestionStrip — predictive bar (UITextChecker + recent words).
+///                        Only visible while a partial word is being typed.
+///   4. KeyboardView    — KeyboardKit's stock QWERTY with overridden:
+///                        - `.space` → CustomSpacebar (renders "rew testing")
+///                        - `.nextKeyboard` → GlobeButton (explicit next-input
+///                          with system long-press picker)
+///                        - `emojiKeyboard` → RewordiumEmojiPanel
 struct RewordiumKeyboardView: View {
 
     let services: Keyboard.Services
     let state: Keyboard.State
     unowned let controller: KeyboardInputViewController
     let aiService: AIService
-    /// True when KeyboardKit failed to initialize. We still need to draw
-    /// *something* — an extension that returns no view at all is killed by
-    /// iOS, which then de-prioritizes us in the globe rotation. So we render
-    /// a minimal stock keyboard with no AI surface.
-    let setupDidFail: Bool
 
     var body: some View {
-        if setupDidFail {
-            fallbackKeyboard
-        } else {
-            VStack(spacing: 0) {
-                AIToolbar(aiService: aiService, controller: controller)
-                SuggestionStrip(controller: controller)
-                keyboard
-            }
-            .background(Color.clear)
+        // BuildBanner is unconditional — independent of any KeyboardKit
+        // initialization state. If the user sees the banner, the extension
+        // binary is loading. That eliminates the "is it stock iOS or my
+        // build?" ambiguity that an indistinguishable fallback would create.
+        //
+        // The full hierarchy below assumes KeyboardKit's services and state
+        // are wired. If a real init failure ever happens, individual views
+        // (AIToolbar, SuggestionStrip) handle it locally rather than the
+        // root replacing itself with a stock-looking layout that would mask
+        // the failure.
+        VStack(spacing: 0) {
+            BuildBanner()
+            AIToolbar(aiService: aiService, controller: controller)
+            SuggestionStrip(controller: controller)
+            keyboard
         }
+        .background(Color.clear)
     }
 
     /// KeyboardKit's stock keyboard view with our overrides.
@@ -49,9 +57,6 @@ struct RewordiumKeyboardView: View {
             services: services,
             buttonContent: { $0.view },
             buttonView:    { params in
-                // KeyboardKit passes us the default rendering as `params.view`.
-                // Wrap once in AnyView so we can layer SwiftUI content over it
-                // without the closure's return-type inference erupting.
                 let defaultView = AnyView(params.view)
                 switch params.item.action {
                 case .space:
@@ -76,21 +81,6 @@ struct RewordiumKeyboardView: View {
                     }
                 )
             },
-            toolbar:       { _ in EmptyView() }
-        )
-    }
-
-    /// Bare-bones fallback when setup fails. Renders only the system
-    /// QWERTY — no AI toolbar, no suggestion strip — so iOS still sees us
-    /// as a working keyboard and keeps us in the globe rotation.
-    private var fallbackKeyboard: some View {
-        KeyboardView(
-            layout: nil,
-            services: services,
-            buttonContent: { $0.view },
-            buttonView:    { $0.view },
-            collapsedView: { $0.view },
-            emojiKeyboard: { $0.view },
             toolbar:       { _ in EmptyView() }
         )
     }
