@@ -1,0 +1,1410 @@
+
+This will become an error in a future version of Flutter. Please contact the plugin maintainers to request Swift Package Manager adoption.
+The following plugins do not support Swift Package Manager for macos:
+  - device_info_plus
+This will become an error in a future version of Flutter. Please contact the plugin maintainers to request Swift Package Manager adoption.
+Warning: Building for device with codesigning disabled. You will have to manually codesign before deploying to device.
+Building com.noxquill.rewordium for device (ios-release)...
+Adding Swift Package Manager integration...                     Resolving dependencies...
+Downloading packages...
+  _flutterfire_internals 1.3.69 (1.3.71 available)
+! archive 4.0.9 (overridden)
+  cloud_firestore 6.3.0 (6.4.1 available)
+  cloud_firestore_platform_interface 7.2.0 (8.0.1 available)
+  cloud_firestore_web 5.3.0 (5.4.1 available)
+! connectivity_plus 7.0.0 (overridden) (7.1.1 available)
+  dbus 0.7.12 (0.7.13 available)
+! device_info_plus 11.0.0 (overridden) (13.1.0 available)
+  device_info_plus_platform_interface 7.0.3 (8.1.0 available)
+  firebase_auth 6.4.0 (6.5.1 available)
+  firebase_auth_platform_interface 8.1.9 (9.0.1 available)
+  firebase_auth_web 6.1.5 (6.2.1 available)
+  firebase_core 4.7.0 (4.9.0 available)
+  firebase_core_platform_interface 6.0.3 (7.0.1 available)
+  firebase_core_web 3.6.0 (3.7.0 available)
+  firebase_messaging 16.2.0 (16.2.2 available)
+  firebase_messaging_platform_interface 4.7.9 (4.7.11 available)
+  firebase_messaging_web 4.1.5 (4.1.7 available)
+  flutter_secure_storage 10.0.0 (10.3.1 available)
+  flutter_secure_storage_darwin 0.2.0 (0.3.2 available)
+  flutter_secure_storage_linux 3.0.0 (3.0.1 available)
+  flutter_secure_storage_web 2.1.0 (2.1.1 available)
+  flutter_secure_storage_windows 4.1.0 (4.2.2 available)
+  flutter_svg 2.2.4 (2.3.0 available)
+  google_sign_in_android 7.2.10 (7.2.11 available)
+  image 4.8.0 (4.9.1 available)
+  in_app_purchase_android 0.4.0+11 (0.5.0 available)
+  in_app_purchase_storekit 0.4.8+1 (0.4.9 available)
+  json_annotation 4.11.0 (4.12.0 available)
+  matcher 0.12.19 (0.12.20 available)
+  meta 1.18.0 (1.18.2 available)
+  package_info_plus 9.0.1 (10.1.0 available)
+  package_info_plus_platform_interface 3.2.1 (4.1.0 available)
+  path_provider_foundation 2.5.1 (2.6.0 available)
+  permission_handler 12.0.1 (12.0.3 available)
+  permission_handler_apple 9.4.7 (9.4.9 available)
+  qr 3.0.2 (4.0.0 available)
+  share_plus 12.0.2 (13.1.0 available)
+  share_plus_platform_interface 6.1.0 (7.1.0 available)
+  syncfusion_flutter_core 33.2.7 (33.2.8 available)
+  syncfusion_flutter_pdf 33.2.7 (33.2.8 available)
+  test_api 0.7.11 (0.7.12 available)
+  url_launcher_android 6.3.29 (6.3.30 available)
+  url_launcher_web 2.4.2 (2.4.3 available)
+  vector_graphics 1.2.0 (1.2.2 available)
+  vector_graphics_compiler 1.2.0 (1.2.5 available)
+  vector_math 2.2.0 (2.3.0 available)
+  win32 5.15.0 (6.3.0 available)
+  win32_registry 1.1.5 (3.0.3 available)
+  xml 6.6.1 (7.0.1 available)
+Got dependencies!
+49 packages have newer versions incompatible with dependency constraints.
+Try `flutter pub outdated` for more information.
+The following plugins do not support Swift Package Manager for ios:
+  - device_info_plus
+  - permission_handler_apple
+  - open_filex
+  - google_mlkit_text_recognition
+  - google_mlkit_commons
+  - cunning_document_scanner
+This will become an error in a future version of Flutter. Please contact the plugin maintainers to request Swift Package Manager adoption.
+The following plugins do not support Swift Package Manager for macos:
+  - device_info_plus
+This will become an error in a future version of Flutter. Please contact the plugin maintainers to request Swift Package Manager adoption.
+Warning: Building for device with codesigning disabled. You will have to manually codesign before deploying to device.
+Building com.noxquill.rewordium for device (ios-release)...
+Adding Swift Package Manager integration...                        58.5s
+To ensure your app continues to launch on upcoming iOS versions, UIScene lifecycle support will soon be required. Please see https://flutter.dev/to/uiscene-migration for the migration guide.
+
+The following target(s) do not support arm64 architecture, which is a requirement for Apple Silicon iOS 26+ simulators:
+  - GoogleMLKit
+  - MLImage
+  - MLKitCommon
+  - MLKitVision
+
+Please contact plugin maintainers to request arm64 support to continue to be able to use the plugin on a simulator.
+Running pod install...                                              6.1s
+Running Xcode build...                                          
+Xcode build done.                                           76.2s
+Failed to build iOS app
+ARC Semantic Issue (Xcode): No visible @interface for 'FIRCollectionSourceStageBridge' declares the selector 'initWithRef:firestore:'
+/Users/builder/clone/build/ios/SourcePackages/cloud_firestore-6.3.0/ios/cloud_firestore/Sources/cloud_firestore/FLTPipelineParser.m:864:56
+
+ARC Semantic Issue (Xcode): No visible @interface for 'FIRCollectionGroupSourceStageBridge' declares the selector 'initWithCollectionId:'
+/Users/builder/clone/build/ios/SourcePackages/cloud_firestore-6.3.0/ios/cloud_firestore/Sources/cloud_firestore/FLTPipelineParser.m:871:61
+
+Encountered error while building for device.
+(flutter post-build validation failed — continuing with our own xcodebuild, see codemagic.yaml comment)
+<module-includes>:1:9: note: in file included from <module-includes>:1:
+ 1 | #import "/Users/builder/clone/ios/Flutter/ephemeral/Packages/.packages/in_app_purchase_storekit-0.4.8+1/Sources/in_app_purchase_storekit_objc/include/in_app_purchase_storekit_objc/FIAObjectTranslator.h"
+   |         `- note: in file included from <module-includes>:1:
+ 2 | #import "/Users/builder/clone/ios/Flutter/ephemeral/Packages/.packages/in_app_purchase_storekit-0.4.8+1/Sources/in_app_purchase_storekit_objc/include/in_app_purchase_storekit_objc/FIAPPaymentQueueDelegate.h"
+ 3 | #import "/Users/builder/clone/ios/Flutter/ephemeral/Packages/.packages/in_app_purchase_storekit-0.4.8+1/Sources/in_app_purchase_storekit_objc/include/in_app_purchase_storekit_objc/FIAPReceiptManager.h"
+
+/Users/builder/clone/ios/Flutter/ephemeral/Packages/.packages/in_app_purchase_storekit-0.4.8+1/Sources/in_app_purchase_storekit_objc/include/in_app_purchase_storekit_objc/FIAObjectTranslator.h:14:40: warning: 'SKProduct' is deprecated: first deprecated in iOS 18.0 - Use Product.
+12 | 
+13 | // Converts an instance of SKProduct into a dictionary.
+14 | + (NSDictionary *)getMapFromSKProduct:(SKProduct *)product;
+   |                                        `- warning: 'SKProduct' is deprecated: first deprecated in iOS 18.0 - Use Product.
+15 | 
+16 | // Converts an instance of SKProductSubscriptionPeriod into a dictionary.
+
+/Applications/Xcode-26.5.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS26.5.sdk/System/Library/Frameworks/StoreKit.framework/Headers/SKProduct.h:41:12: note: 'SKProduct' has been explicitly marked deprecated here
+39 | API_DEPRECATED("Use Product.", ios(3.0, 18.0), macos(10.7, 15.0), watchos(6.2, 11.0), visionos(1.0, 2.0))
+40 | NS_SWIFT_SENDABLE
+41 | @interface SKProduct : NSObject {
+   |            `- note: 'SKProduct' has been explicitly marked deprecated here
+42 | @private
+43 |     id _internal;
+
+<module-includes>:1:9: note: in file included from <module-includes>:1:
+ 1 | #import "/Users/builder/clone/ios/Flutter/ephemeral/Packages/.packages/in_app_purchase_storekit-0.4.8+1/Sources/in_app_purchase_storekit_objc/include/in_app_purchase_storekit_objc/FIAObjectTranslator.h"
+   |         `- note: in file included from <module-includes>:1:
+ 2 | #import "/Users/builder/clone/ios/Flutter/ephemeral/Packages/.packages/in_app_purchase_storekit-0.4.8+1/Sources/in_app_purchase_storekit_objc/include/in_app_purchase_storekit_objc/FIAPPaymentQueueDelegate.h"
+ 3 | #import "/Users/builder/clone/ios/Flutter/ephemeral/Packages/.packages/in_app_purchase_storekit-0.4.8+1/Sources/in_app_purchase_storekit_objc/include/in_app_purchase_storekit_objc/FIAPReceiptManager.h"
+
+/Users/builder/clone/ios/Flutter/ephemeral/Packages/.packages/in_app_purchase_storekit-0.4.8+1/Sources/in_app_purchase_storekit_objc/include/in_app_purchase_storekit_objc/FIAObjectTranslator.h:17:58: warning: 'SKProductSubscriptionPeriod' is deprecated: first deprecated in iOS 18.0 - Use Product.SubscriptionPeriod.
+15 | 
+16 | // Converts an instance of SKProductSubscriptionPeriod into a dictionary.
+17 | + (NSDictionary *)getMapFromSKProductSubscriptionPeriod:(SKProductSubscriptionPeriod *)period
+   |                                                          `- warning: 'SKProductSubscriptionPeriod' is deprecated: first deprecated in iOS 18.0 - Use Product.SubscriptionPeriod.
+18 |     API_AVAILABLE(ios(11.2));
+19 | 
+
+/Applications/Xcode-26.5.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS26.5.sdk/System/Library/Frameworks/StoreKit.framework/Headers/SKProduct.h:27:12: note: 'SKProductSubscriptionPeriod' has been explicitly marked deprecated here
+25 | API_DEPRECATED("Use Product.SubscriptionPeriod.", ios(11.2, 18.0), macos(10.13.2, 15.0), watchos(6.2, 11.0), visionos(1.0, 2.0))
+26 | NS_SWIFT_SENDABLE
+27 | @interface SKProductSubscriptionPeriod : NSObject {
+   |            `- note: 'SKProductSubscriptionPeriod' has been explicitly marked deprecated here
+28 | @private
+29 |     id _internal;
+
+<module-includes>:1:9: note: in file included from <module-includes>:1:
+ 1 | #import "/Users/builder/clone/ios/Flutter/ephemeral/Packages/.packages/in_app_purchase_storekit-0.4.8+1/Sources/in_app_purchase_storekit_objc/include/in_app_purchase_storekit_objc/FIAObjectTranslator.h"
+   |         `- note: in file included from <module-includes>:1:
+ 2 | #import "/Users/builder/clone/ios/Flutter/ephemeral/Packages/.packages/in_app_purchase_storekit-0.4.8+1/Sources/in_app_purchase_storekit_objc/include/in_app_purchase_storekit_objc/FIAPPaymentQueueDelegate.h"
+ 3 | #import "/Users/builder/clone/ios/Flutter/ephemeral/Packages/.packages/in_app_purchase_storekit-0.4.8+1/Sources/in_app_purchase_storekit_objc/include/in_app_purchase_storekit_objc/FIAPReceiptManager.h"
+
+/Users/builder/clone/ios/Flutter/ephemeral/Packages/.packages/in_app_purchase_storekit-0.4.8+1/Sources/in_app_purchase_storekit_objc/include/in_app_purchase_storekit_objc/FIAObjectTranslator.h:21:48: warning: 'SKProductDiscount' is deprecated: first deprecated in iOS 18.0 - Use Product.SubscriptionOffer.
+19 | 
+20 | // Converts an instance of SKProductDiscount into a dictionary.
+21 | + (NSDictionary *)getMapFromSKProductDiscount:(SKProductDiscount *)discount
+   |                                                `- warning: 'SKProductDiscount' is deprecated: first deprecated in iOS 18.0 - Use Product.SubscriptionOffer.
+22 |     API_AVAILABLE(ios(11.2));
+23 | 
+
+/Applications/Xcode-26.5.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS26.5.sdk/System/Library/Frameworks/StoreKit.framework/Headers/SKProductDiscount.h:33:12: note: 'SKProductDiscount' has been explicitly marked deprecated here
+31 | API_DEPRECATED("Use Product.SubscriptionOffer.", ios(11.2, 18.0), macos(10.13.2, 15.0), watchos(6.2, 11.0), visionos(1.0, 2.0))
+32 | NS_SWIFT_SENDABLE
+33 | @interface SKProductDiscount : NSObject {
+   |            `- note: 'SKProductDiscount' has been explicitly marked deprecated here
+34 | @private
+35 |     id _internal;
+
+<module-includes>:1:9: note: in file included from <module-includes>:1:
+ 1 | #import "/Users/builder/clone/ios/Flutter/ephemeral/Packages/.packages/in_app_purchase_storekit-0.4.8+1/Sources/in_app_purchase_storekit_objc/include/in_app_purchase_storekit_objc/FIAObjectTranslator.h"
+   |         `- note: in file included from <module-includes>:1:
+ 2 | #import "/Users/builder/clone/ios/Flutter/ephemeral/Packages/.packages/in_app_purchase_storekit-0.4.8+1/Sources/in_app_purchase_storekit_objc/include/in_app_purchase_storekit_objc/FIAPPaymentQueueDelegate.h"
+ 3 | #import "/Users/builder/clone/ios/Flutter/ephemeral/Packages/.packages/in_app_purchase_storekit-0.4.8+1/Sources/in_app_purchase_storekit_objc/include/in_app_purchase_storekit_objc/FIAPReceiptManager.h"
+
+/Users/builder/clone/ios/Flutter/ephemeral/Packages/.packages/in_app_purchase_storekit-0.4.8+1/Sources/in_app_purchase_storekit_objc/include/in_app_purchase_storekit_objc/FIAObjectTranslator.h:26:22: warning: 'SKProductDiscount' is deprecated: first deprecated in iOS 18.0 - Use Product.SubscriptionOffer.
+24 | // Converts an array of SKProductDiscount instances into an array of dictionaries.
+25 | + (nonnull NSArray *)getMapArrayFromSKProductDiscounts:
+26 |     (nonnull NSArray<SKProductDiscount *> *)productDiscounts API_AVAILABLE(ios(12.2));
+   |                      `- warning: 'SKProductDiscount' is deprecated: first deprecated in iOS 18.0 - Use Product.SubscriptionOffer.
+27 | 
+28 | // Converts an instance of SKProductsResponse into a dictionary.
+
+/Applications/Xcode-26.5.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS26.5.sdk/System/Library/Frameworks/StoreKit.framework/Headers/SKProductDiscount.h:33:12: note: 'SKProductDiscount' has been explicitly marked deprecated here
+31 | API_DEPRECATED("Use Product.SubscriptionOffer.", ios(11.2, 18.0), macos(10.13.2, 15.0), watchos(6.2, 11.0), visionos(1.0, 2.0))
+32 | NS_SWIFT_SENDABLE
+33 | @interface SKProductDiscount : NSObject {
+   |            `- note: 'SKProductDiscount' has been explicitly marked deprecated here
+34 | @private
+35 |     id _internal;
+
+<module-includes>:1:9: note: in file included from <module-includes>:1:
+ 1 | #import "/Users/builder/clone/ios/Flutter/ephemeral/Packages/.packages/in_app_purchase_storekit-0.4.8+1/Sources/in_app_purchase_storekit_objc/include/in_app_purchase_storekit_objc/FIAObjectTranslator.h"
+   |         `- note: in file included from <module-includes>:1:
+ 2 | #import "/Users/builder/clone/ios/Flutter/ephemeral/Packages/.packages/in_app_purchase_storekit-0.4.8+1/Sources/in_app_purchase_storekit_objc/include/in_app_purchase_storekit_objc/FIAPPaymentQueueDelegate.h"
+ 3 | #import "/Users/builder/clone/ios/Flutter/ephemeral/Packages/.packages/in_app_purchase_storekit-0.4.8+1/Sources/in_app_purchase_storekit_objc/include/in_app_purchase_storekit_objc/FIAPReceiptManager.h"
+
+/Users/builder/clone/ios/Flutter/ephemeral/Packages/.packages/in_app_purchase_storekit-0.4.8+1/Sources/in_app_purchase_storekit_objc/include/in_app_purchase_storekit_objc/FIAObjectTranslator.h:29:49: warning: 'SKProductsResponse' is deprecated: first deprecated in iOS 18.0 - Get products using Product.products(for:).
+27 | 
+28 | // Converts an instance of SKProductsResponse into a dictionary.
+29 | + (NSDictionary *)getMapFromSKProductsResponse:(SKProductsResponse *)productResponse;
+   |                                                 `- warning: 'SKProductsResponse' is deprecated: first deprecated in iOS 18.0 - Get products using Product.products(for:).
+30 | 
+31 | // Converts an instance of SKPayment into a dictionary.
+
+/Applications/Xcode-26.5.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS26.5.sdk/System/Library/Frameworks/StoreKit.framework/Headers/SKProductsRequest.h:44:12: note: 'SKProductsResponse' has been explicitly marked deprecated here
+42 | API_DEPRECATED("Get products using Product.products(for:).", ios(3.0, 18.0), macos(10.7, 15.0), watchos(6.2, 11.0), visionos(1.0, 2.0))
+43 | NS_SWIFT_SENDABLE
+44 | @interface SKProductsResponse : NSObject {
+   |            `- note: 'SKProductsResponse' has been explicitly marked deprecated here
+45 | @private
+46 |     id _internal;
+
+<module-includes>:1:9: note: in file included from <module-includes>:1:
+ 1 | #import "/Users/builder/clone/ios/Flutter/ephemeral/Packages/.packages/in_app_purchase_storekit-0.4.8+1/Sources/in_app_purchase_storekit_objc/include/in_app_purchase_storekit_objc/FIAObjectTranslator.h"
+   |         `- note: in file included from <module-includes>:1:
+ 2 | #import "/Users/builder/clone/ios/Flutter/ephemeral/Packages/.packages/in_app_purchase_storekit-0.4.8+1/Sources/in_app_purchase_storekit_objc/include/in_app_purchase_storekit_objc/FIAPPaymentQueueDelegate.h"
+ 3 | #import "/Users/builder/clone/ios/Flutter/ephemeral/Packages/.packages/in_app_purchase_storekit-0.4.8+1/Sources/in_app_purchase_storekit_objc/include/in_app_purchase_storekit_objc/FIAPReceiptManager.h"
+
+/Users/builder/clone/ios/Flutter/ephemeral/Packages/.packages/in_app_purchase_storekit-0.4.8+1/Sources/in_app_purchase_storekit_objc/include/in_app_purchase_storekit_objc/FIAObjectTranslator.h:32:40: warning: 'SKPayment' is deprecated: first deprecated in iOS 18.0 - Use Product.purchase(confirmIn:options:).
+30 | 
+31 | // Converts an instance of SKPayment into a dictionary.
+32 | + (NSDictionary *)getMapFromSKPayment:(SKPayment *)payment;
+   |                                        `- warning: 'SKPayment' is deprecated: first deprecated in iOS 18.0 - Use Product.purchase(confirmIn:options:).
+33 | 
+34 | // Converts an instance of NSLocale into a dictionary.
+
+/Applications/Xcode-26.5.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS26.5.sdk/System/Library/Frameworks/StoreKit.framework/Headers/SKPayment.h:19:12: note: 'SKPayment' has been explicitly marked deprecated here
+17 | API_DEPRECATED("Use Product.purchase(confirmIn:options:).", ios(3.0, 18.0), macos(10.7, 15.0), watchos(6.2, 11.0), visionos(1.0, 2.0))
+18 | NS_SWIFT_NONSENDABLE
+19 | @interface SKPayment : NSObject <NSCopying, NSMutableCopying> {
+   |            `- note: 'SKPayment' has been explicitly marked deprecated here
+20 | @private
+21 |     id _internal;
+
+<module-includes>:1:9: note: in file included from <module-includes>:1:
+ 1 | #import "/Users/builder/clone/ios/Flutter/ephemeral/Packages/.packages/in_app_purchase_storekit-0.4.8+1/Sources/in_app_purchase_storekit_objc/include/in_app_purchase_storekit_objc/FIAObjectTranslator.h"
+   |         `- note: in file included from <module-includes>:1:
+ 2 | #import "/Users/builder/clone/ios/Flutter/ephemeral/Packages/.packages/in_app_purchase_storekit-0.4.8+1/Sources/in_app_purchase_storekit_objc/include/in_app_purchase_storekit_objc/FIAPPaymentQueueDelegate.h"
+ 3 | #import "/Users/builder/clone/ios/Flutter/ephemeral/Packages/.packages/in_app_purchase_storekit-0.4.8+1/Sources/in_app_purchase_storekit_objc/include/in_app_purchase_storekit_objc/FIAPReceiptManager.h"
+
+/Users/builder/clone/ios/Flutter/ephemeral/Packages/.packages/in_app_purchase_storekit-0.4.8+1/Sources/in_app_purchase_storekit_objc/include/in_app_purchase_storekit_objc/FIAObjectTranslator.h:38:4: warning: 'SKMutablePayment' is deprecated: first deprecated in iOS 18.0 - Use Product.purchase(confirmIn:options:).
+36 | 
+37 | // Creates an instance of the SKMutablePayment class based on the supplied dictionary.
+38 | + (SKMutablePayment *)getSKMutablePaymentFromMap:(NSDictionary *)map;
+   |    `- warning: 'SKMutablePayment' is deprecated: first deprecated in iOS 18.0 - Use Product.purchase(confirmIn:options:).
+39 | 
+40 | // Converts an instance of SKPaymentTransaction into a dictionary.
+
+/Applications/Xcode-26.5.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS26.5.sdk/System/Library/Frameworks/StoreKit.framework/Headers/SKPayment.h:52:12: note: 'SKMutablePayment' has been explicitly marked deprecated here
+50 | API_DEPRECATED("Use Product.purchase(confirmIn:options:).", ios(3.0, 18.0), macos(10.7, 15.0), watchos(6.2, 11.0), visionos(1.0, 2.0))
+51 | NS_SWIFT_NONSENDABLE
+52 | @interface SKMutablePayment : SKPayment
+   |            `- note: 'SKMutablePayment' has been explicitly marked deprecated here
+53 | 
+54 | @property(nonatomic, copy, readwrite, nullable) NSString *applicationUsername API_DEPRECATED("Create a Product.PurchaseOption.appAccountToken to use in Product.purchase(confirmIn:options:).", ios(7.0, 18.0), macos(10.9, 15.0), watchos(6.2, 11.0), visionos(1.0, 2.0));
+
+<module-includes>:1:9: note: in file included from <module-includes>:1:
+ 1 | #import "/Users/builder/clone/ios/Flutter/ephemeral/Packages/.packages/in_app_purchase_storekit-0.4.8+1/Sources/in_app_purchase_storekit_objc/include/in_app_purchase_storekit_objc/FIAObjectTranslator.h"
+   |         `- note: in file included from <module-includes>:1:
+ 2 | #import "/Users/builder/clone/ios/Flutter/ephemeral/Packages/.packages/in_app_purchase_storekit-0.4.8+1/Sources/in_app_purchase_storekit_objc/include/in_app_purchase_storekit_objc/FIAPPaymentQueueDelegate.h"
+ 3 | #import "/Users/builder/clone/ios/Flutter/ephemeral/Packages/.packages/in_app_purchase_storekit-0.4.8+1/Sources/in_app_purchase_storekit_objc/include/in_app_purchase_storekit_objc/FIAPReceiptManager.h"
+
+/Users/builder/clone/ios/Flutter/ephemeral/Packages/.packages/in_app_purchase_storekit-0.4.8+1/Sources/in_app_purchase_storekit_objc/include/in_app_purchase_storekit_objc/FIAObjectTranslator.h:41:51: warning: 'SKPaymentTransaction' is deprecated: first deprecated in iOS 18.0 - Use PurchaseResult from Product.purchase(confirmIn:options:).
+39 | 
+40 | // Converts an instance of SKPaymentTransaction into a dictionary.
+41 | + (NSDictionary *)getMapFromSKPaymentTransaction:(SKPaymentTransaction *)transaction;
+   |                                                   `- warning: 'SKPaymentTransaction' is deprecated: first deprecated in iOS 18.0 - Use PurchaseResult from Product.purchase(confirmIn:options:).
+42 | 
+43 | // Converts an instance of NSError into a dictionary.
+
+/Applications/Xcode-26.5.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS26.5.sdk/System/Library/Frameworks/StoreKit.framework/Headers/SKPaymentTransaction.h:27:12: note: 'SKPaymentTransaction' has been explicitly marked deprecated here
+25 | API_DEPRECATED("Use PurchaseResult from Product.purchase(confirmIn:options:).",ios(3.0, 18.0), macos(10.7, 15.0), watchos(6.2, 11.0), visionos(1.0, 2.0))
+26 | NS_SWIFT_SENDABLE
+27 | @interface SKPaymentTransaction : NSObject {
+   |            `- note: 'SKPaymentTransaction' has been explicitly marked deprecated here
+28 | @private
+29 |     id _internal;
+
+<module-includes>:1:9: note: in file included from <module-includes>:1:
+ 1 | #import "/Users/builder/clone/ios/Flutter/ephemeral/Packages/.packages/in_app_purchase_storekit-0.4.8+1/Sources/in_app_purchase_storekit_objc/include/in_app_purchase_storekit_objc/FIAObjectTranslator.h"
+   |         `- note: in file included from <module-includes>:1:
+ 2 | #import "/Users/builder/clone/ios/Flutter/ephemeral/Packages/.packages/in_app_purchase_storekit-0.4.8+1/Sources/in_app_purchase_storekit_objc/include/in_app_purchase_storekit_objc/FIAPPaymentQueueDelegate.h"
+ 3 | #import "/Users/builder/clone/ios/Flutter/ephemeral/Packages/.packages/in_app_purchase_storekit-0.4.8+1/Sources/in_app_purchase_storekit_objc/include/in_app_purchase_storekit_objc/FIAPReceiptManager.h"
+
+/Users/builder/clone/ios/Flutter/ephemeral/Packages/.packages/in_app_purchase_storekit-0.4.8+1/Sources/in_app_purchase_storekit_objc/include/in_app_purchase_storekit_objc/FIAObjectTranslator.h:47:43: warning: 'SKStorefront' is deprecated: first deprecated in iOS 18.0 - Use Storefront.
+45 | 
+46 | // Converts an instance of SKStorefront into a dictionary.
+47 | + (NSDictionary *)getMapFromSKStorefront:(SKStorefront *)storefront
+   |                                           `- warning: 'SKStorefront' is deprecated: first deprecated in iOS 18.0 - Use Storefront.
+48 |     API_AVAILABLE(ios(13), macos(10.15), watchos(6.2));
+49 | 
+
+/Applications/Xcode-26.5.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS26.5.sdk/System/Library/Frameworks/StoreKit.framework/Headers/SKStorefront.h:16:12: note: 'SKStorefront' has been explicitly marked deprecated here
+14 | API_DEPRECATED("Use Storefront.", ios(13.0, 18.0), macos(10.15, 15.0), watchos(6.2, 11.0), visionos(1.0, 2.0))
+15 | NS_SWIFT_SENDABLE
+16 | @interface SKStorefront : NSObject
+   |            `- note: 'SKStorefront' has been explicitly marked deprecated here
+17 | 
+18 | /* The three letter country code for the current storefront */
+
+<module-includes>:1:9: note: in file included from <module-includes>:1:
+ 1 | #import "/Users/builder/clone/ios/Flutter/ephemeral/Packages/.packages/in_app_purchase_storekit-0.4.8+1/Sources/in_app_purchase_storekit_objc/include/in_app_purchase_storekit_objc/FIAObjectTranslator.h"
+   |         `- note: in file included from <module-includes>:1:
+ 2 | #import "/Users/builder/clone/ios/Flutter/ephemeral/Packages/.packages/in_app_purchase_storekit-0.4.8+1/Sources/in_app_purchase_storekit_objc/include/in_app_purchase_storekit_objc/FIAPPaymentQueueDelegate.h"
+ 3 | #import "/Users/builder/clone/ios/Flutter/ephemeral/Packages/.packages/in_app_purchase_storekit-0.4.8+1/Sources/in_app_purchase_storekit_objc/include/in_app_purchase_storekit_objc/FIAPReceiptManager.h"
+
+/Users/builder/clone/ios/Flutter/ephemeral/Packages/.packages/in_app_purchase_storekit-0.4.8+1/Sources/in_app_purchase_storekit_objc/include/in_app_purchase_storekit_objc/FIAObjectTranslator.h:51:43: warning: 'SKStorefront' is deprecated: first deprecated in iOS 18.0 - Use Storefront.
+49 | 
+50 | // Converts the supplied instances of SKStorefront and SKPaymentTransaction into a dictionary.
+51 | + (NSDictionary *)getMapFromSKStorefront:(SKStorefront *)storefront
+   |                                           `- warning: 'SKStorefront' is deprecated: first deprecated in iOS 18.0 - Use Storefront.
+52 |                  andSKPaymentTransaction:(SKPaymentTransaction *)transaction
+53 |     API_AVAILABLE(ios(13), macos(10.15), watchos(6.2));
+
+/Applications/Xcode-26.5.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS26.5.sdk/System/Library/Frameworks/StoreKit.framework/Headers/SKStorefront.h:16:12: note: 'SKStorefront' has been explicitly marked deprecated here
+14 | API_DEPRECATED("Use Storefront.", ios(13.0, 18.0), macos(10.15, 15.0), watchos(6.2, 11.0), visionos(1.0, 2.0))
+15 | NS_SWIFT_SENDABLE
+16 | @interface SKStorefront : NSObject
+   |            `- note: 'SKStorefront' has been explicitly marked deprecated here
+17 | 
+18 | /* The three letter country code for the current storefront */
+
+<module-includes>:1:9: note: in file included from <module-includes>:1:
+ 1 | #import "/Users/builder/clone/ios/Flutter/ephemeral/Packages/.packages/in_app_purchase_storekit-0.4.8+1/Sources/in_app_purchase_storekit_objc/include/in_app_purchase_storekit_objc/FIAObjectTranslator.h"
+   |         `- note: in file included from <module-includes>:1:
+ 2 | #import "/Users/builder/clone/ios/Flutter/ephemeral/Packages/.packages/in_app_purchase_storekit-0.4.8+1/Sources/in_app_purchase_storekit_objc/include/in_app_purchase_storekit_objc/FIAPPaymentQueueDelegate.h"
+ 3 | #import "/Users/builder/clone/ios/Flutter/ephemeral/Packages/.packages/in_app_purchase_storekit-0.4.8+1/Sources/in_app_purchase_storekit_objc/include/in_app_purchase_storekit_objc/FIAPReceiptManager.h"
+
+/Users/builder/clone/ios/Flutter/ephemeral/Packages/.packages/in_app_purchase_storekit-0.4.8+1/Sources/in_app_purchase_storekit_objc/include/in_app_purchase_storekit_objc/FIAObjectTranslator.h:52:43: warning: 'SKPaymentTransaction' is deprecated: first deprecated in iOS 18.0 - Use PurchaseResult from Product.purchase(confirmIn:options:).
+50 | // Converts the supplied instances of SKStorefront and SKPaymentTransaction into a dictionary.
+51 | + (NSDictionary *)getMapFromSKStorefront:(SKStorefront *)storefront
+52 |                  andSKPaymentTransaction:(SKPaymentTransaction *)transaction
+   |                                           `- warning: 'SKPaymentTransaction' is deprecated: first deprecated in iOS 18.0 - Use PurchaseResult from Product.purchase(confirmIn:options:).
+53 |     API_AVAILABLE(ios(13), macos(10.15), watchos(6.2));
+54 | 
+
+/Applications/Xcode-26.5.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS26.5.sdk/System/Library/Frameworks/StoreKit.framework/Headers/SKPaymentTransaction.h:27:12: note: 'SKPaymentTransaction' has been explicitly marked deprecated here
+25 | API_DEPRECATED("Use PurchaseResult from Product.purchase(confirmIn:options:).",ios(3.0, 18.0), macos(10.7, 15.0), watchos(6.2, 11.0), visionos(1.0, 2.0))
+26 | NS_SWIFT_SENDABLE
+27 | @interface SKPaymentTransaction : NSObject {
+   |            `- note: 'SKPaymentTransaction' has been explicitly marked deprecated here
+28 | @private
+29 |     id _internal;
+
+<module-includes>:1:9: note: in file included from <module-includes>:1:
+ 1 | #import "/Users/builder/clone/ios/Flutter/ephemeral/Packages/.packages/in_app_purchase_storekit-0.4.8+1/Sources/in_app_purchase_storekit_objc/include/in_app_purchase_storekit_objc/FIAObjectTranslator.h"
+   |         `- note: in file included from <module-includes>:1:
+ 2 | #import "/Users/builder/clone/ios/Flutter/ephemeral/Packages/.packages/in_app_purchase_storekit-0.4.8+1/Sources/in_app_purchase_storekit_objc/include/in_app_purchase_storekit_objc/FIAPPaymentQueueDelegate.h"
+ 3 | #import "/Users/builder/clone/ios/Flutter/ephemeral/Packages/.packages/in_app_purchase_storekit-0.4.8+1/Sources/in_app_purchase_storekit_objc/include/in_app_purchase_storekit_objc/FIAPReceiptManager.h"
+
+/Users/builder/clone/ios/Flutter/ephemeral/Packages/.packages/in_app_purchase_storekit-0.4.8+1/Sources/in_app_purchase_storekit_objc/include/in_app_purchase_storekit_objc/FIAObjectTranslator.h:56:13: warning: 'SKPaymentDiscount' is deprecated: first deprecated in iOS 18.0 - Create a Product.PurchaseOption.promotionalOffer to use in Product.purchase(confirmIn:options:).
+54 | 
+55 | // Creates an instance of the SKPaymentDiscount class based on the supplied dictionary.
+56 | + (nullable SKPaymentDiscount *)getSKPaymentDiscountFromMap:(NSDictionary *)map
+   |             `- warning: 'SKPaymentDiscount' is deprecated: first deprecated in iOS 18.0 - Create a Product.PurchaseOption.promotionalOffer to use in Product.purchase(confirmIn:options:).
+57 |                                                   withError:(NSString *_Nullable *_Nullable)error
+58 |     API_AVAILABLE(ios(12.2));
+
+/Applications/Xcode-26.5.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS26.5.sdk/System/Library/Frameworks/StoreKit.framework/Headers/SKPaymentDiscount.h:16:12: note: 'SKPaymentDiscount' has been explicitly marked deprecated here
+14 | API_DEPRECATED("Create a Product.PurchaseOption.promotionalOffer to use in Product.purchase(confirmIn:options:).", ios(12.2, 18.0), tvos(12.2, 18.0), macos(10.14.4, 15.0), watchos(6.2, 11.0), visionos(1.0, 2.0))
+15 | NS_SWIFT_SENDABLE
+16 | @interface SKPaymentDiscount : NSObject {
+   |            `- note: 'SKPaymentDiscount' has been explicitly marked deprecated here
+17 | @private
+18 |     id _internal;
+
+<module-includes>:1:9: note: in file included from <module-includes>:1:
+ 1 | #import "/Users/builder/clone/ios/Flutter/ephemeral/Packages/.packages/in_app_purchase_storekit-0.4.8+1/Sources/in_app_purchase_storekit_objc/include/in_app_purchase_storekit_objc/FIAObjectTranslator.h"
+   |         `- note: in file included from <module-includes>:1:
+ 2 | #import "/Users/builder/clone/ios/Flutter/ephemeral/Packages/.packages/in_app_purchase_storekit-0.4.8+1/Sources/in_app_purchase_storekit_objc/include/in_app_purchase_storekit_objc/FIAPPaymentQueueDelegate.h"
+ 3 | #import "/Users/builder/clone/ios/Flutter/ephemeral/Packages/.packages/in_app_purchase_storekit-0.4.8+1/Sources/in_app_purchase_storekit_objc/include/in_app_purchase_storekit_objc/FIAPReceiptManager.h"
+
+/Users/builder/clone/ios/Flutter/ephemeral/Packages/.packages/in_app_purchase_storekit-0.4.8+1/Sources/in_app_purchase_storekit_objc/include/in_app_purchase_storekit_objc/FIAObjectTranslator.h:61:15: warning: 'SKPaymentTransaction' is deprecated: first deprecated in iOS 18.0 - Use PurchaseResult from Product.purchase(confirmIn:options:).
+59 | 
+60 | + (nullable FIASKPaymentTransactionMessage *)convertTransactionToPigeon:
+61 |     (nullable SKPaymentTransaction *)transaction;
+   |               `- warning: 'SKPaymentTransaction' is deprecated: first deprecated in iOS 18.0 - Use PurchaseResult from Product.purchase(confirmIn:options:).
+62 | 
+63 | + (nullable FIASKStorefrontMessage *)convertStorefrontToPigeon:(nullable SKStorefront *)storefront
+
+/Applications/Xcode-26.5.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS26.5.sdk/System/Library/Frameworks/StoreKit.framework/Headers/SKPaymentTransaction.h:27:12: note: 'SKPaymentTransaction' has been explicitly marked deprecated here
+25 | API_DEPRECATED("Use PurchaseResult from Product.purchase(confirmIn:options:).",ios(3.0, 18.0), macos(10.7, 15.0), watchos(6.2, 11.0), visionos(1.0, 2.0))
+26 | NS_SWIFT_SENDABLE
+27 | @interface SKPaymentTransaction : NSObject {
+   |            `- note: 'SKPaymentTransaction' has been explicitly marked deprecated here
+28 | @private
+29 |     id _internal;
+
+<module-includes>:1:9: note: in file included from <module-includes>:1:
+ 1 | #import "/Users/builder/clone/ios/Flutter/ephemeral/Packages/.packages/in_app_purchase_storekit-0.4.8+1/Sources/in_app_purchase_storekit_objc/include/in_app_purchase_storekit_objc/FIAObjectTranslator.h"
+   |         `- note: in file included from <module-includes>:1:
+ 2 | #import "/Users/builder/clone/ios/Flutter/ephemeral/Packages/.packages/in_app_purchase_storekit-0.4.8+1/Sources/in_app_purchase_storekit_objc/include/in_app_purchase_storekit_objc/FIAPPaymentQueueDelegate.h"
+ 3 | #import "/Users/builder/clone/ios/Flutter/ephemeral/Packages/.packages/in_app_purchase_storekit-0.4.8+1/Sources/in_app_purchase_storekit_objc/include/in_app_purchase_storekit_objc/FIAPReceiptManager.h"
+
+/Users/builder/clone/ios/Flutter/ephemeral/Packages/.packages/in_app_purchase_storekit-0.4.8+1/Sources/in_app_purchase_storekit_objc/include/in_app_purchase_storekit_objc/FIAObjectTranslator.h:63:74: warning: 'SKStorefront' is deprecated: first deprecated in iOS 18.0 - Use Storefront.
+61 |     (nullable SKPaymentTransaction *)transaction;
+62 | 
+63 | + (nullable FIASKStorefrontMessage *)convertStorefrontToPigeon:(nullable SKStorefront *)storefront
+   |                                                                          `- warning: 'SKStorefront' is deprecated: first deprecated in iOS 18.0 - Use Storefront.
+64 |     API_AVAILABLE(ios(13.0));
+65 | 
+
+/Applications/Xcode-26.5.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS26.5.sdk/System/Library/Frameworks/StoreKit.framework/Headers/SKStorefront.h:16:12: note: 'SKStorefront' has been explicitly marked deprecated here
+14 | API_DEPRECATED("Use Storefront.", ios(13.0, 18.0), macos(10.15, 15.0), watchos(6.2, 11.0), visionos(1.0, 2.0))
+15 | NS_SWIFT_SENDABLE
+16 | @interface SKStorefront : NSObject
+   |            `- note: 'SKStorefront' has been explicitly marked deprecated here
+17 | 
+18 | /* The three letter country code for the current storefront */
+
+<module-includes>:1:9: note: in file included from <module-includes>:1:
+ 1 | #import "/Users/builder/clone/ios/Flutter/ephemeral/Packages/.packages/in_app_purchase_storekit-0.4.8+1/Sources/in_app_purchase_storekit_objc/include/in_app_purchase_storekit_objc/FIAObjectTranslator.h"
+   |         `- note: in file included from <module-includes>:1:
+ 2 | #import "/Users/builder/clone/ios/Flutter/ephemeral/Packages/.packages/in_app_purchase_storekit-0.4.8+1/Sources/in_app_purchase_storekit_objc/include/in_app_purchase_storekit_objc/FIAPPaymentQueueDelegate.h"
+ 3 | #import "/Users/builder/clone/ios/Flutter/ephemeral/Packages/.packages/in_app_purchase_storekit-0.4.8+1/Sources/in_app_purchase_storekit_objc/include/in_app_purchase_storekit_objc/FIAPReceiptManager.h"
+
+/Users/builder/clone/ios/Flutter/ephemeral/Packages/.packages/in_app_purchase_storekit-0.4.8+1/Sources/in_app_purchase_storekit_objc/include/in_app_purchase_storekit_objc/FIAObjectTranslator.h:67:15: warning: 'SKPaymentDiscount' is deprecated: first deprecated in iOS 18.0 - Create a Product.PurchaseOption.promotionalOffer to use in Product.purchase(confirmIn:options:).
+65 | 
+66 | + (nullable FIASKPaymentDiscountMessage *)convertPaymentDiscountToPigeon:
+67 |     (nullable SKPaymentDiscount *)discount API_AVAILABLE(ios(12.2));
+   |               `- warning: 'SKPaymentDiscount' is deprecated: first deprecated in iOS 18.0 - Create a Product.PurchaseOption.promotionalOffer to use in Product.purchase(confirmIn:options:).
+68 | 
+69 | + (nullable FIASKPaymentMessage *)convertPaymentToPigeon:(nullable SKPayment *)payment
+
+/Applications/Xcode-26.5.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS26.5.sdk/System/Library/Frameworks/StoreKit.framework/Headers/SKPaymentDiscount.h:16:12: note: 'SKPaymentDiscount' has been explicitly marked deprecated here
+14 | API_DEPRECATED("Create a Product.PurchaseOption.promotionalOffer to use in Product.purchase(confirmIn:options:).", ios(12.2, 18.0), tvos(12.2, 18.0), macos(10.14.4, 15.0), watchos(6.2, 11.0), visionos(1.0, 2.0))
+15 | NS_SWIFT_SENDABLE
+16 | @interface SKPaymentDiscount : NSObject {
+   |            `- note: 'SKPaymentDiscount' has been explicitly marked deprecated here
+17 | @private
+18 |     id _internal;
+
+<module-includes>:1:9: note: in file included from <module-includes>:1:
+ 1 | #import "/Users/builder/clone/ios/Flutter/ephemeral/Packages/.packages/in_app_purchase_storekit-0.4.8+1/Sources/in_app_purchase_storekit_objc/include/in_app_purchase_storekit_objc/FIAObjectTranslator.h"
+   |         `- note: in file included from <module-includes>:1:
+ 2 | #import "/Users/builder/clone/ios/Flutter/ephemeral/Packages/.packages/in_app_purchase_storekit-0.4.8+1/Sources/in_app_purchase_storekit_objc/include/in_app_purchase_storekit_objc/FIAPPaymentQueueDelegate.h"
+ 3 | #import "/Users/builder/clone/ios/Flutter/ephemeral/Packages/.packages/in_app_purchase_storekit-0.4.8+1/Sources/in_app_purchase_storekit_objc/include/in_app_purchase_storekit_objc/FIAPReceiptManager.h"
+
+/Users/builder/clone/ios/Flutter/ephemeral/Packages/.packages/in_app_purchase_storekit-0.4.8+1/Sources/in_app_purchase_storekit_objc/include/in_app_purchase_storekit_objc/FIAObjectTranslator.h:69:68: warning: 'SKPayment' is deprecated: first deprecated in iOS 18.0 - Use Product.purchase(confirmIn:options:).
+67 |     (nullable SKPaymentDiscount *)discount API_AVAILABLE(ios(12.2));
+68 | 
+69 | + (nullable FIASKPaymentMessage *)convertPaymentToPigeon:(nullable SKPayment *)payment
+   |                                                                    `- warning: 'SKPayment' is deprecated: first deprecated in iOS 18.0 - Use Product.purchase(confirmIn:options:).
+70 |     API_AVAILABLE(ios(12.2));
+71 | 
+
+/Applications/Xcode-26.5.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS26.5.sdk/System/Library/Frameworks/StoreKit.framework/Headers/SKPayment.h:19:12: note: 'SKPayment' has been explicitly marked deprecated here
+17 | API_DEPRECATED("Use Product.purchase(confirmIn:options:).", ios(3.0, 18.0), macos(10.7, 15.0), watchos(6.2, 11.0), visionos(1.0, 2.0))
+18 | NS_SWIFT_NONSENDABLE
+19 | @interface SKPayment : NSObject <NSCopying, NSMutableCopying> {
+   |            `- note: 'SKPayment' has been explicitly marked deprecated here
+20 | @private
+21 |     id _internal;
+
+<module-includes>:1:9: note: in file included from <module-includes>:1:
+ 1 | #import "/Users/builder/clone/ios/Flutter/ephemeral/Packages/.packages/in_app_purchase_storekit-0.4.8+1/Sources/in_app_purchase_storekit_objc/include/in_app_purchase_storekit_objc/FIAObjectTranslator.h"
+   |         `- note: in file included from <module-includes>:1:
+ 2 | #import "/Users/builder/clone/ios/Flutter/ephemeral/Packages/.packages/in_app_purchase_storekit-0.4.8+1/Sources/in_app_purchase_storekit_objc/include/in_app_purchase_storekit_objc/FIAPPaymentQueueDelegate.h"
+ 3 | #import "/Users/builder/clone/ios/Flutter/ephemeral/Packages/.packages/in_app_purchase_storekit-0.4.8+1/Sources/in_app_purchase_storekit_objc/include/in_app_purchase_storekit_objc/FIAPReceiptManager.h"
+
+/Users/builder/clone/ios/Flutter/ephemeral/Packages/.packages/in_app_purchase_storekit-0.4.8+1/Sources/in_app_purchase_storekit_objc/include/in_app_purchase_storekit_objc/FIAObjectTranslator.h:75:15: warning: 'SKProductsResponse' is deprecated: first deprecated in iOS 18.0 - Get products using Product.products(for:).
+73 | 
+74 | + (nullable FIASKProductsResponseMessage *)convertProductsResponseToPigeon:
+75 |     (nullable SKProductsResponse *)payment;
+   |               `- warning: 'SKProductsResponse' is deprecated: first deprecated in iOS 18.0 - Get products using Product.products(for:).
+76 | 
+77 | + (nullable FIASKProductMessage *)convertProductToPigeon:(nullable SKProduct *)product
+
+/Applications/Xcode-26.5.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS26.5.sdk/System/Library/Frameworks/StoreKit.framework/Headers/SKProductsRequest.h:44:12: note: 'SKProductsResponse' has been explicitly marked deprecated here
+42 | API_DEPRECATED("Get products using Product.products(for:).", ios(3.0, 18.0), macos(10.7, 15.0), watchos(6.2, 11.0), visionos(1.0, 2.0))
+43 | NS_SWIFT_SENDABLE
+44 | @interface SKProductsResponse : NSObject {
+   |            `- note: 'SKProductsResponse' has been explicitly marked deprecated here
+45 | @private
+46 |     id _internal;
+
+<module-includes>:1:9: note: in file included from <module-includes>:1:
+ 1 | #import "/Users/builder/clone/ios/Flutter/ephemeral/Packages/.packages/in_app_purchase_storekit-0.4.8+1/Sources/in_app_purchase_storekit_objc/include/in_app_purchase_storekit_objc/FIAObjectTranslator.h"
+   |         `- note: in file included from <module-includes>:1:
+ 2 | #import "/Users/builder/clone/ios/Flutter/ephemeral/Packages/.packages/in_app_purchase_storekit-0.4.8+1/Sources/in_app_purchase_storekit_objc/include/in_app_purchase_storekit_objc/FIAPPaymentQueueDelegate.h"
+ 3 | #import "/Users/builder/clone/ios/Flutter/ephemeral/Packages/.packages/in_app_purchase_storekit-0.4.8+1/Sources/in_app_purchase_storekit_objc/include/in_app_purchase_storekit_objc/FIAPReceiptManager.h"
+
+/Users/builder/clone/ios/Flutter/ephemeral/Packages/.packages/in_app_purchase_storekit-0.4.8+1/Sources/in_app_purchase_storekit_objc/include/in_app_purchase_storekit_objc/FIAObjectTranslator.h:77:68: warning: 'SKProduct' is deprecated: first deprecated in iOS 18.0 - Use Product.
+75 |     (nullable SKProductsResponse *)payment;
+76 | 
+77 | + (nullable FIASKProductMessage *)convertProductToPigeon:(nullable SKProduct *)product
+   |                                                                    `- warning: 'SKProduct' is deprecated: first deprecated in iOS 18.0 - Use Product.
+78 |     API_AVAILABLE(ios(12.2));
+79 | 
+
+/Applications/Xcode-26.5.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS26.5.sdk/System/Library/Frameworks/StoreKit.framework/Headers/SKProduct.h:41:12: note: 'SKProduct' has been explicitly marked deprecated here
+39 | API_DEPRECATED("Use Product.", ios(3.0, 18.0), macos(10.7, 15.0), watchos(6.2, 11.0), visionos(1.0, 2.0))
+40 | NS_SWIFT_SENDABLE
+41 | @interface SKProduct : NSObject {
+   |            `- note: 'SKProduct' has been explicitly marked deprecated here
+42 | @private
+43 |     id _internal;
+
+<module-includes>:1:9: note: in file included from <module-includes>:1:
+ 1 | #import "/Users/builder/clone/ios/Flutter/ephemeral/Packages/.packages/in_app_purchase_storekit-0.4.8+1/Sources/in_app_purchase_storekit_objc/include/in_app_purchase_storekit_objc/FIAObjectTranslator.h"
+   |         `- note: in file included from <module-includes>:1:
+ 2 | #import "/Users/builder/clone/ios/Flutter/ephemeral/Packages/.packages/in_app_purchase_storekit-0.4.8+1/Sources/in_app_purchase_storekit_objc/include/in_app_purchase_storekit_objc/FIAPPaymentQueueDelegate.h"
+ 3 | #import "/Users/builder/clone/ios/Flutter/ephemeral/Packages/.packages/in_app_purchase_storekit-0.4.8+1/Sources/in_app_purchase_storekit_objc/include/in_app_purchase_storekit_objc/FIAPReceiptManager.h"
+
+/Users/builder/clone/ios/Flutter/ephemeral/Packages/.packages/in_app_purchase_storekit-0.4.8+1/Sources/in_app_purchase_storekit_objc/include/in_app_purchase_storekit_objc/FIAObjectTranslator.h:81:15: warning: 'SKProductDiscount' is deprecated: first deprecated in iOS 18.0 - Use Product.SubscriptionOffer.
+79 | 
+80 | + (nullable FIASKProductDiscountMessage *)convertProductDiscountToPigeon:
+81 |     (nullable SKProductDiscount *)productDiscount API_AVAILABLE(ios(12.2));
+   |               `- warning: 'SKProductDiscount' is deprecated: first deprecated in iOS 18.0 - Use Product.SubscriptionOffer.
+82 | 
+83 | + (nullable FIASKPriceLocaleMessage *)convertNSLocaleToPigeon:(nullable NSLocale *)locale
+
+/Applications/Xcode-26.5.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS26.5.sdk/System/Library/Frameworks/StoreKit.framework/Headers/SKProductDiscount.h:33:12: note: 'SKProductDiscount' has been explicitly marked deprecated here
+31 | API_DEPRECATED("Use Product.SubscriptionOffer.", ios(11.2, 18.0), macos(10.13.2, 15.0), watchos(6.2, 11.0), visionos(1.0, 2.0))
+32 | NS_SWIFT_SENDABLE
+33 | @interface SKProductDiscount : NSObject {
+   |            `- note: 'SKProductDiscount' has been explicitly marked deprecated here
+34 | @private
+35 |     id _internal;
+
+<module-includes>:1:9: note: in file included from <module-includes>:1:
+ 1 | #import "/Users/builder/clone/ios/Flutter/ephemeral/Packages/.packages/in_app_purchase_storekit-0.4.8+1/Sources/in_app_purchase_storekit_objc/include/in_app_purchase_storekit_objc/FIAObjectTranslator.h"
+   |         `- note: in file included from <module-includes>:1:
+ 2 | #import "/Users/builder/clone/ios/Flutter/ephemeral/Packages/.packages/in_app_purchase_storekit-0.4.8+1/Sources/in_app_purchase_storekit_objc/include/in_app_purchase_storekit_objc/FIAPPaymentQueueDelegate.h"
+ 3 | #import "/Users/builder/clone/ios/Flutter/ephemeral/Packages/.packages/in_app_purchase_storekit-0.4.8+1/Sources/in_app_purchase_storekit_objc/include/in_app_purchase_storekit_objc/FIAPReceiptManager.h"
+
+/Users/builder/clone/ios/Flutter/ephemeral/Packages/.packages/in_app_purchase_storekit-0.4.8+1/Sources/in_app_purchase_storekit_objc/include/in_app_purchase_storekit_objc/FIAObjectTranslator.h:87:15: warning: 'SKProductSubscriptionPeriod' is deprecated: first deprecated in iOS 18.0 - Use Product.SubscriptionPeriod.
+85 | 
+86 | + (nullable FIASKProductSubscriptionPeriodMessage *)convertSKProductSubscriptionPeriodToPigeon:
+87 |     (nullable SKProductSubscriptionPeriod *)period API_AVAILABLE(ios(12.2));
+   |               `- warning: 'SKProductSubscriptionPeriod' is deprecated: first deprecated in iOS 18.0 - Use Product.SubscriptionPeriod.
+88 | @end
+89 | 
+
+/Applications/Xcode-26.5.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS26.5.sdk/System/Library/Frameworks/StoreKit.framework/Headers/SKProduct.h:27:12: note: 'SKProductSubscriptionPeriod' has been explicitly marked deprecated here
+25 | API_DEPRECATED("Use Product.SubscriptionPeriod.", ios(11.2, 18.0), macos(10.13.2, 15.0), watchos(6.2, 11.0), visionos(1.0, 2.0))
+26 | NS_SWIFT_SENDABLE
+27 | @interface SKProductSubscriptionPeriod : NSObject {
+   |            `- note: 'SKProductSubscriptionPeriod' has been explicitly marked deprecated here
+28 | @private
+29 |     id _internal;
+
+<module-includes>:2:9: note: in file included from <module-includes>:2:
+ 1 | #import "/Users/builder/clone/ios/Flutter/ephemeral/Packages/.packages/in_app_purchase_storekit-0.4.8+1/Sources/in_app_purchase_storekit_objc/include/in_app_purchase_storekit_objc/FIAObjectTranslator.h"
+ 2 | #import "/Users/builder/clone/ios/Flutter/ephemeral/Packages/.packages/in_app_purchase_storekit-0.4.8+1/Sources/in_app_purchase_storekit_objc/include/in_app_purchase_storekit_objc/FIAPPaymentQueueDelegate.h"
+   |         `- note: in file included from <module-includes>:2:
+ 3 | #import "/Users/builder/clone/ios/Flutter/ephemeral/Packages/.packages/in_app_purchase_storekit-0.4.8+1/Sources/in_app_purchase_storekit_objc/include/in_app_purchase_storekit_objc/FIAPReceiptManager.h"
+ 4 | #import "/Users/builder/clone/ios/Flutter/ephemeral/Packages/.packages/in_app_purchase_storekit-0.4.8+1/Sources/in_app_purchase_storekit_objc/include/in_app_purchase_storekit_objc/FIAPRequestHandler.h"
+
+/Users/builder/clone/ios/Flutter/ephemeral/Packages/.packages/in_app_purchase_storekit-0.4.8+1/Sources/in_app_purchase_storekit_objc/include/in_app_purchase_storekit_objc/FIAPPaymentQueueDelegate.h:19:49: warning: 'SKPaymentQueueDelegate' is deprecated: first deprecated in iOS 18.0 - No longer supported.
+17 | API_AVAILABLE(ios(13), macos(10.15))
+18 | API_UNAVAILABLE(tvos, watchos)
+19 | @interface FIAPPaymentQueueDelegate : NSObject <SKPaymentQueueDelegate>
+   |                                                 `- warning: 'SKPaymentQueueDelegate' is deprecated: first deprecated in iOS 18.0 - No longer supported.
+20 | - (id)initWithMethodChannel:(id<FLTMethodChannelProtocol>)methodChannel;
+21 | @end
+
+/Applications/Xcode-26.5.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS26.5.sdk/System/Library/Frameworks/StoreKit.framework/Headers/SKPaymentQueue.h:78:11: note: 'SKPaymentQueueDelegate' has been explicitly marked deprecated here
+ 76 | 
+ 77 | API_DEPRECATED("No longer supported.", ios(13.0, 18.0), tvos(13.0, 18.0), macos(10.15, 15.0), watchos(6.2, 11.0), visionos(1.0, 2.0))
+ 78 | @protocol SKPaymentQueueDelegate <NSObject>
+    |           `- note: 'SKPaymentQueueDelegate' has been explicitly marked deprecated here
+ 79 | @optional
+ 80 | // Sent when the storefront changes while a payment is processing.
+
+<module-includes>:4:9: note: in file included from <module-includes>:4:
+ 2 | #import "/Users/builder/clone/ios/Flutter/ephemeral/Packages/.packages/in_app_purchase_storekit-0.4.8+1/Sources/in_app_purchase_storekit_objc/include/in_app_purchase_storekit_objc/FIAPPaymentQueueDelegate.h"
+ 3 | #import "/Users/builder/clone/ios/Flutter/ephemeral/Packages/.packages/in_app_purchase_storekit-0.4.8+1/Sources/in_app_purchase_storekit_objc/include/in_app_purchase_storekit_objc/FIAPReceiptManager.h"
+ 4 | #import "/Users/builder/clone/ios/Flutter/ephemeral/Packages/.packages/in_app_purchase_storekit-0.4.8+1/Sources/in_app_purchase_storekit_objc/include/in_app_purchase_storekit_objc/FIAPRequestHandler.h"
+   |         `- note: in file included from <module-includes>:4:
+ 5 | #import "/Users/builder/clone/ios/Flutter/ephemeral/Packages/.packages/in_app_purchase_storekit-0.4.8+1/Sources/in_app_purchase_storekit_objc/include/in_app_purchase_storekit_objc/FIAPaymentQueueHandler.h"
+ 6 | #import "/Users/builder/clone/ios/Flutter/ephemeral/Packages/.packages/in_app_purchase_storekit-0.4.8+1/Sources/in_app_purchase_storekit_objc/include/in_app_purchase_storekit_objc/FIATransactionCache.h"
+
+/Users/builder/clone/ios/Flutter/ephemeral/Packages/.packages/in_app_purchase_storekit-0.4.8+1/Sources/in_app_purchase_storekit_objc/include/in_app_purchase_storekit_objc/FIAPRequestHandler.h:7:9: note: in file included from /Users/builder/clone/ios/Flutter/ephemeral/Packages/.packages/in_app_purchase_storekit-0.4.8+1/Sources/in_app_purchase_storekit_objc/include/in_app_purchase_storekit_objc/FIAPRequestHandler.h:7:
+ 5 | #import <Foundation/Foundation.h>
+ 6 | #import <StoreKit/StoreKit.h>
+ 7 | #import "FLTRequestHandlerProtocol.h"
+   |         `- note: in file included from /Users/builder/clone/ios/Flutter/ephemeral/Packages/.packages/in_app_purchase_storekit-0.4.8+1/Sources/in_app_purchase_storekit_objc/include/in_app_purchase_storekit_objc/FIAPRequestHandler.h:7:
+ 8 | 
+ 9 | NS_ASSUME_NONNULL_BEGIN
+
+/Users/builder/clone/ios/Flutter/ephemeral/Packages/.packages/in_app_purchase_storekit-0.4.8+1/Sources/in_app_purchase_storekit_objc/include/in_app_purchase_storekit_objc/FLTRequestHandlerProtocol.h:8:42: warning: 'SKProductsResponse' is deprecated: first deprecated in iOS 18.0 - Get products using Product.products(for:).
+ 6 | 
+ 7 | NS_ASSUME_NONNULL_BEGIN
+ 8 | typedef void (^ProductRequestCompletion)(SKProductsResponse *_Nullable response,
+   |                                          `- warning: 'SKProductsResponse' is deprecated: first deprecated in iOS 18.0 - Get products using Product.products(for:).
+ 9 |                                          NSError *_Nullable errror);
+10 | /// A protocol that wraps SKRequest.
+
+/Applications/Xcode-26.5.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS26.5.sdk/System/Library/Frameworks/StoreKit.framework/Headers/SKProductsRequest.h:44:12: note: 'SKProductsResponse' has been explicitly marked deprecated here
+42 | API_DEPRECATED("Get products using Product.products(for:).", ios(3.0, 18.0), macos(10.7, 15.0), watchos(6.2, 11.0), visionos(1.0, 2.0))
+43 | NS_SWIFT_SENDABLE
+44 | @interface SKProductsResponse : NSObject {
+   |            `- note: 'SKProductsResponse' has been explicitly marked deprecated here
+45 | @private
+46 |     id _internal;
+
+<module-includes>:4:9: note: in file included from <module-includes>:4:
+ 2 | #import "/Users/builder/clone/ios/Flutter/ephemeral/Packages/.packages/in_app_purchase_storekit-0.4.8+1/Sources/in_app_purchase_storekit_objc/include/in_app_purchase_storekit_objc/FIAPPaymentQueueDelegate.h"
+ 3 | #import "/Users/builder/clone/ios/Flutter/ephemeral/Packages/.packages/in_app_purchase_storekit-0.4.8+1/Sources/in_app_purchase_storekit_objc/include/in_app_purchase_storekit_objc/FIAPReceiptManager.h"
+ 4 | #import "/Users/builder/clone/ios/Flutter/ephemeral/Packages/.packages/in_app_purchase_storekit-0.4.8+1/Sources/in_app_purchase_storekit_objc/include/in_app_purchase_storekit_objc/FIAPRequestHandler.h"
+   |         `- note: in file included from <module-includes>:4:
+ 5 | #import "/Users/builder/clone/ios/Flutter/ephemeral/Packages/.packages/in_app_purchase_storekit-0.4.8+1/Sources/in_app_purchase_storekit_objc/include/in_app_purchase_storekit_objc/FIAPaymentQueueHandler.h"
+ 6 | #import "/Users/builder/clone/ios/Flutter/ephemeral/Packages/.packages/in_app_purchase_storekit-0.4.8+1/Sources/in_app_purchase_storekit_objc/include/in_app_purchase_storekit_objc/FIATransactionCache.h"
+
+/Users/builder/clone/ios/Flutter/ephemeral/Packages/.packages/in_app_purchase_storekit-0.4.8+1/Sources/in_app_purchase_storekit_objc/include/in_app_purchase_storekit_objc/FIAPRequestHandler.h:13:34: warning: 'SKRequest' is deprecated: first deprecated in iOS 18.0 - No longer supported.
+11 | @interface FIAPRequestHandler : NSObject <FLTRequestHandlerProtocol>
+12 | 
+13 | - (instancetype)initWithRequest:(SKRequest *)request;
+   |                                  `- warning: 'SKRequest' is deprecated: first deprecated in iOS 18.0 - No longer supported.
+14 | - (void)startProductRequestWithCompletionHandler:(ProductRequestCompletion)completion;
+15 | 
+
+/Applications/Xcode-26.5.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS26.5.sdk/System/Library/Frameworks/StoreKit.framework/Headers/SKRequest.h:19:12: note: 'SKRequest' has been explicitly marked deprecated here
+17 | API_DEPRECATED("No longer supported.", ios(3.0, 18.0), macos(10.7, 15.0), watchos(6.2, 11.0), visionos(1.0, 2.0))
+18 | NS_SWIFT_NONSENDABLE
+19 | @interface SKRequest : NSObject {
+   |            `- note: 'SKRequest' has been explicitly marked deprecated here
+20 | @private
+21 |     id _requestInternal;
+
+<module-includes>:5:9: note: in file included from <module-includes>:5:
+ 3 | #import "/Users/builder/clone/ios/Flutter/ephemeral/Packages/.packages/in_app_purchase_storekit-0.4.8+1/Sources/in_app_purchase_storekit_objc/include/in_app_purchase_storekit_objc/FIAPReceiptManager.h"
+ 4 | #import "/Users/builder/clone/ios/Flutter/ephemeral/Packages/.packages/in_app_purchase_storekit-0.4.8+1/Sources/in_app_purchase_storekit_objc/include/in_app_purchase_storekit_objc/FIAPRequestHandler.h"
+ 5 | #import "/Users/builder/clone/ios/Flutter/ephemeral/Packages/.packages/in_app_purchase_storekit-0.4.8+1/Sources/in_app_purchase_storekit_objc/include/in_app_purchase_storekit_objc/FIAPaymentQueueHandler.h"
+   |         `- note: in file included from <module-includes>:5:
+ 6 | #import "/Users/builder/clone/ios/Flutter/ephemeral/Packages/.packages/in_app_purchase_storekit-0.4.8+1/Sources/in_app_purchase_storekit_objc/include/in_app_purchase_storekit_objc/FIATransactionCache.h"
+ 7 | #import "/Users/builder/clone/ios/Flutter/ephemeral/Packages/.packages/in_app_purchase_storekit-0.4.8+1/Sources/in_app_purchase_storekit_objc/include/in_app_purchase_storekit_objc/FLTMethodChannelProtocol.h"
+
+/Users/builder/clone/ios/Flutter/ephemeral/Packages/.packages/in_app_purchase_storekit-0.4.8+1/Sources/in_app_purchase_storekit_objc/include/in_app_purchase_storekit_objc/FIAPaymentQueueHandler.h:8:9: note: in file included from /Users/builder/clone/ios/Flutter/ephemeral/Packages/.packages/in_app_purchase_storekit-0.4.8+1/Sources/in_app_purchase_storekit_objc/include/in_app_purchase_storekit_objc/FIAPaymentQueueHandler.h:8:
+ 6 | #import <StoreKit/StoreKit.h>
+ 7 | #import "FIATransactionCache.h"
+ 8 | #import "FLTPaymentQueueHandlerProtocol.h"
+   |         `- note: in file included from /Users/builder/clone/ios/Flutter/ephemeral/Packages/.packages/in_app_purchase_storekit-0.4.8+1/Sources/in_app_purchase_storekit_objc/include/in_app_purchase_storekit_objc/FIAPaymentQueueHandler.h:8:
+ 9 | #import "FLTPaymentQueueProtocol.h"
+10 | #import "FLTTransactionCacheProtocol.h"
+
+/Users/builder/clone/ios/Flutter/ephemeral/Packages/.packages/in_app_purchase_storekit-0.4.8+1/Sources/in_app_purchase_storekit_objc/include/in_app_purchase_storekit_objc/FLTPaymentQueueHandlerProtocol.h:7:9: note: in file included from /Users/builder/clone/ios/Flutter/ephemeral/Packages/.packages/in_app_purchase_storekit-0.4.8+1/Sources/in_app_purchase_storekit_objc/include/in_app_purchase_storekit_objc/FLTPaymentQueueHandlerProtocol.h:7:
+  5 | #import <StoreKit/StoreKit.h>
+  6 | #import "FIATransactionCache.h"
+  7 | #import "FLTPaymentQueueProtocol.h"
+    |         `- note: in file included from /Users/builder/clone/ios/Flutter/ephemeral/Packages/.packages/in_app_purchase_storekit-0.4.8+1/Sources/in_app_purchase_storekit_objc/include/in_app_purchase_storekit_objc/FLTPaymentQueueHandlerProtocol.h:7:
+  8 | #import "FLTTransactionCacheProtocol.h"
+  9 | 
+
+/Users/builder/clone/ios/Flutter/ephemeral/Packages/.packages/in_app_purchase_storekit-0.4.8+1/Sources/in_app_purchase_storekit_objc/include/in_app_purchase_storekit_objc/FLTPaymentQueueProtocol.h:13:30: warning: 'SKStorefront' is deprecated: first deprecated in iOS 18.0 - Use Storefront.
+11 | 
+12 | /// An object containing the location and unique identifier of an Apple App Store storefront.
+13 | @property(nonatomic, strong) SKStorefront *storefront API_AVAILABLE(ios(13.0));
+   |                              `- warning: 'SKStorefront' is deprecated: first deprecated in iOS 18.0 - Use Storefront.
+14 | 
+15 | /// A list of SKPaymentTransactions, which each represents a single transaction
+
+/Applications/Xcode-26.5.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS26.5.sdk/System/Library/Frameworks/StoreKit.framework/Headers/SKStorefront.h:16:12: note: 'SKStorefront' has been explicitly marked deprecated here
+14 | API_DEPRECATED("Use Storefront.", ios(13.0, 18.0), macos(10.15, 15.0), watchos(6.2, 11.0), visionos(1.0, 2.0))
+15 | NS_SWIFT_SENDABLE
+16 | @interface SKStorefront : NSObject
+   |            `- note: 'SKStorefront' has been explicitly marked deprecated here
+17 | 
+18 | /* The three letter country code for the current storefront */
+
+<module-includes>:5:9: note: in file included from <module-includes>:5:
+ 3 | #import "/Users/builder/clone/ios/Flutter/ephemeral/Packages/.packages/in_app_purchase_storekit-0.4.8+1/Sources/in_app_purchase_storekit_objc/include/in_app_purchase_storekit_objc/FIAPReceiptManager.h"
+ 4 | #import "/Users/builder/clone/ios/Flutter/ephemeral/Packages/.packages/in_app_purchase_storekit-0.4.8+1/Sources/in_app_purchase_storekit_objc/include/in_app_purchase_storekit_objc/FIAPRequestHandler.h"
+ 5 | #import "/Users/builder/clone/ios/Flutter/ephemeral/Packages/.packages/in_app_purchase_storekit-0.4.8+1/Sources/in_app_purchase_storekit_objc/include/in_app_purchase_storekit_objc/FIAPaymentQueueHandler.h"
+   |         `- note: in file included from <module-includes>:5:
+ 6 | #import "/Users/builder/clone/ios/Flutter/ephemeral/Packages/.packages/in_app_purchase_storekit-0.4.8+1/Sources/in_app_purchase_storekit_objc/include/in_app_purchase_storekit_objc/FIATransactionCache.h"
+ 7 | #import "/Users/builder/clone/ios/Flutter/ephemeral/Packages/.packages/in_app_purchase_storekit-0.4.8+1/Sources/in_app_purchase_storekit_objc/include/in_app_purchase_storekit_objc/FLTMethodChannelProtocol.h"
+
+/Users/builder/clone/ios/Flutter/ephemeral/Packages/.packages/in_app_purchase_storekit-0.4.8+1/Sources/in_app_purchase_storekit_objc/include/in_app_purchase_storekit_objc/FIAPaymentQueueHandler.h:8:9: note: in file included from /Users/builder/clone/ios/Flutter/ephemeral/Packages/.packages/in_app_purchase_storekit-0.4.8+1/Sources/in_app_purchase_storekit_objc/include/in_app_purchase_storekit_objc/FIAPaymentQueueHandler.h:8:
+ 6 | #import <StoreKit/StoreKit.h>
+ 7 | #import "FIATransactionCache.h"
+ 8 | #import "FLTPaymentQueueHandlerProtocol.h"
+   |         `- note: in file included from /Users/builder/clone/ios/Flutter/ephemeral/Packages/.packages/in_app_purchase_storekit-0.4.8+1/Sources/in_app_purchase_storekit_objc/include/in_app_purchase_storekit_objc/FIAPaymentQueueHandler.h:8:
+ 9 | #import "FLTPaymentQueueProtocol.h"
+10 | #import "FLTTransactionCacheProtocol.h"
+
+/Users/builder/clone/ios/Flutter/ephemeral/Packages/.packages/in_app_purchase_storekit-0.4.8+1/Sources/in_app_purchase_storekit_objc/include/in_app_purchase_storekit_objc/FLTPaymentQueueHandlerProtocol.h:7:9: note: in file included from /Users/builder/clone/ios/Flutter/ephemeral/Packages/.packages/in_app_purchase_storekit-0.4.8+1/Sources/in_app_purchase_storekit_objc/include/in_app_purchase_storekit_objc/FLTPaymentQueueHandlerProtocol.h:7:
+  5 | #import <StoreKit/StoreKit.h>
+  6 | #import "FIATransactionCache.h"
+  7 | #import "FLTPaymentQueueProtocol.h"
+    |         `- note: in file included from /Users/builder/clone/ios/Flutter/ephemeral/Packages/.packages/in_app_purchase_storekit-0.4.8+1/Sources/in_app_purchase_storekit_objc/include/in_app_purchase_storekit_objc/FLTPaymentQueueHandlerProtocol.h:7:
+  8 | #import "FLTTransactionCacheProtocol.h"
+  9 | 
+
+/Users/builder/clone/ios/Flutter/ephemeral/Packages/.packages/in_app_purchase_storekit-0.4.8+1/Sources/in_app_purchase_storekit_objc/include/in_app_purchase_storekit_objc/FLTPaymentQueueProtocol.h:16:38: warning: 'SKPaymentTransaction' is deprecated: first deprecated in iOS 18.0 - Use PurchaseResult from Product.purchase(confirmIn:options:).
+14 | 
+15 | /// A list of SKPaymentTransactions, which each represents a single transaction
+16 | @property(nonatomic, strong) NSArray<SKPaymentTransaction *> *transactions API_AVAILABLE(
+   |                                      `- warning: 'SKPaymentTransaction' is deprecated: first deprecated in iOS 18.0 - Use PurchaseResult from Product.purchase(confirmIn:options:).
+17 |     ios(3.0), macos(10.7), watchos(6.2));
+18 | 
+
+/Applications/Xcode-26.5.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS26.5.sdk/System/Library/Frameworks/StoreKit.framework/Headers/SKPaymentTransaction.h:27:12: note: 'SKPaymentTransaction' has been explicitly marked deprecated here
+25 | API_DEPRECATED("Use PurchaseResult from Product.purchase(confirmIn:options:).",ios(3.0, 18.0), macos(10.7, 15.0), watchos(6.2, 11.0), visionos(1.0, 2.0))
+26 | NS_SWIFT_SENDABLE
+27 | @interface SKPaymentTransaction : NSObject {
+   |            `- note: 'SKPaymentTransaction' has been explicitly marked deprecated here
+28 | @private
+29 |     id _internal;
+
+<module-includes>:5:9: note: in file included from <module-includes>:5:
+ 3 | #import "/Users/builder/clone/ios/Flutter/ephemeral/Packages/.packages/in_app_purchase_storekit-0.4.8+1/Sources/in_app_purchase_storekit_objc/include/in_app_purchase_storekit_objc/FIAPReceiptManager.h"
+ 4 | #import "/Users/builder/clone/ios/Flutter/ephemeral/Packages/.packages/in_app_purchase_storekit-0.4.8+1/Sources/in_app_purchase_storekit_objc/include/in_app_purchase_storekit_objc/FIAPRequestHandler.h"
+ 5 | #import "/Users/builder/clone/ios/Flutter/ephemeral/Packages/.packages/in_app_purchase_storekit-0.4.8+1/Sources/in_app_purchase_storekit_objc/include/in_app_purchase_storekit_objc/FIAPaymentQueueHandler.h"
+   |         `- note: in file included from <module-includes>:5:
+ 6 | #import "/Users/builder/clone/ios/Flutter/ephemeral/Packages/.packages/in_app_purchase_storekit-0.4.8+1/Sources/in_app_purchase_storekit_objc/include/in_app_purchase_storekit_objc/FIATransactionCache.h"
+ 7 | #import "/Users/builder/clone/ios/Flutter/ephemeral/Packages/.packages/in_app_purchase_storekit-0.4.8+1/Sources/in_app_purchase_storekit_objc/include/in_app_purchase_storekit_objc/FLTMethodChannelProtocol.h"
+
+/Users/builder/clone/ios/Flutter/ephemeral/Packages/.packages/in_app_purchase_storekit-0.4.8+1/Sources/in_app_purchase_storekit_objc/include/in_app_purchase_storekit_objc/FIAPaymentQueueHandler.h:8:9: note: in file included from /Users/builder/clone/ios/Flutter/ephemeral/Packages/.packages/in_app_purchase_storekit-0.4.8+1/Sources/in_app_purchase_storekit_objc/include/in_app_purchase_storekit_objc/FIAPaymentQueueHandler.h:8:
+ 6 | #import <StoreKit/StoreKit.h>
+ 7 | #import "FIATransactionCache.h"
+ 8 | #import "FLTPaymentQueueHandlerProtocol.h"
+   |         `- note: in file included from /Users/builder/clone/ios/Flutter/ephemeral/Packages/.packages/in_app_purchase_storekit-0.4.8+1/Sources/in_app_purchase_storekit_objc/include/in_app_purchase_storekit_objc/FIAPaymentQueueHandler.h:8:
+ 9 | #import "FLTPaymentQueueProtocol.h"
+10 | #import "FLTTransactionCacheProtocol.h"
+
+/Users/builder/clone/ios/Flutter/ephemeral/Packages/.packages/in_app_purchase_storekit-0.4.8+1/Sources/in_app_purchase_storekit_objc/include/in_app_purchase_storekit_objc/FLTPaymentQueueHandlerProtocol.h:7:9: note: in file included from /Users/builder/clone/ios/Flutter/ephemeral/Packages/.packages/in_app_purchase_storekit-0.4.8+1/Sources/in_app_purchase_storekit_objc/include/in_app_purchase_storekit_objc/FLTPaymentQueueHandlerProtocol.h:7:
+  5 | #import <StoreKit/StoreKit.h>
+  6 | #import "FIATransactionCache.h"
+  7 | #import "FLTPaymentQueueProtocol.h"
+    |         `- note: in file included from /Users/builder/clone/ios/Flutter/ephemeral/Packages/.packages/in_app_purchase_storekit-0.4.8+1/Sources/in_app_purchase_storekit_objc/include/in_app_purchase_storekit_objc/FLTPaymentQueueHandlerProtocol.h:7:
+  8 | #import "FLTTransactionCacheProtocol.h"
+  9 | 
+
+/Users/builder/clone/ios/Flutter/ephemeral/Packages/.packages/in_app_purchase_storekit-0.4.8+1/Sources/in_app_purchase_storekit_objc/include/in_app_purchase_storekit_objc/FLTPaymentQueueProtocol.h:20:41: warning: 'SKPaymentQueueDelegate' is deprecated: first deprecated in iOS 18.0 - No longer supported.
+18 | 
+19 | /// An object that provides information needed to complete transactions.
+20 | @property(nonatomic, weak, nullable) id<SKPaymentQueueDelegate> delegate API_AVAILABLE(
+   |                                         `- warning: 'SKPaymentQueueDelegate' is deprecated: first deprecated in iOS 18.0 - No longer supported.
+21 |     ios(13.0), macos(10.15), watchos(6.2));
+22 | 
+
+/Applications/Xcode-26.5.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS26.5.sdk/System/Library/Frameworks/StoreKit.framework/Headers/SKPaymentQueue.h:78:11: note: 'SKPaymentQueueDelegate' has been explicitly marked deprecated here
+ 76 | 
+ 77 | API_DEPRECATED("No longer supported.", ios(13.0, 18.0), tvos(13.0, 18.0), macos(10.15, 15.0), watchos(6.2, 11.0), visionos(1.0, 2.0))
+ 78 | @protocol SKPaymentQueueDelegate <NSObject>
+    |           `- note: 'SKPaymentQueueDelegate' has been explicitly marked deprecated here
+ 79 | @optional
+ 80 | // Sent when the storefront changes while a payment is processing.
+
+<module-includes>:5:9: note: in file included from <module-includes>:5:
+ 3 | #import "/Users/builder/clone/ios/Flutter/ephemeral/Packages/.packages/in_app_purchase_storekit-0.4.8+1/Sources/in_app_purchase_storekit_objc/include/in_app_purchase_storekit_objc/FIAPReceiptManager.h"
+ 4 | #import "/Users/builder/clone/ios/Flutter/ephemeral/Packages/.packages/in_app_purchase_storekit-0.4.8+1/Sources/in_app_purchase_storekit_objc/include/in_app_purchase_storekit_objc/FIAPRequestHandler.h"
+ 5 | #import "/Users/builder/clone/ios/Flutter/ephemeral/Packages/.packages/in_app_purchase_storekit-0.4.8+1/Sources/in_app_purchase_storekit_objc/include/in_app_purchase_storekit_objc/FIAPaymentQueueHandler.h"
+   |         `- note: in file included from <module-includes>:5:
+ 6 | #import "/Users/builder/clone/ios/Flutter/ephemeral/Packages/.packages/in_app_purchase_storekit-0.4.8+1/Sources/in_app_purchase_storekit_objc/include/in_app_purchase_storekit_objc/FIATransactionCache.h"
+ 7 | #import "/Users/builder/clone/ios/Flutter/ephemeral/Packages/.packages/in_app_purchase_storekit-0.4.8+1/Sources/in_app_purchase_storekit_objc/include/in_app_purchase_storekit_objc/FLTMethodChannelProtocol.h"
+
+/Users/builder/clone/ios/Flutter/ephemeral/Packages/.packages/in_app_purchase_storekit-0.4.8+1/Sources/in_app_purchase_storekit_objc/include/in_app_purchase_storekit_objc/FIAPaymentQueueHandler.h:8:9: note: in file included from /Users/builder/clone/ios/Flutter/ephemeral/Packages/.packages/in_app_purchase_storekit-0.4.8+1/Sources/in_app_purchase_storekit_objc/include/in_app_purchase_storekit_objc/FIAPaymentQueueHandler.h:8:
+ 6 | #import <StoreKit/StoreKit.h>
+ 7 | #import "FIATransactionCache.h"
+ 8 | #import "FLTPaymentQueueHandlerProtocol.h"
+   |         `- note: in file included from /Users/builder/clone/ios/Flutter/ephemeral/Packages/.packages/in_app_purchase_storekit-0.4.8+1/Sources/in_app_purchase_storekit_objc/include/in_app_purchase_storekit_objc/FIAPaymentQueueHandler.h:8:
+ 9 | #import "FLTPaymentQueueProtocol.h"
+10 | #import "FLTTransactionCacheProtocol.h"
+
+/Users/builder/clone/ios/Flutter/ephemeral/Packages/.packages/in_app_purchase_storekit-0.4.8+1/Sources/in_app_purchase_storekit_objc/include/in_app_purchase_storekit_objc/FLTPaymentQueueHandlerProtocol.h:7:9: note: in file included from /Users/builder/clone/ios/Flutter/ephemeral/Packages/.packages/in_app_purchase_storekit-0.4.8+1/Sources/in_app_purchase_storekit_objc/include/in_app_purchase_storekit_objc/FLTPaymentQueueHandlerProtocol.h:7:
+  5 | #import <StoreKit/StoreKit.h>
+  6 | #import "FIATransactionCache.h"
+  7 | #import "FLTPaymentQueueProtocol.h"
+    |         `- note: in file included from /Users/builder/clone/ios/Flutter/ephemeral/Packages/.packages/in_app_purchase_storekit-0.4.8+1/Sources/in_app_purchase_storekit_objc/include/in_app_purchase_storekit_objc/FLTPaymentQueueHandlerProtocol.h:7:
+  8 | #import "FLTTransactionCacheProtocol.h"
+  9 | 
+
+/Users/builder/clone/ios/Flutter/ephemeral/Packages/.packages/in_app_purchase_storekit-0.4.8+1/Sources/in_app_purchase_storekit_objc/include/in_app_purchase_storekit_objc/FLTPaymentQueueProtocol.h:25:36: warning: 'SKPaymentTransaction' is deprecated: first deprecated in iOS 18.0 - Use PurchaseResult from Product.purchase(confirmIn:options:).
+23 | /// Remove a finished (i.e. failed or completed) transaction from the queue.  Attempting to finish a
+24 | /// purchasing transaction will throw an exception.
+25 | - (void)finishTransaction:(nonnull SKPaymentTransaction *)transaction;
+   |                                    `- warning: 'SKPaymentTransaction' is deprecated: first deprecated in iOS 18.0 - Use PurchaseResult from Product.purchase(confirmIn:options:).
+26 | 
+27 | /// Observers are not retained.  The transactions array will only be synchronized with the server
+
+/Applications/Xcode-26.5.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS26.5.sdk/System/Library/Frameworks/StoreKit.framework/Headers/SKPaymentTransaction.h:27:12: note: 'SKPaymentTransaction' has been explicitly marked deprecated here
+25 | API_DEPRECATED("Use PurchaseResult from Product.purchase(confirmIn:options:).",ios(3.0, 18.0), macos(10.7, 15.0), watchos(6.2, 11.0), visionos(1.0, 2.0))
+26 | NS_SWIFT_SENDABLE
+27 | @interface SKPaymentTransaction : NSObject {
+   |            `- note: 'SKPaymentTransaction' has been explicitly marked deprecated here
+28 | @private
+29 |     id _internal;
+
+<module-includes>:5:9: note: in file included from <module-includes>:5:
+ 3 | #import "/Users/builder/clone/ios/Flutter/ephemeral/Packages/.packages/in_app_purchase_storekit-0.4.8+1/Sources/in_app_purchase_storekit_objc/include/in_app_purchase_storekit_objc/FIAPReceiptManager.h"
+ 4 | #import "/Users/builder/clone/ios/Flutter/ephemeral/Packages/.packages/in_app_purchase_storekit-0.4.8+1/Sources/in_app_purchase_storekit_objc/include/in_app_purchase_storekit_objc/FIAPRequestHandler.h"
+ 5 | #import "/Users/builder/clone/ios/Flutter/ephemeral/Packages/.packages/in_app_purchase_storekit-0.4.8+1/Sources/in_app_purchase_storekit_objc/include/in_app_purchase_storekit_objc/FIAPaymentQueueHandler.h"
+   |         `- note: in file included from <module-includes>:5:
+ 6 | #import "/Users/builder/clone/ios/Flutter/ephemeral/Packages/.packages/in_app_purchase_storekit-0.4.8+1/Sources/in_app_purchase_storekit_objc/include/in_app_purchase_storekit_objc/FIATransactionCache.h"
+ 7 | #import "/Users/builder/clone/ios/Flutter/ephemeral/Packages/.packages/in_app_purchase_storekit-0.4.8+1/Sources/in_app_purchase_storekit_objc/include/in_app_purchase_storekit_objc/FLTMethodChannelProtocol.h"
+
+/Users/builder/clone/ios/Flutter/ephemeral/Packages/.packages/in_app_purchase_storekit-0.4.8+1/Sources/in_app_purchase_storekit_objc/include/in_app_purchase_storekit_objc/FIAPaymentQueueHandler.h:8:9: note: in file included from /Users/builder/clone/ios/Flutter/ephemeral/Packages/.packages/in_app_purchase_storekit-0.4.8+1/Sources/in_app_purchase_storekit_objc/include/in_app_purchase_storekit_objc/FIAPaymentQueueHandler.h:8:
+ 6 | #import <StoreKit/StoreKit.h>
+ 7 | #import "FIATransactionCache.h"
+ 8 | #import "FLTPaymentQueueHandlerProtocol.h"
+   |         `- note: in file included from /Users/builder/clone/ios/Flutter/ephemeral/Packages/.packages/in_app_purchase_storekit-0.4.8+1/Sources/in_app_purchase_storekit_objc/include/in_app_purchase_storekit_objc/FIAPaymentQueueHandler.h:8:
+ 9 | #import "FLTPaymentQueueProtocol.h"
+10 | #import "FLTTransactionCacheProtocol.h"
+
+/Users/builder/clone/ios/Flutter/ephemeral/Packages/.packages/in_app_purchase_storekit-0.4.8+1/Sources/in_app_purchase_storekit_objc/include/in_app_purchase_storekit_objc/FLTPaymentQueueHandlerProtocol.h:7:9: note: in file included from /Users/builder/clone/ios/Flutter/ephemeral/Packages/.packages/in_app_purchase_storekit-0.4.8+1/Sources/in_app_purchase_storekit_objc/include/in_app_purchase_storekit_objc/FLTPaymentQueueHandlerProtocol.h:7:
+  5 | #import <StoreKit/StoreKit.h>
+  6 | #import "FIATransactionCache.h"
+  7 | #import "FLTPaymentQueueProtocol.h"
+    |         `- note: in file included from /Users/builder/clone/ios/Flutter/ephemeral/Packages/.packages/in_app_purchase_storekit-0.4.8+1/Sources/in_app_purchase_storekit_objc/include/in_app_purchase_storekit_objc/FLTPaymentQueueHandlerProtocol.h:7:
+  8 | #import "FLTTransactionCacheProtocol.h"
+  9 | 
+
+/Users/builder/clone/ios/Flutter/ephemeral/Packages/.packages/in_app_purchase_storekit-0.4.8+1/Sources/in_app_purchase_storekit_objc/include/in_app_purchase_storekit_objc/FLTPaymentQueueProtocol.h:29:36: warning: 'SKPaymentTransactionObserver' is deprecated: first deprecated in iOS 18.0 - Use StoreKit 2 Transaction APIs.
+27 | /// Observers are not retained.  The transactions array will only be synchronized with the server
+28 | /// while the queue has observers.  This may require that the user authenticate.
+29 | - (void)addTransactionObserver:(id<SKPaymentTransactionObserver>)observer;
+   |                                    `- warning: 'SKPaymentTransactionObserver' is deprecated: first deprecated in iOS 18.0 - Use StoreKit 2 Transaction APIs.
+30 | 
+31 | /// Add a payment to the server queue.  The payment is copied to add an SKPaymentTransaction to the
+
+/Applications/Xcode-26.5.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS26.5.sdk/System/Library/Frameworks/StoreKit.framework/Headers/SKPaymentQueue.h:91:11: note: 'SKPaymentTransactionObserver' has been explicitly marked deprecated here
+ 89 | 
+ 90 | API_DEPRECATED("Use StoreKit 2 Transaction APIs.", ios(3.0, 18.0), tvos(9.0, 18.0), macos(10.7, 15.0), watchos(6.2, 11.0), visionos(1.0, 2.0))
+ 91 | @protocol SKPaymentTransactionObserver <NSObject>
+    |           `- note: 'SKPaymentTransactionObserver' has been explicitly marked deprecated here
+ 92 | @required
+ 93 | // Sent when the transaction array has changed (additions or state changes).  Client should check state of transactions and finish as appropriate.
+
+<module-includes>:5:9: note: in file included from <module-includes>:5:
+ 3 | #import "/Users/builder/clone/ios/Flutter/ephemeral/Packages/.packages/in_app_purchase_storekit-0.4.8+1/Sources/in_app_purchase_storekit_objc/include/in_app_purchase_storekit_objc/FIAPReceiptManager.h"
+ 4 | #import "/Users/builder/clone/ios/Flutter/ephemeral/Packages/.packages/in_app_purchase_storekit-0.4.8+1/Sources/in_app_purchase_storekit_objc/include/in_app_purchase_storekit_objc/FIAPRequestHandler.h"
+ 5 | #import "/Users/builder/clone/ios/Flutter/ephemeral/Packages/.packages/in_app_purchase_storekit-0.4.8+1/Sources/in_app_purchase_storekit_objc/include/in_app_purchase_storekit_objc/FIAPaymentQueueHandler.h"
+   |         `- note: in file included from <module-includes>:5:
+ 6 | #import "/Users/builder/clone/ios/Flutter/ephemeral/Packages/.packages/in_app_purchase_storekit-0.4.8+1/Sources/in_app_purchase_storekit_objc/include/in_app_purchase_storekit_objc/FIATransactionCache.h"
+ 7 | #import "/Users/builder/clone/ios/Flutter/ephemeral/Packages/.packages/in_app_purchase_storekit-0.4.8+1/Sources/in_app_purchase_storekit_objc/include/in_app_purchase_storekit_objc/FLTMethodChannelProtocol.h"
+
+/Users/builder/clone/ios/Flutter/ephemeral/Packages/.packages/in_app_purchase_storekit-0.4.8+1/Sources/in_app_purchase_storekit_objc/include/in_app_purchase_storekit_objc/FIAPaymentQueueHandler.h:8:9: note: in file included from /Users/builder/clone/ios/Flutter/ephemeral/Packages/.packages/in_app_purchase_storekit-0.4.8+1/Sources/in_app_purchase_storekit_objc/include/in_app_purchase_storekit_objc/FIAPaymentQueueHandler.h:8:
+ 6 | #import <StoreKit/StoreKit.h>
+ 7 | #import "FIATransactionCache.h"
+ 8 | #import "FLTPaymentQueueHandlerProtocol.h"
+   |         `- note: in file included from /Users/builder/clone/ios/Flutter/ephemeral/Packages/.packages/in_app_purchase_storekit-0.4.8+1/Sources/in_app_purchase_storekit_objc/include/in_app_purchase_storekit_objc/FIAPaymentQueueHandler.h:8:
+ 9 | #import "FLTPaymentQueueProtocol.h"
+10 | #import "FLTTransactionCacheProtocol.h"
+
+/Users/builder/clone/ios/Flutter/ephemeral/Packages/.packages/in_app_purchase_storekit-0.4.8+1/Sources/in_app_purchase_storekit_objc/include/in_app_purchase_storekit_objc/FLTPaymentQueueHandlerProtocol.h:7:9: note: in file included from /Users/builder/clone/ios/Flutter/ephemeral/Packages/.packages/in_app_purchase_storekit-0.4.8+1/Sources/in_app_purchase_storekit_objc/include/in_app_purchase_storekit_objc/FLTPaymentQueueHandlerProtocol.h:7:
+  5 | #import <StoreKit/StoreKit.h>
+  6 | #import "FIATransactionCache.h"
+  7 | #import "FLTPaymentQueueProtocol.h"
+    |         `- note: in file included from /Users/builder/clone/ios/Flutter/ephemeral/Packages/.packages/in_app_purchase_storekit-0.4.8+1/Sources/in_app_purchase_storekit_objc/include/in_app_purchase_storekit_objc/FLTPaymentQueueHandlerProtocol.h:7:
+  8 | #import "FLTTransactionCacheProtocol.h"
+  9 | 
+
+/Users/builder/clone/ios/Flutter/ephemeral/Packages/.packages/in_app_purchase_storekit-0.4.8+1/Sources/in_app_purchase_storekit_objc/include/in_app_purchase_storekit_objc/FLTPaymentQueueProtocol.h:34:21: warning: 'SKPayment' is deprecated: first deprecated in iOS 18.0 - Use Product.purchase(confirmIn:options:).
+32 | /// transactions array.  The same payment can be added multiple times to create multiple
+33 | /// transactions.
+34 | - (void)addPayment:(SKPayment *_Nonnull)payment;
+   |                     `- warning: 'SKPayment' is deprecated: first deprecated in iOS 18.0 - Use Product.purchase(confirmIn:options:).
+35 | 
+36 | /// Will add completed transactions for the current user back to the queue to be re-completed.
+
+/Applications/Xcode-26.5.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS26.5.sdk/System/Library/Frameworks/StoreKit.framework/Headers/SKPayment.h:19:12: note: 'SKPayment' has been explicitly marked deprecated here
+17 | API_DEPRECATED("Use Product.purchase(confirmIn:options:).", ios(3.0, 18.0), macos(10.7, 15.0), watchos(6.2, 11.0), visionos(1.0, 2.0))
+18 | NS_SWIFT_NONSENDABLE
+19 | @interface SKPayment : NSObject <NSCopying, NSMutableCopying> {
+   |            `- note: 'SKPayment' has been explicitly marked deprecated here
+20 | @private
+21 |     id _internal;
+
+<module-includes>:5:9: note: in file included from <module-includes>:5:
+ 3 | #import "/Users/builder/clone/ios/Flutter/ephemeral/Packages/.packages/in_app_purchase_storekit-0.4.8+1/Sources/in_app_purchase_storekit_objc/include/in_app_purchase_storekit_objc/FIAPReceiptManager.h"
+ 4 | #import "/Users/builder/clone/ios/Flutter/ephemeral/Packages/.packages/in_app_purchase_storekit-0.4.8+1/Sources/in_app_purchase_storekit_objc/include/in_app_purchase_storekit_objc/FIAPRequestHandler.h"
+ 5 | #import "/Users/builder/clone/ios/Flutter/ephemeral/Packages/.packages/in_app_purchase_storekit-0.4.8+1/Sources/in_app_purchase_storekit_objc/include/in_app_purchase_storekit_objc/FIAPaymentQueueHandler.h"
+   |         `- note: in file included from <module-includes>:5:
+ 6 | #import "/Users/builder/clone/ios/Flutter/ephemeral/Packages/.packages/in_app_purchase_storekit-0.4.8+1/Sources/in_app_purchase_storekit_objc/include/in_app_purchase_storekit_objc/FIATransactionCache.h"
+ 7 | #import "/Users/builder/clone/ios/Flutter/ephemeral/Packages/.packages/in_app_purchase_storekit-0.4.8+1/Sources/in_app_purchase_storekit_objc/include/in_app_purchase_storekit_objc/FLTMethodChannelProtocol.h"
+
+/Users/builder/clone/ios/Flutter/ephemeral/Packages/.packages/in_app_purchase_storekit-0.4.8+1/Sources/in_app_purchase_storekit_objc/include/in_app_purchase_storekit_objc/FIAPaymentQueueHandler.h:8:9: note: in file included from /Users/builder/clone/ios/Flutter/ephemeral/Packages/.packages/in_app_purchase_storekit-0.4.8+1/Sources/in_app_purchase_storekit_objc/include/in_app_purchase_storekit_objc/FIAPaymentQueueHandler.h:8:
+ 6 | #import <StoreKit/StoreKit.h>
+ 7 | #import "FIATransactionCache.h"
+ 8 | #import "FLTPaymentQueueHandlerProtocol.h"
+   |         `- note: in file included from /Users/builder/clone/ios/Flutter/ephemeral/Packages/.packages/in_app_purchase_storekit-0.4.8+1/Sources/in_app_purchase_storekit_objc/include/in_app_purchase_storekit_objc/FIAPaymentQueueHandler.h:8:
+ 9 | #import "FLTPaymentQueueProtocol.h"
+10 | #import "FLTTransactionCacheProtocol.h"
+
+/Users/builder/clone/ios/Flutter/ephemeral/Packages/.packages/in_app_purchase_storekit-0.4.8+1/Sources/in_app_purchase_storekit_objc/include/in_app_purchase_storekit_objc/FLTPaymentQueueHandlerProtocol.h:7:9: note: in file included from /Users/builder/clone/ios/Flutter/ephemeral/Packages/.packages/in_app_purchase_storekit-0.4.8+1/Sources/in_app_purchase_storekit_objc/include/in_app_purchase_storekit_objc/FLTPaymentQueueHandlerProtocol.h:7:
+  5 | #import <StoreKit/StoreKit.h>
+  6 | #import "FIATransactionCache.h"
+  7 | #import "FLTPaymentQueueProtocol.h"
+    |         `- note: in file included from /Users/builder/clone/ios/Flutter/ephemeral/Packages/.packages/in_app_purchase_storekit-0.4.8+1/Sources/in_app_purchase_storekit_objc/include/in_app_purchase_storekit_objc/FLTPaymentQueueHandlerProtocol.h:7:
+  8 | #import "FLTTransactionCacheProtocol.h"
+  9 | 
+
+/Users/builder/clone/ios/Flutter/ephemeral/Packages/.packages/in_app_purchase_storekit-0.4.8+1/Sources/in_app_purchase_storekit_objc/include/in_app_purchase_storekit_objc/FLTPaymentQueueProtocol.h:61:32: warning: 'SKPaymentQueue' is deprecated: first deprecated in iOS 18.0 - No longer supported.
+59 | 
+60 | /// Initialize this wrapper with an SKPaymentQueue
+61 | - (instancetype)initWithQueue:(SKPaymentQueue *)queue NS_DESIGNATED_INITIALIZER;
+   |                                `- warning: 'SKPaymentQueue' is deprecated: first deprecated in iOS 18.0 - No longer supported.
+62 | 
+63 | /// The default initializer is unavailable, as it this must be initlai
+
+/Applications/Xcode-26.5.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS26.5.sdk/System/Library/Frameworks/StoreKit.framework/Headers/SKPaymentQueue.h:25:12: note: 'SKPaymentQueue' has been explicitly marked deprecated here
+ 23 | API_DEPRECATED("No longer supported.", ios(3.0, 18.0), tvos(9.0, 18.0), macos(10.7, 15.0), watchos(6.2, 11.0), visionos(1.0, 2.0))
+ 24 | NS_SWIFT_SENDABLE
+ 25 | @interface SKPaymentQueue : NSObject {
+    |            `- note: 'SKPaymentQueue' has been explicitly marked deprecated here
+ 26 | @private
+ 27 |     id _internal;
+
+<module-includes>:5:9: note: in file included from <module-includes>:5:
+ 3 | #import "/Users/builder/clone/ios/Flutter/ephemeral/Packages/.packages/in_app_purchase_storekit-0.4.8+1/Sources/in_app_purchase_storekit_objc/include/in_app_purchase_storekit_objc/FIAPReceiptManager.h"
+ 4 | #import "/Users/builder/clone/ios/Flutter/ephemeral/Packages/.packages/in_app_purchase_storekit-0.4.8+1/Sources/in_app_purchase_storekit_objc/include/in_app_purchase_storekit_objc/FIAPRequestHandler.h"
+ 5 | #import "/Users/builder/clone/ios/Flutter/ephemeral/Packages/.packages/in_app_purchase_storekit-0.4.8+1/Sources/in_app_purchase_storekit_objc/include/in_app_purchase_storekit_objc/FIAPaymentQueueHandler.h"
+   |         `- note: in file included from <module-includes>:5:
+ 6 | #import "/Users/builder/clone/ios/Flutter/ephemeral/Packages/.packages/in_app_purchase_storekit-0.4.8+1/Sources/in_app_purchase_storekit_objc/include/in_app_purchase_storekit_objc/FIATransactionCache.h"
+ 7 | #import "/Users/builder/clone/ios/Flutter/ephemeral/Packages/.packages/in_app_purchase_storekit-0.4.8+1/Sources/in_app_purchase_storekit_objc/include/in_app_purchase_storekit_objc/FLTMethodChannelProtocol.h"
+
+/Users/builder/clone/ios/Flutter/ephemeral/Packages/.packages/in_app_purchase_storekit-0.4.8+1/Sources/in_app_purchase_storekit_objc/include/in_app_purchase_storekit_objc/FIAPaymentQueueHandler.h:8:9: note: in file included from /Users/builder/clone/ios/Flutter/ephemeral/Packages/.packages/in_app_purchase_storekit-0.4.8+1/Sources/in_app_purchase_storekit_objc/include/in_app_purchase_storekit_objc/FIAPaymentQueueHandler.h:8:
+ 6 | #import <StoreKit/StoreKit.h>
+ 7 | #import "FIATransactionCache.h"
+ 8 | #import "FLTPaymentQueueHandlerProtocol.h"
+   |         `- note: in file included from /Users/builder/clone/ios/Flutter/ephemeral/Packages/.packages/in_app_purchase_storekit-0.4.8+1/Sources/in_app_purchase_storekit_objc/include/in_app_purchase_storekit_objc/FIAPaymentQueueHandler.h:8:
+ 9 | #import "FLTPaymentQueueProtocol.h"
+10 | #import "FLTTransactionCacheProtocol.h"
+
+/Users/builder/clone/ios/Flutter/ephemeral/Packages/.packages/in_app_purchase_storekit-0.4.8+1/Sources/in_app_purchase_storekit_objc/include/in_app_purchase_storekit_objc/FLTPaymentQueueHandlerProtocol.h:11:45: warning: 'SKPaymentTransaction' is deprecated: first deprecated in iOS 18.0 - Use PurchaseResult from Product.purchase(confirmIn:options:).
+  9 | 
+ 10 | NS_ASSUME_NONNULL_BEGIN
+ 11 | typedef void (^TransactionsUpdated)(NSArray<SKPaymentTransaction *> *transactions);
+    |                                             `- warning: 'SKPaymentTransaction' is deprecated: first deprecated in iOS 18.0 - Use PurchaseResult from Product.purchase(confirmIn:options:).
+ 12 | typedef void (^TransactionsRemoved)(NSArray<SKPaymentTransaction *> *transactions);
+ 13 | typedef void (^RestoreTransactionFailed)(NSError *error);
+
+/Applications/Xcode-26.5.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS26.5.sdk/System/Library/Frameworks/StoreKit.framework/Headers/SKPaymentTransaction.h:27:12: note: 'SKPaymentTransaction' has been explicitly marked deprecated here
+25 | API_DEPRECATED("Use PurchaseResult from Product.purchase(confirmIn:options:).",ios(3.0, 18.0), macos(10.7, 15.0), watchos(6.2, 11.0), visionos(1.0, 2.0))
+26 | NS_SWIFT_SENDABLE
+27 | @interface SKPaymentTransaction : NSObject {
+   |            `- note: 'SKPaymentTransaction' has been explicitly marked deprecated here
+28 | @private
+29 |     id _internal;
+
+<module-includes>:5:9: note: in file included from <module-includes>:5:
+ 3 | #import "/Users/builder/clone/ios/Flutter/ephemeral/Packages/.packages/in_app_purchase_storekit-0.4.8+1/Sources/in_app_purchase_storekit_objc/include/in_app_purchase_storekit_objc/FIAPReceiptManager.h"
+ 4 | #import "/Users/builder/clone/ios/Flutter/ephemeral/Packages/.packages/in_app_purchase_storekit-0.4.8+1/Sources/in_app_purchase_storekit_objc/include/in_app_purchase_storekit_objc/FIAPRequestHandler.h"
+ 5 | #import "/Users/builder/clone/ios/Flutter/ephemeral/Packages/.packages/in_app_purchase_storekit-0.4.8+1/Sources/in_app_purchase_storekit_objc/include/in_app_purchase_storekit_objc/FIAPaymentQueueHandler.h"
+   |         `- note: in file included from <module-includes>:5:
+ 6 | #import "/Users/builder/clone/ios/Flutter/ephemeral/Packages/.packages/in_app_purchase_storekit-0.4.8+1/Sources/in_app_purchase_storekit_objc/include/in_app_purchase_storekit_objc/FIATransactionCache.h"
+ 7 | #import "/Users/builder/clone/ios/Flutter/ephemeral/Packages/.packages/in_app_purchase_storekit-0.4.8+1/Sources/in_app_purchase_storekit_objc/include/in_app_purchase_storekit_objc/FLTMethodChannelProtocol.h"
+
+/Users/builder/clone/ios/Flutter/ephemeral/Packages/.packages/in_app_purchase_storekit-0.4.8+1/Sources/in_app_purchase_storekit_objc/include/in_app_purchase_storekit_objc/FIAPaymentQueueHandler.h:8:9: note: in file included from /Users/builder/clone/ios/Flutter/ephemeral/Packages/.packages/in_app_purchase_storekit-0.4.8+1/Sources/in_app_purchase_storekit_objc/include/in_app_purchase_storekit_objc/FIAPaymentQueueHandler.h:8:
+ 6 | #import <StoreKit/StoreKit.h>
+ 7 | #import "FIATransactionCache.h"
+ 8 | #import "FLTPaymentQueueHandlerProtocol.h"
+   |         `- note: in file included from /Users/builder/clone/ios/Flutter/ephemeral/Packages/.packages/in_app_purchase_storekit-0.4.8+1/Sources/in_app_purchase_storekit_objc/include/in_app_purchase_storekit_objc/FIAPaymentQueueHandler.h:8:
+ 9 | #import "FLTPaymentQueueProtocol.h"
+10 | #import "FLTTransactionCacheProtocol.h"
+
+/Users/builder/clone/ios/Flutter/ephemeral/Packages/.packages/in_app_purchase_storekit-0.4.8+1/Sources/in_app_purchase_storekit_objc/include/in_app_purchase_storekit_objc/FLTPaymentQueueHandlerProtocol.h:12:45: warning: 'SKPaymentTransaction' is deprecated: first deprecated in iOS 18.0 - Use PurchaseResult from Product.purchase(confirmIn:options:).
+ 10 | NS_ASSUME_NONNULL_BEGIN
+ 11 | typedef void (^TransactionsUpdated)(NSArray<SKPaymentTransaction *> *transactions);
+ 12 | typedef void (^TransactionsRemoved)(NSArray<SKPaymentTransaction *> *transactions);
+    |                                             `- warning: 'SKPaymentTransaction' is deprecated: first deprecated in iOS 18.0 - Use PurchaseResult from Product.purchase(confirmIn:options:).
+ 13 | typedef void (^RestoreTransactionFailed)(NSError *error);
+ 14 | typedef void (^RestoreCompletedTransactionsFinished)(void);
+
+/Applications/Xcode-26.5.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS26.5.sdk/System/Library/Frameworks/StoreKit.framework/Headers/SKPaymentTransaction.h:27:12: note: 'SKPaymentTransaction' has been explicitly marked deprecated here
+25 | API_DEPRECATED("Use PurchaseResult from Product.purchase(confirmIn:options:).",ios(3.0, 18.0), macos(10.7, 15.0), watchos(6.2, 11.0), visionos(1.0, 2.0))
+26 | NS_SWIFT_SENDABLE
+27 | @interface SKPaymentTransaction : NSObject {
+   |            `- note: 'SKPaymentTransaction' has been explicitly marked deprecated here
+28 | @private
+29 |     id _internal;
+
+<module-includes>:5:9: note: in file included from <module-includes>:5:
+ 3 | #import "/Users/builder/clone/ios/Flutter/ephemeral/Packages/.packages/in_app_purchase_storekit-0.4.8+1/Sources/in_app_purchase_storekit_objc/include/in_app_purchase_storekit_objc/FIAPReceiptManager.h"
+ 4 | #import "/Users/builder/clone/ios/Flutter/ephemeral/Packages/.packages/in_app_purchase_storekit-0.4.8+1/Sources/in_app_purchase_storekit_objc/include/in_app_purchase_storekit_objc/FIAPRequestHandler.h"
+ 5 | #import "/Users/builder/clone/ios/Flutter/ephemeral/Packages/.packages/in_app_purchase_storekit-0.4.8+1/Sources/in_app_purchase_storekit_objc/include/in_app_purchase_storekit_objc/FIAPaymentQueueHandler.h"
+   |         `- note: in file included from <module-includes>:5:
+ 6 | #import "/Users/builder/clone/ios/Flutter/ephemeral/Packages/.packages/in_app_purchase_storekit-0.4.8+1/Sources/in_app_purchase_storekit_objc/include/in_app_purchase_storekit_objc/FIATransactionCache.h"
+ 7 | #import "/Users/builder/clone/ios/Flutter/ephemeral/Packages/.packages/in_app_purchase_storekit-0.4.8+1/Sources/in_app_purchase_storekit_objc/include/in_app_purchase_storekit_objc/FLTMethodChannelProtocol.h"
+
+/Users/builder/clone/ios/Flutter/ephemeral/Packages/.packages/in_app_purchase_storekit-0.4.8+1/Sources/in_app_purchase_storekit_objc/include/in_app_purchase_storekit_objc/FIAPaymentQueueHandler.h:8:9: note: in file included from /Users/builder/clone/ios/Flutter/ephemeral/Packages/.packages/in_app_purchase_storekit-0.4.8+1/Sources/in_app_purchase_storekit_objc/include/in_app_purchase_storekit_objc/FIAPaymentQueueHandler.h:8:
+ 6 | #import <StoreKit/StoreKit.h>
+ 7 | #import "FIATransactionCache.h"
+ 8 | #import "FLTPaymentQueueHandlerProtocol.h"
+   |         `- note: in file included from /Users/builder/clone/ios/Flutter/ephemeral/Packages/.packages/in_app_purchase_storekit-0.4.8+1/Sources/in_app_purchase_storekit_objc/include/in_app_purchase_storekit_objc/FIAPaymentQueueHandler.h:8:
+ 9 | #import "FLTPaymentQueueProtocol.h"
+10 | #import "FLTTransactionCacheProtocol.h"
+
+/Users/builder/clone/ios/Flutter/ephemeral/Packages/.packages/in_app_purchase_storekit-0.4.8+1/Sources/in_app_purchase_storekit_objc/include/in_app_purchase_storekit_objc/FLTPaymentQueueHandlerProtocol.h:15:39: warning: 'SKPayment' is deprecated: first deprecated in iOS 18.0 - Use Product.purchase(confirmIn:options:).
+ 13 | typedef void (^RestoreTransactionFailed)(NSError *error);
+ 14 | typedef void (^RestoreCompletedTransactionsFinished)(void);
+ 15 | typedef BOOL (^ShouldAddStorePayment)(SKPayment *payment, SKProduct *product);
+    |                                       `- warning: 'SKPayment' is deprecated: first deprecated in iOS 18.0 - Use Product.purchase(confirmIn:options:).
+ 16 | typedef void (^UpdatedDownloads)(NSArray<SKDownload *> *downloads);
+ 17 | 
+
+/Applications/Xcode-26.5.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS26.5.sdk/System/Library/Frameworks/StoreKit.framework/Headers/SKPayment.h:19:12: note: 'SKPayment' has been explicitly marked deprecated here
+17 | API_DEPRECATED("Use Product.purchase(confirmIn:options:).", ios(3.0, 18.0), macos(10.7, 15.0), watchos(6.2, 11.0), visionos(1.0, 2.0))
+18 | NS_SWIFT_NONSENDABLE
+19 | @interface SKPayment : NSObject <NSCopying, NSMutableCopying> {
+   |            `- note: 'SKPayment' has been explicitly marked deprecated here
+20 | @private
+21 |     id _internal;
+
+<module-includes>:5:9: note: in file included from <module-includes>:5:
+ 3 | #import "/Users/builder/clone/ios/Flutter/ephemeral/Packages/.packages/in_app_purchase_storekit-0.4.8+1/Sources/in_app_purchase_storekit_objc/include/in_app_purchase_storekit_objc/FIAPReceiptManager.h"
+ 4 | #import "/Users/builder/clone/ios/Flutter/ephemeral/Packages/.packages/in_app_purchase_storekit-0.4.8+1/Sources/in_app_purchase_storekit_objc/include/in_app_purchase_storekit_objc/FIAPRequestHandler.h"
+ 5 | #import "/Users/builder/clone/ios/Flutter/ephemeral/Packages/.packages/in_app_purchase_storekit-0.4.8+1/Sources/in_app_purchase_storekit_objc/include/in_app_purchase_storekit_objc/FIAPaymentQueueHandler.h"
+   |         `- note: in file included from <module-includes>:5:
+ 6 | #import "/Users/builder/clone/ios/Flutter/ephemeral/Packages/.packages/in_app_purchase_storekit-0.4.8+1/Sources/in_app_purchase_storekit_objc/include/in_app_purchase_storekit_objc/FIATransactionCache.h"
+ 7 | #import "/Users/builder/clone/ios/Flutter/ephemeral/Packages/.packages/in_app_purchase_storekit-0.4.8+1/Sources/in_app_purchase_storekit_objc/include/in_app_purchase_storekit_objc/FLTMethodChannelProtocol.h"
+
+/Users/builder/clone/ios/Flutter/ephemeral/Packages/.packages/in_app_purchase_storekit-0.4.8+1/Sources/in_app_purchase_storekit_objc/include/in_app_purchase_storekit_objc/FIAPaymentQueueHandler.h:8:9: note: in file included from /Users/builder/clone/ios/Flutter/ephemeral/Packages/.packages/in_app_purchase_storekit-0.4.8+1/Sources/in_app_purchase_storekit_objc/include/in_app_purchase_storekit_objc/FIAPaymentQueueHandler.h:8:
+ 6 | #import <StoreKit/StoreKit.h>
+ 7 | #import "FIATransactionCache.h"
+ 8 | #import "FLTPaymentQueueHandlerProtocol.h"
+   |         `- note: in file included from /Users/builder/clone/ios/Flutter/ephemeral/Packages/.packages/in_app_purchase_storekit-0.4.8+1/Sources/in_app_purchase_storekit_objc/include/in_app_purchase_storekit_objc/FIAPaymentQueueHandler.h:8:
+ 9 | #import "FLTPaymentQueueProtocol.h"
+10 | #import "FLTTransactionCacheProtocol.h"
+
+/Users/builder/clone/ios/Flutter/ephemeral/Packages/.packages/in_app_purchase_storekit-0.4.8+1/Sources/in_app_purchase_storekit_objc/include/in_app_purchase_storekit_objc/FLTPaymentQueueHandlerProtocol.h:15:59: warning: 'SKProduct' is deprecated: first deprecated in iOS 18.0 - Use Product.
+ 13 | typedef void (^RestoreTransactionFailed)(NSError *error);
+ 14 | typedef void (^RestoreCompletedTransactionsFinished)(void);
+ 15 | typedef BOOL (^ShouldAddStorePayment)(SKPayment *payment, SKProduct *product);
+    |                                                           `- warning: 'SKProduct' is deprecated: first deprecated in iOS 18.0 - Use Product.
+ 16 | typedef void (^UpdatedDownloads)(NSArray<SKDownload *> *downloads);
+ 17 | 
+
+/Applications/Xcode-26.5.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS26.5.sdk/System/Library/Frameworks/StoreKit.framework/Headers/SKProduct.h:41:12: note: 'SKProduct' has been explicitly marked deprecated here
+39 | API_DEPRECATED("Use Product.", ios(3.0, 18.0), macos(10.7, 15.0), watchos(6.2, 11.0), visionos(1.0, 2.0))
+40 | NS_SWIFT_SENDABLE
+41 | @interface SKProduct : NSObject {
+   |            `- note: 'SKProduct' has been explicitly marked deprecated here
+42 | @private
+43 |     id _internal;
+
+<module-includes>:5:9: note: in file included from <module-includes>:5:
+ 3 | #import "/Users/builder/clone/ios/Flutter/ephemeral/Packages/.packages/in_app_purchase_storekit-0.4.8+1/Sources/in_app_purchase_storekit_objc/include/in_app_purchase_storekit_objc/FIAPReceiptManager.h"
+ 4 | #import "/Users/builder/clone/ios/Flutter/ephemeral/Packages/.packages/in_app_purchase_storekit-0.4.8+1/Sources/in_app_purchase_storekit_objc/include/in_app_purchase_storekit_objc/FIAPRequestHandler.h"
+ 5 | #import "/Users/builder/clone/ios/Flutter/ephemeral/Packages/.packages/in_app_purchase_storekit-0.4.8+1/Sources/in_app_purchase_storekit_objc/include/in_app_purchase_storekit_objc/FIAPaymentQueueHandler.h"
+   |         `- note: in file included from <module-includes>:5:
+ 6 | #import "/Users/builder/clone/ios/Flutter/ephemeral/Packages/.packages/in_app_purchase_storekit-0.4.8+1/Sources/in_app_purchase_storekit_objc/include/in_app_purchase_storekit_objc/FIATransactionCache.h"
+ 7 | #import "/Users/builder/clone/ios/Flutter/ephemeral/Packages/.packages/in_app_purchase_storekit-0.4.8+1/Sources/in_app_purchase_storekit_objc/include/in_app_purchase_storekit_objc/FLTMethodChannelProtocol.h"
+
+/Users/builder/clone/ios/Flutter/ephemeral/Packages/.packages/in_app_purchase_storekit-0.4.8+1/Sources/in_app_purchase_storekit_objc/include/in_app_purchase_storekit_objc/FIAPaymentQueueHandler.h:8:9: note: in file included from /Users/builder/clone/ios/Flutter/ephemeral/Packages/.packages/in_app_purchase_storekit-0.4.8+1/Sources/in_app_purchase_storekit_objc/include/in_app_purchase_storekit_objc/FIAPaymentQueueHandler.h:8:
+ 6 | #import <StoreKit/StoreKit.h>
+ 7 | #import "FIATransactionCache.h"
+ 8 | #import "FLTPaymentQueueHandlerProtocol.h"
+   |         `- note: in file included from /Users/builder/clone/ios/Flutter/ephemeral/Packages/.packages/in_app_purchase_storekit-0.4.8+1/Sources/in_app_purchase_storekit_objc/include/in_app_purchase_storekit_objc/FIAPaymentQueueHandler.h:8:
+ 9 | #import "FLTPaymentQueueProtocol.h"
+10 | #import "FLTTransactionCacheProtocol.h"
+
+/Users/builder/clone/ios/Flutter/ephemeral/Packages/.packages/in_app_purchase_storekit-0.4.8+1/Sources/in_app_purchase_storekit_objc/include/in_app_purchase_storekit_objc/FLTPaymentQueueHandlerProtocol.h:16:42: warning: 'SKDownload' is deprecated: first deprecated in iOS 16.0 - Hosted content is no longer supported.
+ 14 | typedef void (^RestoreCompletedTransactionsFinished)(void);
+ 15 | typedef BOOL (^ShouldAddStorePayment)(SKPayment *payment, SKProduct *product);
+ 16 | typedef void (^UpdatedDownloads)(NSArray<SKDownload *> *downloads);
+    |                                          `- warning: 'SKDownload' is deprecated: first deprecated in iOS 16.0 - Hosted content is no longer supported.
+ 17 | 
+ 18 | /// A protocol that conforms to SKPaymentTransactionObserver and handles SKPaymentQueue methods
+
+/Applications/Xcode-26.5.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS26.5.sdk/System/Library/Frameworks/StoreKit.framework/Headers/SKDownload.h:26:182: note: 'SKDownload' has been explicitly marked deprecated here
+24 | SK_EXTERN NSTimeInterval SKDownloadTimeRemainingUnknown API_DEPRECATED("Hosted content is no longer supported.", ios(6.0, 16.0), macos(10.14, 13.0), tvos(9.0, 16.0), watchos(6.2, 9.0)) API_UNAVAILABLE(visionos);
+25 | 
+26 | SK_EXTERN_CLASS API_DEPRECATED("Hosted content is no longer supported.", ios(6.0, 16.0), macos(10.8, 13.0), tvos(9.0, 16.0), watchos(6.2, 9.0)) API_UNAVAILABLE(visionos) @interface SKDownload : NSObject {
+   |                                                                                                                                                                                      `- note: 'SKDownload' has been explicitly marked deprecated here
+27 | @private
+28 |     id _internal;
+
+<module-includes>:5:9: note: in file included from <module-includes>:5:
+ 3 | #import "/Users/builder/clone/ios/Flutter/ephemeral/Packages/.packages/in_app_purchase_storekit-0.4.8+1/Sources/in_app_purchase_storekit_objc/include/in_app_purchase_storekit_objc/FIAPReceiptManager.h"
+ 4 | #import "/Users/builder/clone/ios/Flutter/ephemeral/Packages/.packages/in_app_purchase_storekit-0.4.8+1/Sources/in_app_purchase_storekit_objc/include/in_app_purchase_storekit_objc/FIAPRequestHandler.h"
+ 5 | #import "/Users/builder/clone/ios/Flutter/ephemeral/Packages/.packages/in_app_purchase_storekit-0.4.8+1/Sources/in_app_purchase_storekit_objc/include/in_app_purchase_storekit_objc/FIAPaymentQueueHandler.h"
+   |         `- note: in file included from <module-includes>:5:
+ 6 | #import "/Users/builder/clone/ios/Flutter/ephemeral/Packages/.packages/in_app_purchase_storekit-0.4.8+1/Sources/in_app_purchase_storekit_objc/include/in_app_purchase_storekit_objc/FIATransactionCache.h"
+ 7 | #import "/Users/builder/clone/ios/Flutter/ephemeral/Packages/.packages/in_app_purchase_storekit-0.4.8+1/Sources/in_app_purchase_storekit_objc/include/in_app_purchase_storekit_objc/FLTMethodChannelProtocol.h"
+
+/Users/builder/clone/ios/Flutter/ephemeral/Packages/.packages/in_app_purchase_storekit-0.4.8+1/Sources/in_app_purchase_storekit_objc/include/in_app_purchase_storekit_objc/FIAPaymentQueueHandler.h:8:9: note: in file included from /Users/builder/clone/ios/Flutter/ephemeral/Packages/.packages/in_app_purchase_storekit-0.4.8+1/Sources/in_app_purchase_storekit_objc/include/in_app_purchase_storekit_objc/FIAPaymentQueueHandler.h:8:
+ 6 | #import <StoreKit/StoreKit.h>
+ 7 | #import "FIATransactionCache.h"
+ 8 | #import "FLTPaymentQueueHandlerProtocol.h"
+   |         `- note: in file included from /Users/builder/clone/ios/Flutter/ephemeral/Packages/.packages/in_app_purchase_storekit-0.4.8+1/Sources/in_app_purchase_storekit_objc/include/in_app_purchase_storekit_objc/FIAPaymentQueueHandler.h:8:
+ 9 | #import "FLTPaymentQueueProtocol.h"
+10 | #import "FLTTransactionCacheProtocol.h"
+
+/Users/builder/clone/ios/Flutter/ephemeral/Packages/.packages/in_app_purchase_storekit-0.4.8+1/Sources/in_app_purchase_storekit_objc/include/in_app_purchase_storekit_objc/FLTPaymentQueueHandlerProtocol.h:19:53: warning: 'SKPaymentTransactionObserver' is deprecated: first deprecated in iOS 18.0 - Use StoreKit 2 Transaction APIs.
+ 17 | 
+ 18 | /// A protocol that conforms to SKPaymentTransactionObserver and handles SKPaymentQueue methods
+ 19 | @protocol FLTPaymentQueueHandlerProtocol <NSObject, SKPaymentTransactionObserver>
+    |                                                     `- warning: 'SKPaymentTransactionObserver' is deprecated: first deprecated in iOS 18.0 - Use StoreKit 2 Transaction APIs.
+ 20 | /// An object that provides information needed to complete transactions.
+ 21 | @property(nonatomic, weak, nullable) id<SKPaymentQueueDelegate> delegate API_AVAILABLE(
+
+/Applications/Xcode-26.5.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS26.5.sdk/System/Library/Frameworks/StoreKit.framework/Headers/SKPaymentQueue.h:91:11: note: 'SKPaymentTransactionObserver' has been explicitly marked deprecated here
+ 89 | 
+ 90 | API_DEPRECATED("Use StoreKit 2 Transaction APIs.", ios(3.0, 18.0), tvos(9.0, 18.0), macos(10.7, 15.0), watchos(6.2, 11.0), visionos(1.0, 2.0))
+ 91 | @protocol SKPaymentTransactionObserver <NSObject>
+    |           `- note: 'SKPaymentTransactionObserver' has been explicitly marked deprecated here
+ 92 | @required
+ 93 | // Sent when the transaction array has changed (additions or state changes).  Client should check state of transactions and finish as appropriate.
+
+<module-includes>:5:9: note: in file included from <module-includes>:5:
+ 3 | #import "/Users/builder/clone/ios/Flutter/ephemeral/Packages/.packages/in_app_purchase_storekit-0.4.8+1/Sources/in_app_purchase_storekit_objc/include/in_app_purchase_storekit_objc/FIAPReceiptManager.h"
+ 4 | #import "/Users/builder/clone/ios/Flutter/ephemeral/Packages/.packages/in_app_purchase_storekit-0.4.8+1/Sources/in_app_purchase_storekit_objc/include/in_app_purchase_storekit_objc/FIAPRequestHandler.h"
+ 5 | #import "/Users/builder/clone/ios/Flutter/ephemeral/Packages/.packages/in_app_purchase_storekit-0.4.8+1/Sources/in_app_purchase_storekit_objc/include/in_app_purchase_storekit_objc/FIAPaymentQueueHandler.h"
+   |         `- note: in file included from <module-includes>:5:
+ 6 | #import "/Users/builder/clone/ios/Flutter/ephemeral/Packages/.packages/in_app_purchase_storekit-0.4.8+1/Sources/in_app_purchase_storekit_objc/include/in_app_purchase_storekit_objc/FIATransactionCache.h"
+ 7 | #import "/Users/builder/clone/ios/Flutter/ephemeral/Packages/.packages/in_app_purchase_storekit-0.4.8+1/Sources/in_app_purchase_storekit_objc/include/in_app_purchase_storekit_objc/FLTMethodChannelProtocol.h"
+
+/Users/builder/clone/ios/Flutter/ephemeral/Packages/.packages/in_app_purchase_storekit-0.4.8+1/Sources/in_app_purchase_storekit_objc/include/in_app_purchase_storekit_objc/FIAPaymentQueueHandler.h:8:9: note: in file included from /Users/builder/clone/ios/Flutter/ephemeral/Packages/.packages/in_app_purchase_storekit-0.4.8+1/Sources/in_app_purchase_storekit_objc/include/in_app_purchase_storekit_objc/FIAPaymentQueueHandler.h:8:
+ 6 | #import <StoreKit/StoreKit.h>
+ 7 | #import "FIATransactionCache.h"
+ 8 | #import "FLTPaymentQueueHandlerProtocol.h"
+   |         `- note: in file included from /Users/builder/clone/ios/Flutter/ephemeral/Packages/.packages/in_app_purchase_storekit-0.4.8+1/Sources/in_app_purchase_storekit_objc/include/in_app_purchase_storekit_objc/FIAPaymentQueueHandler.h:8:
+ 9 | #import "FLTPaymentQueueProtocol.h"
+10 | #import "FLTTransactionCacheProtocol.h"
+
+/Users/builder/clone/ios/Flutter/ephemeral/Packages/.packages/in_app_purchase_storekit-0.4.8+1/Sources/in_app_purchase_storekit_objc/include/in_app_purchase_storekit_objc/FLTPaymentQueueHandlerProtocol.h:21:41: warning: 'SKPaymentQueueDelegate' is deprecated: first deprecated in iOS 18.0 - No longer supported.
+ 19 | @protocol FLTPaymentQueueHandlerProtocol <NSObject, SKPaymentTransactionObserver>
+ 20 | /// An object that provides information needed to complete transactions.
+ 21 | @property(nonatomic, weak, nullable) id<SKPaymentQueueDelegate> delegate API_AVAILABLE(
+    |                                         `- warning: 'SKPaymentQueueDelegate' is deprecated: first deprecated in iOS 18.0 - No longer supported.
+ 22 |     ios(13.0), macos(10.15), watchos(6.2));
+ 23 | /// An object containing the location and unique identifier of an Apple App Store storefront.
+
+/Applications/Xcode-26.5.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS26.5.sdk/System/Library/Frameworks/StoreKit.framework/Headers/SKPaymentQueue.h:78:11: note: 'SKPaymentQueueDelegate' has been explicitly marked deprecated here
+ 76 | 
+ 77 | API_DEPRECATED("No longer supported.", ios(13.0, 18.0), tvos(13.0, 18.0), macos(10.15, 15.0), watchos(6.2, 11.0), visionos(1.0, 2.0))
+ 78 | @protocol SKPaymentQueueDelegate <NSObject>
+    |           `- note: 'SKPaymentQueueDelegate' has been explicitly marked deprecated here
+ 79 | @optional
+ 80 | // Sent when the storefront changes while a payment is processing.
+
+<module-includes>:5:9: note: in file included from <module-includes>:5:
+ 3 | #import "/Users/builder/clone/ios/Flutter/ephemeral/Packages/.packages/in_app_purchase_storekit-0.4.8+1/Sources/in_app_purchase_storekit_objc/include/in_app_purchase_storekit_objc/FIAPReceiptManager.h"
+ 4 | #import "/Users/builder/clone/ios/Flutter/ephemeral/Packages/.packages/in_app_purchase_storekit-0.4.8+1/Sources/in_app_purchase_storekit_objc/include/in_app_purchase_storekit_objc/FIAPRequestHandler.h"
+ 5 | #import "/Users/builder/clone/ios/Flutter/ephemeral/Packages/.packages/in_app_purchase_storekit-0.4.8+1/Sources/in_app_purchase_storekit_objc/include/in_app_purchase_storekit_objc/FIAPaymentQueueHandler.h"
+   |         `- note: in file included from <module-includes>:5:
+ 6 | #import "/Users/builder/clone/ios/Flutter/ephemeral/Packages/.packages/in_app_purchase_storekit-0.4.8+1/Sources/in_app_purchase_storekit_objc/include/in_app_purchase_storekit_objc/FIATransactionCache.h"
+ 7 | #import "/Users/builder/clone/ios/Flutter/ephemeral/Packages/.packages/in_app_purchase_storekit-0.4.8+1/Sources/in_app_purchase_storekit_objc/include/in_app_purchase_storekit_objc/FLTMethodChannelProtocol.h"
+
+/Users/builder/clone/ios/Flutter/ephemeral/Packages/.packages/in_app_purchase_storekit-0.4.8+1/Sources/in_app_purchase_storekit_objc/include/in_app_purchase_storekit_objc/FIAPaymentQueueHandler.h:8:9: note: in file included from /Users/builder/clone/ios/Flutter/ephemeral/Packages/.packages/in_app_purchase_storekit-0.4.8+1/Sources/in_app_purchase_storekit_objc/include/in_app_purchase_storekit_objc/FIAPaymentQueueHandler.h:8:
+ 6 | #import <StoreKit/StoreKit.h>
+ 7 | #import "FIATransactionCache.h"
+ 8 | #import "FLTPaymentQueueHandlerProtocol.h"
+   |         `- note: in file included from /Users/builder/clone/ios/Flutter/ephemeral/Packages/.packages/in_app_purchase_storekit-0.4.8+1/Sources/in_app_purchase_storekit_objc/include/in_app_purchase_storekit_objc/FIAPaymentQueueHandler.h:8:
+ 9 | #import "FLTPaymentQueueProtocol.h"
+10 | #import "FLTTransactionCacheProtocol.h"
+
+/Users/builder/clone/ios/Flutter/ephemeral/Packages/.packages/in_app_purchase_storekit-0.4.8+1/Sources/in_app_purchase_storekit_objc/include/in_app_purchase_storekit_objc/FLTPaymentQueueHandlerProtocol.h:25:5: warning: 'SKStorefront' is deprecated: first deprecated in iOS 18.0 - Use Storefront.
+ 23 | /// An object containing the location and unique identifier of an Apple App Store storefront.
+ 24 | @property(nonatomic, readonly, nullable)
+ 25 |     SKStorefront *storefront API_AVAILABLE(ios(13.0), macos(10.15), watchos(6.2));
+    |     `- warning: 'SKStorefront' is deprecated: first deprecated in iOS 18.0 - Use Storefront.
+ 26 | 
+ 27 | /// Creates a new FIAPaymentQueueHandler.
+
+/Applications/Xcode-26.5.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS26.5.sdk/System/Library/Frameworks/StoreKit.framework/Headers/SKStorefront.h:16:12: note: 'SKStorefront' has been explicitly marked deprecated here
+14 | API_DEPRECATED("Use Storefront.", ios(13.0, 18.0), macos(10.15, 15.0), watchos(6.2, 11.0), visionos(1.0, 2.0))
+15 | NS_SWIFT_SENDABLE
+16 | @interface SKStorefront : NSObject
+   |            `- note: 'SKStorefront' has been explicitly marked deprecated here
+17 | 
+18 | /* The three letter country code for the current storefront */
+
+<module-includes>:5:9: note: in file included from <module-includes>:5:
+ 3 | #import "/Users/builder/clone/ios/Flutter/ephemeral/Packages/.packages/in_app_purchase_storekit-0.4.8+1/Sources/in_app_purchase_storekit_objc/include/in_app_purchase_storekit_objc/FIAPReceiptManager.h"
+ 4 | #import "/Users/builder/clone/ios/Flutter/ephemeral/Packages/.packages/in_app_purchase_storekit-0.4.8+1/Sources/in_app_purchase_storekit_objc/include/in_app_purchase_storekit_objc/FIAPRequestHandler.h"
+ 5 | #import "/Users/builder/clone/ios/Flutter/ephemeral/Packages/.packages/in_app_purchase_storekit-0.4.8+1/Sources/in_app_purchase_storekit_objc/include/in_app_purchase_storekit_objc/FIAPaymentQueueHandler.h"
+   |         `- note: in file included from <module-includes>:5:
+ 6 | #import "/Users/builder/clone/ios/Flutter/ephemeral/Packages/.packages/in_app_purchase_storekit-0.4.8+1/Sources/in_app_purchase_storekit_objc/include/in_app_purchase_storekit_objc/FIATransactionCache.h"
+ 7 | #import "/Users/builder/clone/ios/Flutter/ephemeral/Packages/.packages/in_app_purchase_storekit-0.4.8+1/Sources/in_app_purchase_storekit_objc/include/in_app_purchase_storekit_objc/FLTMethodChannelProtocol.h"
+
+/Users/builder/clone/ios/Flutter/ephemeral/Packages/.packages/in_app_purchase_storekit-0.4.8+1/Sources/in_app_purchase_storekit_objc/include/in_app_purchase_storekit_objc/FIAPaymentQueueHandler.h:8:9: note: in file included from /Users/builder/clone/ios/Flutter/ephemeral/Packages/.packages/in_app_purchase_storekit-0.4.8+1/Sources/in_app_purchase_storekit_objc/include/in_app_purchase_storekit_objc/FIAPaymentQueueHandler.h:8:
+ 6 | #import <StoreKit/StoreKit.h>
+ 7 | #import "FIATransactionCache.h"
+ 8 | #import "FLTPaymentQueueHandlerProtocol.h"
+   |         `- note: in file included from /Users/builder/clone/ios/Flutter/ephemeral/Packages/.packages/in_app_purchase_storekit-0.4.8+1/Sources/in_app_purchase_storekit_objc/include/in_app_purchase_storekit_objc/FIAPaymentQueueHandler.h:8:
+ 9 | #import "FLTPaymentQueueProtocol.h"
+10 | #import "FLTTransactionCacheProtocol.h"
+
+/Users/builder/clone/ios/Flutter/ephemeral/Packages/.packages/in_app_purchase_storekit-0.4.8+1/Sources/in_app_purchase_storekit_objc/include/in_app_purchase_storekit_objc/FLTPaymentQueueHandlerProtocol.h:74:36: warning: 'SKPaymentTransaction' is deprecated: first deprecated in iOS 18.0 - Use PurchaseResult from Product.purchase(confirmIn:options:).
+ 72 | 
+ 73 | /// Can throw exceptions if the transaction type is purchasing, should always used in a @try block.
+ 74 | - (void)finishTransaction:(nonnull SKPaymentTransaction *)transaction;
+    |                                    `- warning: 'SKPaymentTransaction' is deprecated: first deprecated in iOS 18.0 - Use PurchaseResult from Product.purchase(confirmIn:options:).
+ 75 | 
+ 76 | /// Attempt to restore transactions. Require app store receipt url.
+
+/Applications/Xcode-26.5.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS26.5.sdk/System/Library/Frameworks/StoreKit.framework/Headers/SKPaymentTransaction.h:27:12: note: 'SKPaymentTransaction' has been explicitly marked deprecated here
+25 | API_DEPRECATED("Use PurchaseResult from Product.purchase(confirmIn:options:).",ios(3.0, 18.0), macos(10.7, 15.0), watchos(6.2, 11.0), visionos(1.0, 2.0))
+26 | NS_SWIFT_SENDABLE
+27 | @interface SKPaymentTransaction : NSObject {
+   |            `- note: 'SKPaymentTransaction' has been explicitly marked deprecated here
+28 | @private
+29 |     id _internal;
+
+<module-includes>:5:9: note: in file included from <module-includes>:5:
+ 3 | #import "/Users/builder/clone/ios/Flutter/ephemeral/Packages/.packages/in_app_purchase_storekit-0.4.8+1/Sources/in_app_purchase_storekit_objc/include/in_app_purchase_storekit_objc/FIAPReceiptManager.h"
+ 4 | #import "/Users/builder/clone/ios/Flutter/ephemeral/Packages/.packages/in_app_purchase_storekit-0.4.8+1/Sources/in_app_purchase_storekit_objc/include/in_app_purchase_storekit_objc/FIAPRequestHandler.h"
+ 5 | #import "/Users/builder/clone/ios/Flutter/ephemeral/Packages/.packages/in_app_purchase_storekit-0.4.8+1/Sources/in_app_purchase_storekit_objc/include/in_app_purchase_storekit_objc/FIAPaymentQueueHandler.h"
+   |         `- note: in file included from <module-includes>:5:
+ 6 | #import "/Users/builder/clone/ios/Flutter/ephemeral/Packages/.packages/in_app_purchase_storekit-0.4.8+1/Sources/in_app_purchase_storekit_objc/include/in_app_purchase_storekit_objc/FIATransactionCache.h"
+ 7 | #import "/Users/builder/clone/ios/Flutter/ephemeral/Packages/.packages/in_app_purchase_storekit-0.4.8+1/Sources/in_app_purchase_storekit_objc/include/in_app_purchase_storekit_objc/FLTMethodChannelProtocol.h"
+
+/Users/builder/clone/ios/Flutter/ephemeral/Packages/.packages/in_app_purchase_storekit-0.4.8+1/Sources/in_app_purchase_storekit_objc/include/in_app_purchase_storekit_objc/FIAPaymentQueueHandler.h:8:9: note: in file included from /Users/builder/clone/ios/Flutter/ephemeral/Packages/.packages/in_app_purchase_storekit-0.4.8+1/Sources/in_app_purchase_storekit_objc/include/in_app_purchase_storekit_objc/FIAPaymentQueueHandler.h:8:
+ 6 | #import <StoreKit/StoreKit.h>
+ 7 | #import "FIATransactionCache.h"
+ 8 | #import "FLTPaymentQueueHandlerProtocol.h"
+   |         `- note: in file included from /Users/builder/clone/ios/Flutter/ephemeral/Packages/.packages/in_app_purchase_storekit-0.4.8+1/Sources/in_app_purchase_storekit_objc/include/in_app_purchase_storekit_objc/FIAPaymentQueueHandler.h:8:
+ 9 | #import "FLTPaymentQueueProtocol.h"
+10 | #import "FLTTransactionCacheProtocol.h"
+
+/Users/builder/clone/ios/Flutter/ephemeral/Packages/.packages/in_app_purchase_storekit-0.4.8+1/Sources/in_app_purchase_storekit_objc/include/in_app_purchase_storekit_objc/FLTPaymentQueueHandlerProtocol.h:83:12: warning: 'SKPaymentTransaction' is deprecated: first deprecated in iOS 18.0 - Use PurchaseResult from Product.purchase(confirmIn:options:).
+ 81 | 
+ 82 | /// Return all transactions that are not marked as complete.
+ 83 | - (NSArray<SKPaymentTransaction *> *)getUnfinishedTransactions;
+    |            `- warning: 'SKPaymentTransaction' is deprecated: first deprecated in iOS 18.0 - Use PurchaseResult from Product.purchase(confirmIn:options:).
+ 84 | 
+ 85 | /// This method needs to be called before any other methods.
+
+/Applications/Xcode-26.5.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS26.5.sdk/System/Library/Frameworks/StoreKit.framework/Headers/SKPaymentTransaction.h:27:12: note: 'SKPaymentTransaction' has been explicitly marked deprecated here
+25 | API_DEPRECATED("Use PurchaseResult from Product.purchase(confirmIn:options:).",ios(3.0, 18.0), macos(10.7, 15.0), watchos(6.2, 11.0), visionos(1.0, 2.0))
+26 | NS_SWIFT_SENDABLE
+27 | @interface SKPaymentTransaction : NSObject {
+   |            `- note: 'SKPaymentTransaction' has been explicitly marked deprecated here
+28 | @private
+29 |     id _internal;
+
+<module-includes>:5:9: note: in file included from <module-includes>:5:
+ 3 | #import "/Users/builder/clone/ios/Flutter/ephemeral/Packages/.packages/in_app_purchase_storekit-0.4.8+1/Sources/in_app_purchase_storekit_objc/include/in_app_purchase_storekit_objc/FIAPReceiptManager.h"
+ 4 | #import "/Users/builder/clone/ios/Flutter/ephemeral/Packages/.packages/in_app_purchase_storekit-0.4.8+1/Sources/in_app_purchase_storekit_objc/include/in_app_purchase_storekit_objc/FIAPRequestHandler.h"
+ 5 | #import "/Users/builder/clone/ios/Flutter/ephemeral/Packages/.packages/in_app_purchase_storekit-0.4.8+1/Sources/in_app_purchase_storekit_objc/include/in_app_purchase_storekit_objc/FIAPaymentQueueHandler.h"
+   |         `- note: in file included from <module-includes>:5:
+ 6 | #import "/Users/builder/clone/ios/Flutter/ephemeral/Packages/.packages/in_app_purchase_storekit-0.4.8+1/Sources/in_app_purchase_storekit_objc/include/in_app_purchase_storekit_objc/FIATransactionCache.h"
+ 7 | #import "/Users/builder/clone/ios/Flutter/ephemeral/Packages/.packages/in_app_purchase_storekit-0.4.8+1/Sources/in_app_purchase_storekit_objc/include/in_app_purchase_storekit_objc/FLTMethodChannelProtocol.h"
+
+/Users/builder/clone/ios/Flutter/ephemeral/Packages/.packages/in_app_purchase_storekit-0.4.8+1/Sources/in_app_purchase_storekit_objc/include/in_app_purchase_storekit_objc/FIAPaymentQueueHandler.h:8:9: note: in file included from /Users/builder/clone/ios/Flutter/ephemeral/Packages/.packages/in_app_purchase_storekit-0.4.8+1/Sources/in_app_purchase_storekit_objc/include/in_app_purchase_storekit_objc/FIAPaymentQueueHandler.h:8:
+ 6 | #import <StoreKit/StoreKit.h>
+ 7 | #import "FIATransactionCache.h"
+ 8 | #import "FLTPaymentQueueHandlerProtocol.h"
+   |         `- note: in file included from /Users/builder/clone/ios/Flutter/ephemeral/Packages/.packages/in_app_purchase_storekit-0.4.8+1/Sources/in_app_purchase_storekit_objc/include/in_app_purchase_storekit_objc/FIAPaymentQueueHandler.h:8:
+ 9 | #import "FLTPaymentQueueProtocol.h"
+10 | #import "FLTTransactionCacheProtocol.h"
+
+/Users/builder/clone/ios/Flutter/ephemeral/Packages/.packages/in_app_purchase_storekit-0.4.8+1/Sources/in_app_purchase_storekit_objc/include/in_app_purchase_storekit_objc/FLTPaymentQueueHandlerProtocol.h:95:21: warning: 'SKPayment' is deprecated: first deprecated in iOS 18.0 - Use Product.purchase(confirmIn:options:).
+ 93 | /// @param payment Payment object to be added to the payment queue.
+ 94 | /// @return whether "addPayment" was successful.
+ 95 | - (BOOL)addPayment:(SKPayment *)payment;
+    |                     `- warning: 'SKPayment' is deprecated: first deprecated in iOS 18.0 - Use Product.purchase(confirmIn:options:).
+ 96 | 
+ 97 | /// Displays the price consent sheet.
+
+/Applications/Xcode-26.5.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS26.5.sdk/System/Library/Frameworks/StoreKit.framework/Headers/SKPayment.h:19:12: note: 'SKPayment' has been explicitly marked deprecated here
+17 | API_DEPRECATED("Use Product.purchase(confirmIn:options:).", ios(3.0, 18.0), macos(10.7, 15.0), watchos(6.2, 11.0), visionos(1.0, 2.0))
+18 | NS_SWIFT_NONSENDABLE
+19 | @interface SKPayment : NSObject <NSCopying, NSMutableCopying> {
+   |            `- note: 'SKPayment' has been explicitly marked deprecated here
+20 | @private
+21 |     id _internal;
+
+<module-includes>:5:9: note: in file included from <module-includes>:5:
+ 3 | #import "/Users/builder/clone/ios/Flutter/ephemeral/Packages/.packages/in_app_purchase_storekit-0.4.8+1/Sources/in_app_purchase_storekit_objc/include/in_app_purchase_storekit_objc/FIAPReceiptManager.h"
+ 4 | #import "/Users/builder/clone/ios/Flutter/ephemeral/Packages/.packages/in_app_purchase_storekit-0.4.8+1/Sources/in_app_purchase_storekit_objc/include/in_app_purchase_storekit_objc/FIAPRequestHandler.h"
+ 5 | #import "/Users/builder/clone/ios/Flutter/ephemeral/Packages/.packages/in_app_purchase_storekit-0.4.8+1/Sources/in_app_purchase_storekit_objc/include/in_app_purchase_storekit_objc/FIAPaymentQueueHandler.h"
+   |         `- note: in file included from <module-includes>:5:
+ 6 | #import "/Users/builder/clone/ios/Flutter/ephemeral/Packages/.packages/in_app_purchase_storekit-0.4.8+1/Sources/in_app_purchase_storekit_objc/include/in_app_purchase_storekit_objc/FIATransactionCache.h"
+ 7 | #import "/Users/builder/clone/ios/Flutter/ephemeral/Packages/.packages/in_app_purchase_storekit-0.4.8+1/Sources/in_app_purchase_storekit_objc/include/in_app_purchase_storekit_objc/FLTMethodChannelProtocol.h"
+
+42 warnings generated.
+/Users/builder/clone/ios/Flutter/ephemeral/Packages/.packages/in_app_purchase_storekit-0.4.8+1/Sources/in_app_purchase_storekit_objc/include/in_app_purchase_storekit_objc/FIAPaymentQueueHandler.h:17:17: warning: 'SKPaymentTransactionObserver' is deprecated: first deprecated in iOS 18.0 - Use StoreKit 2 Transaction APIs.
+15 | 
+16 | @interface FIAPaymentQueueHandler
+17 |     : NSObject <SKPaymentTransactionObserver, FLTPaymentQueueHandlerProtocol>
+   |                 `- warning: 'SKPaymentTransactionObserver' is deprecated: first deprecated in iOS 18.0 - Use StoreKit 2 Transaction APIs.
+18 | @end
+19 | 
+
+/Applications/Xcode-26.5.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS26.5.sdk/System/Library/Frameworks/StoreKit.framework/Headers/SKPaymentQueue.h:91:11: note: 'SKPaymentTransactionObserver' has been explicitly marked deprecated here
+ 89 | 
+ 90 | API_DEPRECATED("Use StoreKit 2 Transaction APIs.", ios(3.0, 18.0), tvos(9.0, 18.0), macos(10.7, 15.0), watchos(6.2, 11.0), visionos(1.0, 2.0))
+ 91 | @protocol SKPaymentTransactionObserver <NSObject>
+    |           `- note: 'SKPaymentTransactionObserver' has been explicitly marked deprecated here
+ 92 | @required
+ 93 | // Sent when the transaction array has changed (additions or state changes).  Client should check state of transactions and finish as appropriate.
+/Users/builder/.pub-cache/hosted/pub.dev/permission_handler_apple-9.4.7/ios/Classes/strategies/PhonePermissionStrategy.m:54:38: warning: 'CTCarrier' is deprecated: first deprecated in iOS 16.0 - Deprecated with no replacement [-Wdeprecated-declarations]
+   54 | -(bool)canPlacePhoneCallWithCarrier:(CTCarrier *)carrier {
+      |                                      ^
+In module 'CoreTelephony' imported from /Users/builder/.pub-cache/hosted/pub.dev/permission_handler_apple-9.4.7/ios/Classes/strategies/PhonePermissionStrategy.m:8:
+/Applications/Xcode-26.5.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS.sdk/System/Library/Frameworks/CoreTelephony.framework/Headers/CTCarrier.h:17:12: note: 'CTCarrier' has been explicitly marked deprecated here
+   17 | @interface CTCarrier : NSObject
+      |            ^
+/Users/builder/.pub-cache/hosted/pub.dev/permission_handler_apple-9.4.7/ios/Classes/strategies/PhonePermissionStrategy.m:39:30: warning: 'CTCarrier' is deprecated: first deprecated in iOS 16.0 - Deprecated with no replacement [-Wdeprecated-declarations]
+   39 |     NSDictionary<NSString *, CTCarrier *> *providers = [netInfo serviceSubscriberCellularProviders];
+      |                              ^
+In module 'CoreTelephony' imported from /Users/builder/.pub-cache/hosted/pub.dev/permission_handler_apple-9.4.7/ios/Classes/strategies/PhonePermissionStrategy.m:8:
+/Applications/Xcode-26.5.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS.sdk/System/Library/Frameworks/CoreTelephony.framework/Headers/CTCarrier.h:17:12: note: 'CTCarrier' has been explicitly marked deprecated here
+   17 | @interface CTCarrier : NSObject
+      |            ^
+/Users/builder/.pub-cache/hosted/pub.dev/permission_handler_apple-9.4.7/ios/Classes/strategies/PhonePermissionStrategy.m:39:65: warning: 'serviceSubscriberCellularProviders' is deprecated: first deprecated in iOS 16.0 - Deprecated with no replacement [-Wdeprecated-declarations]
+   39 |     NSDictionary<NSString *, CTCarrier *> *providers = [netInfo serviceSubscriberCellularProviders];
+      |                                                                 ^
+In module 'CoreTelephony' imported from /Users/builder/.pub-cache/hosted/pub.dev/permission_handler_apple-9.4.7/ios/Classes/strategies/PhonePermissionStrategy.m:8:
+/Applications/Xcode-26.5.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS.sdk/System/Library/Frameworks/CoreTelephony.framework/Headers/CTTelephonyNetworkInfo.h:105:78: note: property 'serviceSubscriberCellularProviders' is declared deprecated here
+  105 | @property(readonly, retain, nullable) NSDictionary<NSString *, CTCarrier *> *serviceSubscriberCellularProviders API_DEPRECATED("Deprecated with no replacement", ios(12.0, 16.0), watchos(5.0, 9.0)) API_UNAVAILABLE(macos, tvos);
+      |                                                                              ^
+/Applications/Xcode-26.5.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS.sdk/System/Library/Frameworks/CoreTelephony.framework/Headers/CTTelephonyNetworkInfo.h:105:78: note: 'serviceSubscriberCellularProviders' has been explicitly marked deprecated here
+/Users/builder/.pub-cache/hosted/pub.dev/permission_handler_apple-9.4.7/ios/Classes/strategies/PhonePermissionStrategy.m:41:7: warning: 'CTCarrier' is deprecated: first deprecated in iOS 16.0 - Deprecated with no replacement [-Wdeprecated-declarations]
+   41 |       CTCarrier *carrier = [providers objectForKey:key];
+      |       ^
+In module 'CoreTelephony' imported from /Users/builder/.pub-cache/hosted/pub.dev/permission_handler_apple-9.4.7/ios/Classes/strategies/PhonePermissionStrategy.m:8:
+/Applications/Xcode-26.5.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS.sdk/System/Library/Frameworks/CoreTelephony.framework/Headers/CTCarrier.h:17:12: note: 'CTCarrier' has been explicitly marked deprecated here
+   17 | @interface CTCarrier : NSObject
+      |            ^
+/Users/builder/.pub-cache/hosted/pub.dev/permission_handler_apple-9.4.7/ios/Classes/strategies/PhonePermissionStrategy.m:49:5: warning: 'CTCarrier' is deprecated: first deprecated in iOS 16.0 - Deprecated with no replacement [-Wdeprecated-declarations]
+   49 |     CTCarrier *carrier = [netInfo subscriberCellularProvider];
+      |     ^
+In module 'CoreTelephony' imported from /Users/builder/.pub-cache/hosted/pub.dev/permission_handler_apple-9.4.7/ios/Classes/strategies/PhonePermissionStrategy.m:8:
+/Applications/Xcode-26.5.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS.sdk/System/Library/Frameworks/CoreTelephony.framework/Headers/CTCarrier.h:17:12: note: 'CTCarrier' has been explicitly marked deprecated here
+   17 | @interface CTCarrier : NSObject
+      |            ^
+/Users/builder/.pub-cache/hosted/pub.dev/permission_handler_apple-9.4.7/ios/Classes/strategies/PhonePermissionStrategy.m:49:35: warning: 'subscriberCellularProvider' is deprecated: first deprecated in iOS 12.0 [-Wdeprecated-declarations]
+   49 |     CTCarrier *carrier = [netInfo subscriberCellularProvider];
+      |                                   ^~~~~~~~~~~~~~~~~~~~~~~~~~
+      |                                   serviceSubscriberCellularProviders
+In module 'CoreTelephony' imported from /Users/builder/.pub-cache/hosted/pub.dev/permission_handler_apple-9.4.7/ios/Classes/strategies/PhonePermissionStrategy.m:8:
+/Applications/Xcode-26.5.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS.sdk/System/Library/Frameworks/CoreTelephony.framework/Headers/CTTelephonyNetworkInfo.h:114:50: note: property 'subscriberCellularProvider' is declared deprecated here
+  114 | @property(readonly, retain, nullable) CTCarrier *subscriberCellularProvider API_DEPRECATED_WITH_REPLACEMENT("serviceSubscriberCellularProviders", ios(4.0, 12.0)) API_UNAVAILABLE(macos);
+      |                                                  ^
+/Applications/Xcode-26.5.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS.sdk/System/Library/Frameworks/CoreTelephony.framework/Headers/CTTelephonyNetworkInfo.h:114:50: note: 'subscriberCellularProvider' has been explicitly marked deprecated here
+/Users/builder/.pub-cache/hosted/pub.dev/permission_handler_apple-9.4.7/ios/Classes/strategies/PhonePermissionStrategy.m:56:28: warning: 'mobileNetworkCode' is deprecated: first deprecated in iOS 16.0 - Deprecated; returns '65535' at some point in the future [-Wdeprecated-declarations]
+   56 |   NSString *mnc = [carrier mobileNetworkCode];
+      |                            ^
+In module 'CoreTelephony' imported from /Users/builder/.pub-cache/hosted/pub.dev/permission_handler_apple-9.4.7/ios/Classes/strategies/PhonePermissionStrategy.m:8:
+/Applications/Xcode-26.5.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS.sdk/System/Library/Frameworks/CoreTelephony.framework/Headers/CTCarrier.h:50:61: note: property 'mobileNetworkCode' is declared deprecated here
+   50 | @property (nonatomic, readonly, retain, nullable) NSString *mobileNetworkCode
+      |                                                             ^
+/Applications/Xcode-26.5.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS.sdk/System/Library/Frameworks/CoreTelephony.framework/Headers/CTCarrier.h:50:61: note: 'mobileNetworkCode' has been explicitly marked deprecated here
+7 warnings generated.
+/Users/builder/.pub-cache/hosted/pub.dev/open_filex-4.7.0/ios/Classes/OpenFilePlugin.m:10:44: warning: a function declaration without a prototype is deprecated in all versions of C [-Wstrict-prototypes]
+   10 | static UIViewController *RootViewController() {
+      |                                            ^
+      |                                             void
+/Users/builder/.pub-cache/hosted/pub.dev/open_filex-4.7.0/ios/Classes/OpenFilePlugin.m:34:46: warning: 'keyWindow' is deprecated: first deprecated in iOS 13.0 - Should not be used for applications that support multiple scenes as it returns a key window across all connected scenes [-Wdeprecated-declarations]
+   34 |     return [UIApplication sharedApplication].keyWindow.rootViewController;
+      |                                              ^
+In module 'UIKit' imported from /Users/builder/clone/ios/Pods/Target Support Files/open_filex/open_filex-prefix.pch:2:
+/Applications/Xcode-26.5.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS26.5.sdk/System/Library/Frameworks/UIKit.framework/Headers/UIApplication.h:108:51: note: 'keyWindow' has been explicitly marked deprecated here
+  108 | @property(nullable, nonatomic,readonly) UIWindow *keyWindow API_DEPRECATED("Should not be used for applications that support multiple scenes as it returns a key window across all connected scenes", ios(2.0, 13.0)) API_UNAVAILABLE(visionos, watchos);
+      |                                                   ^
+2 warnings generated.
+/Users/builder/.pub-cache/hosted/pub.dev/google_mlkit_commons-0.11.1/ios/Classes/MLKVisionImage+FlutterPlugin.m:98:81: warning: bitwise operation between different enumeration types ('enum CGImageAlphaInfo' and 'enum CGBitmapInfo') [-Wenum-enum-conversion]
+   98 |                                                  kCGImageAlphaPremultipliedLast | kCGBitmapByteOrder32Big);
+      |                                                  ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ ^ ~~~~~~~~~~~~~~~~~~~~~~~
+In file included from /Users/builder/.pub-cache/hosted/pub.dev/google_mlkit_commons-0.11.1/ios/Classes/MLKVisionImage+FlutterPlugin.m:1:
+/Users/builder/.pub-cache/hosted/pub.dev/google_mlkit_commons-0.11.1/ios/Classes/GoogleMlKitCommonsPlugin.h:12:22: warning: unused function 'getFlutterError' [-Wunused-function]
+   12 | static FlutterError *getFlutterError(NSError *error) {
+      |                      ^~~~~~~~~~~~~~~
+2 warnings generated.
+In file included from /Users/builder/.pub-cache/hosted/pub.dev/google_mlkit_commons-0.11.1/ios/Classes/GoogleMlKitCommonsPlugin.m:1:
+/Users/builder/.pub-cache/hosted/pub.dev/google_mlkit_commons-0.11.1/ios/Classes/GoogleMlKitCommonsPlugin.h:12:22: warning: unused function 'getFlutterError' [-Wunused-function]
+   12 | static FlutterError *getFlutterError(NSError *error) {
+      |                      ^~~~~~~~~~~~~~~
+1 warning generated.
+/Users/builder/.pub-cache/hosted/pub.dev/google_mlkit_text_recognition-0.15.1/ios/Classes/GoogleMlKitTextRecognitionPlugin.m:124:27: warning: incompatible pointer types sending 'NSNull * _Nonnull' to parameter of type 'NSNumber *' [-Wincompatible-pointer-types]
+  124 |                confidence:[NSNull null]
+      |                           ^~~~~~~~~~~~~
+/Users/builder/.pub-cache/hosted/pub.dev/google_mlkit_text_recognition-0.15.1/ios/Classes/GoogleMlKitTextRecognitionPlugin.m:176:29: note: passing argument to parameter 'confidence' here
+  176 |      confidence:(NSNumber *)confidence
+      |                             ^
+/Users/builder/.pub-cache/hosted/pub.dev/google_mlkit_text_recognition-0.15.1/ios/Classes/GoogleMlKitTextRecognitionPlugin.m:125:27: warning: incompatible pointer types sending 'NSNull * _Nonnull' to parameter of type 'NSNumber *' [-Wincompatible-pointer-types]
+  125 |                     angle:[NSNull null]];
+      |                           ^~~~~~~~~~~~~
+/Users/builder/.pub-cache/hosted/pub.dev/google_mlkit_text_recognition-0.15.1/ios/Classes/GoogleMlKitTextRecognitionPlugin.m:177:29: note: passing argument to parameter 'angle' here
+  177 |           angle:(NSNumber *)angle {
+      |                             ^
+/Users/builder/.pub-cache/hosted/pub.dev/google_mlkit_text_recognition-0.15.1/ios/Classes/GoogleMlKitTextRecognitionPlugin.m:136:31: warning: incompatible pointer types sending 'NSNull * _Nonnull' to parameter of type 'NSNumber *' [-Wincompatible-pointer-types]
+  136 |                    confidence:[NSNull null] // TODO: replace with actual value once it is supported by Google's native API
+      |                               ^~~~~~~~~~~~~
+/Users/builder/.pub-cache/hosted/pub.dev/google_mlkit_text_recognition-0.15.1/ios/Classes/GoogleMlKitTextRecognitionPlugin.m:176:29: note: passing argument to parameter 'confidence' here
+  176 |      confidence:(NSNumber *)confidence
+      |                             ^
+/Users/builder/.pub-cache/hosted/pub.dev/google_mlkit_text_recognition-0.15.1/ios/Classes/GoogleMlKitTextRecognitionPlugin.m:137:31: warning: incompatible pointer types sending 'NSNull * _Nonnull' to parameter of type 'NSNumber *' [-Wincompatible-pointer-types]
+  137 |                         angle:[NSNull null]]; // TODO: replace with actual value once it is supported by Google's native API
+      |                               ^~~~~~~~~~~~~
+/Users/builder/.pub-cache/hosted/pub.dev/google_mlkit_text_recognition-0.15.1/ios/Classes/GoogleMlKitTextRecognitionPlugin.m:177:29: note: passing argument to parameter 'angle' here
+  177 |           angle:(NSNumber *)angle {
+      |                             ^
+/Users/builder/.pub-cache/hosted/pub.dev/google_mlkit_text_recognition-0.15.1/ios/Classes/GoogleMlKitTextRecognitionPlugin.m:149:35: warning: incompatible pointer types sending 'NSNull * _Nonnull' to parameter of type 'NSNumber *' [-Wincompatible-pointer-types]
+  149 |                        confidence:[NSNull null] // TODO: replace with actual value once it is supported by Google's native API
+      |                                   ^~~~~~~~~~~~~
+/Users/builder/.pub-cache/hosted/pub.dev/google_mlkit_text_recognition-0.15.1/ios/Classes/GoogleMlKitTextRecognitionPlugin.m:176:29: note: passing argument to parameter 'confidence' here
+  176 |      confidence:(NSNumber *)confidence
+      |                             ^
+/Users/builder/.pub-cache/hosted/pub.dev/google_mlkit_text_recognition-0.15.1/ios/Classes/GoogleMlKitTextRecognitionPlugin.m:150:35: warning: incompatible pointer types sending 'NSNull * _Nonnull' to parameter of type 'NSNumber *' [-Wincompatible-pointer-types]
+  150 |                             angle:[NSNull null]]; // TODO: replace with actual value once it is supported by Google's native API
+      |                                   ^~~~~~~~~~~~~
+/Users/builder/.pub-cache/hosted/pub.dev/google_mlkit_text_recognition-0.15.1/ios/Classes/GoogleMlKitTextRecognitionPlugin.m:177:29: note: passing argument to parameter 'angle' here
+  177 |           angle:(NSNumber *)angle {
+      |                             ^
+6 warnings generated.
+/Users/builder/.pub-cache/hosted/pub.dev/cunning_document_scanner-1.4.0/ios/Classes/SwiftCunningDocumentScannerPlugin.swift:21:71: warning: 'keyWindow' was deprecated in iOS 13.0: Should not be used for applications that support multiple scenes as it returns a key window across all connected scenes
+            let presentedVC: UIViewController? = UIApplication.shared.keyWindow?.rootViewController
+                                                                      ^
+libtool: warning: 'MLKVisionImage+FlutterPlugin.o' has no symbols
+/Users/builder/clone/build/ios/SourcePackages/cloud_firestore-6.3.0/ios/cloud_firestore/Sources/cloud_firestore/FLTPipelineParser.m:865:57: error: no visible @interface for 'FIRCollectionSourceStageBridge' declares the selector 'initWithRef:firestore:'
+  865 |         stage = [[FIRCollectionSourceStageBridge alloc] initWithRef:ref firestore:firestore];
+      |                  ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ ^~~~~~~~~~~~~~~~~~~~~~~~~
+/Users/builder/clone/build/ios/SourcePackages/cloud_firestore-6.3.0/ios/cloud_firestore/Sources/cloud_firestore/FLTPipelineParser.m:872:62: error: no visible @interface for 'FIRCollectionGroupSourceStageBridge' declares the selector 'initWithCollectionId:'
+  872 |         stage = [[FIRCollectionGroupSourceStageBridge alloc] initWithCollectionId:path];
+      |                  ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ ^~~~~~~~~~~~~~~~~~~~
+2 errors generated.
+Failed frontend command:
+/Applications/Xcode-26.5.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/clang -cc1 -Wundef-prefix\=TARGET_OS_ -fdiagnostics-show-note-include-stack -fmacro-backtrace-limit\=0 -w -ferror-limit 19 -serialize-diagnostic-file /Users/builder/clone/build/ios/DerivedData/Build/Intermediates.noindex/cloud_firestore.build/Release-iphoneos/cloud_firestore.build/Objects-normal/arm64/FLTPipelineParser.dia -Wdeprecated-objc-isa-usage -Werror\=deprecated-objc-isa-usage -Werror\=implicit-function-declaration -Wnon-modular-include-in-framework-module -Werror\=non-modular-include-in-framework-module -Wno-trigraphs -Wno-missing-field-initializers -Wno-missing-prototypes -Wno-return-type -Wno-implicit-atomic-properties -Wno-objc-interface-ivars -Wno-arc-repeated-use-of-weak -Wno-missing-braces -Wparentheses -Wswitch -Wno-unused-function -Wno-unused-label -Wno-unused-parameter -Wno-unused-variable -Wunused-value -Wno-empty-body -Wno-uninitialized -Wno-unknown-pragmas -Wno-shadow -Wno-four-char-constants -Wno-conversion -Wno-constant-conversion -Wno-int-conversion -Wno-bool-conversion -Wno-enum-conversion -Wno-float-conversion -Wno-non-literal-null-conversion -Wno-objc-literal-conversion -Wshorten-64-to-32 -Wpointer-sign -Wno-newline-eof -Wno-selector -Wno-strict-selector-match -Wno-undeclared-selector -Wno-deprecated-implementations -Wno-implicit-fallthrough -Wprotocol -Wdeprecated-declarations -Wno-sign-conversion -Wno-infinite-recursion -Wno-comma -Wno-block-capture-autoreleasing -Wno-strict-prototypes -Wno-semicolon-before-method-body -Wno-elaborated-enum-base -Wno-error\=allocator-wrappers -fmodule-map-file\=/Users/builder/clone/build/ios/DerivedData/Build/Intermediates.noindex/GeneratedModuleMaps-iphoneos/abslWrapper.modulemap -fmodule-map-file\=/Users/builder/clone/build/ios/DerivedData/Build/Intermediates.noindex/GeneratedModuleMaps-iphoneos/opensslWrapper.modulemap -fmodule-map-file\=/Users/builder/clone/build/ios/DerivedData/Build/Intermediates.noindex/GeneratedModuleMaps-iphoneos/grpcWrapper.modulemap -fmodule-map-file\=/Users/builder/clone/build/ios/DerivedData/Build/Intermediates.noindex/GeneratedModuleMaps-iphoneos/grpcppWrapper.modulemap -fmodule-map-file\=/Users/builder/clone/build/ios/DerivedData/Build/Intermediates.noindex/GeneratedModuleMaps-iphoneos/nanopb.modulemap -fmodule-map-file\=/Users/builder/clone/build/ios/DerivedData/Build/Intermediates.noindex/GeneratedModuleMaps-iphoneos/leveldb.modulemap -fmodule-map-file\=/Users/builder/clone/build/ios/DerivedData/Build/Intermediates.noindex/GeneratedModuleMaps-iphoneos/FirebaseFirestore.modulemap -fmodule-map-file\=/Users/builder/clone/build/ios/DerivedData/Build/Intermediates.noindex/GeneratedModuleMaps-iphoneos/FirebaseSharedSwift.modulemap -fmodule-map-file\=/Users/builder/clone/build/ios/DerivedData/Build/Intermediates.noindex/GeneratedModuleMaps-iphoneos/FirebaseCoreExtension.modulemap -fmodule-map-file\=/Users/builder/clone/build/ios/DerivedData/Build/Intermediates.noindex/GeneratedModuleMaps-iphoneos/FirebaseAppCheckInterop.modulemap -fmodule-map-file\=/Users/builder/clone/build/ios/DerivedData/Build/Intermediates.noindex/GeneratedModuleMaps-iphoneos/FirebaseFirestoreInternalWrapper.modulemap -fmodule-map-file\=/Users/builder/clone/build/ios/DerivedData/Build/Intermediates.noindex/GeneratedModuleMaps-iphoneos/FirebaseFirestoreTarget.modulemap -fmodule-map-file\=/Users/builder/clone/build/ios/DerivedData/Build/Intermediates.noindex/GeneratedModuleMaps-iphoneos/GoogleUtilities-NSData.modulemap -fmodule-map-file\=/Users/builder/clone/build/ios/DerivedData/Build/Intermediates.noindex/GeneratedModuleMaps-iphoneos/GoogleUtilities-Logger.modulemap -fmodule-map-file\=/Users/builder/clone/build/ios/DerivedData/Build/Intermediates.noindex/GeneratedModuleMaps-iphoneos/GoogleUtilities-Environment.modulemap -fmodule-map-file\=/Users/builder/clone/build/ios/DerivedData/Build/Intermediates.noindex/GeneratedModuleMaps-iphoneos/third-party-IsAppEncrypted.modulemap -fmodule-map-file\=/Users/builder/clone/build/ios/DerivedData/Build/Intermediates.noindex/GeneratedModuleMaps-iphoneos/GoogleUtilities-UserDefaults.modulemap -fmodule-map-file\=/Users/builder/clone/build/ios/DerivedData/Build/Intermediates.noindex/GeneratedModuleMaps-iphoneos/FirebaseCore.modulemap -fmodule-map-file\=/Users/builder/clone/build/ios/DerivedData/Build/Intermediates.noindex/GeneratedModuleMaps-iphoneos/FirebaseCoreInternal.modulemap -fmodule-map-file\=/Users/builder/clone/build/ios/DerivedData/Build/Intermediates.noindex/GeneratedModuleMaps-iphoneos/FirebaseInstallations.modulemap -fmodule-map-file\=/Users/builder/clone/build/ios/DerivedData/Build/Intermediates.noindex/GeneratedModuleMaps-iphoneos/firebase_core.modulemap -fmodule-map-file\=/Applications/Xcode-26.5.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS.sdk/usr/include/DarwinFoundation1.modulemap -fmodule-map-file\=/Applications/Xcode-26.5.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS.sdk/System/Library/Frameworks/Foundation.framework/Modules/module.modulemap -fmodule-map-file\=/Users/builder/clone/build/ios/DerivedData/Build/Products/Release-iphoneos/Flutter.framework/Modules/module.modulemap -fmodule-map-file\=/Users/builder/clone/build/ios/DerivedData/Build/Products/Release-iphoneos/FirebaseFirestoreInternal.framework/Modules/module.modulemap -fmodule-map-file\=/Users/builder/clone/build/ios/DerivedData/Build/Intermediates.noindex/GeneratedModuleMaps-iphoneos/FirebaseFirestore.modulemap -fmodule-map-file\=/Users/builder/clone/build/ios/DerivedData/Build/Intermediates.noindex/GeneratedModuleMaps-iphoneos/FirebaseFirestoreInternalWrapper.modulemap -o /Users/builder/clone/build/ios/DerivedData/Build/Intermediates.noindex/cloud_firestore.build/Release-iphoneos/cloud_firestore.build/Objects-normal/arm64/FLTPipelineParser.o -disable-free -emit-obj -x objective-c /Users/builder/clone/build/ios/SourcePackages/cloud_firestore-6.3.0/ios/cloud_firestore/Sources/cloud_firestore/FLTPipelineParser.m -target-abi darwinpcs -target-cpu apple-a7 -target-feature +v8a -target-feature +aes -target-feature +fp-armv8 -target-feature +neon -target-feature +perfmon -target-feature +sha2 -triple arm64-apple-ios15.0.0 -target-linker-version 1267 -target-sdk-version\=26.5 -fmodules-validate-system-headers -fno-modulemap-allow-subdirectory-search -isysroot /Applications/Xcode-26.5.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS26.5.sdk -resource-dir /Applications/Xcode-26.5.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/clang/21 -fmodule-format\=obj -fmodule-file\=FirebaseFirestore\=/Users/builder/clone/build/ios/DerivedData/Build/Intermediates.noindex/ExplicitPrecompiledModules/FirebaseFirestore-1GB458MG5RZQXF6HX809CWWJ8.pcm -fmodule-file\=FirebaseFirestoreInternal\=/Users/builder/clone/build/ios/DerivedData/Build/Intermediates.noindex/ExplicitPrecompiledModules/FirebaseFirestoreInternal-9N3FCCI74XOYSIFN0U2EFONUG.pcm -fmodule-file\=FirebaseFirestoreInternalWrapper\=/Users/builder/clone/build/ios/DerivedData/Build/Intermediates.noindex/ExplicitPrecompiledModules/FirebaseFirestoreInternalWrapper-7N53VP9PHQDPBENVLC6KZRQBF.pcm -fmodule-file\=Flutter\=/Users/builder/clone/build/ios/DerivedData/Build/Intermediates.noindex/ExplicitPrecompiledModules/Flutter-EXU1BJU9JEF8LHUD7746FZ0DQ.pcm -fmodule-file\=Foundation\=/Users/builder/clone/build/ios/DerivedData/Build/Intermediates.noindex/ExplicitPrecompiledModules/Foundation-1M0ARKUBRY9HZ9X4Z3TRJOIH.pcm -fmodule-file\=_DarwinFoundation1\=/Users/builder/clone/build/ios/DerivedData/Build/Intermediates.noindex/ExplicitPrecompiledModules/_DarwinFoundation1-ALRTH3QGRXJLD5LH146VDLB22.pcm -I /Users/builder/clone/build/ios/SourcePackages/checkouts/abseil-cpp-binary/absl-Wrapper/include -I /Users/builder/clone/build/ios/SourcePackages/checkouts/grpc-binary/openssl-grpc-Wrapper/include -I /Users/builder/clone/build/ios/SourcePackages/checkouts/grpc-binary/grpc-Wrapper/include -I /Users/builder/clone/build/ios/SourcePackages/checkouts/grpc-binary/grpcpp-Wrapper/include -I /Users/builder/clone/build/ios/SourcePackages/checkouts/nanopb/spm_headers -I /Users/builder/clone/build/ios/SourcePackages/checkouts/leveldb/include -I /Users/builder/clone/build/ios/SourcePackages/checkouts/firebase-ios-sdk/FirebaseCore/Extension -I /Users/builder/clone/build/ios/SourcePackages/checkouts/firebase-ios-sdk/FirebaseAppCheck/Interop/Public -I /Users/builder/clone/build/ios/SourcePackages/checkouts/firebase-ios-sdk/FirebaseFirestoreInternal -I /Users/builder/clone/build/ios/SourcePackages/checkouts/firebase-ios-sdk/SwiftPM-PlatformExclude/FirebaseFirestoreWrap/include -I /Users/builder/clone/build/ios/SourcePackages/checkouts/GoogleUtilities/GoogleUtilities/NSData+zlib/Public -I /Users/builder/clone/build/ios/SourcePackages/checkouts/promises/Sources/FBLPromises/include -I /Users/builder/clone/build/ios/SourcePackages/checkouts/GoogleUtilities/GoogleUtilities/Logger/Public -I /Users/builder/clone/build/ios/SourcePackages/checkouts/GoogleUtilities/GoogleUtilities/Environment/Public -I /Users/builder/clone/build/ios/SourcePackages/checkouts/GoogleUtilities/third_party/IsAppEncrypted/Public -I /Users/builder/clone/build/ios/SourcePackages/checkouts/GoogleUtilities/GoogleUtilities/UserDefaults/Public -I /Users/builder/clone/build/ios/SourcePackages/checkouts/firebase-ios-sdk/FirebaseCore/Sources/Public -I /Users/builder/clone/build/ios/SourcePackages/checkouts/firebase-ios-sdk/CoreOnly/Sources -I /Users/builder/clone/build/ios/SourcePackages/checkouts/firebase-ios-sdk/FirebaseInstallations/Source/Library/Public -I /Users/builder/clone/ios/Flutter/ephemeral/Packages/.packages/firebase_core-4.7.0/Sources/firebase_core/include -I /Users/builder/clone/build/ios/DerivedData/Build/Products/Release-iphoneos/include -I /Users/builder/clone/ios/Flutter/ephemeral/Packages/.packages/cloud_firestore-6.3.0/Sources/cloud_firestore/include -I /Users/builder/clone/ios/Flutter/ephemeral/Packages/.packages/cloud_firestore-6.3.0/Sources/cloud_firestore/include/cloud_firestore/Private -I /Users/builder/clone/ios/Flutter/ephemeral/Packages/.packages/cloud_firestore-6.3.0/Sources/cloud_firestore/include/cloud_firestore/Public -I /Users/builder/clone/build/ios/DerivedData/Build/Intermediates.noindex/cloud_firestore.build/Release-iphoneos/cloud_firestore.build/DerivedSources-normal/arm64 -I /Users/builder/clone/build/ios/DerivedData/Build/Intermediates.noindex/cloud_firestore.build/Release-iphoneos/cloud_firestore.build/DerivedSources/arm64 -I /Users/builder/clone/build/ios/DerivedData/Build/Intermediates.noindex/cloud_firestore.build/Release-iphoneos/cloud_firestore.build/DerivedSources -F /Users/builder/clone/build/ios/DerivedData/Build/Products/Release-iphoneos/PackageFrameworks -F /Users/builder/clone/build/ios/DerivedData/Build/Products/Release-iphoneos/PackageFrameworks -F /Users/builder/clone/build/ios/DerivedData/Build/Products/Release-iphoneos/PackageFrameworks -F /Users/builder/clone/build/ios/DerivedData/Build/Products/Release-iphoneos/PackageFrameworks -F /Users/builder/clone/build/ios/DerivedData/Build/Products/Release-iphoneos/PackageFrameworks -F /Users/builder/clone/build/ios/DerivedData/Build/Products/Release-iphoneos/PackageFrameworks -F /Users/builder/clone/build/ios/DerivedData/Build/Products/Release-iphoneos/PackageFrameworks -F /Users/builder/clone/build/ios/DerivedData/Build/Products/Release-iphoneos/PackageFrameworks -F /Users/builder/clone/build/ios/DerivedData/Build/Products/Release-iphoneos/PackageFrameworks -F /Users/builder/clone/build/ios/DerivedData/Build/Products/Release-iphoneos/PackageFrameworks -F /Users/builder/clone/build/ios/DerivedData/Build/Products/Release-iphoneos/PackageFrameworks -F /Users/builder/clone/build/ios/DerivedData/Build/Products/Release-iphoneos/PackageFrameworks -F /Users/builder/clone/build/ios/DerivedData/Build/Products/Release-iphoneos/PackageFrameworks -F /Users/builder/clone/build/ios/DerivedData/Build/Products/Release-iphoneos/PackageFrameworks -F /Users/builder/clone/build/ios/DerivedData/Build/Products/Release-iphoneos/PackageFrameworks -F /Users/builder/clone/build/ios/DerivedData/Build/Products/Release-iphoneos/PackageFrameworks -F /Users/builder/clone/build/ios/DerivedData/Build/Products/Release-iphoneos/PackageFrameworks -F /Users/builder/clone/build/ios/DerivedData/Build/Products/Release-iphoneos/PackageFrameworks -F /Users/builder/clone/build/ios/DerivedData/Build/Products/Release-iphoneos/PackageFrameworks -F /Users/builder/clone/build/ios/DerivedData/Build/Products/Release-iphoneos/PackageFrameworks -F /Users/builder/clone/build/ios/DerivedData/Build/Products/Release-iphoneos/PackageFrameworks -F /Users/builder/clone/build/ios/DerivedData/Build/Products/Release-iphoneos/PackageFrameworks -F /Users/builder/clone/build/ios/DerivedData/Build/Products/Release-iphoneos/PackageFrameworks -F /Users/builder/clone/build/ios/DerivedData/Build/Products/Release-iphoneos -iframework /Applications/Xcode-26.5.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/Library/Frameworks -iframework /Applications/Xcode-26.5.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS26.5.sdk/Developer/Library/Frameworks -internal-isystem /Applications/Xcode-26.5.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS26.5.sdk/usr/local/include -internal-isystem /Applications/Xcode-26.5.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/clang/21/include -internal-externc-isystem /Applications/Xcode-26.5.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS26.5.sdk/usr/include -internal-externc-isystem /Applications/Xcode-26.5.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/include -internal-iframework /Applications/Xcode-26.5.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS26.5.sdk/System/Library/Frameworks -internal-iframework /Applications/Xcode-26.5.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS26.5.sdk/System/Library/SubFrameworks -internal-iframework /Applications/Xcode-26.5.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS26.5.sdk/Library/Frameworks -ivfsstatcache /Users/builder/clone/build/ios/DerivedData/SDKStatCaches.noindex/iphoneos26.5-23F73-3b7460bcb52d2002dde82e7a4a01fe09.sdkstatcache -std\=gnu11 -fexceptions -fskip-odr-check-in-gmf -fmodules -fmodule-name\=cloud_firestore -fno-implicit-modules -fobjc-exceptions -fmax-type-align\=16 -fpascal-strings -fstack-check -fvisibility-inlines-hidden-static-local-var -mdarwin-stkchk-strong-link -fno-odr-hash-protocols -pic-level 2 -fencode-extended-block-signature -stack-protector 1 -fobjc-runtime\=ios-15.0.0 -fobjc-arc -fobjc-runtime-has-weak -fobjc-weak -fgnuc-version\=4.2.1 -fblocks -fno-convergent-functions -ffp-contract\=on -fclang-abi-compat\=4.0 -fno-experimental-relative-c++-abi-vtables -fno-file-reproducible -clang-vendor-feature\=+disableNonDependentMemberExprInCurrentInstantiation -clang-vendor-feature\=+enableAggressiveVLAFolding -clang-vendor-feature\=+revert09abecef7bbf -clang-vendor-feature\=+thisNoAlignAttr -clang-vendor-feature\=+thisNoNullAttr -clang-vendor-feature\=+disableAtImportPrivateFrameworkInImplementationError -O2 -fno-assume-unique-vtables -fdebug-compilation-dir\=/Users/builder/clone/ios -fcoverage-compilation-dir\=/Users/builder/clone/ios -fcommon -fdwarf2-cfi-asm -fobjc-msgsend-selector-stubs -fregister-global-dtors-with-atexit -fno-strict-return -dwarf-version\=4 -debugger-tuning\=lldb -vectorize-loops -vectorize-slp -disable-llvm-verifier -dwarf-ext-refs -funwind-tables\=1 -enable-tlsdesc -clear-ast-before-backend -discard-value-names -main-file-name FLTPipelineParser.m -mframe-pointer\=non-leaf -finline-functions -debug-info-kind\=standalone -Os -fno-loop-interchange -fdiagnostics-hotness-threshold\=0 -fdiagnostics-misexpect-tolerance\=0 -D LIBRARY_NAME\=\"flutter-fire-fst\" -D LIBRARY_VERSION\=\"6.3.0\" -D OBJC_OLD_DISPATCH_PROTOTYPES\=1 -D SWIFT_PACKAGE -D Xcode -fdefine-target-os-macros -MT dependencies -dependency-file /Users/builder/clone/build/ios/DerivedData/Build/Intermediates.noindex/cloud_firestore.build/Release-iphoneos/cloud_firestore.build/Objects-normal/arm64/FLTPipelineParser.d -skip-unused-modulemap-deps
+note: Using codesigning identity override: 
+note: Run script build phase 'Run Script' will be run during every build because the option to run the script phase "Based on dependency analysis" is unchecked. (in target 'Runner' from project 'Runner')
+note: Run script build phase 'Thin Binary' will be run during every build because the option to run the script phase "Based on dependency analysis" is unchecked. (in target 'Runner' from project 'Runner')
+** BUILD FAILED **
+
+
+
+Build failed :|
+Step 10 script `Build iOS app (no codesign)` exited with status code 65

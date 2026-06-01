@@ -1,11 +1,20 @@
 import SwiftUI
+import UIKit
 import KeyboardKit
 
 /// The single morphing surface that sits above the keyboard.
 ///
-/// One view, three visual states (collapsed → grid → result). No modal
-/// sheets, no overlays — the toolbar height grows in place so the keyboard
-/// stays put. This is how the iOS system predictive bar feels.
+/// One view, five visual states (collapsed → grid → running → result → error).
+/// No modal sheets, no overlays — the toolbar height grows in place so the
+/// keyboard stays put. This is how the iOS system predictive bar feels.
+///
+/// Premium features layered on top of the v1 morph:
+///   • Persona row above the action grid — `AIPersona` shapes voice.
+///   • Streaming reveal in `.running` — tokens land into a live text view.
+///   • Result card with [Copy] [Regenerate] [Try other style] [Apply].
+///   • History dots — last 3 outputs reachable via swipe / dot tap.
+///   • Liquid Glass surfaces on iOS 26 via the shared `rewordiumGlassContainer`.
+///   • `sensoryFeedback(.selection, trigger:)` on every state transition.
 struct AIToolbar: View {
 
     enum Mode: Equatable {
@@ -20,24 +29,29 @@ struct AIToolbar: View {
     /// `let` is enough — no `@Bindable` or `@ObservedObject` required.
     let aiService: AIService
     unowned let controller: KeyboardInputViewController
+
     @State private var mode: Mode = .collapsed
     @State private var customPromptText: String = ""
     @State private var showsCustomPromptField: Bool = false
+    @State private var persona: AIPersona = .neutral
+    @State private var showsPersonaInResult: Bool = false
+    @State private var historyIndex: Int = 0
+    @Namespace private var morphNamespace
 
     var body: some View {
-        ZStack(alignment: .top) {
-            // Surface background — extends edge-to-edge for tactile feel.
-            Color.clear.rewordiumSurface()
-
-            content
-                .padding(.horizontal, RewordiumTokens.Space.md)
-                .padding(.vertical, RewordiumTokens.Space.sm)
-        }
-        .frame(minHeight: 44)
-        .animation(RewordiumTokens.AnimationCurve.surface, value: mode)
-        .onChange(of: aiService.status) { _, newStatus in
-            syncMode(from: newStatus)
-        }
+        content
+            .padding(.horizontal, RewordiumTokens.Space.md)
+            .padding(.vertical, RewordiumTokens.Space.sm)
+            .frame(minHeight: 44)
+            .background(GlassSurfaceBackground())
+            .animation(RewordiumTokens.AnimationCurve.surface, value: mode)
+            .animation(RewordiumTokens.AnimationCurve.surface, value: showsCustomPromptField)
+            .animation(RewordiumTokens.AnimationCurve.surface, value: showsPersonaInResult)
+            .onChange(of: aiService.status) { _, newStatus in
+                syncMode(from: newStatus)
+            }
+            .sensoryFeedback(.selection, trigger: mode)
+            .rewordiumGlassContainer()
     }
 
     // MARK: - Mode dispatch
@@ -54,9 +68,6 @@ struct AIToolbar: View {
     }
 
     // MARK: - Collapsed (compact pill)
-    //
-    // Single line: "Tap to rewrite" hint on the left, sparkle pill on the
-    // right. Matches the system predictive bar's information density.
 
     private var collapsedView: some View {
         HStack(spacing: RewordiumTokens.Space.sm) {
@@ -68,6 +79,7 @@ struct AIToolbar: View {
             Spacer(minLength: 0)
 
             sparkleButton
+                .matchedGeometryEffect(id: "ai-anchor", in: morphNamespace)
         }
     }
 
@@ -80,23 +92,24 @@ struct AIToolbar: View {
             HStack(spacing: 6) {
                 Image(systemName: "sparkles")
                     .font(.system(size: 13, weight: .medium))
+                    .symbolRenderingMode(.hierarchical)
                 Text("AI")
                     .font(.system(size: 13, weight: .semibold))
             }
             .foregroundStyle(Color.accentColor)
             .padding(.horizontal, RewordiumTokens.Space.md)
             .padding(.vertical, RewordiumTokens.Space.xs)
+            .rewordiumPill(isSelected: false)
             .background(
-                Capsule().fill(Color.accentColor.opacity(0.12))
-            )
-            .overlay(
-                Capsule().strokeBorder(Color.accentColor.opacity(0.25), lineWidth: 0.5)
+                Capsule().fill(Color.accentColor.opacity(0.10))
+                    .blendMode(.normal)
             )
         }
         .buttonStyle(.plain)
+        .accessibilityLabel("Open AI rewrite panel")
     }
 
-    // MARK: - Action grid (8 chips in 2×4)
+    // MARK: - Action grid
 
     private var actionGridView: some View {
         VStack(alignment: .leading, spacing: RewordiumTokens.Space.sm) {
@@ -105,8 +118,14 @@ struct AIToolbar: View {
                     .font(.system(size: 13, weight: .medium))
                     .foregroundStyle(.primary)
                 Spacer()
+                Image(systemName: "sparkles")
+                    .font(.system(size: 12, weight: .medium))
+                    .foregroundStyle(Color.accentColor)
+                    .matchedGeometryEffect(id: "ai-anchor", in: morphNamespace)
                 closeButton
             }
+
+            PersonaRow(selected: $persona)
 
             if showsCustomPromptField {
                 customPromptField
@@ -117,7 +136,10 @@ struct AIToolbar: View {
     }
 
     private var chipsGrid: some View {
-        let columns = Array(repeating: GridItem(.flexible(), spacing: RewordiumTokens.Space.sm), count: 4)
+        let columns = Array(
+            repeating: GridItem(.flexible(), spacing: RewordiumTokens.Space.sm),
+            count: 4
+        )
         return LazyVGrid(columns: columns, spacing: RewordiumTokens.Space.sm) {
             ForEach(AIAction.allCases) { action in
                 AIActionChip(action: action) {
@@ -164,9 +186,11 @@ struct AIToolbar: View {
                         .padding(.horizontal, RewordiumTokens.Space.md)
                         .padding(.vertical, RewordiumTokens.Space.xs)
                         .background(
-                            Capsule().fill(customPromptText.trimmingCharacters(in: .whitespaces).isEmpty
-                                ? Color.gray.opacity(0.4)
-                                : Color.accentColor)
+                            Capsule().fill(
+                                customPromptText.trimmingCharacters(in: .whitespaces).isEmpty
+                                    ? Color.gray.opacity(0.4)
+                                    : Color.accentColor
+                            )
                         )
                 }
                 .buttonStyle(.plain)
@@ -175,48 +199,97 @@ struct AIToolbar: View {
         }
     }
 
-    // MARK: - Running
+    // MARK: - Running (streaming reveal)
 
     private func runningView(for action: AIAction) -> some View {
-        HStack(spacing: RewordiumTokens.Space.sm) {
-            ProgressView()
-                .scaleEffect(0.7)
-                .frame(width: 18, height: 18)
-            Text(action.loadingLabel)
-                .font(.system(size: 13))
-                .foregroundStyle(.secondary)
-            Spacer()
-            closeButton
+        VStack(alignment: .leading, spacing: RewordiumTokens.Space.xs) {
+            HStack(spacing: RewordiumTokens.Space.sm) {
+                BreathingDot()
+                    .matchedGeometryEffect(id: "ai-anchor", in: morphNamespace)
+                Text(action.loadingLabel)
+                    .font(.system(size: 12, weight: .medium))
+                    .foregroundStyle(.secondary)
+                Spacer()
+                closeButton
+            }
+
+            // Live token reveal. Truncates to two lines so the toolbar
+            // height doesn't oscillate while text streams in.
+            if !aiService.partialResult.isEmpty {
+                Text(aiService.partialResult)
+                    .font(.system(size: 14))
+                    .foregroundStyle(.primary)
+                    .lineLimit(2, reservesSpace: true)
+                    .multilineTextAlignment(.leading)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .padding(.horizontal, RewordiumTokens.Space.sm)
+                    .padding(.vertical, RewordiumTokens.Space.xs)
+                    .rewordiumCard()
+                    .transition(.opacity.combined(with: .move(edge: .top)))
+            }
         }
     }
 
     // MARK: - Result
 
     private func resultView(text: String) -> some View {
-        VStack(alignment: .leading, spacing: RewordiumTokens.Space.sm) {
-            Text(text)
+        // Resolve the currently-paginated entry; default to the latest if
+        // history is shorter than the cursor (shouldn't happen but cheap
+        // to be defensive).
+        let entries = aiService.history
+        let resolvedText: String = {
+            if entries.indices.contains(historyIndex) {
+                return entries[historyIndex].result
+            }
+            return text
+        }()
+
+        return VStack(alignment: .leading, spacing: RewordiumTokens.Space.sm) {
+            // Result text card.
+            Text(resolvedText)
                 .font(.system(size: 14))
                 .foregroundStyle(.primary)
-                .lineLimit(3)
+                .lineLimit(4)
                 .multilineTextAlignment(.leading)
                 .frame(maxWidth: .infinity, alignment: .leading)
+                .padding(.horizontal, RewordiumTokens.Space.md)
+                .padding(.vertical, RewordiumTokens.Space.sm)
+                .rewordiumCard()
+                .matchedGeometryEffect(id: "ai-anchor", in: morphNamespace)
 
-            HStack(spacing: RewordiumTokens.Space.sm) {
-                Button {
-                    withAnimation(RewordiumTokens.AnimationCurve.surface) {
-                        mode = .actionGrid
-                    }
-                } label: {
-                    Label("Try again", systemImage: "arrow.counterclockwise")
-                        .font(.system(size: 13, weight: .medium))
-                        .foregroundStyle(.secondary)
+            // Inline persona picker for "Try other style" — collapses by
+            // default so the result card reads as the focal point.
+            if showsPersonaInResult {
+                PersonaRow(selected: $persona) { newPersona in
+                    persona = newPersona
+                    showsPersonaInResult = false
+                    aiService.regenerate { _ in }
                 }
-                .buttonStyle(.plain)
+            }
 
-                Spacer()
+            // Toolbar row: [history dots] [Copy] [Regenerate] [Try style] [Apply]
+            HStack(spacing: RewordiumTokens.Space.sm) {
+                historyDots(count: entries.count)
+
+                Spacer(minLength: 0)
+
+                resultChromeButton(icon: "doc.on.doc", title: "Copy") {
+                    UIPasteboard.general.string = resolvedText
+                    UINotificationFeedbackGenerator().notificationOccurred(.success)
+                }
+
+                resultChromeButton(icon: "arrow.counterclockwise", title: "Redo") {
+                    aiService.regenerate { _ in }
+                }
+
+                resultChromeButton(icon: "paintpalette", title: "Style") {
+                    withAnimation(RewordiumTokens.AnimationCurve.surface) {
+                        showsPersonaInResult.toggle()
+                    }
+                }
 
                 Button {
-                    apply(text: text)
+                    apply(text: resolvedText)
                 } label: {
                     Text("Apply")
                         .font(.system(size: 13, weight: .semibold))
@@ -226,7 +299,49 @@ struct AIToolbar: View {
                         .background(Capsule().fill(Color.accentColor))
                 }
                 .buttonStyle(.plain)
+                .accessibilityLabel("Apply rewrite to text")
             }
+        }
+    }
+
+    private func resultChromeButton(icon: String, title: String, action: @escaping () -> Void) -> some View {
+        Button {
+            UIImpactFeedbackGenerator(style: .light).impactOccurred()
+            action()
+        } label: {
+            HStack(spacing: 4) {
+                Image(systemName: icon)
+                    .font(.system(size: 11, weight: .medium))
+                Text(title)
+                    .font(.system(size: 12, weight: .medium))
+            }
+            .foregroundStyle(.secondary)
+            .padding(.horizontal, RewordiumTokens.Space.sm)
+            .padding(.vertical, 5)
+            .rewordiumPill(isSelected: false)
+        }
+        .buttonStyle(.plain)
+    }
+
+    @ViewBuilder
+    private func historyDots(count: Int) -> some View {
+        if count > 1 {
+            HStack(spacing: 4) {
+                ForEach(0..<count, id: \.self) { i in
+                    Circle()
+                        .fill(i == historyIndex ? Color.accentColor : Color.primary.opacity(0.25))
+                        .frame(width: 5, height: 5)
+                        .onTapGesture {
+                            withAnimation(RewordiumTokens.AnimationCurve.tap) {
+                                historyIndex = i
+                            }
+                        }
+                }
+            }
+            .accessibilityElement(children: .ignore)
+            .accessibilityLabel("Result \(historyIndex + 1) of \(count)")
+        } else {
+            EmptyView()
         }
     }
 
@@ -237,6 +352,7 @@ struct AIToolbar: View {
             Image(systemName: "exclamationmark.circle")
                 .font(.system(size: 14))
                 .foregroundStyle(.orange)
+                .matchedGeometryEffect(id: "ai-anchor", in: morphNamespace)
             Text(message)
                 .font(.system(size: 13))
                 .foregroundStyle(.primary)
@@ -259,6 +375,7 @@ struct AIToolbar: View {
             withAnimation(RewordiumTokens.AnimationCurve.surface) {
                 mode = .collapsed
                 showsCustomPromptField = false
+                showsPersonaInResult = false
             }
         } label: {
             Image(systemName: "xmark")
@@ -268,13 +385,20 @@ struct AIToolbar: View {
                 .background(Circle().fill(Color.primary.opacity(0.08)))
         }
         .buttonStyle(.plain)
+        .accessibilityLabel("Close AI panel")
     }
 
     // MARK: - Behavior
 
     private func run(_ action: AIAction, customInstruction: String? = nil) {
         let source = currentText()
-        aiService.run(action, on: source, customInstruction: customInstruction) { _ in
+        historyIndex = 0
+        aiService.run(
+            action,
+            on: source,
+            persona: persona,
+            customInstruction: customInstruction
+        ) { _ in
             // status changes drive UI via syncMode(from:)
         }
     }
@@ -284,6 +408,7 @@ struct AIToolbar: View {
             switch status {
             case .idle:
                 if let text = aiService.lastResult {
+                    historyIndex = 0
                     mode = .result(text)
                 } else if case .actionGrid = mode {
                     // stay in grid
@@ -312,7 +437,6 @@ struct AIToolbar: View {
         if combined.count <= 600 {
             return combined
         }
-        // Last-sentence heuristic.
         let terminators = CharacterSet(charactersIn: ".!?")
         let parts = before.unicodeScalars
             .split(whereSeparator: { terminators.contains($0) })
@@ -320,14 +444,10 @@ struct AIToolbar: View {
         return (parts.last ?? before).trimmingCharacters(in: .whitespacesAndNewlines)
     }
 
-    /// Replace the source text with the AI result by deleting backward across
-    /// the source range and inserting the rewrite. Selection-aware.
+    /// Replace the source text with the AI result.
     private func apply(text: String) {
         let proxy = controller.textDocumentProxy
         if let selected = proxy.selectedText, !selected.isEmpty {
-            // KeyboardKit's input view controller doesn't expose a direct
-            // replace-selection API — deleting forwards across the selection
-            // is what UIKit gives us.
             for _ in 0..<selected.count {
                 proxy.deleteBackward()
             }
@@ -347,7 +467,7 @@ struct AIToolbar: View {
     }
 }
 
-// MARK: - Chip
+// MARK: - Action chip
 
 private struct AIActionChip: View {
     let action: AIAction
@@ -362,6 +482,7 @@ private struct AIActionChip: View {
             VStack(spacing: 4) {
                 Image(systemName: action.systemImage)
                     .font(.system(size: 16, weight: .regular))
+                    .symbolRenderingMode(.hierarchical)
                     .foregroundStyle(.primary)
                 Text(action.title)
                     .font(.system(size: 11, weight: .medium))
@@ -380,5 +501,47 @@ private struct AIActionChip: View {
                 .onChanged { _ in isPressed = true }
                 .onEnded { _ in isPressed = false }
         )
+    }
+}
+
+// MARK: - Background helpers
+
+/// Surface backing for the AI toolbar. iOS 26 gets the Liquid Glass
+/// treatment; older OSes fall back to `.ultraThinMaterial`. The hairline
+/// bottom border keeps the toolbar visually anchored over the keyboard.
+private struct GlassSurfaceBackground: View {
+    var body: some View {
+        ZStack {
+            if #available(iOS 26.0, *) {
+                Rectangle()
+                    .fill(.regularMaterial)
+                    .glassEffect()
+            } else {
+                Rectangle()
+                    .fill(.ultraThinMaterial)
+            }
+        }
+        .overlay(
+            Rectangle()
+                .frame(height: RewordiumTokens.Stroke.hairline)
+                .foregroundStyle(.quaternary),
+            alignment: .bottom
+        )
+        .ignoresSafeArea(edges: .horizontal)
+    }
+}
+
+/// Pulse indicator shown next to the loading label while a request streams.
+/// Replaces the framework spinner for a calmer feel.
+private struct BreathingDot: View {
+    @State private var on: Bool = false
+
+    var body: some View {
+        Circle()
+            .fill(Color.accentColor)
+            .frame(width: 8, height: 8)
+            .opacity(on ? 1.0 : 0.35)
+            .animation(.easeInOut(duration: 0.9).repeatForever(autoreverses: true), value: on)
+            .onAppear { on = true }
     }
 }

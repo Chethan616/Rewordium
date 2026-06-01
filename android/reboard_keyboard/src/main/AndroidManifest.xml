@@ -17,6 +17,13 @@
     <!-- Required for the GIF picker (KLIPY API). All requests are HTTPS. -->
     <uses-permission android:name="android.permission.INTERNET"/>
 
+    <!-- Required for the Sticker Studio's optional "take a photo" tool in
+         the editor's image-cropper. Runtime-prompted on first use; if the
+         user denies, the studio falls back to gallery-only. Declaring the
+         permission also satisfies the cropper library's manifest check
+         before the runtime prompt fires. -->
+    <uses-permission android:name="android.permission.CAMERA"/>
+
     <!-- Android 11+ only: Define that ReBoard requests to see all apps that
           ship with an IME or Spell Check service. This is used to guide the user
           in the Settings Ui why ReBoard may not be working.

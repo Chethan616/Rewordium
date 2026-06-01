@@ -17,17 +17,29 @@ final class KeyboardViewController: KeyboardInputViewController {
     /// by reference and observes via `@Observable` macro tracking.
     private let aiService = AIService()
 
+    /// Becomes `true` if the KeyboardKit boot threw. The view layer reads this
+    /// and renders a minimal QWERTY fallback so iOS still sees a working
+    /// keyboard — extensions that show a broken view get pulled from the
+    /// globe-cycle rotation on the next launch.
+    private var setupDidFail: Bool = false
+
     // MARK: - Lifecycle
 
     /// Called once when the keyboard extension launches. Configure services
     /// and state here. Anything view-related belongs in viewWillSetupKeyboardView.
     override func viewWillSetupKeyboardKit() {
         setupKeyboardKit(for: rewordiumApp) { [weak self] result in
+            guard let self else { return }
             switch result {
             case .success:
-                self?.applyDefaultStateTweaks()
+                self.applyDefaultStateTweaks()
             case .failure(let error):
+                // Don't silently swallow — iOS will still ask us to render
+                // a view, and if the SwiftUI hierarchy assumes KeyboardKit
+                // services are wired we'd crash. Flag the failure so the
+                // view path can fall back to a stock layout.
                 NSLog("[RewordiumKeyboard] setup failed: \(error)")
+                self.setupDidFail = true
             }
         }
     }
@@ -41,9 +53,20 @@ final class KeyboardViewController: KeyboardInputViewController {
                 services: controller.services,
                 state: controller.state,
                 controller: controller,
-                aiService: self.aiService
+                aiService: self.aiService,
+                setupDidFail: self.setupDidFail
             )
         }
+    }
+
+    /// Wired to the in-keyboard globe button. Tap = advance to next keyboard;
+    /// long-press = show the system picker. Mirrors the system convention.
+    func handleNextKeyboardTap(from view: UIView, with event: UIEvent?) {
+        advanceToNextInputMode()
+    }
+
+    func handleNextKeyboardLongPress(from view: UIView, with event: UIEvent?) {
+        handleInputModeList(from: view, with: event ?? UIEvent())
     }
 
     // MARK: - KeyboardApp

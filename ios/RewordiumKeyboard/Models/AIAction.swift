@@ -59,11 +59,11 @@ enum AIAction: String, CaseIterable, Identifiable, Hashable {
     }
 
     /// System prompt. The user message is always the text being acted on.
-    /// We ask for raw text (no JSON envelope) for the extension flow — it
-    /// keeps responses small enough to fit the 60 MB keyboard memory budget
-    /// even with long inputs, and parsing JSON inside a memory-constrained
-    /// process is wasted work.
-    func systemPrompt(customInstruction: String? = nil) -> String {
+    /// `persona` shapes the *voice*; the action shapes the *transformation*.
+    /// When both are present the persona modifier is appended after the
+    /// action instruction so the model treats it as a refinement, not the
+    /// primary task.
+    func systemPrompt(persona: AIPersona = .neutral, customInstruction: String? = nil) -> String {
         let base: String
         switch self {
         case .rewrite:
@@ -86,7 +86,69 @@ enum AIAction: String, CaseIterable, Identifiable, Hashable {
                 ? "Rewrite the user's text following good editorial judgment."
                 : "Rewrite the user's text following these instructions: \(instruction). Preserve meaning unless instructed otherwise."
         }
+
+        let voice = persona.promptModifier
+        let withVoice = voice.isEmpty ? base : "\(base) \(voice)"
+
         // Belt-and-suspenders for qwen3's thinking-mode tendency.
-        return base + " Reply with only the rewritten text. /no_think"
+        return withVoice + " Reply with only the rewritten text. /no_think"
+    }
+}
+
+/// Voice / register layered on top of an `AIAction`.
+///
+/// Mirrors the Android `AIPersona` set in `ime/ai/AIPersona.kt`. The keyboard
+/// uses a smaller curated list than the Flutter side (no Custom-prompt
+/// persona) — when the user wants a freeform brief, they go through
+/// `AIAction.custom` instead, which already takes an instruction string.
+enum AIPersona: String, CaseIterable, Identifiable, Hashable {
+    case neutral
+    case casual
+    case academic
+    case poetic
+    case professional
+    case friendly
+
+    var id: String { rawValue }
+
+    var title: String {
+        switch self {
+        case .neutral:      return "Neutral"
+        case .casual:       return "Casual"
+        case .academic:     return "Academic"
+        case .poetic:       return "Poetic"
+        case .professional: return "Professional"
+        case .friendly:     return "Friendly"
+        }
+    }
+
+    var systemImage: String {
+        switch self {
+        case .neutral:      return "circle"
+        case .casual:       return "bubble.left.and.bubble.right"
+        case .academic:     return "graduationcap"
+        case .poetic:       return "leaf"
+        case .professional: return "briefcase"
+        case .friendly:     return "heart"
+        }
+    }
+
+    /// Trailing sentence appended to the action's base prompt. Kept short
+    /// because the model already has the transformation instruction.
+    var promptModifier: String {
+        switch self {
+        case .neutral:
+            return ""
+        case .casual:
+            return "Use a relaxed, conversational register — contractions are fine, slang is fine if it fits."
+        case .academic:
+            return "Use an academic register: precise vocabulary, hedged claims, no contractions, no slang."
+        case .poetic:
+            return "Lean into rhythm and imagery without sacrificing meaning. Avoid clichés."
+        case .professional:
+            return "Use a polished professional register suitable for workplace correspondence. No slang."
+        case .friendly:
+            return "Use a warm, friendly tone. Keep it human — not corporate."
+        }
     }
 }

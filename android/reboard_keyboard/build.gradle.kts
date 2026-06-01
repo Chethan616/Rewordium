@@ -309,6 +309,25 @@ dependencies {
     // AsyncImage{}; coil-gif decodes animated GIFs (Tenor thumbnails).
     implementation("io.coil-kt:coil-compose:2.7.0")
     implementation("io.coil-kt:coil-gif:2.7.0")
+
+    // Sticker Studio (native ReBoard settings app):
+    //   - PhotoEditor (MIT, Burhanrashid52) — draw/text/sticker overlay
+    //     canvas, embedded via AndroidView from Compose.
+    //   - android-image-cropper (Apache 2.0, vanniktech, was CanHub) —
+    //     gallery + camera contract + square crop.
+    //   - ML Kit Subject Segmentation (Apache 2.0, BETA, on-device) —
+    //     one-tap background removal returning an RGBA bitmap.
+    //   - ffmpeg-kit min-gpl (LGPL) — animated GIF → animated WebP
+    //     conversion for WhatsApp-compatible stickers.
+    implementation("com.burhanrashid52:photoeditor:3.0.1")
+    implementation("com.vanniktech:android-image-cropper:4.5.0")
+    implementation("com.google.android.gms:play-services-mlkit-subject-segmentation:16.0.0-beta1")
+    // Note: ffmpeg-kit was the original choice for animated GIF→WebP
+    // conversion, but Arthenica deprecated the project in 2025 and the
+    // Maven binaries were pulled. Animated GIF import now just clones
+    // the source GIF into the user sticker store — most messaging
+    // editors accept GIF stickers fine. A future v2 can revisit the
+    // animated-WebP transcoding path with a different encoder.
     api(platform("com.google.firebase:firebase-bom:34.10.0"))
     implementation("com.google.firebase:firebase-auth")
     implementation("com.google.firebase:firebase-firestore")

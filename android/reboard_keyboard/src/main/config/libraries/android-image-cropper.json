@@ -1,0 +1,15 @@
+{
+  "uniqueId": "android-image-cropper",
+  "name": "Android Image Cropper",
+  "developers": [
+    {
+      "name": "CanHub / vanniktech",
+      "organisationUrl": "https://github.com/CanHub/Android-Image-Cropper"
+    }
+  ],
+  "description": "Image cropping with built-in gallery + camera picker, used by the Sticker Studio editor to crop user photos into 1:1 sticker canvases.",
+  "website": "https://github.com/CanHub/Android-Image-Cropper",
+  "licenses": [
+    "Apache-2.0"
+  ]
+}

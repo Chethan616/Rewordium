@@ -254,7 +254,26 @@ class KeyboardManager(context: Context) : InputKeyEventReceiver {
             prefs.keyboard.utilityKeyAction.asFlow().collectLatestIn(scope) {
                 updateActiveEvaluators()
             }
-            activeState.collectLatestIn(scope) {
+            activeState.collectLatestIn(scope) { snapshot ->
+                // Returning to TEXT after a media-mode visit is a cheap
+                // opportunity to clean up any lingering search state — eg.
+                // the user opened the GIF search overlay, then dismissed
+                // via the system back gesture or by re-tapping the smiley
+                // (which directly changes imeUiMode and skips
+                // endMediaSearch). Without this cleanup, _emojiSearchQuery
+                // stays non-null and evaluateVisible hides the smiley key
+                // on the QWERTY — the "emoji key disappeared" bug.
+                if (snapshot.imeUiMode == ImeUiMode.TEXT &&
+                    _mediaSearchMode.value != MediaSearchMode.NONE) {
+                    endMediaSearch()
+                }
+                updateActiveEvaluators()
+            }
+            // Re-evaluate key visibility whenever the search state flips —
+            // otherwise the keyboard cache holds the previous isVisible
+            // value until something else nudges it (a layout switch, etc.)
+            // and the smiley reappears late.
+            _emojiSearchQuery.collectLatestIn(scope) {
                 updateActiveEvaluators()
             }
             subtypeManager.subtypesFlow.collectLatestIn(scope) {
@@ -1236,12 +1255,13 @@ class KeyboardManager(context: Context) : InputKeyEventReceiver {
                 KeyCode.IME_UI_MODE_TEXT,
                 KeyCode.IME_UI_MODE_MEDIA -> {
                     // Hide the emoji entry key (and any "back to text" peer)
-                    // while the emoji-search overlay is active — tapping it
-                    // mid-search would re-enter the media panel and stack a
-                    // confusing second emoji UI on top of the overlay.
-                    // Gboard does the same: in its emoji-search screenshot
-                    // there is no smiley key in the bottom row.
-                    if (_emojiSearchQuery.value != null) return false
+                    // only while the EMOJI search overlay is active —
+                    // tapping it would re-enter the media panel and stack
+                    // a confusing second emoji UI on top of the overlay.
+                    // For GIF/STICKER search we leave it visible so the
+                    // user can bail out to the emoji panel without first
+                    // hunting for the search overlay's back arrow.
+                    if (_mediaSearchMode.value == MediaSearchMode.EMOJI) return false
                     val tempUtilityKeyAction = when {
                         prefs.keyboard.utilityKeyEnabled.get() -> prefs.keyboard.utilityKeyAction.get()
                         else -> UtilityKeyAction.DISABLED

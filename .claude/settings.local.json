@@ -70,7 +70,26 @@
       "WebFetch(domain:pub.dev)",
       "Bash(curl -s \"https://api.klipy.com/api/v1/KLIPY_API_KEY_REDACTED/gifs/trending?per_page=4&customer_id=rewordium-android\")",
       "Bash(curl -s \"https://api.klipy.com/api/v1/KLIPY_API_KEY_REDACTED/gifs/categories?customer_id=rewordium-android\")",
-      "Bash(./gradlew :reboard_keyboard:compileReleaseKotlin)"
+      "Bash(./gradlew :reboard_keyboard:compileReleaseKotlin)",
+      "Bash(./gradlew :reboard_keyboard:compileDebugKotlin :reboard_keyboard:compileReleaseKotlin)",
+      "Bash(Get-ChildItem \"C:\\\\Users\\\\cheth\\\\OneDrive\\\\Desktop\\\\PC2\\\\rewordium\\\\rewordium\\\\rewordium\\\\rewordium\\\\lib\\\\theme\" -Filter \"*.dart\")",
+      "Bash(Get-ChildItem -Path \"C:\\\\Users\\\\cheth\\\\OneDrive\\\\Desktop\\\\PC2\\\\rewordium\\\\rewordium\\\\rewordium\\\\rewordium\\\\android\\\\reboard_keyboard\\\\src\\\\main\\\\kotlin\\\\com\\\\noxquill\\\\rewordium\\\\keyboard\\\\app\" -Recurse -Name)",
+      "WebFetch(domain:mutant.tech)",
+      "WebFetch(domain:developers.google.com)",
+      "Bash(curl -s https://api.github.com/repos/microsoft/fluentui-emoji)",
+      "Bash(curl -sLI -o /dev/null -w \"%{http_code}\\\\n\" \"https://raw.githubusercontent.com/microsoft/fluentui-emoji/main/assets/Grinning%20face/Flat/grinning_face_flat.png\")",
+      "WebFetch(domain:api.github.com)",
+      "Bash(curl -sLI -o /dev/null -w \"%{http_code}\\\\n\" \"https://raw.githubusercontent.com/microsoft/fluentui-emoji/main/assets/Grinning%20face/3D/grinning_face_3d.png\")",
+      "Bash(curl -sfL \"https://raw.githubusercontent.com/microsoft/fluentui-emoji/main/assets/Ok%20hand/Default/3D/ok_hand_3d_default.png\" -o \"ok_hand.png\")",
+      "Bash(sed -i 's/\\\\]$//' index.json)",
+      "Bash(rm -f index.json.placeholder)",
+      "Bash(python -c ' *)",
+      "PowerShell(Get-ChildItem -Path \"C:\\\\Users\\\\cheth\\\\OneDrive\\\\Desktop\\\\PC2\\\\rewordium\\\\rewordium\\\\rewordium\\\\rewordium\\\\lib\" -Recurse -File | Where-Object { $_.Name -match 'settings|about|license|credit' } | Select-Object FullName)",
+      "Bash(python -c \"import json; json.load\\(open\\(r'reboard_keyboard\\\\src\\\\main\\\\assets\\\\ime\\\\theme\\\\com.noxquill.reboardstyle\\\\stylesheets\\\\reboard_material_dark.json'\\)\\); json.load\\(open\\(r'reboard_keyboard\\\\src\\\\main\\\\assets\\\\ime\\\\theme\\\\com.noxquill.reboardstyle\\\\stylesheets\\\\reboard_material_light.json'\\)\\); print\\('OK'\\)\")",
+      "Bash(git checkout *)",
+      "Bash(Get-ChildItem -Path \"ios\\\\RewordiumKeyboard\" -Recurse)",
+      "Bash(Get-ChildItem -Path \"C:\\\\Users\\\\cheth\\\\OneDrive\\\\Desktop\\\\PC2\\\\rewordium\\\\rewordium\\\\rewordium\\\\rewordium\\\\lib\" -Directory)",
+      "Bash(grep -i \"\\\\.kt$\")"
     ]
   }
 }

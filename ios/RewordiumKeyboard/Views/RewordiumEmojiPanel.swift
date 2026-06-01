@@ -30,7 +30,10 @@ struct RewordiumEmojiPanel: View {
     let onReturnToAlphabetic: () -> Void
 
     @State private var selectedCategory: EmojiCatalog.Category = .recents
-    @State private var recents: [String] = EmojiRecents.load()
+    // Lazy-loaded on first appearance — keeps the App Group read off the
+    // hot view-init path so the panel's first frame isn't blocked on I/O.
+    @State private var recents: [String] = []
+    @State private var didLoadRecents: Bool = false
     @State private var skinTone: EmojiSkinTone = EmojiPrefs.skinTone
     @State private var skinToneAnchor: String? = nil
     @State private var showSkinTonePicker: Bool = false
@@ -48,6 +51,17 @@ struct RewordiumEmojiPanel: View {
         }
         .background(Color.clear)
         .overlay(skinTonePopover, alignment: .center)
+        .onAppear {
+            guard !didLoadRecents else { return }
+            didLoadRecents = true
+            // Read off the main thread — App Group plist read is cheap
+            // but not free, and the panel's first frame is more important
+            // than freshly-populated recents.
+            Task.detached(priority: .userInitiated) {
+                let loaded = EmojiRecents.load()
+                await MainActor.run { recents = loaded }
+            }
+        }
     }
 
     // MARK: - Grid

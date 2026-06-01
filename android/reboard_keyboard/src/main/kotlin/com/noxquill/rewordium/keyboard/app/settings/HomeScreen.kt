@@ -30,6 +30,7 @@ import androidx.compose.material.icons.filled.Language
 import androidx.compose.material.icons.filled.SentimentSatisfiedAlt
 import androidx.compose.material.icons.filled.SmartButton
 import androidx.compose.material.icons.filled.Spellcheck
+import androidx.compose.material.icons.outlined.Brush
 import androidx.compose.material.icons.outlined.Build
 import androidx.compose.material.icons.outlined.Palette
 import androidx.compose.material3.MaterialTheme
@@ -196,6 +197,13 @@ fun HomeScreen() = FlorisScreen {
                 icon = Icons.Default.SentimentSatisfiedAlt,
                 iconTint = MaterialTheme.colorScheme.secondary,
                 onClick = { navController.navigate(Routes.Settings.Media) },
+            )
+            SettingItem(
+                title = "Sticker Studio",
+                subtitle = "Create, edit, and browse stickers",
+                icon = Icons.Outlined.Brush,
+                iconTint = MaterialTheme.colorScheme.primary,
+                onClick = { navController.navigate(Routes.Settings.StickerStudio) },
             )
             SettingItem(
                 title = stringRes(R.string.ext__home__title),
