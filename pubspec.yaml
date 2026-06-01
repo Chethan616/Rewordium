@@ -58,19 +58,26 @@ dependencies:
   firebase_auth: ^6.2.0
   firebase_messaging: ^16.1.2
   google_sign_in: ^7.2.0
-  # Exact pin (no caret) — must stay at 6.1.3.
+  # Cloud Firestore — pinned to the floor of the 6.3.x range.
   #
-  # cloud_firestore 6.2.x+ added FLTPipelineParser.m which calls the new
-  # Pipeline bridge selectors `-initWithRef:firestore:` and
-  # `-initWithCollectionId:`. Those selectors only exist on
-  # firebase-ios-sdk 12.x. Our firebase_core 4.x line pulls in an older
-  # iOS SDK that lacks them, so 6.2.x – 6.4.x all hard-fail the iOS build
-  # with "no visible @interface declares the selector" errors.
+  # Why ^6.3.0 and not 6.1.3 (where we briefly pinned)?
+  #   6.1.3 is incompatible with the current `cloud_firestore_platform_
+  #   interface` 7.x line: 6.1.3 calls `replaceValueWithDelegatesInMap`
+  #   with `Map<String, dynamic>` while 7.x expects `Map<FieldPath,
+  #   dynamic>`. Pinning down breaks the Android Dart compile.
   #
-  # 6.1.3 predates the Pipeline parser entirely and builds clean against
-  # the current firebase-ios-sdk. We don't use Firestore Pipeline anywhere
-  # in lib/, so pinning down costs us nothing.
-  cloud_firestore: 6.1.3
+  # Why 6.3.x then has an iOS issue:
+  #   6.2.0+ added FLTPipelineParser.m which calls Firestore Pipeline
+  #   bridge selectors only present in firebase-ios-sdk 12.x. Our
+  #   firebase_core 4.x line resolves an older iOS SDK that lacks those
+  #   selectors → ARC "no visible @interface declares the selector"
+  #   errors at iOS build time.
+  #
+  # Fix: keep the Dart side current (^6.3.0) so Android builds, and stub
+  # out FLTPipelineParser.m in the iOS CI pipeline before xcodebuild
+  # compiles it. Rewordium doesn't use Firestore Pipelines anywhere in
+  # lib/, so the stub is functionally invisible.
+  cloud_firestore: ^6.3.0
   
   # JWT and Cryptography for FCM OAuth2
   dart_jsonwebtoken: ^3.4.1
