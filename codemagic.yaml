@@ -186,8 +186,8 @@ workflows:
           #   doesn't match its parent app's. Previously this step passed
           #   --build-number="${CM_BUILD_NUMBER:-75}" with a hardcoded 75
           #   fallback, while the keyboard extension's Ruby setup script
-          #   reads `pubspec_build` (currently 78 from `version: 2.9.4+78`).
-          #   Result: Runner = 75, extension = 78 → iOS silently disables
+          #   reads `pubspec_build` (currently 79 from `version: 2.9.5+79`).
+          #   Result: Runner = 75, extension = 79 → iOS silently disables
           #   the keyboard so the user sees a stub (no AI panel, no emoji
           #   panel, no suggestion strip, no spacebar label, globe key skips
           #   to other keyboards instead of staying on Rewordium).
@@ -252,6 +252,64 @@ workflows:
             exit 1
           fi
           echo "OK: Runner.app + RewordiumKeyboard.appex present"
+
+      - name: Diagnose & harden keyboard extension
+        script: |
+          set -e
+          APP="build/ios/iphoneos/Runner.app"
+          EXT="$APP/PlugIns/RewordiumKeyboard.appex"
+
+          echo "=== HOST APP Info.plist ==="
+          /usr/libexec/PlistBuddy -c "Print :CFBundleIdentifier"        "$APP/Info.plist"
+          /usr/libexec/PlistBuddy -c "Print :CFBundleShortVersionString" "$APP/Info.plist"
+          /usr/libexec/PlistBuddy -c "Print :CFBundleVersion"           "$APP/Info.plist"
+
+          echo ""
+          echo "=== EXTENSION Info.plist (before patching) ==="
+          /usr/libexec/PlistBuddy -c "Print :CFBundleIdentifier"        "$EXT/Info.plist"
+          /usr/libexec/PlistBuddy -c "Print :CFBundleShortVersionString" "$EXT/Info.plist"
+          /usr/libexec/PlistBuddy -c "Print :CFBundleVersion"           "$EXT/Info.plist"
+          /usr/libexec/PlistBuddy -c "Print :NSExtension:NSExtensionPrincipalClass" "$EXT/Info.plist"
+
+          # ---------------------------------------------------------------
+          # CRITICAL FIX: Force-sync the extension's version with the host.
+          #
+          # iOS REFUSES to load an app extension whose CFBundleVersion or
+          # CFBundleShortVersionString differs from the host app. The Ruby
+          # setup script injects literal values at project-generation time,
+          # but if the Xcode build system substitutes different values
+          # (e.g. from a stale DerivedData or a CI variable override), the
+          # embedded .appex can end up with a mismatched version.
+          #
+          # This post-build patch reads the ACTUAL values from the host
+          # app's compiled Info.plist and writes them into the extension's
+          # plist. This is the last step before IPA packaging, so it's
+          # authoritative — whatever the host has, the extension will match.
+          # ---------------------------------------------------------------
+          HOST_SHORT=$(/usr/libexec/PlistBuddy -c "Print :CFBundleShortVersionString" "$APP/Info.plist")
+          HOST_BUILD=$(/usr/libexec/PlistBuddy -c "Print :CFBundleVersion" "$APP/Info.plist")
+          HOST_BUNDLE=$(/usr/libexec/PlistBuddy -c "Print :CFBundleIdentifier" "$APP/Info.plist")
+
+          /usr/libexec/PlistBuddy -c "Set :CFBundleShortVersionString $HOST_SHORT" "$EXT/Info.plist"
+          /usr/libexec/PlistBuddy -c "Set :CFBundleVersion $HOST_BUILD"            "$EXT/Info.plist"
+
+          # Ensure extension bundle ID is <host-bundle-id>.keyboard
+          EXPECTED_EXT_BUNDLE="${HOST_BUNDLE}.keyboard"
+          ACTUAL_EXT_BUNDLE=$(/usr/libexec/PlistBuddy -c "Print :CFBundleIdentifier" "$EXT/Info.plist")
+          if [ "$ACTUAL_EXT_BUNDLE" != "$EXPECTED_EXT_BUNDLE" ]; then
+            echo "WARNING: Extension bundle ID mismatch!"
+            echo "  Expected: $EXPECTED_EXT_BUNDLE"
+            echo "  Actual:   $ACTUAL_EXT_BUNDLE"
+            echo "  → Patching to $EXPECTED_EXT_BUNDLE"
+            /usr/libexec/PlistBuddy -c "Set :CFBundleIdentifier $EXPECTED_EXT_BUNDLE" "$EXT/Info.plist"
+          fi
+
+          echo ""
+          echo "=== EXTENSION Info.plist (after patching) ==="
+          /usr/libexec/PlistBuddy -c "Print :CFBundleIdentifier"        "$EXT/Info.plist"
+          /usr/libexec/PlistBuddy -c "Print :CFBundleShortVersionString" "$EXT/Info.plist"
+          /usr/libexec/PlistBuddy -c "Print :CFBundleVersion"           "$EXT/Info.plist"
+          echo "OK: Extension version synced with host"
 
       - name: Package unsigned IPA for Sideloadly
         script: |
