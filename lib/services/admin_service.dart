@@ -178,15 +178,15 @@ class AdminService {
       }
 
       // Get all users count
-      final allUsersSnapshot = await _firestore.collection('users').get();
-      final totalUsers = allUsersSnapshot.size;
+      final allUsersSnapshot = await _firestore.collection('users').count().get();
+      final totalUsers = allUsersSnapshot.count ?? 0;
 
       // Get pro users count
       final proUsersSnapshot = await _firestore
           .collection('users')
           .where('isPro', isEqualTo: true)
-          .get();
-      final proUsers = proUsersSnapshot.size;
+          .count().get();
+      final proUsers = proUsersSnapshot.count ?? 0;
 
       // Calculate free users
       final freeUsers = totalUsers - proUsers;
@@ -202,15 +202,15 @@ class AdminService {
       final activeNowSnapshot = await _firestore
           .collection('users')
           .where('lastActiveAt', isGreaterThanOrEqualTo: activeSince)
-          .get();
+          .count().get();
 
       final dauSnapshot = await _firestore
           .collection('users')
           .where('lastActiveAt', isGreaterThanOrEqualTo: startOfDay)
-          .get();
+          .count().get();
 
-      final activeNow = activeNowSnapshot.size;
-      final dau = dauSnapshot.size;
+      final activeNow = activeNowSnapshot.count ?? 0;
+      final dau = dauSnapshot.count ?? 0;
 
       debugPrint(
           'User statistics: Total: $totalUsers, Pro: $proUsers, Free: $freeUsers, ActiveNow: $activeNow, DAU: $dau');
@@ -328,11 +328,11 @@ class AdminService {
       final activeNowSnapshot = await _firestore
           .collection('users')
           .where('lastActiveAt', isGreaterThanOrEqualTo: activeSince)
-          .get();
+          .count().get();
       final dauSnapshot = await _firestore
           .collection('users')
           .where('lastActiveAt', isGreaterThanOrEqualTo: startOfDay)
-          .get();
+          .count().get();
 
       return {
         'totalApiCalls': (globalData['totalApiCalls'] as num?)?.toInt() ?? 0,
@@ -342,8 +342,8 @@ class AdminService {
         'dailyApiUsage': dailyApiUsageList,
         'leaderboard': leaderboard,
         'trackingStartedAt': trackingStartedAt,
-        'activeNow': activeNowSnapshot.size,
-        'dau': dauSnapshot.size,
+        'activeNow': activeNowSnapshot.count ?? 0,
+        'dau': dauSnapshot.count ?? 0,
         'hasHistoricalData': hasHistoricalData,
       };
     } catch (e) {
@@ -516,7 +516,7 @@ class AdminService {
         // Conversion rate based on filtered pro count when baseline is provided
         'conversionRate': filteredProCount > 0
             ? (filteredProCount /
-                (await _firestore.collection('users').get()).size *
+                ((await _firestore.collection('users').count().get()).count ?? 1) *
                 100)
             : 0.0,
       };
