@@ -32,6 +32,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 
+import com.noxquill.rewordium.keyboard.ime.input.LocalInputFeedbackController
+
 /**
  * Custom micro-animated capsule chip built with Emil Kowalski's design philosophy.
  * Features a subtle press-down bounce effect and highly-refined selection highlights.
@@ -45,6 +47,7 @@ fun CustomChip(
     modifier: Modifier = Modifier,
     content: @Composable () -> Unit,
 ) {
+    val feedbackController = runCatching { LocalInputFeedbackController.current }.getOrNull()
     val interactionSource = remember { MutableInteractionSource() }
     val isPressed = interactionSource.collectIsPressedAsState().value
     val scale = remember { Animatable(1f) }
@@ -72,7 +75,10 @@ fun CustomChip(
             .clickable(
                 interactionSource = interactionSource,
                 indication = null, // Keep it clean by avoiding bulky material ripples
-                onClick = onClick
+                onClick = {
+                    feedbackController?.keyPress()
+                    onClick()
+                }
             )
             .padding(horizontal = 14.dp, vertical = 7.dp),
         contentAlignment = Alignment.Center
