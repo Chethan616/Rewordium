@@ -412,37 +412,54 @@ private fun GifTile(
         // on tap-outside. `focusable = false` keeps the IME alive (the
         // default M3 menu is focusable and the system kills the keyboard
         // when its input view loses focus).
-        DropdownMenu(
-            expanded = menuOpen,
-            onDismissRequest = { menuOpen = false },
-            properties = PopupProperties(focusable = false),
-        ) {
-            DropdownMenuItem(
-                text = {
-                    Text(if (isFavorited) "Remove from favorites" else "Add to favorites")
-                },
-                leadingIcon = {
-                    Icon(
-                        imageVector = if (isFavorited) Icons.Filled.Star else Icons.Outlined.StarBorder,
-                        contentDescription = null,
-                    )
-                },
-                onClick = {
-                    menuOpen = false
-                    onToggleFavorite()
-                },
+        val mediaStyle = org.florisboard.lib.snygg.ui.rememberSnyggThemeQuery(
+            com.noxquill.rewordium.keyboard.ime.theme.FlorisImeUi.Media.elementName
+        )
+        val containerBg = mediaStyle.background(default = androidx.compose.material3.MaterialTheme.colorScheme.surface)
+
+        androidx.compose.material3.MaterialTheme(
+            colorScheme = androidx.compose.material3.MaterialTheme.colorScheme.copy(
+                surface = containerBg,
+                onSurface = fg,
+                surfaceVariant = containerBg,
+                onSurfaceVariant = fg.copy(alpha = 0.8f),
+                primary = accent,
+                surfaceTint = Color.Transparent
             )
-            if (onRemoveRecent != null) {
+        ) {
+            DropdownMenu(
+                expanded = menuOpen,
+                onDismissRequest = { menuOpen = false },
+                properties = PopupProperties(focusable = false),
+                modifier = Modifier.background(containerBg)
+            ) {
                 DropdownMenuItem(
-                    text = { Text("Remove from recents") },
+                    text = {
+                        Text(if (isFavorited) "Remove from favorites" else "Add to favorites")
+                    },
                     leadingIcon = {
-                        Icon(imageVector = Icons.Outlined.Schedule, contentDescription = null)
+                        Icon(
+                            imageVector = if (isFavorited) Icons.Filled.Star else Icons.Outlined.StarBorder,
+                            contentDescription = null,
+                        )
                     },
                     onClick = {
                         menuOpen = false
-                        onRemoveRecent()
+                        onToggleFavorite()
                     },
                 )
+                if (onRemoveRecent != null) {
+                    DropdownMenuItem(
+                        text = { Text("Remove from recents") },
+                        leadingIcon = {
+                            Icon(imageVector = Icons.Outlined.Schedule, contentDescription = null)
+                        },
+                        onClick = {
+                            menuOpen = false
+                            onRemoveRecent()
+                        },
+                    )
+                }
             }
         }
     }

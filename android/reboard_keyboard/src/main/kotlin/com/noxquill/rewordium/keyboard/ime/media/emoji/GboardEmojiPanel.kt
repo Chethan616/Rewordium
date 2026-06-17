@@ -254,6 +254,11 @@ fun GboardEmojiPanel(
             // so the search pill takes precedence. The pill itself looks the
             // same in every mode — tapping routes to whichever
             // [KeyboardManager.MediaSearchMode] matches the active panel.
+            val hintText = if (panelMode == EmojiPanelMode.GIF || panelMode == EmojiPanelMode.STICKER) {
+                "Search on KLIPY"
+            } else {
+                "Search"
+            }
             EmojiPanelHeader(
                 categories = pagerCategories,
                 activeIndex = activeChipIndex,
@@ -262,6 +267,7 @@ fun GboardEmojiPanel(
                 searchPillExpanded = searchPillExpanded,
                 categoryListState = categoryListState,
                 showCategories = panelMode == EmojiPanelMode.EMOJI,
+                hintText = hintText,
                 onBackClick = {
                     inputFeedbackController.keyPress(TextKeyData.UNSPECIFIED)
                     keyboardManager.activeState.imeUiMode = ImeUiMode.TEXT
@@ -399,6 +405,7 @@ private fun EmojiPanelHeader(
     searchPillExpanded: Boolean,
     categoryListState: LazyListState,
     showCategories: Boolean,
+    hintText: String,
     onBackClick: () -> Unit,
     onSearchClick: () -> Unit,
     onCategoryClick: (Int) -> Unit,
@@ -476,7 +483,7 @@ private fun EmojiPanelHeader(
                 if (searchPillExpanded || !showCategories) {
                     Spacer(Modifier.width(8.dp))
                     Text(
-                        text = "Search",
+                        text = hintText,
                         color = fg.copy(alpha = 0.55f),
                         fontSize = 14.sp,
                     )

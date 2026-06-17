@@ -55,6 +55,8 @@ class UserStickerStore(private val context: Context) {
         val mime: String,
         /** Last-touched epoch seconds. Drives recency sort. */
         val t: Long,
+        /** User-created tags/categories for this sticker. */
+        val tags: List<String> = emptyList(),
     )
 
     private val mutex = Mutex()
@@ -115,7 +117,7 @@ class UserStickerStore(private val context: Context) {
      * (tmp + rename) so a process kill leaves either the previous manifest
      * or the new one — never a partial.
      */
-    suspend fun import(sourceUri: Uri, mimeType: String): Entry? = withContext(Dispatchers.IO) {
+    suspend fun import(sourceUri: Uri, mimeType: String, tags: List<String> = emptyList()): Entry? = withContext(Dispatchers.IO) {
         ensureLoaded()
         val ext = mimeToExt(mimeType)
         val id = UUID.randomUUID().toString()
@@ -129,7 +131,7 @@ class UserStickerStore(private val context: Context) {
             outFile.delete()
             return@withContext null
         }
-        val entry = Entry(id, ext, mimeType, System.currentTimeMillis() / 1000)
+        val entry = Entry(id, ext, mimeType, System.currentTimeMillis() / 1000, tags)
         mutex.withLock {
             _entries.value = _entries.value + entry
             writeManifest()

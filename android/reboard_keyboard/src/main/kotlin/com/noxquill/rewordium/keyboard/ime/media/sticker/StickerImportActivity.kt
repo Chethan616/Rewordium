@@ -28,6 +28,7 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -91,10 +92,19 @@ class StickerImportActivity : ComponentActivity() {
         setContent {
             FlorisAppTheme(theme = AppTheme.AUTO) {
                 val uri by pickedUri
+                var tagsText by remember { mutableStateOf("") }
                 if (uri != null) {
                     ImportConfirmationDialog(
-                        onKeep = { commit(uri!!, removeBg = false) },
-                        onRemoveBg = { commit(uri!!, removeBg = true) },
+                        tagsText = tagsText,
+                        onTagsTextChange = { tagsText = it },
+                        onKeep = { 
+                            val tagsList = tagsText.split(",").map { it.trim() }.filter { it.isNotEmpty() }
+                            commit(uri!!, removeBg = false, tags = tagsList) 
+                        },
+                        onRemoveBg = { 
+                            val tagsList = tagsText.split(",").map { it.trim() }.filter { it.isNotEmpty() }
+                            commit(uri!!, removeBg = true, tags = tagsList) 
+                        },
                         onEdit = {
                             CoroutineScope(Dispatchers.Main).launch {
                                 val cachedUri = copyToCache(this@StickerImportActivity, uri!!)
@@ -136,7 +146,7 @@ class StickerImportActivity : ComponentActivity() {
         super.finish()
     }
 
-    private fun commit(uri: Uri, removeBg: Boolean) {
+    private fun commit(uri: Uri, removeBg: Boolean, tags: List<String> = emptyList()) {
         CoroutineScope(Dispatchers.Main).launch {
             try {
                 withContext(Dispatchers.IO) {
@@ -149,7 +159,7 @@ class StickerImportActivity : ComponentActivity() {
                     }
                     val mime = if (removeBg) "image/webp"
                     else contentResolver.getType(uri) ?: "image/webp"
-                    store.import(finalUri, mime)
+                    store.import(finalUri, mime, tags)
                     flogDebug { "StickerImportActivity: imported $finalUri (removeBg=$removeBg)" }
                 }
             } catch (e: Exception) {
@@ -204,6 +214,8 @@ class StickerImportActivity : ComponentActivity() {
  */
 @androidx.compose.runtime.Composable
 private fun ImportConfirmationDialog(
+    tagsText: String,
+    onTagsTextChange: (String) -> Unit,
     onKeep: () -> Unit,
     onRemoveBg: () -> Unit,
     onEdit: () -> Unit,
@@ -213,10 +225,21 @@ private fun ImportConfirmationDialog(
         onDismissRequest = onCancel,
         title = { Text("Make a sticker") },
         text = {
-            Text(
-                text = "Want to cut the subject out of the background or edit it in the Sticker Studio?",
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
+            Column {
+                Text(
+                    text = "Want to cut the subject out of the background or edit it in the Sticker Studio?",
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+                Spacer(modifier = Modifier.height(12.dp))
+                OutlinedTextField(
+                    value = tagsText,
+                    onValueChange = onTagsTextChange,
+                    label = { Text("Tags (comma separated)") },
+                    placeholder = { Text("e.g. John, Reaction, Funny") },
+                    singleLine = true,
+                    modifier = Modifier.fillMaxWidth()
+                )
+            }
         },
         confirmButton = {
             Column(
