@@ -52,7 +52,7 @@ class AIManager(private val context: Context) {
          */
         private fun filterUnwantedResponses(response: String): String? {
             // Strip chain-of-thought <think>...</think> blocks first
-            val cleaned = response.replace(Regex("<think>[\\s\\S]*?</think>", RegexOption.IGNORE_CASE), "").trim()
+            val cleaned = response.replace(Regex("<think>[\\s\\S]*?(?:</think>|$)", RegexOption.IGNORE_CASE), "").trim()
             val lower = cleaned.lowercase()
             val identityPatterns = listOf(
                 "i am an ai", "as an ai", "i am a language model", "i am artificial intelligence",

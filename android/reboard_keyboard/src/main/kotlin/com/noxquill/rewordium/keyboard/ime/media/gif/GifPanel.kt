@@ -54,12 +54,11 @@ import androidx.compose.material.icons.outlined.StarBorder
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
-import androidx.compose.material3.FilterChip
-import androidx.compose.material3.FilterChipDefaults
 import androidx.compose.ui.window.PopupProperties
 import androidx.compose.material3.Icon
-import androidx.compose.material3.SelectableChipColors
 import androidx.compose.material3.Text
+import com.noxquill.rewordium.keyboard.ime.media.CustomChip
+import com.noxquill.rewordium.keyboard.keyboardManager
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -152,9 +151,19 @@ fun GifPanel(
     val favoriteEntries by favoritesStore.entriesFlow.collectAsState()
     val favoriteIds = remember(favoriteEntries) { favoriteEntries.map { it.id }.toSet() }
 
+    val keyboardManager by context.keyboardManager()
+    val mediaSearchQuery by keyboardManager.mediaSearchQuery.collectAsState()
+
     LaunchedEffect(Unit) {
         recentsStore.ensureLoaded()
         favoritesStore.ensureLoaded()
+    }
+
+    LaunchedEffect(mediaSearchQuery) {
+        if (mediaSearchQuery.isNotEmpty()) {
+            query = mediaSearchQuery
+            source = GifSource.Trending
+        }
     }
 
     if (!client.isConfigured && recentEntries.isEmpty() && favoriteEntries.isEmpty()) {
@@ -201,58 +210,64 @@ fun GifPanel(
             contentPadding = PaddingValues(vertical = 6.dp),
         ) {
             item(key = "__recents") {
-                FilterChip(
+                CustomChip(
                     selected = source == GifSource.Recents,
                     onClick = {
                         source = if (source == GifSource.Recents) GifSource.Trending else GifSource.Recents
                     },
-                    label = {},
-                    leadingIcon = {
-                        Icon(
-                            imageVector = Icons.Outlined.Schedule,
-                            contentDescription = "Recents",
-                            modifier = Modifier.size(18.dp),
-                        )
-                    },
-                    colors = gifChipColors(fg, accent),
-                    border = null,
-                )
+                    fg = fg,
+                    accent = accent
+                ) {
+                    Icon(
+                        imageVector = Icons.Outlined.Schedule,
+                        contentDescription = "Recents",
+                        modifier = Modifier.size(18.dp),
+                    )
+                }
             }
             item(key = "__favorites") {
-                FilterChip(
+                CustomChip(
                     selected = source == GifSource.Favorites,
                     onClick = {
                         source = if (source == GifSource.Favorites) GifSource.Trending else GifSource.Favorites
                     },
-                    label = {},
-                    leadingIcon = {
-                        Icon(
-                            imageVector = if (source == GifSource.Favorites) Icons.Filled.Star
-                            else Icons.Outlined.StarBorder,
-                            contentDescription = "Favorites",
-                            modifier = Modifier.size(18.dp),
-                        )
-                    },
-                    colors = gifChipColors(fg, accent),
-                    border = null,
-                )
+                    fg = fg,
+                    accent = accent
+                ) {
+                    Icon(
+                        imageVector = if (source == GifSource.Favorites) Icons.Filled.Star
+                        else Icons.Outlined.StarBorder,
+                        contentDescription = "Favorites",
+                        modifier = Modifier.size(18.dp),
+                    )
+                }
+            }
+            if (query.isNotEmpty() && source == GifSource.Trending) {
+                item(key = "__temp_query") {
+                    CustomChip(
+                        selected = true,
+                        onClick = {
+                            query = ""
+                            keyboardManager.endMediaSearch()
+                        },
+                        fg = fg,
+                        accent = accent
+                    ) {
+                        Text(text = "$query ✕")
+                    }
+                }
             }
             if (categories.isNotEmpty() && source == GifSource.Trending) {
                 items(categories, key = { "cat:${it.name}" }) { category ->
                     val isActive = query.equals(category.name, ignoreCase = true)
-                    FilterChip(
+                    CustomChip(
                         selected = isActive,
                         onClick = { query = if (isActive) "" else category.name },
-                        label = {
-                            Text(
-                                text = category.name.replaceFirstChar { it.uppercase() },
-                                fontSize = 12.sp,
-                                fontWeight = if (isActive) FontWeight.SemiBold else FontWeight.Medium,
-                            )
-                        },
-                        colors = gifChipColors(fg, accent),
-                        border = null,
-                    )
+                        fg = fg,
+                        accent = accent
+                    ) {
+                        Text(text = category.name.replaceFirstChar { it.uppercase() })
+                    }
                 }
             }
         }
@@ -329,17 +344,6 @@ private data class GifGridState(
     val loading: Boolean,
 )
 
-@Composable
-private fun gifChipColors(fg: Color, accent: Color): SelectableChipColors {
-    return FilterChipDefaults.filterChipColors(
-        containerColor = fg.copy(alpha = 0.08f),
-        labelColor = fg.copy(alpha = 0.85f),
-        iconColor = fg.copy(alpha = 0.85f),
-        selectedContainerColor = accent.copy(alpha = 0.28f),
-        selectedLabelColor = fg,
-        selectedLeadingIconColor = fg,
-    )
-}
 
 @Composable
 private fun GifTile(
@@ -500,16 +504,23 @@ private val downloadClient = OkHttpClient.Builder()
 private suspend fun downloadAndStore(
     context: android.content.Context,
     url: String,
+    mimeType: String = "image/gif",
 ): android.net.Uri? = withContext(Dispatchers.IO) {
     try {
         val response = downloadClient.newCall(Request.Builder().url(url).build()).execute()
         response.use { r ->
             if (!r.isSuccessful) return@withContext null
             val body = r.body ?: return@withContext null
-            val id = System.nanoTime()
-            val file = ClipboardFileStorage.getFileForId(context, id)
-            file.outputStream().use { out -> body.byteStream().copyTo(out) }
-            ContentUris.withAppendedId(ClipboardMediaProvider.IMAGE_CLIPS_URI, id)
+            val cache = java.io.File(context.cacheDir, "gif_dl_${System.nanoTime()}.tmp")
+            cache.outputStream().use { out -> body.byteStream().copyTo(out) }
+            val values = android.content.ContentValues(3).apply {
+                put(ClipboardMediaProvider.Columns.MediaUri, android.net.Uri.fromFile(cache).toString())
+                put(ClipboardMediaProvider.Columns.MimeTypes, mimeType)
+                put(android.provider.OpenableColumns.DISPLAY_NAME, "media")
+            }
+            val result = context.contentResolver.insert(ClipboardMediaProvider.IMAGE_CLIPS_URI, values)
+            cache.delete()
+            result
         }
     } catch (e: Exception) {
         flogDebug { "downloadAndStore failed: ${e.message}" }

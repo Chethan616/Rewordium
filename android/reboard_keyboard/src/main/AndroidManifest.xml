@@ -134,7 +134,17 @@
         <activity
             android:name="com.noxquill.rewordium.keyboard.ime.media.sticker.StickerImportActivity"
             android:theme="@android:style/Theme.Translucent.NoTitleBar"
+            android:taskAffinity=""
+            android:excludeFromRecents="true"
+            android:launchMode="singleInstance"
             android:exported="false"/>
+
+        <!-- Android Image Cropper Activity with AppCompat theme to ensure the Action Bar is visible -->
+        <activity
+            android:name="com.canhub.cropper.CropImageActivity"
+            android:theme="@style/Theme.AppCompat"
+            android:exported="false"
+            tools:replace="android:exported"/>
 
         <!-- Clipboard Media File Provider -->
         <provider

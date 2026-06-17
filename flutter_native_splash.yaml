@@ -1,21 +1,21 @@
 # Flutter Native Splash Configuration
-# Simple white splash that transitions quickly to Flutter splash
+# Custom Google-style splash screen with centered logo
 
 flutter_native_splash:
-  # White background
+  # Base background color
   color: "#FFFFFF"
-  
-  # Dark mode background  
   color_dark: "#1E1E1E"
-
-  # No image - just plain white/dark background for fastest transition
-  # The panda and "Rewordium" text will show in the Flutter splash screen
-  # This avoids the Android 12+ image cropping issues
   
+  # Centered logo
+  image: Re_splash.png
+  image_dark: Re_splash.png
+
   # Android 12+ specific settings
   android_12:
     color: "#FFFFFF"
     color_dark: "#1E1E1E"
+    image: Re_splash.png
+    image_dark: Re_splash.png
 
   # Platform specific settings
   android: true

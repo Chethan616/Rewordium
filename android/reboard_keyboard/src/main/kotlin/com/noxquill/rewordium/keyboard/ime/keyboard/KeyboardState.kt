@@ -228,6 +228,9 @@ open class KeyboardState protected constructor(open var rawValue: ULong) {
     
     // Name of the detected AI app (for display in prompt enhancer UI)
     var aiAppName: String? = null
+
+    // Active media panel mode (Emoji, GIF, Sticker, Emoticon) to persist across window states
+    var activeMediaMode: String = "EMOJI"
 }
 
 class ObservableKeyboardState private constructor(

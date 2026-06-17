@@ -218,7 +218,15 @@ fun GboardEmojiPanel(
     val categoryListState = rememberLazyListState()
 
     // Panel mode state — lifted here so the header can adapt its search pill.
-    var panelMode by remember { mutableStateOf(EmojiPanelMode.EMOJI) }
+    var panelMode by remember {
+        mutableStateOf(
+            try {
+                EmojiPanelMode.valueOf(keyboardManager.activeState.activeMediaMode)
+            } catch (e: Exception) {
+                EmojiPanelMode.EMOJI
+            }
+        )
+    }
 
     LaunchedEffect(lazyGridState, categoryListState) {
         launch {
@@ -363,6 +371,7 @@ fun GboardEmojiPanel(
                 onModeChange = {
                     inputFeedbackController.keyPress(TextKeyData.UNSPECIFIED)
                     panelMode = it
+                    keyboardManager.activeState.activeMediaMode = it.name
                 },
                 onAbcClick = {
                     inputFeedbackController.keyPress(TextKeyData.UNSPECIFIED)

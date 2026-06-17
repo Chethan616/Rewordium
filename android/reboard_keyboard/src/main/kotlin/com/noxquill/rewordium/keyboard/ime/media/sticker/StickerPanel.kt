@@ -27,6 +27,7 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
@@ -55,12 +56,12 @@ import androidx.compose.material.icons.outlined.Schedule
 import androidx.compose.material.icons.outlined.StarBorder
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
-import androidx.compose.material3.FilterChip
 import androidx.compose.ui.window.PopupProperties
-import androidx.compose.material3.FilterChipDefaults
 import androidx.compose.material3.Icon
-import androidx.compose.material3.SelectableChipColors
 import androidx.compose.material3.Text
+import com.noxquill.rewordium.keyboard.ime.media.CustomChip
+import com.noxquill.rewordium.keyboard.keyboardManager
+import com.noxquill.rewordium.keyboard.ime.media.StickerSearchResults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -83,10 +84,14 @@ import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
 import com.noxquill.rewordium.keyboard.ime.clipboard.provider.ClipboardFileStorage
 import com.noxquill.rewordium.keyboard.ime.clipboard.provider.ClipboardMediaProvider
+import com.noxquill.rewordium.keyboard.ime.media.gif.KlipyClient
 import com.noxquill.rewordium.keyboard.lib.devtools.flogDebug
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import okhttp3.OkHttpClient
+import okhttp3.Request
+import java.util.concurrent.TimeUnit
 
 /**
  * Sticker picker — horizontal pack-tab strip ("User", then each installed
@@ -131,10 +136,17 @@ fun StickerPanel(
     val favoriteEntries by favoritesStore.entriesFlow.collectAsState()
     val favoriteKeys = remember(favoriteEntries) { favoriteEntries.map { it.ref.key }.toSet() }
 
+    val keyboardManager by context.keyboardManager()
+    val mediaSearchQuery by keyboardManager.mediaSearchQuery.collectAsState()
+
     var waPacks by remember { mutableStateOf<List<WhatsAppStickerReader.Pack>>(emptyList()) }
     var premadeIndex by remember { mutableStateOf<List<PremadeEntry>>(emptyList()) }
     var selectedTab by remember { mutableStateOf(0) }
     val dim = fg.copy(alpha = 0.55f)
+
+    // Community stickers (KLIPY API)
+    val klipyClient = remember { KlipyClient() }
+    var communityStickers by remember { mutableStateOf<List<KlipyClient.StickerResult>>(emptyList()) }
 
     LaunchedEffect(Unit) {
         userStore.ensureLoaded()
@@ -142,15 +154,19 @@ fun StickerPanel(
         favoritesStore.ensureLoaded()
         waPacks = whatsapp.packs()
         premadeIndex = withContext(Dispatchers.IO) { loadPremadeIndex(context) }
+        if (klipyClient.isConfigured) {
+            communityStickers = klipyClient.stickerTrending()
+        }
     }
 
     // Build the tab strip. Recents + Favorites pin at the start (Gboard
     // style); then "User", "Premade" (bundled Fluent UI Emoji), then each
     // installed WhatsApp pack.
-    val tabs by remember(userEntries, waPacks, premadeIndex) {
+    val tabs by remember(userEntries, waPacks, premadeIndex, klipyClient.isConfigured) {
         derivedStateOf { buildList {
             add(TabSpec.Recents)
             add(TabSpec.Favorites)
+            if (klipyClient.isConfigured) add(TabSpec.Community)
             add(TabSpec.User)
             if (premadeIndex.isNotEmpty()) add(TabSpec.Premade)
             waPacks.forEachIndexed { i, pack -> add(TabSpec.WhatsApp(i, pack)) }
@@ -206,7 +222,7 @@ fun StickerPanel(
                     // into ClipboardFileStorage.
                     clonePremadeAssetToClipboardStore(context, ref.slug)
                 } else {
-                    cloneToClipboardStore(context, resolved.model)
+                    cloneToClipboardStore(context, resolved.model, resolved.mime)
                 }
             } ?: return@launch
             onStickerPicked(uri, resolved.mime, resolved.description)
@@ -233,157 +249,196 @@ fun StickerPanel(
     }
 
     Column(modifier = modifier.fillMaxSize()) {
-        // M3 chip strip. Recents + Favorites are FilterChip icon-only tabs
-        // at the start, then "User" + each WhatsApp pack as labeled chips.
-        // FilterChip handles the selected surface tint, label tint, and
-        // ripple uniformly so all the chips read as one M3 tab strip.
-        LazyRow(
-            modifier = Modifier.fillMaxWidth().padding(horizontal = 8.dp, vertical = 6.dp),
-            horizontalArrangement = Arrangement.spacedBy(6.dp),
-        ) {
-            items(tabs) { tab ->
-                val idx = tabs.indexOf(tab)
-                val isActive = idx == selectedTab
-                when (tab) {
-                    TabSpec.Recents -> FilterChip(
-                        selected = isActive,
-                        onClick = { selectedTab = idx },
-                        label = {},
-                        leadingIcon = {
-                            Icon(
-                                imageVector = Icons.Outlined.Schedule,
-                                contentDescription = "Recents",
-                                modifier = Modifier.size(18.dp),
-                            )
-                        },
-                        colors = stickerChipColors(fg, accent),
-                        border = null,
-                    )
-                    TabSpec.Favorites -> FilterChip(
-                        selected = isActive,
-                        onClick = { selectedTab = idx },
-                        label = {},
-                        leadingIcon = {
-                            Icon(
-                                imageVector = if (isActive) Icons.Filled.Star else Icons.Outlined.StarBorder,
-                                contentDescription = "Favorites",
-                                modifier = Modifier.size(18.dp),
-                            )
-                        },
-                        colors = stickerChipColors(fg, accent),
-                        border = null,
-                    )
-                    else -> FilterChip(
-                        selected = isActive,
-                        onClick = { selectedTab = idx },
-                        label = {
-                            Text(
-                                text = tab.label(),
-                                fontSize = 12.sp,
-                                fontWeight = if (isActive) FontWeight.SemiBold else FontWeight.Medium,
-                            )
-                        },
-                        colors = stickerChipColors(fg, accent),
-                        border = null,
-                    )
+        if (mediaSearchQuery.isNotEmpty()) {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 12.dp, vertical = 8.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween,
+            ) {
+                Text(
+                    text = "Search results for \"$mediaSearchQuery\"",
+                    color = fg,
+                    fontSize = 14.sp,
+                    fontWeight = FontWeight.SemiBold,
+                )
+                CustomChip(
+                    selected = true,
+                    onClick = { keyboardManager.endMediaSearch() },
+                    fg = fg,
+                    accent = accent
+                ) {
+                    Text(text = "Clear ✕")
                 }
             }
-        }
+            Box(modifier = Modifier.weight(1f)) {
+                StickerSearchResults(
+                    query = mediaSearchQuery,
+                    fg = fg,
+                    accent = accent,
+                    onStickerPicked = onStickerPicked,
+                )
+            }
+        } else {
+            // M3 chip strip. Recents + Favorites are FilterChip icon-only tabs
+            // at the start, then "User" + each WhatsApp pack as labeled chips.
+            // FilterChip handles the selected surface tint, label tint, and
+            // ripple uniformly so all the chips read as one M3 tab strip.
+            LazyRow(
+                modifier = Modifier.fillMaxWidth().padding(horizontal = 8.dp, vertical = 6.dp),
+                horizontalArrangement = Arrangement.spacedBy(6.dp),
+            ) {
+                items(tabs) { tab ->
+                    val idx = tabs.indexOf(tab)
+                    val isActive = idx == selectedTab
+                    CustomChip(
+                        selected = isActive,
+                        onClick = { selectedTab = idx },
+                        fg = fg,
+                        accent = accent
+                    ) {
+                        when (tab) {
+                            TabSpec.Recents -> {
+                                Icon(
+                                    imageVector = Icons.Outlined.Schedule,
+                                    contentDescription = "Recents",
+                                    modifier = Modifier.size(18.dp),
+                                )
+                            }
+                            TabSpec.Favorites -> {
+                                Icon(
+                                    imageVector = if (isActive) Icons.Filled.Star else Icons.Outlined.StarBorder,
+                                    contentDescription = "Favorites",
+                                    modifier = Modifier.size(18.dp),
+                                )
+                            }
+                            else -> {
+                                Text(text = tab.label())
+                            }
+                        }
+                    }
+                }
+            }
 
-        val active = tabs.getOrNull(selectedTab) ?: TabSpec.Recents
-        AnimatedContent(
-            targetState = active,
-            transitionSpec = { fadeIn(tween(180)) togetherWith fadeOut(tween(120)) },
-            contentKey = { tabs.indexOf(it) },
-            label = "sticker-tab",
-        ) { tabContent ->
-            when (tabContent) {
-                TabSpec.Recents -> CollectionGrid(
-                    refs = recentEntries.map { it.ref },
-                    emptyKind = EmptyKind.Recents,
-                    fg = fg,
-                    accent = accent,
-                    favoriteKeys = favoriteKeys,
-                    resolve = ::resolveRef,
-                    onPick = { ref, resolved -> onCommit(ref, resolved) },
-                    onToggleFavorite = onToggleFavorite,
-                    onRemoveRecent = onRemoveRecent,
-                )
-                TabSpec.Favorites -> CollectionGrid(
-                    refs = favoriteEntries.map { it.ref },
-                    emptyKind = EmptyKind.Favorites,
-                    fg = fg,
-                    accent = accent,
-                    favoriteKeys = favoriteKeys,
-                    resolve = ::resolveRef,
-                    onPick = { ref, resolved -> onCommit(ref, resolved) },
-                    onToggleFavorite = onToggleFavorite,
-                    onRemoveRecent = null,
-                )
-                TabSpec.User -> UserGrid(
-                    entries = userEntries,
-                    fg = fg, accent = accent,
-                    favoriteKeys = favoriteKeys,
-                    onAddClick = {
-                        // Launch the transparent helper Activity which can use
-                        // the system image picker and forward the result to
-                        // UserStickerStore. InputMethodService cannot host
-                        // ActivityResult contracts directly.
-                        try {
-                            val intent = Intent(context, StickerImportActivity::class.java)
-                            intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-                            context.startActivity(intent)
-                        } catch (e: Exception) {
-                            flogDebug { "StickerPanel: Failed to launch picker: ${e.message}" }
-                            Toast.makeText(context, "Cannot open image picker", Toast.LENGTH_SHORT).show()
-                        }
-                    },
-                    onPick = { entry ->
-                        val ref = StickerRef.User(entry.id)
-                        scope.launch {
-                            userStore.touch(entry)
-                            recentsStore.add(ref)
-                            val file = userStore.fileFor(entry)
-                            if (!file.exists()) return@launch
-                            val uri = withContext(Dispatchers.IO) {
-                                cloneToClipboardStore(context, Uri.fromFile(file))
-                            } ?: return@launch
-                            onStickerPicked(uri, entry.mime, "Sticker")
-                        }
-                    },
-                    onToggleFavorite = { entry -> onToggleFavorite(StickerRef.User(entry.id)) },
-                    onDelete = onDeleteUser,
-                )
-                TabSpec.Premade -> CollectionGrid(
-                    refs = premadeIndex.map { StickerRef.Premade(it.slug) },
-                    emptyKind = EmptyKind.Recents, // never visible — we hide
-                    fg = fg,
-                    accent = accent,
-                    favoriteKeys = favoriteKeys,
-                    resolve = ::resolveRef,
-                    onPick = { ref, resolved -> onCommit(ref, resolved) },
-                    onToggleFavorite = onToggleFavorite,
-                    onRemoveRecent = null,
-                )
-                is TabSpec.WhatsApp -> WhatsAppGrid(
-                    pack = tabContent.pack,
-                    fg = fg,
-                    favoriteKeys = favoriteKeys,
-                    accent = accent,
-                    onPick = { sticker ->
-                        val ref = StickerRef.WhatsApp(sticker.uri.toString(), sticker.emojis)
-                        scope.launch {
-                            recentsStore.add(ref)
-                            val uri = withContext(Dispatchers.IO) {
-                                cloneToClipboardStore(context, sticker.uri)
-                            } ?: return@launch
-                            onStickerPicked(uri, "image/webp", sticker.emojis.ifBlank { "Sticker" })
-                        }
-                    },
-                    onToggleFavorite = { sticker ->
-                        onToggleFavorite(StickerRef.WhatsApp(sticker.uri.toString(), sticker.emojis))
-                    },
-                )
+            val active = tabs.getOrNull(selectedTab) ?: TabSpec.Recents
+            AnimatedContent(
+                targetState = active,
+                transitionSpec = { fadeIn(tween(180)) togetherWith fadeOut(tween(120)) },
+                contentKey = { tabs.indexOf(it) },
+                label = "sticker-tab",
+            ) { tabContent ->
+                when (tabContent) {
+                    TabSpec.Recents -> CollectionGrid(
+                        refs = recentEntries.map { it.ref },
+                        emptyKind = EmptyKind.Recents,
+                        fg = fg,
+                        accent = accent,
+                        favoriteKeys = favoriteKeys,
+                        resolve = ::resolveRef,
+                        onPick = { ref, resolved -> onCommit(ref, resolved) },
+                        onToggleFavorite = onToggleFavorite,
+                        onRemoveRecent = onRemoveRecent,
+                    )
+                    TabSpec.Favorites -> CollectionGrid(
+                        refs = favoriteEntries.map { it.ref },
+                        emptyKind = EmptyKind.Favorites,
+                        fg = fg,
+                        accent = accent,
+                        favoriteKeys = favoriteKeys,
+                        resolve = ::resolveRef,
+                        onPick = { ref, resolved -> onCommit(ref, resolved) },
+                        onToggleFavorite = onToggleFavorite,
+                        onRemoveRecent = null,
+                    )
+                    TabSpec.User -> UserGrid(
+                        entries = userEntries,
+                        fg = fg, accent = accent,
+                        favoriteKeys = favoriteKeys,
+                        onAddClick = {
+                            // Launch the transparent helper Activity which can use
+                            // the system image picker and forward the result to
+                            // UserStickerStore. InputMethodService cannot host
+                            // ActivityResult contracts directly.
+                            try {
+                                com.noxquill.rewordium.keyboard.FlorisImeService.shouldPreserveMediaUiModeOnce = true
+                                val intent = Intent(context, StickerImportActivity::class.java)
+                                intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                                context.startActivity(intent)
+                            } catch (e: Exception) {
+                                flogDebug { "StickerPanel: Failed to launch picker: ${e.message}" }
+                                Toast.makeText(context, "Cannot open image picker", Toast.LENGTH_SHORT).show()
+                            }
+                        },
+                        onPick = { entry ->
+                            val ref = StickerRef.User(entry.id)
+                            scope.launch {
+                                userStore.touch(entry)
+                                recentsStore.add(ref)
+                                val file = userStore.fileFor(entry)
+                                if (!file.exists()) return@launch
+                                val uri = withContext(Dispatchers.IO) {
+                                    cloneToClipboardStore(context, Uri.fromFile(file), entry.mime)
+                                } ?: return@launch
+                                onStickerPicked(uri, entry.mime, "Sticker")
+                            }
+                        },
+                        onToggleFavorite = { entry -> onToggleFavorite(StickerRef.User(entry.id)) },
+                        onDelete = onDeleteUser,
+                    )
+                    TabSpec.Premade -> CollectionGrid(
+                        refs = premadeIndex.map { StickerRef.Premade(it.slug) },
+                        emptyKind = EmptyKind.Recents, // never visible — we hide
+                        fg = fg,
+                        accent = accent,
+                        favoriteKeys = favoriteKeys,
+                        resolve = ::resolveRef,
+                        onPick = { ref, resolved -> onCommit(ref, resolved) },
+                        onToggleFavorite = onToggleFavorite,
+                        onRemoveRecent = null,
+                    )
+                    is TabSpec.WhatsApp -> WhatsAppGrid(
+                        pack = tabContent.pack,
+                        fg = fg,
+                        favoriteKeys = favoriteKeys,
+                        accent = accent,
+                        onPick = { sticker ->
+                            val ref = StickerRef.WhatsApp(sticker.uri.toString(), sticker.emojis)
+                            scope.launch {
+                                recentsStore.add(ref)
+                                val uri = withContext(Dispatchers.IO) {
+                                    cloneToClipboardStore(context, sticker.uri, "image/webp")
+                                } ?: return@launch
+                                onStickerPicked(uri, "image/webp", sticker.emojis.ifBlank { "Sticker" })
+                            }
+                        },
+                        onToggleFavorite = { sticker ->
+                            onToggleFavorite(StickerRef.WhatsApp(sticker.uri.toString(), sticker.emojis))
+                        },
+                    )
+                    TabSpec.Community -> CommunityGrid(
+                        stickers = communityStickers,
+                        fg = fg,
+                        accent = accent,
+                        onPick = { sticker ->
+                            scope.launch {
+                                val uri = withContext(Dispatchers.IO) {
+                                    downloadStickerAndStore(context, sticker.stickerUrl)
+                                } ?: return@launch
+                                onStickerPicked(uri, "image/webp", sticker.contentDescription.ifBlank { "Sticker" })
+                            }
+                        },
+                        onSearch = { query ->
+                            scope.launch {
+                                communityStickers = if (query.isBlank()) {
+                                    klipyClient.stickerTrending()
+                                } else {
+                                    klipyClient.stickerSearch(query)
+                                }
+                            }
+                        },
+                    )
+                }
             }
         }
     }
@@ -395,6 +450,7 @@ private sealed interface TabSpec {
     fun label(): String
     object Recents : TabSpec { override fun label() = "Recents" }
     object Favorites : TabSpec { override fun label() = "Favorites" }
+    object Community : TabSpec { override fun label() = "Community" }
     object User : TabSpec { override fun label() = "User" }
     object Premade : TabSpec { override fun label() = "Premade" }
     data class WhatsApp(val index: Int, val pack: WhatsAppStickerReader.Pack) : TabSpec {
@@ -438,7 +494,7 @@ private suspend fun clonePremadeAssetToClipboardStore(
         java.io.FileOutputStream(cache).use { out ->
             bitmap.compress(android.graphics.Bitmap.CompressFormat.WEBP_LOSSLESS, 100, out)
         }
-        val cloned = cloneToClipboardStore(context, Uri.fromFile(cache))
+        val cloned = cloneToClipboardStore(context, Uri.fromFile(cache), "image/webp")
         cache.delete()
         cloned
     } catch (e: Exception) {
@@ -454,17 +510,6 @@ private data class ResolvedSticker(
     val description: String,
 )
 
-@Composable
-private fun stickerChipColors(fg: Color, accent: Color): SelectableChipColors {
-    return FilterChipDefaults.filterChipColors(
-        containerColor = fg.copy(alpha = 0.08f),
-        labelColor = fg.copy(alpha = 0.85f),
-        iconColor = fg.copy(alpha = 0.85f),
-        selectedContainerColor = accent.copy(alpha = 0.28f),
-        selectedLabelColor = fg,
-        selectedLeadingIconColor = fg,
-    )
-}
 
 @Composable
 private fun CollectionGrid(
@@ -801,24 +846,100 @@ private fun WhatsAppGrid(
     }
 }
 
+@Composable
+private fun CommunityGrid(
+    stickers: List<KlipyClient.StickerResult>,
+    fg: Color,
+    accent: Color,
+    onPick: (KlipyClient.StickerResult) -> Unit,
+    onSearch: (String) -> Unit,
+) {
+    val dim = fg.copy(alpha = 0.55f)
+    if (stickers.isEmpty()) {
+        Box(
+            modifier = Modifier.fillMaxSize().padding(24.dp),
+            contentAlignment = Alignment.Center,
+        ) {
+            Text(
+                text = "No community stickers found.",
+                color = dim,
+                fontSize = 13.sp,
+            )
+        }
+        return
+    }
+    LazyVerticalGrid(
+        columns = GridCells.Adaptive(88.dp),
+        modifier = Modifier.fillMaxSize().padding(horizontal = 8.dp),
+        verticalArrangement = Arrangement.spacedBy(8.dp),
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+        contentPadding = PaddingValues(vertical = 8.dp),
+    ) {
+        items(stickers, key = { it.id }) { sticker ->
+            StickerTile(
+                model = sticker.previewUrl,
+                fg = fg,
+                accent = accent,
+                isFavorited = false,
+                onTap = { onPick(sticker) },
+                onToggleFavorite = {},
+                onRemoveRecent = null,
+                onDelete = null,
+            )
+        }
+    }
+}
+
+private val stickerDownloadClient = OkHttpClient.Builder()
+    .callTimeout(10, TimeUnit.SECONDS)
+    .connectTimeout(4, TimeUnit.SECONDS)
+    .readTimeout(8, TimeUnit.SECONDS)
+    .build()
+
+private suspend fun downloadStickerAndStore(
+    context: android.content.Context,
+    url: String,
+): Uri? = withContext(Dispatchers.IO) {
+    try {
+        val response = stickerDownloadClient.newCall(Request.Builder().url(url).build()).execute()
+        response.use { r ->
+            if (!r.isSuccessful) return@withContext null
+            val body = r.body ?: return@withContext null
+            val cache = java.io.File(context.cacheDir, "sticker_dl_${System.nanoTime()}.tmp")
+            cache.outputStream().use { out -> body.byteStream().copyTo(out) }
+            val values = android.content.ContentValues(3).apply {
+                put(ClipboardMediaProvider.Columns.MediaUri, Uri.fromFile(cache).toString())
+                put(ClipboardMediaProvider.Columns.MimeTypes, "image/webp")
+                put(android.provider.OpenableColumns.DISPLAY_NAME, "sticker")
+            }
+            val result = context.contentResolver.insert(ClipboardMediaProvider.IMAGE_CLIPS_URI, values)
+            cache.delete()
+            result
+        }
+    } catch (e: Exception) {
+        flogDebug { "downloadStickerAndStore failed: ${e.message}" }
+        null
+    }
+}
+
 /**
- * Copies a file/content URI's bytes into [ClipboardFileStorage] and returns
- * the resulting clipboard-provider URI. We do this on commit because
- * forwarding a foreign content URI (e.g. WhatsApp's) to a third-party
- * editor doesn't carry permission cleanly — the keyboard's own provider
- * grants read access via `INPUT_CONTENT_GRANT_READ_URI_PERMISSION`.
+ * Copies a file/content URI's bytes into [ClipboardFileStorage] **and**
+ * registers the entry with [ClipboardMediaProvider] so that `getType(uri)`
+ * returns the correct MIME type. Without this registration, apps like
+ * WhatsApp reject the content because `getType()` returns null.
  */
 private suspend fun cloneToClipboardStore(
     context: android.content.Context,
     source: Uri,
+    mimeType: String = "image/webp",
 ): Uri? = withContext(Dispatchers.IO) {
     try {
-        val id = System.nanoTime()
-        val file = ClipboardFileStorage.getFileForId(context, id)
-        context.contentResolver.openInputStream(source)?.use { input ->
-            file.outputStream().use { output -> input.copyTo(output) }
-        } ?: return@withContext null
-        ContentUris.withAppendedId(ClipboardMediaProvider.IMAGE_CLIPS_URI, id)
+        val values = android.content.ContentValues(3).apply {
+            put(ClipboardMediaProvider.Columns.MediaUri, source.toString())
+            put(ClipboardMediaProvider.Columns.MimeTypes, mimeType)
+            put(android.provider.OpenableColumns.DISPLAY_NAME, "sticker")
+        }
+        context.contentResolver.insert(ClipboardMediaProvider.IMAGE_CLIPS_URI, values)
     } catch (e: Exception) {
         flogDebug { "cloneToClipboardStore failed: ${e.message}" }
         null

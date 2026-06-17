@@ -135,6 +135,7 @@ dev_dependencies:
   # package. See that file for information about deactivating specific lint
   # rules and activating additional ones.
   flutter_lints: ^6.0.0
+  flutter_native_splash: ^2.4.8
 
 # Force archive v4 so pdfrx and lottie resolve (lottie 2.x pins archive ^3 but works fine with 4)
 dependency_overrides:

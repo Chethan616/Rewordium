@@ -126,12 +126,11 @@ class InputFeedbackController private constructor(private val ims: InputMethodSe
                 } else {
                     HapticFeedbackConstants.KEYBOARD_TAP
                 }
-                val didPerform = view.performHapticFeedback(hfc,
+                view.performHapticFeedback(hfc,
                     HapticFeedbackConstants.FLAG_IGNORE_VIEW_SETTING or
                         HapticFeedbackConstants.FLAG_IGNORE_GLOBAL_SETTING
                 )
-                if (didPerform) return@launch
-                // If not performed fall back to using the vibrator directly
+                return@launch
             }
 
             vibrator.vibrate(

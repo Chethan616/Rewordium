@@ -160,6 +160,23 @@ class KeyboardManager(context: Context) : InputKeyEventReceiver {
         refreshEmojiKeyVisibility()
     }
 
+    fun commitMediaSearch() {
+        val currentMode = _mediaSearchMode.value
+        if (currentMode == MediaSearchMode.GIF || currentMode == MediaSearchMode.STICKER) {
+            activeState.imeUiMode = com.noxquill.rewordium.keyboard.ime.ImeUiMode.MEDIA
+            if (currentMode == MediaSearchMode.GIF) {
+                activeState.activeMediaMode = "GIF"
+            } else {
+                activeState.activeMediaMode = "STICKER"
+            }
+            _mediaSearchMode.value = MediaSearchMode.NONE
+            _emojiSearchQuery.value = null
+            refreshEmojiKeyVisibility()
+        } else {
+            endMediaSearch()
+        }
+    }
+
     fun appendToEmojiSearch(text: String) {
         if (text.isEmpty()) return
         if (_mediaSearchMode.value == MediaSearchMode.NONE) return
@@ -893,7 +910,10 @@ class KeyboardManager(context: Context) : InputKeyEventReceiver {
             when (data.code) {
                 KeyCode.DELETE -> { backspaceEmojiSearch(); return@batchEdit }
                 KeyCode.SPACE -> { appendToEmojiSearch(" "); return@batchEdit }
-                KeyCode.ENTER -> { endEmojiSearch(); return@batchEdit }
+                KeyCode.ENTER -> {
+                    commitMediaSearch()
+                    return@batchEdit
+                }
                 KeyCode.SHIFT,
                 KeyCode.CAPS_LOCK,
                 KeyCode.VIEW_CHARACTERS,

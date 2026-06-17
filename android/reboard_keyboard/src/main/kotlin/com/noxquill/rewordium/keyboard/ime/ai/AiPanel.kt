@@ -66,6 +66,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
@@ -138,7 +139,7 @@ fun AiPanel(
     val surfaceColor = smartbarStyle.background()
     val onSurface = keyStyle.foreground()
     val primary = smartbarStyle.foreground().takeIf { it.alpha > 0f } ?: onSurface
-    val onPrimary = bgColor
+    val onPrimary = if (primary.luminance() > 0.5f) Color.Black else Color.White
     val outline = onSurface.copy(alpha = 0.14f)
     val surfaceVariant = surfaceColor.copy(alpha = 0.55f)
     val onSurfaceVar = onSurface.copy(alpha = 0.70f)
@@ -433,12 +434,12 @@ private fun ModeSegmented(
             modes.forEach { mode ->
                 val isSelected = selected == mode
                 val segBg by animateColorAsState(
-                    if (isSelected) accent else Color.Transparent,
+                    if (isSelected) accent.copy(alpha = 0.18f) else Color.Transparent,
                     tween(220),
                     label = "modeBg",
                 )
                 val segFg by animateColorAsState(
-                    if (isSelected) onAccent else fgMuted,
+                    if (isSelected) accent else fgMuted,
                     tween(220),
                     label = "modeFg",
                 )

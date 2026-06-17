@@ -40,6 +40,7 @@ import android.widget.FrameLayout
 import android.widget.LinearLayout
 import android.widget.inline.InlinePresentationSpec
 import androidx.annotation.RequiresApi
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -51,6 +52,7 @@ import androidx.compose.foundation.layout.safeDrawingPadding
 import androidx.compose.foundation.layout.wrapContentHeight
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -158,6 +160,13 @@ private const val KEY_PARAPHRASER_ENABLED = "flutter.paraphraser_enabled"
  */
 class FlorisImeService : LifecycleInputMethodService() {
     companion object {
+        @Volatile
+        var shouldPreserveMediaUiModeOnce: Boolean = false
+
+        fun currentInstance(): FlorisImeService? {
+            return FlorisImeServiceReference.get()
+        }
+
         private val InlineSuggestionUiSmallestSize = Size(0, 0)
         private val InlineSuggestionUiBiggestSize = Size(Int.MAX_VALUE, Int.MAX_VALUE)
 
@@ -409,8 +418,12 @@ class FlorisImeService : LifecycleInputMethodService() {
             smartReplyEngine.clearCache()
         }
         activeState.batchEdit {
-            if (activeState.imeUiMode != ImeUiMode.CLIPBOARD || prefs.clipboard.historyHideOnNextTextField.get()) {
-                activeState.imeUiMode = ImeUiMode.TEXT
+            if (shouldPreserveMediaUiModeOnce) {
+                shouldPreserveMediaUiModeOnce = false
+            } else {
+                if (activeState.imeUiMode != ImeUiMode.CLIPBOARD || prefs.clipboard.historyHideOnNextTextField.get()) {
+                    activeState.imeUiMode = ImeUiMode.TEXT
+                }
             }
             activeState.isSelectionMode = editorInfo.initialSelection.isSelectionMode
             editorInstance.handleStartInputView(editorInfo, isRestart = restarting)
@@ -561,7 +574,9 @@ class FlorisImeService : LifecycleInputMethodService() {
         }
         isWindowShown = false
         activeState.batchEdit {
-            activeState.imeUiMode = ImeUiMode.TEXT
+            if (!shouldPreserveMediaUiModeOnce) {
+                activeState.imeUiMode = ImeUiMode.TEXT
+            }
             activeState.isActionsOverflowVisible = false
             activeState.isActionsEditorVisible = false
         }
@@ -719,8 +734,13 @@ class FlorisImeService : LifecycleInputMethodService() {
             ProvideKeyboardRowBaseHeight {
                 CompositionLocalProvider(LocalInputFeedbackController provides inputFeedbackController) {
                     FlorisImeTheme {
+                        val windowStyle = rememberSnyggThemeQuery(FlorisImeUi.Window.elementName)
+                        val windowBg = windowStyle.background(default = MaterialTheme.colorScheme.surface)
                         // Do not apply system bar padding here yet, we want to draw it ourselves
-                        Column(modifier = Modifier.fillMaxWidth()) {
+                        Column(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                        ) {
                             if (!(isFullscreenUiMode && isExtractUiShown)) {
                                 DevtoolsOverlay(
                                     modifier = Modifier
@@ -728,8 +748,14 @@ class FlorisImeService : LifecycleInputMethodService() {
                                         .weight(1f),
                                 )
                             }
-                            ImeUi()
-                            SystemUiIme()
+                            Column(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .background(windowBg)
+                            ) {
+                                ImeUi()
+                                SystemUiIme()
+                            }
                         }
                     }
                 }
