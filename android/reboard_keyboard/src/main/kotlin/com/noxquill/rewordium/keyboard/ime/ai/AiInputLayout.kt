@@ -54,10 +54,15 @@ import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.animation.core.Animatable
+import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.border
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.material3.FilledTonalButton
-import androidx.compose.material3.FilterChip
-import androidx.compose.material3.FilterChipDefaults
 import androidx.compose.material3.Icon
+import androidx.compose.ui.graphics.graphicsLayer
+import com.noxquill.rewordium.keyboard.ime.media.CustomChip
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
@@ -74,6 +79,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.res.stringResource
@@ -132,7 +138,7 @@ fun AiInputLayout(
     val surfaceColor   = keyStyle.background()
     val onSurface      = keyStyle.foreground()
     val primary        = smartbarStyle.foreground().takeIf { it.alpha > 0f } ?: onSurface
-    val onPrimary      = bgColor
+    val onPrimary      = if (primary.luminance() > 0.5f) Color.Black else Color.White
     val outline        = onSurface.copy(alpha = 0.12f)
     val surfaceVariant = surfaceColor.copy(alpha = 0.55f)
     val onSurfaceVar   = onSurface.copy(alpha = 0.65f)
@@ -331,11 +337,12 @@ fun AiInputLayout(
 
                 // ════════ Mode segmented toggle ════════
                 Surface(
-                    color = surfaceVariant.copy(alpha = 0.4f),
+                    color = surfaceVariant.copy(alpha = 0.25f),
                     shape = RoundedCornerShape(50),
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(horizontal = 16.dp)
+                        .border(1.dp, outline, RoundedCornerShape(50))
                 ) {
                     val modeList = if (isInAiApp) {
                         listOf(
@@ -354,30 +361,22 @@ fun AiInputLayout(
                         modeList.forEach { (mode, labelRes) ->
                             val selected = aiMode == mode
                             val bg by animateColorAsState(
-                                if (selected) primary else Color.Transparent, tween(200), label = "bg"
+                                if (selected) primary.copy(alpha = 0.18f) else Color.Transparent, tween(200), label = "bg"
                             )
                             val fg by animateColorAsState(
-                                if (selected) onPrimary else onSurfaceVar, tween(200), label = "fg"
+                                if (selected) primary else onSurfaceVar, tween(200), label = "fg"
                             )
-                            Surface(
-                                color = bg,
-                                shape = RoundedCornerShape(50),
-                                modifier = Modifier
-                                    .weight(1f)
-                                    .clip(RoundedCornerShape(50))
-                                    .clickable {
-                                        inputFeedbackController.keyPress()
-                                        aiMode = mode
-                                        generatedText = null
-                                        errorMessage = null
-                                    }
-                            ) {
-                                Row(
-                                    modifier = Modifier.padding(vertical = 7.dp),
-                                    horizontalArrangement = Arrangement.Center,
-                                    verticalAlignment = Alignment.CenterVertically
-                                ) {
-                                    Spacer(Modifier.weight(1f))
+                            SegmentButton(
+                                selected = selected,
+                                onClick = {
+                                    inputFeedbackController.keyPress()
+                                    aiMode = mode
+                                    generatedText = null
+                                    errorMessage = null
+                                },
+                                bg = bg,
+                                fg = fg,
+                                icon = {
                                     Icon(
                                         when (mode) {
                                             AiMode.CONTEXT -> Icons.Default.AutoFixHigh
@@ -386,14 +385,15 @@ fun AiInputLayout(
                                         },
                                         null, tint = fg, modifier = Modifier.size(14.dp)
                                     )
-                                    Spacer(Modifier.width(4.dp))
+                                },
+                                label = {
                                     Text(
                                         stringResource(labelRes), color = fg, fontSize = 12.sp,
                                         fontWeight = if (selected) FontWeight.Medium else FontWeight.Normal
                                     )
-                                    Spacer(Modifier.weight(1f))
-                                }
-                            }
+                                },
+                                modifier = Modifier.weight(1f)
+                            )
                         }
                     }
                 }
@@ -436,27 +436,27 @@ fun AiInputLayout(
                                     LinearProgressIndicator(
                                         modifier = Modifier
                                             .fillMaxWidth(0.5f)
-                                            .height(2.dp)
-                                            .clip(RoundedCornerShape(1.dp)),
+                                            .height(3.dp)
+                                            .clip(RoundedCornerShape(1.5.dp)),
                                         color = primary,
                                         trackColor = outline
                                     )
-                                    Spacer(Modifier.height(12.dp))
+                                    Spacer(Modifier.height(16.dp))
                                     Text(
                                         when (aiMode) {
-                                            AiMode.ENHANCE -> "Enhancing\u2026"
-                                            AiMode.CONTEXT -> "Polishing\u2026"
+                                            AiMode.ENHANCE -> "Enhancing prompt\u2026"
+                                            AiMode.CONTEXT -> "Polishing writing\u2026"
                                             else -> "Processing\u2026"
                                         },
                                         color = onSurface,
                                         fontSize = 14.sp,
-                                        fontWeight = FontWeight.Medium
+                                        fontWeight = FontWeight.SemiBold
                                     )
-                                    Spacer(Modifier.height(2.dp))
+                                    Spacer(Modifier.height(4.dp))
                                     Text(
                                         when (aiMode) {
                                             AiMode.ENHANCE -> "Making your prompt more effective"
-                                            AiMode.CONTEXT -> "Keeping your vibe while fixing grammar"
+                                            AiMode.CONTEXT -> "Keeping your tone while fixing grammar"
                                             else -> "Enhancing your text"
                                         },
                                         color = onSurfaceVar,
@@ -471,21 +471,28 @@ fun AiInputLayout(
                                         modifier = Modifier.fillMaxSize().padding(4.dp),
                                     ) {
                                         Card(
-                                            colors = CardDefaults.cardColors(containerColor = surfaceColor.copy(alpha = 0.7f)),
-                                            shape = RoundedCornerShape(14.dp),
-                                            modifier = Modifier.weight(1f).fillMaxWidth()
+                                            colors = CardDefaults.cardColors(
+                                                containerColor = surfaceColor
+                                            ),
+                                            shape = RoundedCornerShape(16.dp),
+                                            border = BorderStroke(1.dp, outline),
+                                            modifier = Modifier
+                                                .weight(1f)
+                                                .fillMaxWidth()
+                                                .padding(vertical = 4.dp, horizontal = 2.dp)
                                         ) {
-                                            Column(
+                                            Box(
                                                 modifier = Modifier
                                                     .fillMaxSize()
                                                     .verticalScroll(rememberScrollState())
-                                                    .padding(12.dp)
+                                                    .padding(16.dp)
                                             ) {
                                                 Text(
                                                     generated,
                                                     color = onSurface,
                                                     fontSize = 14.sp,
-                                                    lineHeight = 20.sp
+                                                    lineHeight = 21.sp,
+                                                    letterSpacing = 0.15.sp
                                                 )
                                             }
                                         }
@@ -553,31 +560,71 @@ fun AiInputLayout(
                                         Column(
                                             horizontalAlignment = Alignment.CenterHorizontally,
                                             verticalArrangement = Arrangement.Center,
+                                            modifier = Modifier.padding(16.dp)
                                         ) {
+                                            Icon(
+                                                imageVector = when (aiMode) {
+                                                    AiMode.ENHANCE -> Icons.Default.Edit
+                                                    else -> Icons.Default.AutoFixHigh
+                                                },
+                                                contentDescription = null,
+                                                tint = primary.copy(alpha = 0.5f),
+                                                modifier = Modifier.size(32.dp)
+                                            )
+                                            Spacer(Modifier.height(12.dp))
                                             Text(
                                                 when (aiMode) {
                                                     AiMode.ENHANCE -> "Write your prompt in the text field"
                                                     AiMode.CONTEXT -> stringResource(R.string.ai__context_mode_hint)
                                                     else -> ""
                                                 },
-                                                color = onSurfaceVar,
+                                                color = onSurface,
                                                 fontSize = 14.sp,
+                                                fontWeight = FontWeight.Medium,
+                                                textAlign = TextAlign.Center
                                             )
-                                            Spacer(Modifier.height(0.dp))
+                                            Spacer(Modifier.height(4.dp))
                                             Text(
                                                 when (aiMode) {
-                                                    AiMode.ENHANCE -> "then tap Enhance to make it better"
+                                                    AiMode.ENHANCE -> "Then tap Enhance to make it better"
                                                     AiMode.CONTEXT -> "It auto-preserves slang and tone"
                                                     else -> ""
                                                 },
-                                                color = onSurfaceVar.copy(alpha = 0.7f),
+                                                color = onSurfaceVar,
                                                 fontSize = 12.sp,
+                                                textAlign = TextAlign.Center
                                             )
                                         }
                                     }
                                     AiMode.REWRITE,
                                     AiMode.APPEND -> {
-                                        Spacer(Modifier.height(0.dp))
+                                        Column(
+                                            horizontalAlignment = Alignment.CenterHorizontally,
+                                            verticalArrangement = Arrangement.Center,
+                                            modifier = Modifier.padding(16.dp)
+                                        ) {
+                                            Icon(
+                                                imageVector = Icons.Default.AutoFixHigh,
+                                                contentDescription = null,
+                                                tint = primary.copy(alpha = 0.4f),
+                                                modifier = Modifier.size(32.dp)
+                                            )
+                                            Spacer(Modifier.height(12.dp))
+                                            Text(
+                                                "Choose style, intent, or length options below",
+                                                color = onSurface,
+                                                fontSize = 14.sp,
+                                                fontWeight = FontWeight.Medium,
+                                                textAlign = TextAlign.Center
+                                            )
+                                            Spacer(Modifier.height(4.dp))
+                                            Text(
+                                                "Then tap Generate to rewrite or append text",
+                                                color = onSurfaceVar,
+                                                fontSize = 12.sp,
+                                                textAlign = TextAlign.Center
+                                            )
+                                        }
                                     }
                                 }
                             }
@@ -810,57 +857,45 @@ private fun SmartChipSection(
     onSurface: Color,
     outline: Color,
 ) {
-    Surface(
-        color = surfaceVariant.copy(alpha = 0.4f),
-        shape = RoundedCornerShape(12.dp),
-        modifier = Modifier.fillMaxWidth(),
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(vertical = 4.dp),
+        verticalArrangement = Arrangement.spacedBy(6.dp),
     ) {
-        Column(
-            modifier = Modifier.padding(horizontal = 8.dp, vertical = 6.dp),
-            verticalArrangement = Arrangement.spacedBy(6.dp),
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 12.dp, vertical = 2.dp),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically,
         ) {
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 2.dp, vertical = 1.dp),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                Text(
-                    title,
-                    color = onSurface.copy(alpha = 0.82f),
-                    fontSize = 10.sp,
-                    fontWeight = FontWeight.Medium,
-                )
-                if (!selectedChip.isNullOrBlank()) {
-                    Surface(
-                        color = primary.copy(alpha = 0.18f),
-                        shape = RoundedCornerShape(10.dp),
-                    ) {
-                        Text(
-                            selectedChip,
-                            color = primary,
-                            fontSize = 10.sp,
-                            fontWeight = FontWeight.Medium,
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis,
-                            modifier = Modifier
-                                .widthIn(max = 120.dp)
-                                .padding(horizontal = 8.dp, vertical = 2.dp),
-                        )
-                    }
-                }
-            }
-            SystemChipRow(
-                chips = chips,
-                selectedChip = selectedChip,
-                onChipSelected = onChipSelected,
-                primary = primary,
-                surfaceVariant = surfaceVariant,
-                onSurface = onSurface,
-                outline = outline,
+            Text(
+                title.uppercase(),
+                color = onSurface.copy(alpha = 0.45f),
+                fontSize = 10.sp,
+                fontWeight = FontWeight.Bold,
+                letterSpacing = 0.8.sp
             )
+            if (!selectedChip.isNullOrBlank()) {
+                Text(
+                    selectedChip,
+                    color = primary,
+                    fontSize = 10.sp,
+                    fontWeight = FontWeight.SemiBold,
+                    letterSpacing = 0.2.sp
+                )
+            }
         }
+        SystemChipRow(
+            chips = chips,
+            selectedChip = selectedChip,
+            onChipSelected = onChipSelected,
+            primary = primary,
+            surfaceVariant = surfaceVariant,
+            onSurface = onSurface,
+            outline = outline,
+        )
     }
 }
 
@@ -878,44 +913,76 @@ private fun SystemChipRow(
 
     LazyRow(
         modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.spacedBy(8.dp),
-        contentPadding = PaddingValues(horizontal = 8.dp),
+        horizontalArrangement = Arrangement.spacedBy(6.dp),
+        contentPadding = PaddingValues(horizontal = 12.dp),
     ) {
         items(chips.size) { index ->
             val chip = chips[index]
             val isSelected = selectedChip == chip
-            FilterChip(
+            CustomChip(
                 selected = isSelected,
                 onClick = {
                     inputFeedbackController.keyPress()
                     onChipSelected(chip)
                 },
-                label = {
-                    Text(
-                        chip,
-                        fontSize = 11.sp,
-                        maxLines = 1,
-                        fontWeight = if (isSelected) FontWeight.Medium else FontWeight.Normal
-                    )
-                },
-                colors = FilterChipDefaults.filterChipColors(
-                    containerColor = surfaceVariant,
-                    labelColor = onSurface,
-                    selectedContainerColor = primary.copy(alpha = 0.18f),
-                    selectedLabelColor = primary,
-                ),
-                border = FilterChipDefaults.filterChipBorder(
-                    enabled = true,
-                    selected = isSelected,
-                    borderWidth = 0.dp,
-                    borderColor = Color.Transparent,
-                    selectedBorderColor = Color.Transparent,
-                ),
-                shape = RoundedCornerShape(14.dp),
-                modifier = Modifier
-                    .height(34.dp)
-                    .widthIn(min = 74.dp)
+                fg = onSurface,
+                accent = primary,
+            ) {
+                Text(
+                    chip,
+                    maxLines = 1,
+                    softWrap = false,
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun SegmentButton(
+    selected: Boolean,
+    onClick: () -> Unit,
+    bg: Color,
+    fg: Color,
+    icon: @Composable () -> Unit,
+    label: @Composable () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    val interactionSource = remember { MutableInteractionSource() }
+    val isPressed = interactionSource.collectIsPressedAsState().value
+    val scale = remember { Animatable(1f) }
+
+    LaunchedEffect(isPressed) {
+        if (isPressed) {
+            scale.animateTo(0.95f, animationSpec = tween(80))
+        } else {
+            scale.animateTo(1f, animationSpec = tween(120))
+        }
+    }
+
+    Box(
+        modifier = modifier
+            .graphicsLayer {
+                scaleX = scale.value
+                scaleY = scale.value
+            }
+            .clip(RoundedCornerShape(50))
+            .background(bg)
+            .clickable(
+                interactionSource = interactionSource,
+                indication = null,
+                onClick = onClick
             )
+            .padding(vertical = 8.dp),
+        contentAlignment = Alignment.Center
+    ) {
+        Row(
+            horizontalArrangement = Arrangement.Center,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            icon()
+            Spacer(Modifier.width(4.dp))
+            label()
         }
     }
 }

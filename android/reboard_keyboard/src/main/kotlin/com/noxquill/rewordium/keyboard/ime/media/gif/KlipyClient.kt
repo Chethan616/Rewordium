@@ -257,6 +257,110 @@ class KlipyClient(
         else -> emptyList()
     }
 
+    @Serializable
+    data class StickerResult(
+        val id: String,
+        /** Full-resolution sticker URL (transparent WebP or PNG). */
+        val stickerUrl: String,
+        /** Small preview — used in the grid thumbnail. */
+        val previewUrl: String,
+        val width: Int,
+        val height: Int,
+        val contentDescription: String,
+    )
+
+    /**
+     * Trending stickers for the default empty-search state.
+     */
+    suspend fun stickerTrending(limit: Int = 24): List<StickerResult> = withContext(Dispatchers.IO) {
+        if (!isConfigured) return@withContext emptyList()
+        fetchStickers("${base()}/stickers/trending?${commonParams(limit)}")
+    }
+
+    /**
+     * Keyword search for stickers.
+     */
+    suspend fun stickerSearch(query: String, limit: Int = 24): List<StickerResult> = withContext(Dispatchers.IO) {
+        val q = query.trim()
+        if (q.isEmpty()) return@withContext stickerTrending(limit)
+        if (!isConfigured) return@withContext emptyList()
+        val encoded = java.net.URLEncoder.encode(q, "UTF-8")
+        fetchStickers("${base()}/stickers/search?q=$encoded&${commonParams(limit)}")
+    }
+
+    /**
+     * Top sticker categories for the chip strip.
+     */
+    suspend fun stickerCategories(): List<Category> = withContext(Dispatchers.IO) {
+        if (!isConfigured) return@withContext emptyList()
+        val url = "${base()}/stickers/categories?customer_id=$customerId"
+        try {
+            val response = httpClient.newCall(Request.Builder().url(url).build()).execute()
+            response.use { r ->
+                if (!r.isSuccessful) return@withContext emptyList()
+                val body = r.body?.string() ?: return@withContext emptyList()
+                parseCategories(body)
+            }
+        } catch (e: Exception) {
+            flogDebug { "KlipyClient.stickerCategories failed: ${e.message}" }
+            emptyList()
+        }
+    }
+
+    private fun fetchStickers(url: String): List<StickerResult> {
+        return try {
+            val response = httpClient.newCall(Request.Builder().url(url).build()).execute()
+            response.use { r ->
+                if (!r.isSuccessful) {
+                    flogDebug { "KlipyClient: HTTP ${r.code} for sticker $url" }
+                    return emptyList()
+                }
+                val body = r.body?.string() ?: return emptyList()
+                parseStickers(body)
+            }
+        } catch (e: Exception) {
+            flogDebug { "KlipyClient.fetchStickers failed: ${e.message}" }
+            emptyList()
+        }
+    }
+
+    private fun parseStickers(body: String): List<StickerResult> {
+        val root = json.parseToJsonElement(body).jsonObject
+        val data = root["data"]?.jsonObject ?: return emptyList()
+        val items = data["data"] ?: data["stickers"] ?: return emptyList()
+        return items.tryArray().mapNotNull { it.toStickerResult() }
+    }
+
+    private fun JsonElement.toStickerResult(): StickerResult? {
+        val obj = this as? JsonObject ?: return null
+        val id = obj["id"]?.tryString()
+            ?: obj["slug"]?.tryString()
+            ?: return null
+        val title = obj["title"]?.tryString().orEmpty()
+        val file = obj["file"]?.jsonObject ?: return null
+        // Stickers prefer webp (transparent) > png > gif
+        val previewBuckets = listOf("sm", "md", "hd")
+        val fullBuckets = listOf("hd", "md", "sm")
+        val stickerFormats = listOf("webp", "png", "gif")
+
+        val preview = pickEntry(file, previewBuckets, stickerFormats) ?: return null
+        val full = pickEntry(file, fullBuckets, stickerFormats) ?: preview
+
+        val previewUrl = preview["url"]?.tryString() ?: return null
+        val fullUrl = full["url"]?.tryString() ?: previewUrl
+        val w = full["width"]?.tryInt() ?: preview["width"]?.tryInt() ?: 0
+        val h = full["height"]?.tryInt() ?: preview["height"]?.tryInt() ?: 0
+
+        return StickerResult(
+            id = id,
+            stickerUrl = fullUrl,
+            previewUrl = previewUrl,
+            width = w,
+            height = h,
+            contentDescription = title,
+        )
+    }
+
     private fun base() = "$BASE/$apiKey"
 
     private fun commonParams(limit: Int): String {

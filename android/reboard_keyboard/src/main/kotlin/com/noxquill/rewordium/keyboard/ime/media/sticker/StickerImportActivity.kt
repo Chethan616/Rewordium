@@ -24,7 +24,10 @@ import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.layout.*
 import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Button
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -34,10 +37,14 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.MutableState
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.unit.dp
 import com.noxquill.rewordium.keyboard.app.AppTheme
 import com.noxquill.rewordium.keyboard.app.apptheme.FlorisAppTheme
 import com.noxquill.rewordium.keyboard.app.settings.stickerstudio.SubjectSegmentationHelper
 import com.noxquill.rewordium.keyboard.lib.devtools.flogDebug
+import com.noxquill.rewordium.keyboard.keyboardManager
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -76,6 +83,11 @@ class StickerImportActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        if (savedInstanceState != null) {
+            savedInstanceState.getString("picked_uri")?.let { uriStr ->
+                pickedUri.value = Uri.parse(uriStr)
+            }
+        }
         setContent {
             FlorisAppTheme(theme = AppTheme.AUTO) {
                 val uri by pickedUri
@@ -83,35 +95,69 @@ class StickerImportActivity : ComponentActivity() {
                     ImportConfirmationDialog(
                         onKeep = { commit(uri!!, removeBg = false) },
                         onRemoveBg = { commit(uri!!, removeBg = true) },
+                        onEdit = {
+                            CoroutineScope(Dispatchers.Main).launch {
+                                val cachedUri = copyToCache(this@StickerImportActivity, uri!!)
+                                if (cachedUri != null) {
+                                    val editUri = Uri.parse("ui://ReBoard/settings/sticker-studio/editor?sourceUri=${Uri.encode(cachedUri.toString())}")
+                                    val intent = Intent(Intent.ACTION_VIEW, editUri)
+                                    intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                                    startActivity(intent)
+                                }
+                                finish()
+                            }
+                        },
                         onCancel = { finish() },
                     )
                 }
             }
         }
-        pickerLauncher.launch("image/*")
+        if (savedInstanceState == null && pickedUri.value == null) {
+            pickerLauncher.launch("image/*")
+        }
+    }
+
+    override fun onSaveInstanceState(outState: Bundle) {
+        super.onSaveInstanceState(outState)
+        pickedUri.value?.let { uri ->
+            outState.putString("picked_uri", uri.toString())
+        }
+    }
+
+    override fun finish() {
+        try {
+            val keyboardManager = this.keyboardManager().value
+            keyboardManager.activeState.imeUiMode = com.noxquill.rewordium.keyboard.ime.ImeUiMode.MEDIA
+            keyboardManager.activeState.activeMediaMode = "STICKER"
+        } catch (e: Exception) {
+            flogDebug { "StickerImportActivity finish error: ${e.message}" }
+        }
+        com.noxquill.rewordium.keyboard.FlorisImeService.shouldPreserveMediaUiModeOnce = true
+        super.finish()
     }
 
     private fun commit(uri: Uri, removeBg: Boolean) {
-        // Fire-and-forget. The store push is reactive, so the IME's
-        // sticker panel picks up the new entry without waiting for us.
-        CoroutineScope(Dispatchers.IO + SupervisorJob()).launch {
+        CoroutineScope(Dispatchers.Main).launch {
             try {
-                val store = UserStickerStore.get(this@StickerImportActivity)
-                store.ensureLoaded()
-                val finalUri = if (removeBg) {
-                    runBgRemove(this@StickerImportActivity, uri) ?: uri
-                } else {
-                    uri
+                withContext(Dispatchers.IO) {
+                    val store = UserStickerStore.get(this@StickerImportActivity)
+                    store.ensureLoaded()
+                    val finalUri = if (removeBg) {
+                        runBgRemove(this@StickerImportActivity, uri) ?: uri
+                    } else {
+                        uri
+                    }
+                    val mime = if (removeBg) "image/webp"
+                    else contentResolver.getType(uri) ?: "image/webp"
+                    store.import(finalUri, mime)
+                    flogDebug { "StickerImportActivity: imported $finalUri (removeBg=$removeBg)" }
                 }
-                val mime = if (removeBg) "image/webp"
-                else contentResolver.getType(uri) ?: "image/webp"
-                store.import(finalUri, mime)
-                flogDebug { "StickerImportActivity: imported $finalUri (removeBg=$removeBg)" }
             } catch (e: Exception) {
                 flogDebug { "StickerImportActivity: import failed: ${e.message}" }
+            } finally {
+                finish()
             }
         }
-        finish()
     }
 
     private suspend fun runBgRemove(
@@ -133,16 +179,34 @@ class StickerImportActivity : ComponentActivity() {
             null
         }
     }
+
+    private suspend fun copyToCache(
+        context: android.content.Context,
+        sourceUri: Uri,
+    ): Uri? = withContext(Dispatchers.IO) {
+        try {
+            val cache = File(context.cacheDir, "sticker_edit_${System.nanoTime()}.png")
+            context.contentResolver.openInputStream(sourceUri)?.use { input ->
+                cache.outputStream().use { output -> input.copyTo(output) }
+            } ?: return@withContext null
+            Uri.fromFile(cache)
+        } catch (e: Exception) {
+            flogDebug { "StickerImportActivity.copyToCache failed: ${e.message}" }
+            null
+        }
+    }
 }
 
 /**
- * Material 3 confirmation dialog: "Remove background?" with three actions
- * — Remove (runs ML Kit cutout), Keep as-is (raw import), Cancel.
+ * Material 3 confirmation dialog: "Remove background?" with options:
+ * Remove background (runs ML Kit cutout), Edit (launches Sticker Studio),
+ * Keep as-is (raw import), Cancel.
  */
 @androidx.compose.runtime.Composable
 private fun ImportConfirmationDialog(
     onKeep: () -> Unit,
     onRemoveBg: () -> Unit,
+    onEdit: () -> Unit,
     onCancel: () -> Unit,
 ) {
     AlertDialog(
@@ -150,16 +214,43 @@ private fun ImportConfirmationDialog(
         title = { Text("Make a sticker") },
         text = {
             Text(
-                text = "Want to cut the subject out of the background? " +
-                    "We'll keep transparency for messaging apps that need it.",
+                text = "Want to cut the subject out of the background or edit it in the Sticker Studio?",
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
         },
         confirmButton = {
-            TextButton(onClick = onRemoveBg) { Text("Remove background") }
-        },
-        dismissButton = {
-            TextButton(onClick = onKeep) { Text("Keep as-is") }
-        },
+            Column(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalAlignment = Alignment.End
+            ) {
+                Button(
+                    onClick = onRemoveBg,
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Text("Remove background")
+                }
+                Spacer(modifier = Modifier.height(8.dp))
+                OutlinedButton(
+                    onClick = onEdit,
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Text("Edit")
+                }
+                Spacer(modifier = Modifier.height(8.dp))
+                TextButton(
+                    onClick = onKeep,
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Text("Keep as-is")
+                }
+                Spacer(modifier = Modifier.height(8.dp))
+                TextButton(
+                    onClick = onCancel,
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Text("Cancel")
+                }
+            }
+        }
     )
 }

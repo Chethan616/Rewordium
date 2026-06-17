@@ -180,7 +180,7 @@ Rules:
                 val raw = response.body?.string() ?: return@withContext emptyList()
                 val apiResponse = gson.fromJson(raw, SmartReplyApiResponse::class.java)
                 val content = apiResponse.choices?.firstOrNull()?.message?.content
-                    ?.replace(Regex("<think>[\\s\\S]*?</think>", RegexOption.IGNORE_CASE), "")
+                    ?.replace(Regex("<think>[\\s\\S]*?(?:</think>|$)", RegexOption.IGNORE_CASE), "")
                     ?.trim() ?: return@withContext emptyList()
 
                 // Parse JSON array from content

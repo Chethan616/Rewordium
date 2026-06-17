@@ -430,10 +430,59 @@ class EditorInstance(context: Context) : AbstractEditorInstance(context) {
         description: String,
         fallbackText: String = "",
     ): Boolean {
+        var finalUri = uri
+        var finalMimeType = mimeType
+
+        // Check if the target editor supports this MIME type. If not, and it's image/webp,
+        // see if it supports image/png instead, and convert it.
+        val acceptsWebp = activeInfo.contentMimeTypes.any { type ->
+            type.equals("image/webp", ignoreCase = true) ||
+            type.equals("image/*", ignoreCase = true) ||
+            type.equals("*/*", ignoreCase = true)
+        }
+        val acceptsPng = activeInfo.contentMimeTypes.any { type ->
+            type.equals("image/png", ignoreCase = true) ||
+            type.equals("image/*", ignoreCase = true) ||
+            type.equals("*/*", ignoreCase = true)
+        }
+
+        if (mimeType.equals("image/webp", ignoreCase = true) && !acceptsWebp && acceptsPng) {
+            val id = try { android.content.ContentUris.parseId(uri) } catch (e: Exception) { -1L }
+            if (id != -1L) {
+                val webpFile = ClipboardFileStorage.getFileForId(appContext, id)
+                if (webpFile.exists()) {
+                    val pngFile = java.io.File(appContext.cacheDir, "sticker_conv_${System.nanoTime()}.png")
+                    try {
+                        val bitmap = android.graphics.BitmapFactory.decodeFile(webpFile.absolutePath)
+                        if (bitmap != null) {
+                            java.io.FileOutputStream(pngFile).use { out ->
+                                bitmap.compress(android.graphics.Bitmap.CompressFormat.PNG, 100, out)
+                            }
+                            // Insert the converted PNG as a new clip in the provider so it has an image/png type
+                            val values = android.content.ContentValues(3).apply {
+                                put(com.noxquill.rewordium.keyboard.ime.clipboard.provider.ClipboardMediaProvider.Columns.MediaUri, android.net.Uri.fromFile(pngFile).toString())
+                                put(com.noxquill.rewordium.keyboard.ime.clipboard.provider.ClipboardMediaProvider.Columns.MimeTypes, "image/png")
+                                put(android.provider.OpenableColumns.DISPLAY_NAME, "sticker")
+                            }
+                            val newUri = appContext.contentResolver.insert(com.noxquill.rewordium.keyboard.ime.clipboard.provider.ClipboardMediaProvider.IMAGE_CLIPS_URI, values)
+                            if (newUri != null && !newUri.toString().endsWith("/0")) {
+                                finalUri = newUri
+                                finalMimeType = "image/png"
+                            }
+                        }
+                    } catch (e: Exception) {
+                        com.noxquill.rewordium.keyboard.lib.devtools.flogError { "Failed to convert webp to png: ${e.message}" }
+                    } finally {
+                        pngFile.delete()
+                    }
+                }
+            }
+        }
+
         val ic = currentInputConnection() ?: return false
         val inputContentInfo = InputContentInfoCompat(
-            uri,
-            ClipDescription(description, arrayOf(mimeType)),
+            finalUri,
+            ClipDescription(description, arrayOf(finalMimeType)),
             null,
         )
         ic.finishComposingText()

@@ -75,6 +75,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -151,13 +152,28 @@ fun StickerEditorScreen(sourceUri: String?) = FlorisScreen {
     var showTextDialog by remember { mutableStateOf(false) }
     var saving by remember { mutableStateOf(false) }
     var bgRemovalRunning by remember { mutableStateOf(false) }
+    var imageUri by rememberSaveable { mutableStateOf(sourceUri) }
 
     val cropLauncher = rememberLauncherForActivityResult(CropImageContract()) { result ->
         if (result.isSuccessful) {
             val uri = result.uriContent ?: return@rememberLauncherForActivityResult
             scope.launch {
-                val bmp = decodeUriToBitmap(context, uri, EXPORT_SIZE)
-                if (bmp != null) photoEditorView?.source?.setImageBitmap(bmp)
+                val cachedUri = withContext(Dispatchers.IO) {
+                    try {
+                        val cacheFile = File(context.cacheDir, "crop_cache_${System.nanoTime()}.png")
+                        context.contentResolver.openInputStream(uri)?.use { input ->
+                            cacheFile.outputStream().use { output -> input.copyTo(output) }
+                        } ?: return@withContext null
+                        Uri.fromFile(cacheFile)
+                    } catch (e: Exception) {
+                        null
+                    }
+                }
+                if (cachedUri != null) {
+                    imageUri = cachedUri.toString()
+                } else {
+                    Toast.makeText(context, "Failed to read cropped image", Toast.LENGTH_SHORT).show()
+                }
             }
         } else {
             result.error?.let {
@@ -192,11 +208,26 @@ fun StickerEditorScreen(sourceUri: String?) = FlorisScreen {
     ) { granted -> launchCropper(allowCamera = granted) }
 
     // Seed the editor with the passed-in URI on first composition.
-    LaunchedEffect(photoEditorView, sourceUri) {
+    LaunchedEffect(photoEditorView, imageUri) {
         val view = photoEditorView ?: return@LaunchedEffect
-        if (sourceUri.isNullOrBlank()) return@LaunchedEffect
-        val bmp = decodeUriToBitmap(context, Uri.parse(sourceUri), EXPORT_SIZE)
+        val uriStr = imageUri
+        if (uriStr.isNullOrBlank()) return@LaunchedEffect
+        val bmp = decodeUriToBitmap(context, Uri.parse(uriStr), EXPORT_SIZE)
         if (bmp != null) view.source.setImageBitmap(bmp)
+    }
+
+    // Auto-launch image picker/cropper if no source URI is provided.
+    LaunchedEffect(Unit) {
+        if (imageUri.isNullOrBlank()) {
+            val cameraAlreadyGranted = ContextCompat.checkSelfPermission(
+                context, Manifest.permission.CAMERA,
+            ) == PackageManager.PERMISSION_GRANTED
+            if (cameraAlreadyGranted) {
+                launchCropper(true)
+            } else {
+                cameraPermissionLauncher.launch(Manifest.permission.CAMERA)
+            }
+        }
     }
 
     content {
@@ -231,6 +262,39 @@ fun StickerEditorScreen(sourceUri: String?) = FlorisScreen {
                             }
                         },
                     )
+                    if (imageUri.isNullOrBlank()) {
+                        Column(
+                            horizontalAlignment = Alignment.CenterHorizontally,
+                            verticalArrangement = Arrangement.Center,
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .background(MaterialTheme.colorScheme.surfaceContainerHigh)
+                                .clickable {
+                                    val cameraAlreadyGranted = ContextCompat.checkSelfPermission(
+                                        context, Manifest.permission.CAMERA,
+                                    ) == PackageManager.PERMISSION_GRANTED
+                                    if (cameraAlreadyGranted) {
+                                        launchCropper(true)
+                                    } else {
+                                        cameraPermissionLauncher.launch(Manifest.permission.CAMERA)
+                                    }
+                                }
+                                .padding(32.dp)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Outlined.PhotoLibrary,
+                                contentDescription = null,
+                                modifier = Modifier.size(48.dp),
+                                tint = MaterialTheme.colorScheme.primary
+                            )
+                            Spacer(Modifier.height(12.dp))
+                            Text(
+                                text = "Choose a photo to start",
+                                style = MaterialTheme.typography.titleMedium,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                    }
                     if (saving || bgRemovalRunning) {
                         Box(
                             modifier = Modifier
@@ -273,54 +337,65 @@ fun StickerEditorScreen(sourceUri: String?) = FlorisScreen {
                     })
                 }
                 item {
-                    ToolButton(icon = Icons.Outlined.Crop, label = "Crop", onClick = {
-                        // Re-crop the current source — export, rerun cropper.
-                        val view = photoEditorView ?: return@ToolButton
-                        scope.launch {
-                            val cached = exportSourceAsCacheFile(context, view) ?: return@launch
-                            cropLauncher.launch(
-                                CropImageContractOptions(
-                                    uri = Uri.fromFile(cached),
-                                    cropImageOptions = CropImageOptions(
-                                        fixAspectRatio = true,
-                                        aspectRatioX = 1,
-                                        aspectRatioY = 1,
-                                        outputCompressFormat = Bitmap.CompressFormat.PNG,
+                    ToolButton(
+                        icon = Icons.Outlined.Crop,
+                        label = "Crop",
+                        enabled = !imageUri.isNullOrBlank(),
+                        onClick = {
+                            // Re-crop the current source — export, rerun cropper.
+                            val view = photoEditorView ?: return@ToolButton
+                            scope.launch {
+                                val cached = exportSourceAsCacheFile(context, view) ?: return@launch
+                                cropLauncher.launch(
+                                    CropImageContractOptions(
+                                        uri = Uri.fromFile(cached),
+                                        cropImageOptions = CropImageOptions(
+                                            fixAspectRatio = true,
+                                            aspectRatioX = 1,
+                                            aspectRatioY = 1,
+                                            outputCompressFormat = Bitmap.CompressFormat.PNG,
+                                        ),
                                     ),
-                                ),
-                            )
+                                )
+                            }
                         }
-                    })
+                    )
                 }
                 item {
-                    ToolButton(icon = Icons.Outlined.AutoAwesome, label = "Cutout", onClick = {
-                        val view = photoEditorView ?: return@ToolButton
-                        bgRemovalRunning = true
-                        scope.launch {
-                            val bmp = view.source.drawableToBitmap()
-                            if (bmp == null) {
+                    ToolButton(
+                        icon = Icons.Outlined.AutoAwesome,
+                        label = "Cutout",
+                        enabled = !imageUri.isNullOrBlank(),
+                        onClick = {
+                            val view = photoEditorView ?: return@ToolButton
+                            bgRemovalRunning = true
+                            scope.launch {
+                                val bmp = view.source.drawableToBitmap()
+                                if (bmp == null) {
+                                    bgRemovalRunning = false
+                                    return@launch
+                                }
+                                val cutout = SubjectSegmentationHelper.run(bmp)
                                 bgRemovalRunning = false
-                                return@launch
-                            }
-                            val cutout = SubjectSegmentationHelper.run(bmp)
-                            bgRemovalRunning = false
-                            if (cutout != null) {
-                                view.source.setImageBitmap(cutout)
-                            } else {
-                                Toast.makeText(
-                                    context,
-                                    "Couldn't find a subject — try a clearer photo.",
-                                    Toast.LENGTH_SHORT,
-                                ).show()
+                                if (cutout != null) {
+                                    view.source.setImageBitmap(cutout)
+                                } else {
+                                    Toast.makeText(
+                                        context,
+                                        "Couldn't find a subject — try a clearer photo.",
+                                        Toast.LENGTH_SHORT,
+                                    ).show()
+                                }
                             }
                         }
-                    })
+                    )
                 }
                 item {
                     ToolButton(
                         icon = Icons.Outlined.Brush,
                         label = "Draw",
                         selected = mode == EditorMode.Draw,
+                        enabled = !imageUri.isNullOrBlank(),
                         onClick = {
                             val editor = photoEditor ?: return@ToolButton
                             mode = EditorMode.Draw
@@ -339,6 +414,7 @@ fun StickerEditorScreen(sourceUri: String?) = FlorisScreen {
                         icon = Icons.Outlined.Delete,
                         label = "Eraser",
                         selected = mode == EditorMode.Erase,
+                        enabled = !imageUri.isNullOrBlank(),
                         onClick = {
                             val editor = photoEditor ?: return@ToolButton
                             mode = EditorMode.Erase
@@ -356,21 +432,36 @@ fun StickerEditorScreen(sourceUri: String?) = FlorisScreen {
                     )
                 }
                 item {
-                    ToolButton(icon = Icons.Outlined.TextFields, label = "Text", onClick = {
-                        photoEditor?.setBrushDrawingMode(false)
-                        mode = EditorMode.Idle
-                        showTextDialog = true
-                    })
+                    ToolButton(
+                        icon = Icons.Outlined.TextFields,
+                        label = "Text",
+                        enabled = !imageUri.isNullOrBlank(),
+                        onClick = {
+                            photoEditor?.setBrushDrawingMode(false)
+                            mode = EditorMode.Idle
+                            showTextDialog = true
+                        }
+                    )
                 }
                 item {
-                    ToolButton(icon = Icons.AutoMirrored.Outlined.Undo, label = "Undo", onClick = {
-                        photoEditor?.undo()
-                    })
+                    ToolButton(
+                        icon = Icons.AutoMirrored.Outlined.Undo,
+                        label = "Undo",
+                        enabled = !imageUri.isNullOrBlank(),
+                        onClick = {
+                            photoEditor?.undo()
+                        }
+                    )
                 }
                 item {
-                    ToolButton(icon = Icons.AutoMirrored.Outlined.Redo, label = "Redo", onClick = {
-                        photoEditor?.redo()
-                    })
+                    ToolButton(
+                        icon = Icons.AutoMirrored.Outlined.Redo,
+                        label = "Redo",
+                        enabled = !imageUri.isNullOrBlank(),
+                        onClick = {
+                            photoEditor?.redo()
+                        }
+                    )
                 }
             }
 
@@ -436,7 +527,7 @@ fun StickerEditorScreen(sourceUri: String?) = FlorisScreen {
                             }
                         }
                     },
-                    enabled = !saving && !bgRemovalRunning,
+                    enabled = !saving && !bgRemovalRunning && !imageUri.isNullOrBlank(),
                     modifier = Modifier.weight(1f),
                 ) {
                     Icon(Icons.Outlined.Check, contentDescription = null, modifier = Modifier.size(18.dp))
@@ -544,8 +635,10 @@ private fun ToolButton(
     icon: androidx.compose.ui.graphics.vector.ImageVector,
     label: String,
     selected: Boolean = false,
+    enabled: Boolean = true,
     onClick: () -> Unit,
 ) {
+    val alpha = if (enabled) 1.0f else 0.38f
     Column(
         modifier = Modifier
             .clip(RoundedCornerShape(12.dp))
@@ -553,23 +646,23 @@ private fun ToolButton(
                 if (selected) MaterialTheme.colorScheme.primaryContainer
                 else MaterialTheme.colorScheme.surfaceContainerLow,
             )
-            .clickable(onClick = onClick)
+            .clickable(enabled = enabled, onClick = onClick)
             .padding(horizontal = 12.dp, vertical = 8.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
         Icon(
             imageVector = icon,
             contentDescription = label,
-            tint = if (selected) MaterialTheme.colorScheme.onPrimaryContainer
-            else MaterialTheme.colorScheme.onSurface,
+            tint = (if (selected) MaterialTheme.colorScheme.onPrimaryContainer
+            else MaterialTheme.colorScheme.onSurface).copy(alpha = alpha),
             modifier = Modifier.size(20.dp),
         )
         Spacer(Modifier.height(2.dp))
         Text(
             text = label,
             style = MaterialTheme.typography.labelSmall,
-            color = if (selected) MaterialTheme.colorScheme.onPrimaryContainer
-            else MaterialTheme.colorScheme.onSurface,
+            color = (if (selected) MaterialTheme.colorScheme.onPrimaryContainer
+            else MaterialTheme.colorScheme.onSurface).copy(alpha = alpha),
         )
     }
 }

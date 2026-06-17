@@ -430,7 +430,7 @@ private fun GifSearchResults(
 }
 
 @Composable
-private fun StickerSearchResults(
+internal fun StickerSearchResults(
     query: String,
     fg: Color,
     accent: Color,
@@ -440,21 +440,35 @@ private fun StickerSearchResults(
     val store = remember { UserStickerStore.get(context) }
     val whatsapp = remember { WhatsAppStickerReader(context) }
     val recentsStore = remember { StickerCollectionStore.recents(context) }
+    val klipyClient = remember { KlipyClient() }
     val scope = rememberCoroutineScope()
     val userEntries by store.entriesFlow.collectAsState()
     var waPacks by remember { mutableStateOf<List<WhatsAppStickerReader.Pack>>(emptyList()) }
+    var klipyResults by remember { mutableStateOf<List<KlipyClient.StickerResult>>(emptyList()) }
+    var loading by remember { mutableStateOf(false) }
     val dim = fg.copy(alpha = 0.55f)
+
     LaunchedEffect(Unit) {
         store.ensureLoaded()
         recentsStore.ensureLoaded()
         waPacks = whatsapp.packs()
     }
 
+    LaunchedEffect(query) {
+        if (!klipyClient.isConfigured) return@LaunchedEffect
+        loading = true
+        klipyResults = if (query.isBlank()) {
+            klipyClient.stickerTrending()
+        } else {
+            klipyClient.stickerSearch(query)
+        }
+        loading = false
+    }
+
     // Combined sticker list: user stickers first (most recently touched),
-    // then every WhatsApp sticker the user has installed. We don't have
-    // text metadata on user stickers, so the query only filters WhatsApp
-    // stickers via their emoji tags — a partial but useful fallback.
-    val flatStickers = remember(userEntries, waPacks, query) {
+    // then every WhatsApp sticker the user has installed, followed by
+    // community stickers from KLIPY.
+    val flatStickers = remember(userEntries, waPacks, klipyResults, query) {
         val q = query.trim().lowercase()
         val out = mutableListOf<StickerSearchItem>()
         val sortedUser = userEntries.sortedByDescending { it.t }
@@ -474,10 +488,11 @@ private fun StickerSearchResults(
                     .forEach { sticker -> out += StickerSearchItem.WhatsApp(sticker) }
             }
         }
+        klipyResults.forEach { sticker -> out += StickerSearchItem.Community(sticker) }
         out
     }
 
-    if (flatStickers.isEmpty()) {
+    if (flatStickers.isEmpty() && !loading) {
         Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
             Text(
                 text = if (query.isEmpty()) "No stickers yet" else "No stickers match",
@@ -488,62 +503,80 @@ private fun StickerSearchResults(
         return
     }
 
-    LazyVerticalGrid(
-        columns = GridCells.Adaptive(72.dp),
-        modifier = Modifier.fillMaxSize(),
-        horizontalArrangement = Arrangement.spacedBy(4.dp),
-        verticalArrangement = Arrangement.spacedBy(4.dp),
-        contentPadding = PaddingValues(0.dp),
-    ) {
-        items(flatStickers, key = { it.key }) { item ->
-            Box(
-                modifier = Modifier
-                    .aspectRatio(1f)
-                    .clip(RoundedCornerShape(8.dp))
-                    .background(fg.copy(alpha = 0.05f))
-                    .clickable {
-                        scope.launch {
-                            when (item) {
-                                is StickerSearchItem.User -> {
-                                    store.touch(item.entry)
-                                    recentsStore.add(StickerRef.User(item.entry.id))
-                                    val file = store.fileFor(item.entry)
-                                    if (!file.exists()) return@launch
-                                    val uri = withContext(Dispatchers.IO) {
-                                        cloneToClipboardStore(context, android.net.Uri.fromFile(file))
-                                    } ?: return@launch
-                                    onStickerPicked(uri, item.entry.mime, "Sticker")
-                                }
-                                is StickerSearchItem.WhatsApp -> {
-                                    recentsStore.add(
-                                        StickerRef.WhatsApp(item.sticker.uri.toString(), item.sticker.emojis),
-                                    )
-                                    val uri = withContext(Dispatchers.IO) {
-                                        cloneToClipboardStore(context, item.sticker.uri)
-                                    } ?: return@launch
-                                    onStickerPicked(uri, "image/webp", item.sticker.emojis.ifBlank { "Sticker" })
-                                }
-                            }
-                        }
-                    },
+    Box(modifier = Modifier.fillMaxSize()) {
+        if (loading && flatStickers.isEmpty()) {
+            Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                CircularProgressIndicator(color = accent, strokeWidth = 2.dp, modifier = Modifier.size(24.dp))
+            }
+        } else {
+            LazyVerticalGrid(
+                columns = GridCells.Adaptive(72.dp),
+                modifier = Modifier.fillMaxSize(),
+                horizontalArrangement = Arrangement.spacedBy(4.dp),
+                verticalArrangement = Arrangement.spacedBy(4.dp),
+                contentPadding = PaddingValues(0.dp),
             ) {
-                val model: Any = when (item) {
-                    is StickerSearchItem.User -> android.net.Uri.fromFile(store.fileFor(item.entry))
-                    is StickerSearchItem.WhatsApp -> item.sticker.uri
+                items(flatStickers, key = { it.key }) { item ->
+                    Box(
+                        modifier = Modifier
+                            .aspectRatio(1f)
+                            .clip(RoundedCornerShape(8.dp))
+                            .background(fg.copy(alpha = 0.05f))
+                            .clickable {
+                                scope.launch {
+                                    when (item) {
+                                        is StickerSearchItem.User -> {
+                                            store.touch(item.entry)
+                                            recentsStore.add(StickerRef.User(item.entry.id))
+                                            val file = store.fileFor(item.entry)
+                                            if (!file.exists()) return@launch
+                                            val uri = withContext(Dispatchers.IO) {
+                                                cloneToClipboardStore(context, android.net.Uri.fromFile(file), item.entry.mime)
+                                            } ?: return@launch
+                                            onStickerPicked(uri, item.entry.mime, "Sticker")
+                                        }
+                                        is StickerSearchItem.WhatsApp -> {
+                                            recentsStore.add(
+                                                StickerRef.WhatsApp(item.sticker.uri.toString(), item.sticker.emojis),
+                                            )
+                                            val uri = withContext(Dispatchers.IO) {
+                                                cloneToClipboardStore(context, item.sticker.uri, "image/webp")
+                                            } ?: return@launch
+                                            onStickerPicked(uri, "image/webp", item.sticker.emojis.ifBlank { "Sticker" })
+                                        }
+                                        is StickerSearchItem.Community -> {
+                                            val uri = withContext(Dispatchers.IO) {
+                                                downloadAndStore(context, item.sticker.stickerUrl, "image/webp")
+                                            } ?: return@launch
+                                            onStickerPicked(uri, "image/webp", item.sticker.contentDescription.ifBlank { "Sticker" })
+                                        }
+                                    }
+                                }
+                            },
+                    ) {
+                        val model: Any = when (item) {
+                            is StickerSearchItem.User -> android.net.Uri.fromFile(store.fileFor(item.entry))
+                            is StickerSearchItem.WhatsApp -> item.sticker.uri
+                            is StickerSearchItem.Community -> item.sticker.previewUrl
+                        }
+                        AsyncImage(model = model, contentDescription = null, modifier = Modifier.fillMaxSize())
+                    }
                 }
-                AsyncImage(model = model, contentDescription = null, modifier = Modifier.fillMaxSize())
             }
         }
     }
 }
 
-private sealed interface StickerSearchItem {
+internal sealed interface StickerSearchItem {
     val key: String
     data class User(val entry: UserStickerStore.Entry) : StickerSearchItem {
         override val key: String get() = "u:${entry.id}"
     }
     data class WhatsApp(val sticker: WhatsAppStickerReader.Sticker) : StickerSearchItem {
         override val key: String get() = "w:${sticker.uri}"
+    }
+    data class Community(val sticker: KlipyClient.StickerResult) : StickerSearchItem {
+        override val key: String get() = "c:${sticker.id}"
     }
 }
 
@@ -553,19 +586,27 @@ private val sharedDownloadClient = OkHttpClient.Builder()
     .readTimeout(8, TimeUnit.SECONDS)
     .build()
 
-private suspend fun downloadAndStore(
+internal suspend fun downloadAndStore(
     context: android.content.Context,
     url: String,
+    mimeType: String = "image/gif",
 ): android.net.Uri? = withContext(Dispatchers.IO) {
     try {
         val response = sharedDownloadClient.newCall(Request.Builder().url(url).build()).execute()
         response.use { r ->
             if (!r.isSuccessful) return@withContext null
             val body = r.body ?: return@withContext null
-            val id = System.nanoTime()
-            val file = ClipboardFileStorage.getFileForId(context, id)
-            file.outputStream().use { out -> body.byteStream().copyTo(out) }
-            android.content.ContentUris.withAppendedId(ClipboardMediaProvider.IMAGE_CLIPS_URI, id)
+            // Write to a temp cache file first, then register via contentResolver.insert
+            val cache = java.io.File(context.cacheDir, "dl_${System.nanoTime()}.tmp")
+            cache.outputStream().use { out -> body.byteStream().copyTo(out) }
+            val values = android.content.ContentValues(3).apply {
+                put(ClipboardMediaProvider.Columns.MediaUri, android.net.Uri.fromFile(cache).toString())
+                put(ClipboardMediaProvider.Columns.MimeTypes, mimeType)
+                put(android.provider.OpenableColumns.DISPLAY_NAME, "media")
+            }
+            val result = context.contentResolver.insert(ClipboardMediaProvider.IMAGE_CLIPS_URI, values)
+            cache.delete()
+            result
         }
     } catch (e: Exception) {
         flogDebug { "MediaSearchOverlay.downloadAndStore failed: ${e.message}" }
@@ -573,17 +614,18 @@ private suspend fun downloadAndStore(
     }
 }
 
-private suspend fun cloneToClipboardStore(
+internal suspend fun cloneToClipboardStore(
     context: android.content.Context,
     source: android.net.Uri,
+    mimeType: String = "image/webp",
 ): android.net.Uri? = withContext(Dispatchers.IO) {
     try {
-        val id = System.nanoTime()
-        val file = ClipboardFileStorage.getFileForId(context, id)
-        context.contentResolver.openInputStream(source)?.use { input ->
-            file.outputStream().use { output -> input.copyTo(output) }
-        } ?: return@withContext null
-        android.content.ContentUris.withAppendedId(ClipboardMediaProvider.IMAGE_CLIPS_URI, id)
+        val values = android.content.ContentValues(3).apply {
+            put(ClipboardMediaProvider.Columns.MediaUri, source.toString())
+            put(ClipboardMediaProvider.Columns.MimeTypes, mimeType)
+            put(android.provider.OpenableColumns.DISPLAY_NAME, "sticker")
+        }
+        context.contentResolver.insert(ClipboardMediaProvider.IMAGE_CLIPS_URI, values)
     } catch (e: Exception) {
         flogDebug { "MediaSearchOverlay.cloneToClipboardStore failed: ${e.message}" }
         null
