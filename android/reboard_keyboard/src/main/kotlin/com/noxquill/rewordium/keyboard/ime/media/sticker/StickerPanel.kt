@@ -166,8 +166,8 @@ fun StickerPanel(
         derivedStateOf { buildList {
             add(TabSpec.Recents)
             add(TabSpec.Favorites)
-            if (klipyClient.isConfigured) add(TabSpec.Community)
             add(TabSpec.User)
+            if (klipyClient.isConfigured) add(TabSpec.Community)
             if (premadeIndex.isNotEmpty()) add(TabSpec.Premade)
             waPacks.forEachIndexed { i, pack -> add(TabSpec.WhatsApp(i, pack)) }
         } }

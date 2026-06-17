@@ -67,6 +67,7 @@ import java.io.FileOutputStream
  * background with the M3 surface tint.
  */
 class StickerImportActivity : ComponentActivity() {
+    private var isRedirectingToEditor = false
 
     private val pickerLauncher = registerForActivityResult(
         ActivityResultContracts.GetContent(),
@@ -114,6 +115,7 @@ class StickerImportActivity : ComponentActivity() {
                                     intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
                                     startActivity(intent)
                                 }
+                                isRedirectingToEditor = true
                                 finish()
                             }
                         },
@@ -144,6 +146,9 @@ class StickerImportActivity : ComponentActivity() {
         }
         com.noxquill.rewordium.keyboard.FlorisImeService.shouldPreserveMediaUiModeOnce = true
         super.finish()
+        if (!isRedirectingToEditor) {
+            com.noxquill.rewordium.keyboard.FlorisImeService.showUi()
+        }
     }
 
     private fun commit(uri: Uri, removeBg: Boolean, tags: List<String> = emptyList()) {
