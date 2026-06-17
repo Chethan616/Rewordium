@@ -131,14 +131,25 @@ private class FlorisScreenScopeImpl : FlorisScreenScope {
         val colorScheme = MaterialTheme.colorScheme
 
         SideEffect {
-            val window = (context as Activity).window
-            previewFieldController?.isVisible = previewFieldVisible
-            window.statusBarColor = Color.Transparent.toArgb()
-            if (AndroidVersion.ATLEAST_API29_Q) {
-                window.navigationBarColor = Color.Transparent.toArgb()
-                window.isNavigationBarContrastEnforced = true
-            } else {
-                window.navigationBarColor = colorScheme.scrim.toArgb()
+            var ctx = context
+            var activity: Activity? = null
+            while (ctx is android.content.ContextWrapper) {
+                if (ctx is Activity) {
+                    activity = ctx
+                    break
+                }
+                ctx = ctx.baseContext
+            }
+            if (activity != null) {
+                val window = activity.window
+                previewFieldController?.isVisible = previewFieldVisible
+                window.statusBarColor = Color.Transparent.toArgb()
+                if (AndroidVersion.ATLEAST_API29_Q) {
+                    window.navigationBarColor = Color.Transparent.toArgb()
+                    window.isNavigationBarContrastEnforced = true
+                } else {
+                    window.navigationBarColor = colorScheme.scrim.toArgb()
+                }
             }
         }
 

@@ -201,6 +201,26 @@ class KeyboardManager(context: Context) : InputKeyEventReceiver {
         _emojiSearchQuery.value = next
     }
 
+    fun deleteWordEmojiSearch() {
+        if (_mediaSearchMode.value == MediaSearchMode.NONE) return
+        val current = _mediaSearchQuery.value
+        if (current.isEmpty()) return
+        val trimmed = current.trimEnd()
+        if (trimmed.isEmpty()) {
+            _mediaSearchQuery.value = ""
+            _emojiSearchQuery.value = ""
+            return
+        }
+        val lastSpaceIndex = trimmed.lastIndexOf(' ')
+        val next = if (lastSpaceIndex >= 0) {
+            trimmed.substring(0, lastSpaceIndex + 1)
+        } else {
+            ""
+        }
+        _mediaSearchQuery.value = next
+        _emojiSearchQuery.value = next
+    }
+
     /**
      * Clear the entire media-search query without closing the overlay. Used
      * by the X button inside the search pill and after a result is picked
@@ -444,7 +464,13 @@ class KeyboardManager(context: Context) : InputKeyEventReceiver {
         // "happy", expect 😊 results to filter live, and instead see the
         // word land in their host text field.
         if (_emojiSearchQuery.value != null) {
-            appendToEmojiSearch(word)
+            val current = _mediaSearchQuery.value
+            val textToAppend = if (current.isNotEmpty() && !current.endsWith(" ")) {
+                " $word"
+            } else {
+                word
+            }
+            appendToEmojiSearch(textToAppend)
             return
         }
         editorInstance.commitGesture(fixCase(word))
@@ -909,6 +935,7 @@ class KeyboardManager(context: Context) : InputKeyEventReceiver {
         if (_emojiSearchQuery.value != null) {
             when (data.code) {
                 KeyCode.DELETE -> { backspaceEmojiSearch(); return@batchEdit }
+                KeyCode.DELETE_WORD -> { deleteWordEmojiSearch(); return@batchEdit }
                 KeyCode.SPACE -> { appendToEmojiSearch(" "); return@batchEdit }
                 KeyCode.ENTER -> {
                     commitMediaSearch()

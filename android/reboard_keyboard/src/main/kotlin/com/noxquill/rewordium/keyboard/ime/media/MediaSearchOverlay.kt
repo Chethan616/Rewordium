@@ -143,8 +143,8 @@ fun MediaSearchOverlay() {
     val dividerColor = pillFg.copy(alpha = 0.10f)
 
     val titleText = when (mode) {
-        KeyboardManager.MediaSearchMode.GIF -> "Search GIFs"
-        KeyboardManager.MediaSearchMode.STICKER -> "Search stickers"
+        KeyboardManager.MediaSearchMode.GIF -> "Search on KLIPY"
+        KeyboardManager.MediaSearchMode.STICKER -> "Search on KLIPY"
         else -> "Search"
     }
 
@@ -248,6 +248,7 @@ fun MediaSearchOverlay() {
 
                 SearchPill(
                     query = query,
+                    mode = mode,
                     pillBg = pillBg,
                     pillFg = pillFg,
                     accent = accent,
@@ -264,6 +265,7 @@ fun MediaSearchOverlay() {
 @Composable
 private fun SearchPill(
     query: String,
+    mode: KeyboardManager.MediaSearchMode,
     pillBg: Color,
     pillFg: Color,
     accent: Color,
@@ -306,13 +308,20 @@ private fun SearchPill(
                 )
                 Spacer(modifier = Modifier.width(10.dp))
                 if (query.isEmpty()) {
-                    Box(
-                        modifier = Modifier
-                            .width(2.dp)
-                            .height(18.dp)
-                            .alpha(caretAlpha)
-                            .background(accent),
-                    )
+                    Box(contentAlignment = Alignment.CenterStart) {
+                        Text(
+                            text = if (mode == KeyboardManager.MediaSearchMode.GIF || mode == KeyboardManager.MediaSearchMode.STICKER) "Search on KLIPY" else "Search",
+                            color = pillFg.copy(alpha = 0.55f),
+                            fontSize = 14.sp,
+                        )
+                        Box(
+                            modifier = Modifier
+                                .width(2.dp)
+                                .height(18.dp)
+                                .alpha(caretAlpha)
+                                .background(accent),
+                        )
+                    }
                 } else {
                     Text(text = query, color = pillFg, fontSize = 14.sp)
                     Spacer(modifier = Modifier.width(1.dp))

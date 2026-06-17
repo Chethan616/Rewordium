@@ -153,6 +153,8 @@ fun StickerEditorScreen(sourceUri: String?) = FlorisScreen {
     var saving by remember { mutableStateOf(false) }
     var bgRemovalRunning by remember { mutableStateOf(false) }
     var imageUri by rememberSaveable { mutableStateOf(sourceUri) }
+    var showSaveDialog by remember { mutableStateOf(false) }
+    var saveTagsText by remember { mutableStateOf("") }
 
     val cropLauncher = rememberLauncherForActivityResult(CropImageContract()) { result ->
         if (result.isSuccessful) {
@@ -513,19 +515,8 @@ fun StickerEditorScreen(sourceUri: String?) = FlorisScreen {
                 }
                 Button(
                     onClick = {
-                        val editor = photoEditor ?: return@Button
-                        val view = photoEditorView ?: return@Button
-                        saving = true
-                        scope.launch {
-                            val ok = exportAndImport(context, editor, view, store)
-                            saving = false
-                            if (ok) {
-                                Toast.makeText(context, "Sticker saved", Toast.LENGTH_SHORT).show()
-                                navController.popBackStack()
-                            } else {
-                                Toast.makeText(context, "Save failed", Toast.LENGTH_SHORT).show()
-                            }
-                        }
+                        saveTagsText = ""
+                        showSaveDialog = true
                     },
                     enabled = !saving && !bgRemovalRunning && !imageUri.isNullOrBlank(),
                     modifier = Modifier.weight(1f),
@@ -624,6 +615,58 @@ fun StickerEditorScreen(sourceUri: String?) = FlorisScreen {
             dismissButton = {
                 TextButton(onClick = { showTextDialog = false }) { Text("Cancel") }
             },
+        )
+    }
+
+    if (showSaveDialog) {
+        AlertDialog(
+            onDismissRequest = { showSaveDialog = false },
+            title = { Text("Save sticker") },
+            text = {
+                Column {
+                    Text(
+                        text = "Add tags to categorize this sticker (comma separated):",
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                    Spacer(modifier = Modifier.height(12.dp))
+                    androidx.compose.material3.OutlinedTextField(
+                        value = saveTagsText,
+                        onValueChange = { saveTagsText = it },
+                        label = { Text("Tags") },
+                        placeholder = { Text("e.g. John, Reaction, Funny") },
+                        singleLine = true,
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                }
+            },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        showSaveDialog = false
+                        val tagsList = saveTagsText.split(",").map { it.trim() }.filter { it.isNotEmpty() }
+                        val editor = photoEditor ?: return@TextButton
+                        val view = photoEditorView ?: return@TextButton
+                        saving = true
+                        scope.launch {
+                            val ok = exportAndImport(context, editor, view, store, tagsList)
+                            saving = false
+                            if (ok) {
+                                Toast.makeText(context, "Sticker saved", Toast.LENGTH_SHORT).show()
+                                navController.popBackStack()
+                            } else {
+                                Toast.makeText(context, "Save failed", Toast.LENGTH_SHORT).show()
+                            }
+                        }
+                    }
+                ) {
+                    Text("Save")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showSaveDialog = false }) {
+                    Text("Cancel")
+                }
+            }
         )
     }
 }
@@ -741,6 +784,7 @@ private suspend fun exportAndImport(
     editor: PhotoEditor,
     view: PhotoEditorView,
     store: UserStickerStore,
+    tags: List<String> = emptyList(),
 ): Boolean = withContext(Dispatchers.IO) {
     try {
         val rasterized = rasterizeEditor(editor) ?: return@withContext false
@@ -750,7 +794,7 @@ private suspend fun exportAndImport(
             // WEBP_LOSSLESS preserves the transparent background that cutouts produce.
             normalized.compress(Bitmap.CompressFormat.WEBP_LOSSLESS, 100, it)
         }
-        val entry = store.import(Uri.fromFile(cacheFile), "image/webp")
+        val entry = store.import(Uri.fromFile(cacheFile), "image/webp", tags)
         cacheFile.delete()
         entry != null
     } catch (e: Exception) {
