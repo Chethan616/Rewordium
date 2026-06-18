@@ -18,6 +18,7 @@ package com.noxquill.rewordium.keyboard.app
 
 import android.content.Context
 import android.content.Intent
+import android.net.Uri
 import android.content.res.Configuration
 import android.os.Bundle
 import androidx.activity.ComponentActivity
@@ -84,8 +85,19 @@ class FlorisAppActivity : ComponentActivity() {
     private var showAppIcon = true
     private var resourcesContext by mutableStateOf(this as Context)
     private var intentToBeHandled by mutableStateOf<Intent?>(null)
+    private var startupDeepLinkUri by mutableStateOf<Uri?>(null)
 
     override fun onCreate(savedInstanceState: Bundle?) {
+        val isAppDeepLink = intent?.action == Intent.ACTION_VIEW &&
+            intent?.data?.scheme == "ui" && intent?.data?.host == "ReBoard"
+        val isBrowsableDeepLink = intent?.action == Intent.ACTION_VIEW &&
+            intent?.categories?.contains(Intent.CATEGORY_BROWSABLE) == true
+        if (isAppDeepLink || isBrowsableDeepLink) {
+            startupDeepLinkUri = intent?.data
+            intent?.action = null
+            intent?.data = null
+        }
+
         // Splash screen should be installed before calling super.onCreate()
         installSplashScreen().apply {
             setKeepOnScreenCondition { !appContext.preferenceStoreLoaded.value }
@@ -132,11 +144,7 @@ class FlorisAppActivity : ComponentActivity() {
                     }
                 }
             }
-            val isAppDeepLink = intent.action == Intent.ACTION_VIEW &&
-                intent.data?.scheme == "ui" && intent.data?.host == "ReBoard"
-            val isBrowsableDeepLink = intent.action == Intent.ACTION_VIEW &&
-                intent.categories?.contains(Intent.CATEGORY_BROWSABLE) == true
-            if (!isAppDeepLink && !isBrowsableDeepLink) {
+            if (startupDeepLinkUri == null) {
                 onNewIntent(intent)
             }
         }
@@ -210,6 +218,14 @@ class FlorisAppActivity : ComponentActivity() {
             }
         }
 
+        LaunchedEffect(startupDeepLinkUri) {
+            val uri = startupDeepLinkUri
+            if (uri != null) {
+                navController.navigate(uri)
+                startupDeepLinkUri = null
+            }
+        }
+
         LaunchedEffect(intentToBeHandled) {
             val intent = intentToBeHandled
             if (intent != null) {
@@ -218,7 +234,7 @@ class FlorisAppActivity : ComponentActivity() {
                 val isBrowsableDeepLink = intent.action == Intent.ACTION_VIEW &&
                     intent.categories?.contains(Intent.CATEGORY_BROWSABLE) == true
                 if (isAppDeepLink || isBrowsableDeepLink) {
-                    navController.handleDeepLink(intent)
+                    intent.data?.let { navController.navigate(it) }
                 } else {
                     val data = if (intent.action == Intent.ACTION_VIEW) {
                         intent.data!!
