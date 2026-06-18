@@ -153,23 +153,55 @@ class StickerImportActivity : ComponentActivity() {
 
     private fun commit(uri: Uri, removeBg: Boolean, tags: List<String> = emptyList()) {
         CoroutineScope(Dispatchers.Main).launch {
+            var tempFile: File? = null
+            var cutoutFile: File? = null
             try {
                 withContext(Dispatchers.IO) {
                     val store = UserStickerStore.get(this@StickerImportActivity)
                     store.ensureLoaded()
-                    val finalUri = if (removeBg) {
-                        runBgRemove(this@StickerImportActivity, uri) ?: uri
-                    } else {
-                        uri
+
+                    // Copy transient content URI to a local file in the app cache using Activity Context
+                    val temp = File(cacheDir, "sticker_import_temp_${System.nanoTime()}")
+                    val copyOk = contentResolver.openInputStream(uri)?.use { input ->
+                        temp.outputStream().use { output ->
+                            input.copyTo(output)
+                        }
+                        true
+                    } ?: false
+                    if (!copyOk) {
+                        flogDebug { "StickerImportActivity: failed to copy source URI to cache" }
+                        return@withContext
                     }
-                    val mime = if (removeBg) "image/webp"
+                    tempFile = temp
+                    val tempUri = Uri.fromFile(temp)
+
+                    val finalUri = if (removeBg) {
+                        val cutout = runBgRemove(this@StickerImportActivity, tempUri)
+                        if (cutout != null) {
+                            cutoutFile = File(cutout.path!!)
+                            cutout
+                        } else {
+                            tempUri
+                        }
+                    } else {
+                        tempUri
+                    }
+
+                    val mime = if (removeBg && cutoutFile != null) "image/webp"
                     else contentResolver.getType(uri) ?: "image/webp"
+
                     store.import(finalUri, mime, tags)
                     flogDebug { "StickerImportActivity: imported $finalUri (removeBg=$removeBg)" }
                 }
             } catch (e: Exception) {
                 flogDebug { "StickerImportActivity: import failed: ${e.message}" }
             } finally {
+                try {
+                    tempFile?.delete()
+                } catch (_: Exception) {}
+                try {
+                    cutoutFile?.delete()
+                } catch (_: Exception) {}
                 finish()
             }
         }
