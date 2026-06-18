@@ -175,6 +175,7 @@ fun StickerEditorScreen(sourceUri: String?) = FlorisScreen {
     var pendingCropUri by remember { mutableStateOf<Uri?>(null) }
     var cropLoading by remember { mutableStateOf(false) }
     var cropAspectRatioState by remember { mutableStateOf<CropRatioPreset>(CropRatioPreset.Free) }
+    var lastLoadedUri by remember { mutableStateOf<Uri?>(null) }
 
     LaunchedEffect(cropModeActive) {
         title = if (cropModeActive) "Crop image" else "Sticker editor"
@@ -340,6 +341,7 @@ fun StickerEditorScreen(sourceUri: String?) = FlorisScreen {
                                 guidelines = CropImageView.Guidelines.ON
                                 cropShape = CropImageView.CropShape.RECTANGLE
                                 isAutoZoomEnabled = true
+                                tag = cropAspectRatioState
                                 
                                 val options = CropImageOptions().apply {
                                     backgroundColor = AndroidColor.TRANSPARENT
@@ -375,49 +377,56 @@ fun StickerEditorScreen(sourceUri: String?) = FlorisScreen {
                                 setImageCropOptions(options)
                                 
                                 cropViewRef = this
-                                pendingCropUri?.let { setImageUriAsync(it) }
+                                pendingCropUri?.let { uri ->
+                                    lastLoadedUri = uri
+                                    setImageUriAsync(uri)
+                                }
                             }
                         },
                         update = { view ->
-                            val options = CropImageOptions().apply {
-                                backgroundColor = AndroidColor.TRANSPARENT
-                                borderLineColor = primaryColor
-                                borderCornerColor = primaryColor
-                                guidelinesColor = guidelineColor
-                                borderLineThickness = 4f
-                                borderCornerThickness = 8f
-                                borderCornerLength = 36f
-                                guidelinesThickness = 2f
-                                guidelines = CropImageView.Guidelines.ON
-                                cropShape = CropImageView.CropShape.RECTANGLE
-                                autoZoomEnabled = true
-                                
-                                when (cropAspectRatioState) {
-                                    CropRatioPreset.Free -> {
-                                        fixAspectRatio = false
-                                    }
-                                    CropRatioPreset.Square -> {
-                                        fixAspectRatio = true
-                                        aspectRatioX = 1
-                                        aspectRatioY = 1
-                                    }
-                                    CropRatioPreset.Ratio4_3 -> {
-                                        fixAspectRatio = true
-                                        aspectRatioX = 4
-                                        aspectRatioY = 3
-                                    }
-                                    CropRatioPreset.Ratio16_9 -> {
-                                        fixAspectRatio = true
-                                        aspectRatioX = 16
-                                        aspectRatioY = 9
+                            if (view.tag != cropAspectRatioState) {
+                                view.tag = cropAspectRatioState
+                                val options = CropImageOptions().apply {
+                                    backgroundColor = AndroidColor.TRANSPARENT
+                                    borderLineColor = primaryColor
+                                    borderCornerColor = primaryColor
+                                    guidelinesColor = guidelineColor
+                                    borderLineThickness = 4f
+                                    borderCornerThickness = 8f
+                                    borderCornerLength = 36f
+                                    guidelinesThickness = 2f
+                                    guidelines = CropImageView.Guidelines.ON
+                                    cropShape = CropImageView.CropShape.RECTANGLE
+                                    autoZoomEnabled = true
+                                    
+                                    when (cropAspectRatioState) {
+                                        CropRatioPreset.Free -> {
+                                            fixAspectRatio = false
+                                        }
+                                        CropRatioPreset.Square -> {
+                                            fixAspectRatio = true
+                                            aspectRatioX = 1
+                                            aspectRatioY = 1
+                                        }
+                                        CropRatioPreset.Ratio4_3 -> {
+                                            fixAspectRatio = true
+                                            aspectRatioX = 4
+                                            aspectRatioY = 3
+                                        }
+                                        CropRatioPreset.Ratio16_9 -> {
+                                            fixAspectRatio = true
+                                            aspectRatioX = 16
+                                            aspectRatioY = 9
+                                        }
                                     }
                                 }
+                                view.setImageCropOptions(options)
                             }
-                            view.setImageCropOptions(options)
-                            pendingCropUri?.let { uri ->
-                                if (view.imageUri != uri) {
-                                    view.setImageUriAsync(uri)
-                                }
+                            
+                            val uri = pendingCropUri
+                            if (uri != null && uri != lastLoadedUri) {
+                                lastLoadedUri = uri
+                                view.setImageUriAsync(uri)
                             }
                         },
                     )
