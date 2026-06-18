@@ -24,6 +24,7 @@ import android.graphics.Paint
 import android.graphics.PorterDuff
 import android.graphics.RectF
 import android.net.Uri
+import android.view.ViewGroup
 import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
@@ -340,12 +341,32 @@ fun StickerEditorScreen(sourceUri: String?) = FlorisScreen {
                     AndroidView(
                         modifier = Modifier.fillMaxSize(),
                         factory = { ctx ->
-                            CropImageView(ctx).apply {
+                            // 1. Create a FrameLayout to act as a layout boundary
+                            val container = android.widget.FrameLayout(ctx).apply {
+                                layoutParams = ViewGroup.LayoutParams(
+                                    ViewGroup.LayoutParams.MATCH_PARENT,
+                                    ViewGroup.LayoutParams.MATCH_PARENT
+                                )
+                            }
+
+                            // 2. Initialize the CropImageView
+                            val cropView = CropImageView(ctx).apply {
+                                layoutParams = android.widget.FrameLayout.LayoutParams(
+                                    android.widget.FrameLayout.LayoutParams.MATCH_PARENT,
+                                    android.widget.FrameLayout.LayoutParams.MATCH_PARENT
+                                )
                                 guidelines = CropImageView.Guidelines.ON
                                 cropShape = CropImageView.CropShape.RECTANGLE
                                 isAutoZoomEnabled = true
                                 lastAspectRatioRef.value = cropAspectRatioState
-                                
+
+                                // Swallow internal decode exceptions to prevent hard crashes
+                                setOnSetImageUriCompleteListener { _, _, error ->
+                                    if (error != null) {
+                                        Toast.makeText(ctx, "Failed to load image", Toast.LENGTH_SHORT).show()
+                                    }
+                                }
+
                                 val options = CropImageOptions().apply {
                                     backgroundColor = AndroidColor.TRANSPARENT
                                     borderLineColor = primaryColor
@@ -355,11 +376,9 @@ fun StickerEditorScreen(sourceUri: String?) = FlorisScreen {
                                     borderCornerThickness = 8f
                                     borderCornerLength = 36f
                                     guidelinesThickness = 2f
-                                    
+
                                     when (cropAspectRatioState) {
-                                        CropRatioPreset.Free -> {
-                                            fixAspectRatio = false
-                                        }
+                                        CropRatioPreset.Free -> fixAspectRatio = false
                                         CropRatioPreset.Square -> {
                                             fixAspectRatio = true
                                             aspectRatioX = 1
@@ -375,18 +394,38 @@ fun StickerEditorScreen(sourceUri: String?) = FlorisScreen {
                                             aspectRatioX = 16
                                             aspectRatioY = 9
                                         }
+                                        CropRatioPreset.Ratio9_16 -> {
+                                            fixAspectRatio = true
+                                            aspectRatioX = 9
+                                            aspectRatioY = 16
+                                        }
                                     }
                                 }
                                 setImageCropOptions(options)
-                                
+
                                 cropViewRef = this
                                 pendingCropUri?.let { uri ->
                                     lastLoadedUriRef.value = uri
-                                    setImageUriAsync(uri)
+                                    // Wait for the view to have dimensions before loading the URI
+                                    viewTreeObserver.addOnGlobalLayoutListener(object : android.view.ViewTreeObserver.OnGlobalLayoutListener {
+                                        override fun onGlobalLayout() {
+                                            if (width > 0 && height > 0) {
+                                                viewTreeObserver.removeOnGlobalLayoutListener(this)
+                                                setImageUriAsync(uri)
+                                            }
+                                        }
+                                    })
                                 }
                             }
+
+                            // 3. Add the cropper to the container and return the container to Compose
+                            container.addView(cropView)
+                            container
                         },
-                        update = { view ->
+                        update = { container ->
+                            // 4. Extract the CropImageView from the FrameLayout container
+                            val view = container.getChildAt(0) as CropImageView
+
                             if (lastAspectRatioRef.value != cropAspectRatioState) {
                                 lastAspectRatioRef.value = cropAspectRatioState
                                 val options = CropImageOptions().apply {
@@ -401,11 +440,9 @@ fun StickerEditorScreen(sourceUri: String?) = FlorisScreen {
                                     guidelines = CropImageView.Guidelines.ON
                                     cropShape = CropImageView.CropShape.RECTANGLE
                                     autoZoomEnabled = true
-                                    
+
                                     when (cropAspectRatioState) {
-                                        CropRatioPreset.Free -> {
-                                            fixAspectRatio = false
-                                        }
+                                        CropRatioPreset.Free -> fixAspectRatio = false
                                         CropRatioPreset.Square -> {
                                             fixAspectRatio = true
                                             aspectRatioX = 1
@@ -421,15 +458,32 @@ fun StickerEditorScreen(sourceUri: String?) = FlorisScreen {
                                             aspectRatioX = 16
                                             aspectRatioY = 9
                                         }
+                                        CropRatioPreset.Ratio9_16 -> {
+                                            fixAspectRatio = true
+                                            aspectRatioX = 9
+                                            aspectRatioY = 16
+                                        }
                                     }
                                 }
                                 view.setImageCropOptions(options)
                             }
-                            
+
                             val uri = pendingCropUri
                             if (uri != null && lastLoadedUriRef.value != uri) {
                                 lastLoadedUriRef.value = uri
-                                view.setImageUriAsync(uri)
+                                
+                                if (view.width > 0 && view.height > 0) {
+                                    view.setImageUriAsync(uri)
+                                } else {
+                                    view.viewTreeObserver.addOnGlobalLayoutListener(object : android.view.ViewTreeObserver.OnGlobalLayoutListener {
+                                        override fun onGlobalLayout() {
+                                            if (view.width > 0 && view.height > 0) {
+                                                view.viewTreeObserver.removeOnGlobalLayoutListener(this)
+                                                view.setImageUriAsync(uri)
+                                            }
+                                        }
+                                    })
+                                }
                             }
                         },
                     )
@@ -1177,7 +1231,8 @@ private enum class CropRatioPreset(val label: String) {
     Free("Free"),
     Square("1:1"),
     Ratio4_3("4:3"),
-    Ratio16_9("16:9")
+    Ratio16_9("16:9"),
+    Ratio9_16("9:16")
 }
 
 @Composable
