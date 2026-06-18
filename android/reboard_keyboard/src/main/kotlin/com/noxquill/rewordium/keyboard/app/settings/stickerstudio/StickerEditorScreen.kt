@@ -25,11 +25,8 @@ import android.graphics.PorterDuff
 import android.graphics.RectF
 import android.net.Uri
 import android.widget.Toast
-import android.Manifest
-import android.content.pm.PackageManager
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.core.content.ContextCompat
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -37,6 +34,14 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
+import com.canhub.cropper.CropImageOptions
+import androidx.compose.material.icons.outlined.Close
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import org.florisboard.lib.compose.FlorisIconButton
+import org.florisboard.lib.compose.autoMirrorForRtl
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
@@ -58,13 +63,20 @@ import androidx.compose.material.icons.outlined.Cancel
 import androidx.compose.material.icons.outlined.Check
 import androidx.compose.material.icons.outlined.Crop
 import androidx.compose.material.icons.outlined.Delete
+import androidx.compose.material.icons.outlined.Flip
 import androidx.compose.material.icons.outlined.PhotoLibrary
+import androidx.compose.material.icons.outlined.RotateLeft
+import androidx.compose.material.icons.outlined.RotateRight
 import androidx.compose.material.icons.outlined.TextFields
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.FilledTonalButton
+import androidx.compose.material3.FilledTonalIconButton
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Slider
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -84,12 +96,10 @@ import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.viewinterop.AndroidView
-import com.canhub.cropper.CropImageContract
-import com.canhub.cropper.CropImageContractOptions
-import com.canhub.cropper.CropImageOptions
 import com.canhub.cropper.CropImageView
 import com.noxquill.rewordium.keyboard.app.LocalNavController
 import com.noxquill.rewordium.keyboard.ime.media.sticker.UserStickerStore
@@ -118,8 +128,7 @@ private val PALETTE = listOf(
  * Sticker editor — Compose shell around `PhotoEditorView` (MIT,
  * Burhanrashid52). Hosts a 1:1 square canvas the user can:
  *
- *  - Replace the base image from gallery (image_cropper auto-crops to
- *    1:1 with built-in camera + gallery picker)
+ *  - Replace the base image from gallery (inline Material 3 crop UI)
  *  - Auto-cut-out background via ML Kit Subject Segmentation
  *  - Draw with brush / eraser
  *  - Add text with color
@@ -127,6 +136,9 @@ private val PALETTE = listOf(
  *  - Save: rasterize the editor, scale to 512x512, encode lossless WebP,
  *    push through [UserStickerStore.import] — IME panel picks it up
  *    instantly via the existing `entriesFlow` collector.
+ *
+ * Crop flow uses an inline [CropImageView] embedded in Compose with
+ * Material 3 buttons — no external activity needed.
  *
  * If [sourceUri] is non-null on first composition, that URI is loaded as
  * the base image; otherwise the canvas starts transparent and the user
@@ -143,6 +155,7 @@ fun StickerEditorScreen(sourceUri: String?) = FlorisScreen {
     val scope = rememberCoroutineScope()
     val store = remember { UserStickerStore.get(context) }
 
+    // ── Editor state ───────────────────────────────────────────────────
     var photoEditorView by remember { mutableStateOf<PhotoEditorView?>(null) }
     var photoEditor by remember { mutableStateOf<PhotoEditor?>(null) }
     var brushColor by remember { mutableStateOf(PALETTE[0]) }
@@ -156,58 +169,133 @@ fun StickerEditorScreen(sourceUri: String?) = FlorisScreen {
     var showSaveDialog by remember { mutableStateOf(false) }
     var saveTagsText by remember { mutableStateOf("") }
 
-    val cropLauncher = rememberLauncherForActivityResult(CropImageContract()) { result ->
-        if (result.isSuccessful) {
-            val uri = result.uriContent ?: return@rememberLauncherForActivityResult
-            scope.launch {
-                val cachedUri = withContext(Dispatchers.IO) {
-                    try {
-                        val cacheFile = File(context.cacheDir, "crop_cache_${System.nanoTime()}.png")
-                        context.contentResolver.openInputStream(uri)?.use { input ->
-                            cacheFile.outputStream().use { output -> input.copyTo(output) }
-                        } ?: return@withContext null
-                        Uri.fromFile(cacheFile)
-                    } catch (e: Exception) {
-                        null
-                    }
-                }
-                if (cachedUri != null) {
-                    imageUri = cachedUri.toString()
-                } else {
-                    Toast.makeText(context, "Failed to read cropped image", Toast.LENGTH_SHORT).show()
-                }
+    // ── Inline crop mode state ─────────────────────────────────────────
+    var cropModeActive by remember { mutableStateOf(false) }
+    var cropViewRef by remember { mutableStateOf<CropImageView?>(null) }
+    var pendingCropUri by remember { mutableStateOf<Uri?>(null) }
+    var cropLoading by remember { mutableStateOf(false) }
+    var cropAspectRatioState by remember { mutableStateOf<CropRatioPreset>(CropRatioPreset.Free) }
+    var lastLoadedUri by remember { mutableStateOf<Uri?>(null) }
+
+    LaunchedEffect(cropModeActive) {
+        title = if (cropModeActive) "Crop image" else "Sticker editor"
+    }
+
+    navigationIcon {
+        val nav = LocalNavController.current
+        if (cropModeActive) {
+            IconButton(onClick = {
+                cropModeActive = false
+                pendingCropUri = null
+                cropViewRef = null
+            }) {
+                Icon(
+                    imageVector = Icons.Outlined.Close,
+                    contentDescription = "Cancel crop"
+                )
             }
         } else {
-            result.error?.let {
-                Toast.makeText(context, "Crop failed: ${it.message}", Toast.LENGTH_SHORT).show()
+            FlorisIconButton(
+                onClick = { nav.popBackStack() },
+                modifier = Modifier.autoMirrorForRtl(),
+                icon = Icons.AutoMirrored.Filled.ArrowBack,
+            )
+        }
+    }
+
+    actions {
+        if (cropModeActive) {
+            IconButton(
+                onClick = {
+                    val view = cropViewRef ?: return@IconButton
+                    cropLoading = true
+                    scope.launch {
+                        val croppedBmp = withContext(Dispatchers.IO) {
+                            try {
+                                view.getCroppedImage()
+                            } catch (_: Exception) { null }
+                        }
+                        cropLoading = false
+                        if (croppedBmp != null) {
+                            val cacheFile = withContext(Dispatchers.IO) {
+                                try {
+                                    val f = File(
+                                        context.cacheDir,
+                                        "crop_result_${System.nanoTime()}.png",
+                                    )
+                                    FileOutputStream(f).use {
+                                        croppedBmp.compress(
+                                            Bitmap.CompressFormat.PNG, 100, it,
+                                        )
+                                    }
+                                    f
+                                } catch (_: Exception) { null }
+                            }
+                            if (cacheFile != null) {
+                                imageUri = Uri.fromFile(cacheFile).toString()
+                            } else {
+                                Toast.makeText(
+                                    context, "Crop failed", Toast.LENGTH_SHORT,
+                                ).show()
+                            }
+                        } else {
+                            Toast.makeText(
+                                context, "Crop failed", Toast.LENGTH_SHORT,
+                            ).show()
+                        }
+                        cropModeActive = false
+                        pendingCropUri = null
+                        cropViewRef = null
+                    }
+                }
+            ) {
+                Icon(
+                    imageVector = Icons.Outlined.Check,
+                    contentDescription = "Confirm crop"
+                )
+            }
+        } else {
+            IconButton(
+                onClick = {
+                    saveTagsText = ""
+                    showSaveDialog = true
+                },
+                enabled = !saving && !bgRemovalRunning && !imageUri.isNullOrBlank()
+            ) {
+                Icon(
+                    imageVector = Icons.Outlined.Check,
+                    contentDescription = "Save sticker"
+                )
             }
         }
     }
 
-    fun launchCropper(allowCamera: Boolean) {
-        cropLauncher.launch(
-            CropImageContractOptions(
-                uri = null,
-                cropImageOptions = CropImageOptions(
-                    imageSourceIncludeGallery = true,
-                    imageSourceIncludeCamera = allowCamera,
-                    fixAspectRatio = true,
-                    aspectRatioX = 1,
-                    aspectRatioY = 1,
-                    outputCompressFormat = Bitmap.CompressFormat.PNG,
-                    cropShape = CropImageView.CropShape.RECTANGLE,
-                ),
-            ),
-        )
+    // ── Image picker (replaces CropImageContract) ──────────────────────
+    val imagePickerLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.GetContent(),
+    ) { uri ->
+        if (uri != null) {
+            // Copy the transient content URI to a local cache file so the
+            // CropImageView can read it even after the picker closes.
+            scope.launch {
+                val cachedUri = withContext(Dispatchers.IO) {
+                    try {
+                        val cache = File(context.cacheDir, "pick_cache_${System.nanoTime()}.png")
+                        context.contentResolver.openInputStream(uri)?.use { input ->
+                            cache.outputStream().use { output -> input.copyTo(output) }
+                        } ?: return@withContext null
+                        Uri.fromFile(cache)
+                    } catch (_: Exception) { null }
+                }
+                if (cachedUri != null) {
+                    pendingCropUri = cachedUri
+                    cropModeActive = true
+                } else {
+                    Toast.makeText(context, "Failed to read image", Toast.LENGTH_SHORT).show()
+                }
+            }
+        }
     }
-
-    // Runtime camera permission. The cropper will offer "take a photo"
-    // only when CAMERA is granted; otherwise we silently strip the camera
-    // option from the source picker so the user can still pick from the
-    // gallery without seeing a confusing "permission denied" screen.
-    val cameraPermissionLauncher = rememberLauncherForActivityResult(
-        ActivityResultContracts.RequestPermission(),
-    ) { granted -> launchCropper(allowCamera = granted) }
 
     // Seed the editor with the passed-in URI on first composition.
     LaunchedEffect(photoEditorView, imageUri) {
@@ -218,312 +306,558 @@ fun StickerEditorScreen(sourceUri: String?) = FlorisScreen {
         if (bmp != null) view.source.setImageBitmap(bmp)
     }
 
-    // Auto-launch image picker/cropper if no source URI is provided.
+    // Auto-launch image picker if no source URI is provided.
     LaunchedEffect(Unit) {
         if (imageUri.isNullOrBlank()) {
-            val cameraAlreadyGranted = ContextCompat.checkSelfPermission(
-                context, Manifest.permission.CAMERA,
-            ) == PackageManager.PERMISSION_GRANTED
-            if (cameraAlreadyGranted) {
-                launchCropper(true)
-            } else {
-                cameraPermissionLauncher.launch(Manifest.permission.CAMERA)
-            }
+            imagePickerLauncher.launch("image/*")
         }
     }
 
     content {
-        Column(modifier = Modifier.fillMaxSize()) {
-            // Canvas slot — fills any leftover vertical space (weight=1f)
-            // while keeping the canvas itself square. Wrapping in a Box
-            // that takes the weight, then nesting the square canvas
-            // inside, prevents the previous bug where Spacer(weight=1f)
-            // pushed the Save bar off-screen on tall devices.
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .weight(1f)
-                    .padding(16.dp),
-                contentAlignment = Alignment.Center,
-            ) {
+        if (cropModeActive) {
+            // ────────────────────────────────────────────────────────────
+            //  INLINE CROP MODE — Material 3 UI
+            // ────────────────────────────────────────────────────────────
+            Column(modifier = Modifier.fillMaxSize()) {
+                val surfaceBg = MaterialTheme.colorScheme.surfaceContainerHigh.toArgb()
+                val primaryColor = MaterialTheme.colorScheme.primary.toArgb()
+                val guidelineColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.5f).toArgb()
+
+                // Crop canvas — fills remaining vertical space
                 Box(
                     modifier = Modifier
-                        .aspectRatio(1f)
+                        .fillMaxWidth()
+                        .weight(1f)
+                        .padding(16.dp)
                         .clip(RoundedCornerShape(16.dp))
-                        .background(MaterialTheme.colorScheme.surfaceContainerHigh),
+                        .checkerboard()
+                        .background(Color.Transparent),
                     contentAlignment = Alignment.Center,
                 ) {
                     AndroidView(
                         modifier = Modifier.fillMaxSize(),
                         factory = { ctx ->
-                            PhotoEditorView(ctx).also { view ->
-                                photoEditorView = view
-                                photoEditor = PhotoEditor.Builder(ctx, view)
-                                    .setPinchTextScalable(true)
-                                    .build()
+                            CropImageView(ctx).apply {
+                                guidelines = CropImageView.Guidelines.ON
+                                cropShape = CropImageView.CropShape.RECTANGLE
+                                isAutoZoomEnabled = true
+                                tag = cropAspectRatioState
+                                
+                                val options = CropImageOptions().apply {
+                                    backgroundColor = AndroidColor.TRANSPARENT
+                                    borderLineColor = primaryColor
+                                    borderCornerColor = primaryColor
+                                    guidelinesColor = guidelineColor
+                                    borderLineThickness = 4f
+                                    borderCornerThickness = 8f
+                                    borderCornerLength = 36f
+                                    guidelinesThickness = 2f
+                                    
+                                    when (cropAspectRatioState) {
+                                        CropRatioPreset.Free -> {
+                                            fixAspectRatio = false
+                                        }
+                                        CropRatioPreset.Square -> {
+                                            fixAspectRatio = true
+                                            aspectRatioX = 1
+                                            aspectRatioY = 1
+                                        }
+                                        CropRatioPreset.Ratio4_3 -> {
+                                            fixAspectRatio = true
+                                            aspectRatioX = 4
+                                            aspectRatioY = 3
+                                        }
+                                        CropRatioPreset.Ratio16_9 -> {
+                                            fixAspectRatio = true
+                                            aspectRatioX = 16
+                                            aspectRatioY = 9
+                                        }
+                                    }
+                                }
+                                setImageCropOptions(options)
+                                
+                                cropViewRef = this
+                                pendingCropUri?.let { uri ->
+                                    lastLoadedUri = uri
+                                    setImageUriAsync(uri)
+                                }
+                            }
+                        },
+                        update = { view ->
+                            if (view.tag != cropAspectRatioState) {
+                                view.tag = cropAspectRatioState
+                                val options = CropImageOptions().apply {
+                                    backgroundColor = AndroidColor.TRANSPARENT
+                                    borderLineColor = primaryColor
+                                    borderCornerColor = primaryColor
+                                    guidelinesColor = guidelineColor
+                                    borderLineThickness = 4f
+                                    borderCornerThickness = 8f
+                                    borderCornerLength = 36f
+                                    guidelinesThickness = 2f
+                                    guidelines = CropImageView.Guidelines.ON
+                                    cropShape = CropImageView.CropShape.RECTANGLE
+                                    autoZoomEnabled = true
+                                    
+                                    when (cropAspectRatioState) {
+                                        CropRatioPreset.Free -> {
+                                            fixAspectRatio = false
+                                        }
+                                        CropRatioPreset.Square -> {
+                                            fixAspectRatio = true
+                                            aspectRatioX = 1
+                                            aspectRatioY = 1
+                                        }
+                                        CropRatioPreset.Ratio4_3 -> {
+                                            fixAspectRatio = true
+                                            aspectRatioX = 4
+                                            aspectRatioY = 3
+                                        }
+                                        CropRatioPreset.Ratio16_9 -> {
+                                            fixAspectRatio = true
+                                            aspectRatioX = 16
+                                            aspectRatioY = 9
+                                        }
+                                    }
+                                }
+                                view.setImageCropOptions(options)
+                            }
+                            
+                            val uri = pendingCropUri
+                            if (uri != null && uri != lastLoadedUri) {
+                                lastLoadedUri = uri
+                                view.setImageUriAsync(uri)
                             }
                         },
                     )
-                    if (imageUri.isNullOrBlank()) {
-                        Column(
-                            horizontalAlignment = Alignment.CenterHorizontally,
-                            verticalArrangement = Arrangement.Center,
-                            modifier = Modifier
-                                .fillMaxSize()
-                                .background(MaterialTheme.colorScheme.surfaceContainerHigh)
-                                .clickable {
-                                    val cameraAlreadyGranted = ContextCompat.checkSelfPermission(
-                                        context, Manifest.permission.CAMERA,
-                                    ) == PackageManager.PERMISSION_GRANTED
-                                    if (cameraAlreadyGranted) {
-                                        launchCropper(true)
-                                    } else {
-                                        cameraPermissionLauncher.launch(Manifest.permission.CAMERA)
-                                    }
-                                }
-                                .padding(32.dp)
-                        ) {
-                            Icon(
-                                imageVector = Icons.Outlined.PhotoLibrary,
-                                contentDescription = null,
-                                modifier = Modifier.size(48.dp),
-                                tint = MaterialTheme.colorScheme.primary
-                            )
-                            Spacer(Modifier.height(12.dp))
-                            Text(
-                                text = "Choose a photo to start",
-                                style = MaterialTheme.typography.titleMedium,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                        }
-                    }
-                    if (saving || bgRemovalRunning) {
+                    if (cropLoading) {
                         Box(
                             modifier = Modifier
                                 .fillMaxSize()
                                 .background(Color.Black.copy(alpha = 0.35f)),
                             contentAlignment = Alignment.Center,
                         ) {
-                            Column(
-                                horizontalAlignment = Alignment.CenterHorizontally,
-                            ) {
-                                CircularProgressIndicator(color = Color.White)
-                                Spacer(Modifier.height(8.dp))
-                                Text(
-                                    text = if (saving) "Saving…" else "Removing background…",
-                                    color = Color.White,
+                            CircularProgressIndicator(
+                                color = MaterialTheme.colorScheme.primary,
+                            )
+                        }
+                    }
+                }
+
+                // ── Aspect Ratio Presets Row ──────────────────────────
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 16.dp, vertical = 4.dp),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        text = "Aspect Ratio:",
+                        style = MaterialTheme.typography.labelMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    LazyRow(
+                        horizontalArrangement = Arrangement.spacedBy(6.dp),
+                        modifier = Modifier.weight(1f)
+                    ) {
+                        CropRatioPreset.values().forEach { preset ->
+                            item {
+                                PresetChip(
+                                    label = preset.label,
+                                    selected = cropAspectRatioState == preset,
+                                    onClick = {
+                                        cropAspectRatioState = preset
+                                    }
                                 )
                             }
                         }
                     }
                 }
-            }
 
-            // Tools row
-            LazyRow(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 8.dp, vertical = 4.dp),
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
-            ) {
-                item {
-                    ToolButton(icon = Icons.Outlined.PhotoLibrary, label = "Photo", onClick = {
-                        val cameraAlreadyGranted = ContextCompat.checkSelfPermission(
-                            context, Manifest.permission.CAMERA,
-                        ) == PackageManager.PERMISSION_GRANTED
-                        if (cameraAlreadyGranted) {
-                            launchCropper(allowCamera = true)
-                        } else {
-                            cameraPermissionLauncher.launch(Manifest.permission.CAMERA)
-                        }
-                    })
-                }
-                item {
-                    ToolButton(
-                        icon = Icons.Outlined.Crop,
-                        label = "Crop",
-                        enabled = !imageUri.isNullOrBlank(),
-                        onClick = {
-                            // Re-crop the current source — export, rerun cropper.
-                            val view = photoEditorView ?: return@ToolButton
-                            scope.launch {
-                                val cached = exportSourceAsCacheFile(context, view) ?: return@launch
-                                cropLauncher.launch(
-                                    CropImageContractOptions(
-                                        uri = Uri.fromFile(cached),
-                                        cropImageOptions = CropImageOptions(
-                                            fixAspectRatio = true,
-                                            aspectRatioX = 1,
-                                            aspectRatioY = 1,
-                                            outputCompressFormat = Bitmap.CompressFormat.PNG,
-                                        ),
-                                    ),
-                                )
-                            }
-                        }
-                    )
-                }
-                item {
-                    ToolButton(
-                        icon = Icons.Outlined.AutoAwesome,
-                        label = "Cutout",
-                        enabled = !imageUri.isNullOrBlank(),
-                        onClick = {
-                            val view = photoEditorView ?: return@ToolButton
-                            bgRemovalRunning = true
-                            scope.launch {
-                                val bmp = view.source.drawableToBitmap()
-                                if (bmp == null) {
-                                    bgRemovalRunning = false
-                                    return@launch
-                                }
-                                val cutout = SubjectSegmentationHelper.run(bmp)
-                                bgRemovalRunning = false
-                                if (cutout != null) {
-                                    view.source.setImageBitmap(cutout)
-                                } else {
-                                    Toast.makeText(
-                                        context,
-                                        "Couldn't find a subject — try a clearer photo.",
-                                        Toast.LENGTH_SHORT,
-                                    ).show()
-                                }
-                            }
-                        }
-                    )
-                }
-                item {
-                    ToolButton(
-                        icon = Icons.Outlined.Brush,
-                        label = "Draw",
-                        selected = mode == EditorMode.Draw,
-                        enabled = !imageUri.isNullOrBlank(),
-                        onClick = {
-                            val editor = photoEditor ?: return@ToolButton
-                            mode = EditorMode.Draw
-                            editor.setBrushDrawingMode(true)
-                            editor.setShape(
-                                ShapeBuilder().withShapeType(ShapeType.Brush)
-                                    .withShapeColor(brushColor.toArgb())
-                                    .withShapeSize(brushSize),
-                            )
-                            showColorSheet = true
-                        },
-                    )
-                }
-                item {
-                    ToolButton(
-                        icon = Icons.Outlined.Delete,
-                        label = "Eraser",
-                        selected = mode == EditorMode.Erase,
-                        enabled = !imageUri.isNullOrBlank(),
-                        onClick = {
-                            val editor = photoEditor ?: return@ToolButton
-                            mode = EditorMode.Erase
-                            editor.setBrushDrawingMode(true)
-                            // In PhotoEditor 3.x the eraser uses the same
-                            // ShapeBuilder size as the brush; brushEraser()
-                            // just flips the mode to eraser. Reuse the
-                            // current brushSize via setShape.
-                            editor.setShape(
-                                ShapeBuilder().withShapeType(ShapeType.Brush)
-                                    .withShapeSize(brushSize),
-                            )
-                            editor.brushEraser()
-                        },
-                    )
-                }
-                item {
-                    ToolButton(
-                        icon = Icons.Outlined.TextFields,
-                        label = "Text",
-                        enabled = !imageUri.isNullOrBlank(),
-                        onClick = {
-                            photoEditor?.setBrushDrawingMode(false)
-                            mode = EditorMode.Idle
-                            showTextDialog = true
-                        }
-                    )
-                }
-                item {
-                    ToolButton(
-                        icon = Icons.AutoMirrored.Outlined.Undo,
-                        label = "Undo",
-                        enabled = !imageUri.isNullOrBlank(),
-                        onClick = {
-                            photoEditor?.undo()
-                        }
-                    )
-                }
-                item {
-                    ToolButton(
-                        icon = Icons.AutoMirrored.Outlined.Redo,
-                        label = "Redo",
-                        enabled = !imageUri.isNullOrBlank(),
-                        onClick = {
-                            photoEditor?.redo()
-                        }
-                    )
-                }
-            }
-
-            // Brush size slider — visible when a brush tool is active.
-            if (mode == EditorMode.Draw || mode == EditorMode.Erase) {
+                // ── Crop tool buttons ──────────────────────────────────
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(horizontal = 16.dp, vertical = 4.dp),
+                    horizontalArrangement = Arrangement.SpaceEvenly,
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
-                    Text("Size", style = MaterialTheme.typography.labelMedium)
-                    Spacer(Modifier.width(8.dp))
-                    Slider(
-                        value = brushSize,
-                        onValueChange = {
-                            brushSize = it
-                            val builder = ShapeBuilder()
-                                .withShapeType(ShapeType.Brush)
-                                .withShapeSize(brushSize)
-                            if (mode == EditorMode.Draw) {
-                                builder.withShapeColor(brushColor.toArgb())
-                            }
-                            photoEditor?.setShape(builder)
-                            if (mode == EditorMode.Erase) {
-                                photoEditor?.brushEraser()
+                    FilledTonalIconButton(onClick = {
+                        cropViewRef?.rotateImage(-90)
+                    }) {
+                        Icon(
+                            Icons.Outlined.RotateLeft,
+                            contentDescription = "Rotate left",
+                        )
+                    }
+                    FilledTonalIconButton(onClick = {
+                        cropViewRef?.rotateImage(90)
+                    }) {
+                        Icon(
+                            Icons.Outlined.RotateRight,
+                            contentDescription = "Rotate right",
+                        )
+                    }
+                    FilledTonalIconButton(onClick = {
+                        cropViewRef?.flipImageHorizontally()
+                    }) {
+                        Icon(
+                            Icons.Outlined.Flip,
+                            contentDescription = "Flip",
+                        )
+                    }
+                }
+
+                // ── Cancel / Crop action bar ──────────────────────────
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 16.dp)
+                        .padding(bottom = 16.dp, top = 4.dp),
+                    horizontalArrangement = Arrangement.spacedBy(12.dp),
+                ) {
+                    OutlinedButton(
+                        onClick = {
+                            cropModeActive = false
+                            pendingCropUri = null
+                            cropViewRef = null
+                        },
+                        modifier = Modifier.weight(1f),
+                    ) {
+                        Icon(
+                            Icons.Outlined.Cancel,
+                            contentDescription = null,
+                            modifier = Modifier.size(18.dp),
+                        )
+                        Spacer(Modifier.width(6.dp))
+                        Text("Cancel")
+                    }
+                    Button(
+                        onClick = {
+                            val view = cropViewRef ?: return@Button
+                            cropLoading = true
+                            scope.launch {
+                                val croppedBmp = withContext(Dispatchers.IO) {
+                                    try {
+                                        view.getCroppedImage()
+                                    } catch (_: Exception) { null }
+                                }
+                                cropLoading = false
+                                if (croppedBmp != null) {
+                                    val cacheFile = withContext(Dispatchers.IO) {
+                                        try {
+                                            val f = File(
+                                                context.cacheDir,
+                                                "crop_result_${System.nanoTime()}.png",
+                                            )
+                                            FileOutputStream(f).use {
+                                                croppedBmp.compress(
+                                                    Bitmap.CompressFormat.PNG, 100, it,
+                                                )
+                                            }
+                                            f
+                                        } catch (_: Exception) { null }
+                                    }
+                                    if (cacheFile != null) {
+                                        imageUri = Uri.fromFile(cacheFile).toString()
+                                    } else {
+                                        Toast.makeText(
+                                            context, "Crop failed", Toast.LENGTH_SHORT,
+                                        ).show()
+                                    }
+                                } else {
+                                    Toast.makeText(
+                                        context, "Crop failed", Toast.LENGTH_SHORT,
+                                    ).show()
+                                }
+                                cropModeActive = false
+                                pendingCropUri = null
+                                cropViewRef = null
                             }
                         },
-                        valueRange = 4f..80f,
                         modifier = Modifier.weight(1f),
-                    )
+                    ) {
+                        Icon(
+                            Icons.Outlined.Crop,
+                            contentDescription = null,
+                            modifier = Modifier.size(18.dp),
+                        )
+                        Spacer(Modifier.width(6.dp))
+                        Text("Crop")
+                    }
                 }
             }
-
-            // Cancel / Save action bar
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(16.dp),
-                horizontalArrangement = Arrangement.spacedBy(12.dp),
-            ) {
-                TextButton(
-                    onClick = { navController.popBackStack() },
-                    modifier = Modifier.weight(1f),
+        } else {
+            // ────────────────────────────────────────────────────────────
+            //  NORMAL EDITOR MODE
+            // ────────────────────────────────────────────────────────────
+            Column(modifier = Modifier.fillMaxSize()) {
+                // Canvas slot — fills leftover vertical space (weight=1f)
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .weight(1f)
+                        .padding(16.dp),
+                    contentAlignment = Alignment.Center,
                 ) {
-                    Icon(Icons.Outlined.Cancel, contentDescription = null, modifier = Modifier.size(18.dp))
-                    Spacer(Modifier.width(6.dp))
-                    Text("Cancel")
+                    Box(
+                        modifier = Modifier
+                            .aspectRatio(1f)
+                            .clip(RoundedCornerShape(16.dp))
+                            .checkerboard()
+                            .background(Color.Transparent),
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        AndroidView(
+                            modifier = Modifier.fillMaxSize(),
+                            factory = { ctx ->
+                                PhotoEditorView(ctx).also { view ->
+                                    view.setBackgroundColor(AndroidColor.TRANSPARENT)
+                                    view.source.setBackgroundColor(AndroidColor.TRANSPARENT)
+                                    photoEditorView = view
+                                    photoEditor = PhotoEditor.Builder(ctx, view)
+                                        .setPinchTextScalable(true)
+                                        .build()
+                                }
+                            },
+                        )
+                        if (imageUri.isNullOrBlank()) {
+                            Column(
+                                horizontalAlignment = Alignment.CenterHorizontally,
+                                verticalArrangement = Arrangement.Center,
+                                modifier = Modifier
+                                    .fillMaxSize()
+                                    .background(MaterialTheme.colorScheme.surfaceContainerHigh)
+                                    .clickable { imagePickerLauncher.launch("image/*") }
+                                    .padding(32.dp),
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Outlined.PhotoLibrary,
+                                    contentDescription = null,
+                                    modifier = Modifier.size(48.dp),
+                                    tint = MaterialTheme.colorScheme.primary,
+                                )
+                                Spacer(Modifier.height(12.dp))
+                                Text(
+                                    text = "Choose a photo to start",
+                                    style = MaterialTheme.typography.titleMedium,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                )
+                            }
+                        }
+                        if (saving || bgRemovalRunning) {
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxSize()
+                                    .background(Color.Black.copy(alpha = 0.35f)),
+                                contentAlignment = Alignment.Center,
+                            ) {
+                                Column(
+                                    horizontalAlignment = Alignment.CenterHorizontally,
+                                ) {
+                                    CircularProgressIndicator(color = Color.White)
+                                    Spacer(Modifier.height(8.dp))
+                                    Text(
+                                        text = if (saving) "Saving…" else "Removing background…",
+                                        color = Color.White,
+                                    )
+                                }
+                            }
+                        }
+                    }
                 }
-                Button(
-                    onClick = {
-                        saveTagsText = ""
-                        showSaveDialog = true
-                    },
-                    enabled = !saving && !bgRemovalRunning && !imageUri.isNullOrBlank(),
-                    modifier = Modifier.weight(1f),
+
+                // Tools row
+                LazyRow(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 8.dp, vertical = 4.dp),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
                 ) {
-                    Icon(Icons.Outlined.Check, contentDescription = null, modifier = Modifier.size(18.dp))
-                    Spacer(Modifier.width(6.dp))
-                    Text("Save sticker")
+                    item {
+                        ToolButton(
+                            icon = Icons.Outlined.PhotoLibrary,
+                            label = "Photo",
+                            onClick = { imagePickerLauncher.launch("image/*") },
+                        )
+                    }
+                    item {
+                        ToolButton(
+                            icon = Icons.Outlined.Crop,
+                            label = "Crop",
+                            enabled = !imageUri.isNullOrBlank(),
+                            onClick = {
+                                val view = photoEditorView ?: return@ToolButton
+                                scope.launch {
+                                    val cached = exportSourceAsCacheFile(context, view)
+                                        ?: return@launch
+                                    pendingCropUri = Uri.fromFile(cached)
+                                    cropModeActive = true
+                                }
+                            },
+                        )
+                    }
+                    item {
+                        ToolButton(
+                            icon = Icons.Outlined.AutoAwesome,
+                            label = "Cutout",
+                            enabled = !imageUri.isNullOrBlank(),
+                            onClick = {
+                                val view = photoEditorView ?: return@ToolButton
+                                bgRemovalRunning = true
+                                scope.launch {
+                                    val bmp = view.source.drawableToBitmap()
+                                    if (bmp == null) {
+                                        bgRemovalRunning = false
+                                        return@launch
+                                    }
+                                    val cutout = SubjectSegmentationHelper.run(bmp)
+                                    bgRemovalRunning = false
+                                    if (cutout != null) {
+                                        view.source.setImageBitmap(cutout)
+                                    } else {
+                                        Toast.makeText(
+                                            context,
+                                            "Couldn't find a subject — try a clearer photo.",
+                                            Toast.LENGTH_SHORT,
+                                        ).show()
+                                    }
+                                }
+                            },
+                        )
+                    }
+                    item {
+                        ToolButton(
+                            icon = Icons.Outlined.Brush,
+                            label = "Draw",
+                            selected = mode == EditorMode.Draw,
+                            enabled = !imageUri.isNullOrBlank(),
+                            onClick = {
+                                val editor = photoEditor ?: return@ToolButton
+                                mode = EditorMode.Draw
+                                editor.setBrushDrawingMode(true)
+                                editor.setShape(
+                                    ShapeBuilder().withShapeType(ShapeType.Brush)
+                                        .withShapeColor(brushColor.toArgb())
+                                        .withShapeSize(brushSize),
+                                )
+                                showColorSheet = true
+                            },
+                        )
+                    }
+                    item {
+                        ToolButton(
+                            icon = Icons.Outlined.Delete,
+                            label = "Eraser",
+                            selected = mode == EditorMode.Erase,
+                            enabled = !imageUri.isNullOrBlank(),
+                            onClick = {
+                                val editor = photoEditor ?: return@ToolButton
+                                mode = EditorMode.Erase
+                                editor.setBrushDrawingMode(true)
+                                editor.setShape(
+                                    ShapeBuilder().withShapeType(ShapeType.Brush)
+                                        .withShapeSize(brushSize),
+                                )
+                                editor.brushEraser()
+                            },
+                        )
+                    }
+                    item {
+                        ToolButton(
+                            icon = Icons.Outlined.TextFields,
+                            label = "Text",
+                            enabled = !imageUri.isNullOrBlank(),
+                            onClick = {
+                                photoEditor?.setBrushDrawingMode(false)
+                                mode = EditorMode.Idle
+                                showTextDialog = true
+                            },
+                        )
+                    }
+                    item {
+                        ToolButton(
+                            icon = Icons.AutoMirrored.Outlined.Undo,
+                            label = "Undo",
+                            enabled = !imageUri.isNullOrBlank(),
+                            onClick = { photoEditor?.undo() },
+                        )
+                    }
+                    item {
+                        ToolButton(
+                            icon = Icons.AutoMirrored.Outlined.Redo,
+                            label = "Redo",
+                            enabled = !imageUri.isNullOrBlank(),
+                            onClick = { photoEditor?.redo() },
+                        )
+                    }
+                }
+
+                if (mode == EditorMode.Draw || mode == EditorMode.Erase) {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 16.dp, vertical = 4.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        Text("Size", style = MaterialTheme.typography.labelMedium)
+                        Spacer(Modifier.width(8.dp))
+                        Slider(
+                            value = brushSize,
+                            onValueChange = {
+                                brushSize = it
+                                val builder = ShapeBuilder()
+                                    .withShapeType(ShapeType.Brush)
+                                    .withShapeSize(brushSize)
+                                if (mode == EditorMode.Draw) {
+                                    builder.withShapeColor(brushColor.toArgb())
+                                }
+                                photoEditor?.setShape(builder)
+                                if (mode == EditorMode.Erase) {
+                                    photoEditor?.brushEraser()
+                                }
+                            },
+                            valueRange = 4f..80f,
+                            modifier = Modifier.weight(1f),
+                        )
+                    }
+                }
+
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(16.dp),
+                    horizontalArrangement = Arrangement.spacedBy(12.dp),
+                ) {
+                    OutlinedButton(
+                        onClick = { navController.popBackStack() },
+                        modifier = Modifier.weight(1f),
+                    ) {
+                        Icon(
+                            Icons.Outlined.Cancel,
+                            contentDescription = null,
+                            modifier = Modifier.size(18.dp),
+                        )
+                        Spacer(Modifier.width(6.dp))
+                        Text("Cancel")
+                    }
+                    Button(
+                        onClick = {
+                            saveTagsText = ""
+                            showSaveDialog = true
+                        },
+                        enabled = !saving && !bgRemovalRunning && !imageUri.isNullOrBlank(),
+                        modifier = Modifier.weight(1f),
+                    ) {
+                        Icon(
+                            Icons.Outlined.Check,
+                            contentDescription = null,
+                            modifier = Modifier.size(18.dp),
+                        )
+                        Spacer(Modifier.width(6.dp))
+                        Text("Save sticker")
+                    }
                 }
             }
         }
@@ -835,3 +1169,57 @@ private fun squarePad(src: Bitmap, size: Int): Bitmap {
     canvas.drawBitmap(src, null, dst, Paint(Paint.FILTER_BITMAP_FLAG))
     return out
 }
+
+private enum class CropRatioPreset(val label: String) {
+    Free("Free"),
+    Square("1:1"),
+    Ratio4_3("4:3"),
+    Ratio16_9("16:9")
+}
+
+@Composable
+private fun PresetChip(
+    label: String,
+    selected: Boolean,
+    onClick: () -> Unit
+) {
+    Box(
+        modifier = Modifier
+            .clip(RoundedCornerShape(8.dp))
+            .background(
+                if (selected) MaterialTheme.colorScheme.primaryContainer
+                else MaterialTheme.colorScheme.surfaceVariant
+            )
+            .clickable(onClick = onClick)
+            .padding(horizontal = 12.dp, vertical = 6.dp)
+    ) {
+        Text(
+            text = label,
+            style = MaterialTheme.typography.labelMedium,
+            color = if (selected) MaterialTheme.colorScheme.onPrimaryContainer
+                    else MaterialTheme.colorScheme.onSurfaceVariant
+        )
+    }
+}
+
+private fun Modifier.checkerboard(
+    squareSize: Float = 24f,
+    color1: Color = Color.LightGray.copy(alpha = 0.35f),
+    color2: Color = Color.White.copy(alpha = 0.35f)
+): Modifier = this.drawBehind {
+    val width = size.width
+    val height = size.height
+    val numCols = (width / squareSize).toInt() + 1
+    val numRows = (height / squareSize).toInt() + 1
+    for (r in 0..numRows) {
+        for (c in 0..numCols) {
+            val color = if ((r + c) % 2 == 0) color1 else color2
+            drawRect(
+                color = color,
+                topLeft = Offset(c * squareSize, r * squareSize),
+                size = Size(squareSize, squareSize)
+            )
+        }
+    }
+}
+

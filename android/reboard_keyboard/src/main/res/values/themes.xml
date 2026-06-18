@@ -42,4 +42,20 @@
         <item name="android:windowIsTranslucent">true</item>
     </style>
 
+    <!-- Premium dark theme for Android-Image-Cropper CropImageActivity.
+         Must keep ActionBar so the Crop / confirm toolbar button is visible.
+         colorPrimary = toolbar bg, colorPrimaryDark = status bar,
+         textColorPrimary = toolbar title & menu text. -->
+    <style name="CropperDarkTheme" parent="Theme.AppCompat">
+        <item name="colorPrimary">@color/cropper_toolbar</item>
+        <item name="colorPrimaryDark">@color/cropper_status_bar</item>
+        <item name="colorAccent">@color/cropper_accent</item>
+        <item name="android:textColorPrimary">@color/cropper_toolbar_text</item>
+        <item name="android:textColorSecondary">@color/cropper_toolbar_text</item>
+        <item name="android:windowBackground">@color/cropper_background</item>
+        <item name="android:colorBackground">@color/cropper_background</item>
+        <item name="android:navigationBarColor">@color/cropper_status_bar</item>
+        <item name="android:forceDarkAllowed" tools:targetApi="q">false</item>
+    </style>
+
 </resources>
