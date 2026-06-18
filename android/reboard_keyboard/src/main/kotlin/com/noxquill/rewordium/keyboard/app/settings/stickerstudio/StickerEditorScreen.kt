@@ -175,7 +175,10 @@ fun StickerEditorScreen(sourceUri: String?) = FlorisScreen {
     var pendingCropUri by remember { mutableStateOf<Uri?>(null) }
     var cropLoading by remember { mutableStateOf(false) }
     var cropAspectRatioState by remember { mutableStateOf<CropRatioPreset>(CropRatioPreset.Free) }
-    var lastLoadedUri by remember { mutableStateOf<Uri?>(null) }
+
+    // Non-triggering refs to prevent recomposition loops in AndroidView
+    val lastLoadedUriRef = remember { Ref<Uri>() }
+    val lastAspectRatioRef = remember { Ref<CropRatioPreset>() }
 
     LaunchedEffect(cropModeActive) {
         title = if (cropModeActive) "Crop image" else "Sticker editor"
@@ -341,7 +344,7 @@ fun StickerEditorScreen(sourceUri: String?) = FlorisScreen {
                                 guidelines = CropImageView.Guidelines.ON
                                 cropShape = CropImageView.CropShape.RECTANGLE
                                 isAutoZoomEnabled = true
-                                tag = cropAspectRatioState
+                                lastAspectRatioRef.value = cropAspectRatioState
                                 
                                 val options = CropImageOptions().apply {
                                     backgroundColor = AndroidColor.TRANSPARENT
@@ -378,14 +381,14 @@ fun StickerEditorScreen(sourceUri: String?) = FlorisScreen {
                                 
                                 cropViewRef = this
                                 pendingCropUri?.let { uri ->
-                                    lastLoadedUri = uri
+                                    lastLoadedUriRef.value = uri
                                     setImageUriAsync(uri)
                                 }
                             }
                         },
                         update = { view ->
-                            if (view.tag != cropAspectRatioState) {
-                                view.tag = cropAspectRatioState
+                            if (lastAspectRatioRef.value != cropAspectRatioState) {
+                                lastAspectRatioRef.value = cropAspectRatioState
                                 val options = CropImageOptions().apply {
                                     backgroundColor = AndroidColor.TRANSPARENT
                                     borderLineColor = primaryColor
@@ -424,8 +427,8 @@ fun StickerEditorScreen(sourceUri: String?) = FlorisScreen {
                             }
                             
                             val uri = pendingCropUri
-                            if (uri != null && uri != lastLoadedUri) {
-                                lastLoadedUri = uri
+                            if (uri != null && lastLoadedUriRef.value != uri) {
+                                lastLoadedUriRef.value = uri
                                 view.setImageUriAsync(uri)
                             }
                         },
@@ -1222,4 +1225,6 @@ private fun Modifier.checkerboard(
         }
     }
 }
+
+private class Ref<T>(var value: T? = null)
 
