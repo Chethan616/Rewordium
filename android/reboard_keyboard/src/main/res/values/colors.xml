@@ -26,4 +26,11 @@
 
     <!-- Dark splash screen background (no FlorisBoard branding) -->
     <color name="splash_dark_bg">#FF1B1B1B</color>
+
+    <!-- Premium dark Cropper theme colors -->
+    <color name="cropper_background">#FF121212</color>
+    <color name="cropper_toolbar">#FF1E1E2E</color>
+    <color name="cropper_toolbar_text">#FFFFFFFF</color>
+    <color name="cropper_accent">#FF8B5CF6</color>
+    <color name="cropper_status_bar">#FF0D0D0D</color>
 </resources>
