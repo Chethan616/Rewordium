@@ -142,6 +142,7 @@ fun StickerPanel(
     var waPacks by remember { mutableStateOf<List<WhatsAppStickerReader.Pack>>(emptyList()) }
     var premadeIndex by remember { mutableStateOf<List<PremadeEntry>>(emptyList()) }
     var selectedTab by remember { mutableStateOf(0) }
+    var lastLaunchTime by remember { mutableStateOf(0L) }
     val dim = fg.copy(alpha = 0.55f)
 
     // Community stickers (KLIPY API)
@@ -356,18 +357,18 @@ fun StickerPanel(
                         fg = fg, accent = accent,
                         favoriteKeys = favoriteKeys,
                         onAddClick = {
-                            // Launch the transparent helper Activity which can use
-                            // the system image picker and forward the result to
-                            // UserStickerStore. InputMethodService cannot host
-                            // ActivityResult contracts directly.
-                            try {
-                                com.noxquill.rewordium.keyboard.FlorisImeService.shouldPreserveMediaUiModeOnce = true
-                                val intent = Intent(context, StickerImportActivity::class.java)
-                                intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-                                context.startActivity(intent)
-                            } catch (e: Exception) {
-                                flogDebug { "StickerPanel: Failed to launch picker: ${e.message}" }
-                                Toast.makeText(context, "Cannot open image picker", Toast.LENGTH_SHORT).show()
+                            val now = System.currentTimeMillis()
+                            if (now - lastLaunchTime > 1500L) {
+                                lastLaunchTime = now
+                                try {
+                                    com.noxquill.rewordium.keyboard.FlorisImeService.shouldPreserveMediaUiModeOnce = true
+                                    val intent = Intent(Intent.ACTION_VIEW, Uri.parse("ui://ReBoard/settings/sticker-studio"))
+                                    intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                                    context.startActivity(intent)
+                                } catch (e: Exception) {
+                                    flogDebug { "StickerPanel: Failed to launch Sticker Studio: ${e.message}" }
+                                    Toast.makeText(context, "Cannot open Sticker Studio", Toast.LENGTH_SHORT).show()
+                                }
                             }
                         },
                         onPick = { entry ->

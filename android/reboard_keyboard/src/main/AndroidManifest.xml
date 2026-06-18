@@ -139,10 +139,10 @@
             android:launchMode="singleInstance"
             android:exported="false"/>
 
-        <!-- Android Image Cropper Activity with AppCompat theme to ensure the Action Bar is visible -->
+        <!-- Android Image Cropper Activity with premium dark theme -->
         <activity
             android:name="com.canhub.cropper.CropImageActivity"
-            android:theme="@style/Theme.AppCompat"
+            android:theme="@style/CropperDarkTheme"
             android:exported="false"
             tools:replace="android:exported"/>
 

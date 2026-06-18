@@ -132,7 +132,13 @@ class FlorisAppActivity : ComponentActivity() {
                     }
                 }
             }
-            onNewIntent(intent)
+            val isAppDeepLink = intent.action == Intent.ACTION_VIEW &&
+                intent.data?.scheme == "ui" && intent.data?.host == "ReBoard"
+            val isBrowsableDeepLink = intent.action == Intent.ACTION_VIEW &&
+                intent.categories?.contains(Intent.CATEGORY_BROWSABLE) == true
+            if (!isAppDeepLink && !isBrowsableDeepLink) {
+                onNewIntent(intent)
+            }
         }
     }
 
