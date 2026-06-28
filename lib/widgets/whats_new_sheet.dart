@@ -33,6 +33,36 @@ class WhatsNewSheet {
   static final Map<String, List<_WhatsNewItem>> _features = {
     '2.9.6+80': [
       const _WhatsNewItem(
+        icon: CupertinoIcons.sparkles,
+        color: Color(0xFF10B981),
+        title: 'Better AI Responses',
+        description:
+            'Enjoy significantly improved, more natural, and context-aware AI-generated responses.',
+      ),
+      const _WhatsNewItem(
+        icon: CupertinoIcons.search_circle_fill,
+        color: Color(0xFF8B5CF6),
+        title: 'GIF & Sticker Search',
+        description:
+            'Easily find the perfect reaction with our new search UI for the GIF and Sticker panels. (Beta)',
+      ),
+      const _WhatsNewItem(
+        icon: CupertinoIcons.smiley_fill,
+        color: Color(0xFFF59E0B),
+        title: 'New Android Emojis',
+        description:
+            'Express yourself better with full support for the latest Android emojis.',
+      ),
+      const _WhatsNewItem(
+        icon: CupertinoIcons.square_fill_on_square_fill,
+        color: Color(0xFF3B82F6),
+        title: 'Massive Sticker Library',
+        description:
+            'Explore a large sticker community powered by Klipy. (Beta)',
+      ),
+    ],
+    '2.9.6+80': [
+      const _WhatsNewItem(
         icon: CupertinoIcons.search_circle_fill,
         color: Color(0xFF8B5CF6),
         title: 'Modernized Emoji Search',

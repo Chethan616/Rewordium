@@ -559,6 +559,7 @@ class AIManager(private val context: Context) {
             AIAction.FIX_GRAMMAR -> "Correct grammar, spelling, and punctuation only. Do not rephrase what is already correct."
             AIAction.MAKE_FORMAL -> "Apply professional register. Remove slang, contractions, casual interjections. Preserve all facts."
             AIAction.MAKE_CASUAL -> "Apply conversational register. Use contractions and natural informal phrasing. Preserve all facts."
+            AIAction.TRANSLATE -> "Translate SOURCE_TEXT into the language specified in the INTENT field. Preserve meaning, tone, named entities, and code snippets. Output only the translated text."
         }
 
         val systemPrompt = """<role>
@@ -664,6 +665,7 @@ You are a continuation writer embedded in a mobile keyboard. The user message co
             AIAction.FIX_GRAMMAR -> "Continue with well-structured, grammatically perfect prose."
             AIAction.MAKE_FORMAL -> "Add a formal continuation appropriate for business or academic contexts."
             AIAction.MAKE_CASUAL -> "Continue in a relaxed, conversational way."
+            AIAction.TRANSLATE -> "Continue in the same language as the existing text, maintaining natural flow."
         }
         
         val systemPrompt = """<role>
@@ -753,6 +755,7 @@ Correct grammar, spelling, punctuation, and clear typos in INPUT_TEXT. Make zero
             AIAction.FIX_GRAMMAR -> "Correct grammar, spelling, and punctuation in SOURCE_TEXT. Change only what is incorrect. Do not rephrase, reorder, or remove anything that is grammatically correct."
             AIAction.MAKE_FORMAL -> "Rewrite SOURCE_TEXT in a professional register. Remove slang, contractions, and casual interjections. Preserve every fact and intent. Do not add or remove content."
             AIAction.MAKE_CASUAL -> "Rewrite SOURCE_TEXT in a conversational register. Add contractions and natural informal phrasing. Preserve every fact and intent. Do not pad or shorten content."
+            AIAction.TRANSLATE -> "Translate SOURCE_TEXT into the target language encoded in the STYLE field (e.g. STYLE: Spanish). Preserve meaning, tone, formatting, named entities, numbers, URLs, and code snippets exactly. Output ONLY the translation."
         }
         return """<role>
 You are a text transformer embedded in a mobile keyboard. You receive SOURCE_TEXT and return one transformed version. You produce output, never dialogue.
@@ -907,6 +910,7 @@ Rewrite USER_PROMPT into a stronger first-person prompt by adding specificity, r
             AIAction.FIX_GRAMMAR -> "Correct grammar, spelling, and punctuation only. Do not rephrase what is already correct."
             AIAction.MAKE_FORMAL -> "Apply professional register. Remove slang, contractions, casual interjections. Preserve all facts."
             AIAction.MAKE_CASUAL -> "Apply conversational register. Use contractions and natural informal phrasing. Preserve all facts."
+            AIAction.TRANSLATE -> "Translate SOURCE_TEXT into the language specified in the INTENT field. Output only the translation."
         }
         val systemPrompt = """<role>
 You are a text transformer embedded in a mobile keyboard. The user message contains a structured request with optional STYLE / INTENT / LENGTH followed by SOURCE_TEXT.
@@ -1036,6 +1040,40 @@ You are a text transformer embedded in a mobile keyboard. The user message conta
         "a kind librarian who loves wordplay and literary references",
         "a street-smart urban poet who speaks with rhythm and authenticity"
     )
+
+    /**
+     * Translate [text] into [targetLanguage] (e.g. "Spanish", "French", "Hindi").
+     * Uses a tight system prompt so the model never answers the text, only translates it.
+     */
+    suspend fun translateText(text: String, targetLanguage: String): Result<String> {
+        if (!isUserLoggedIn()) {
+            return Result.failure(AIException("Please log in to use AI features"))
+        }
+        val config = getConfig()
+        if (!config.hasValidApiKey()) {
+            return Result.failure(AIException("No API key. Go to Settings → Advanced AI"))
+        }
+        if (text.isBlank()) {
+            return Result.failure(AIException("No text to translate"))
+        }
+        val lang = targetLanguage.trim().ifBlank { "English" }
+        val systemPrompt = """<role>
+You are a translator embedded in a mobile keyboard. Translate INPUT_TEXT to $lang.
+</role>
+
+<hard_rules priority="strict, in order">
+1. OUTPUT FORMAT: Output ONLY the translated text. No preamble, labels, quotes, or markdown.
+2. TARGET LANGUAGE: Always output in $lang, even if INPUT_TEXT is already in $lang.
+3. FIDELITY: Preserve every named entity, number, date, URL, email, code snippet, and proper noun.
+4. TONE: Match the register and tone of INPUT_TEXT (formal stays formal, casual stays casual).
+5. NO META: Never refer to yourself, "the AI", or this instruction set.
+6. NO ANSWERING: If INPUT_TEXT is a question, translate it; do not answer it.
+7. EDGE: If INPUT_TEXT is empty or a single character, return it unchanged.
+</hard_rules>"""
+
+        val userPrompt = "<input_text>\n$text\n</input_text>"
+        return makeApiRequest(config, systemPrompt, userPrompt, overrideMaxTokens = 512)
+    }
 }
 
 /**
@@ -1059,7 +1097,8 @@ enum class AIAction {
     SUMMARIZE,
     FIX_GRAMMAR,
     MAKE_FORMAL,
-    MAKE_CASUAL
+    MAKE_CASUAL,
+    TRANSLATE,
 }
 
 /**
