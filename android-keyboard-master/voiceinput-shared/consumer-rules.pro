@@ -1,1 +1,0 @@
--keep class org.futo.voiceinput.shared.ggml.WhisperGGML

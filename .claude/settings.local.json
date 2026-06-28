@@ -90,7 +90,13 @@
       "Bash(Get-ChildItem -Path \"ios\\\\RewordiumKeyboard\" -Recurse)",
       "Bash(Get-ChildItem -Path \"C:\\\\Users\\\\cheth\\\\OneDrive\\\\Desktop\\\\PC2\\\\rewordium\\\\rewordium\\\\rewordium\\\\rewordium\\\\lib\" -Directory)",
       "Bash(grep -i \"\\\\.kt$\")",
-      "Bash(git check-ignore *)"
+      "Bash(git check-ignore *)",
+      "PowerShell(flutter analyze *)",
+      "PowerShell(cd ..; $out = flutter analyze 2>&1; \\($out | Select-String -Pattern \"error -\"\\).Count; \"---ERRORS---\"; $out | Select-String -Pattern \"error -\" | Select-Object -First 40; \"---TAIL---\"; $out | Select-Object -Last 3)",
+      "PowerShell(cd ..; $out = flutter analyze 2>&1; \"ERRORS: \" + \\($out | Select-String -Pattern \"error -\"\\).Count; $out | Select-String -Pattern \"error -\" | Select-Object -First 40; \"---TAIL---\"; $out | Select-Object -Last 2)",
+      "Bash(git fetch *)",
+      "Bash(gh auth *)",
+      "Bash(git stash *)"
     ]
   }
 }

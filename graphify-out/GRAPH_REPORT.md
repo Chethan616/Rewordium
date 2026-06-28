@@ -1,12 +1,18 @@
-# Graph Report - .  (2026-06-17)
+# Graph Report - rewordium  (2026-06-19)
 
 ## Corpus Check
-- Large corpus: 923 files · ~894,640 words. Semantic extraction will be expensive (many Claude tokens). Consider running on a subfolder.
+- 882 files · ~909,376 words
+- Verdict: corpus is large enough that graph structure adds value.
 
 ## Summary
-- 14971 nodes · 20889 edges · 1249 communities (1148 shown, 101 thin omitted)
-- Extraction: 96% EXTRACTED · 4% INFERRED · 0% AMBIGUOUS · INFERRED: 777 edges (avg confidence: 0.8)
+- 15375 nodes · 21505 edges · 1285 communities (1181 shown, 104 thin omitted)
+- Extraction: 96% EXTRACTED · 4% INFERRED · 0% AMBIGUOUS · INFERRED: 790 edges (avg confidence: 0.8)
 - Token cost: 0 input · 0 output
+
+## Graph Freshness
+- Built from commit: `7f8e619b`
+- Run `git rev-parse HEAD` and compare to check if the graph is stale.
+- Run `graphify update .` after code changes (no API cost).
 
 ## Community Hubs (Navigation)
 - [[_COMMUNITY_Dictionary Word Data|Dictionary Word Data]]
@@ -1090,30 +1096,63 @@
 - [[_COMMUNITY_State|State]]
 - [[_COMMUNITY_String|String?]]
 - [[_COMMUNITY_T|T]]
+- [[_COMMUNITY_Community 1249|Community 1249]]
+- [[_COMMUNITY_Community 1250|Community 1250]]
+- [[_COMMUNITY_Community 1251|Community 1251]]
+- [[_COMMUNITY_Community 1252|Community 1252]]
+- [[_COMMUNITY_Community 1253|Community 1253]]
+- [[_COMMUNITY_Community 1254|Community 1254]]
+- [[_COMMUNITY_Community 1255|Community 1255]]
+- [[_COMMUNITY_Community 1256|Community 1256]]
+- [[_COMMUNITY_Community 1257|Community 1257]]
+- [[_COMMUNITY_Community 1258|Community 1258]]
+- [[_COMMUNITY_Community 1259|Community 1259]]
+- [[_COMMUNITY_Community 1260|Community 1260]]
+- [[_COMMUNITY_Community 1261|Community 1261]]
+- [[_COMMUNITY_Community 1262|Community 1262]]
+- [[_COMMUNITY_Community 1263|Community 1263]]
+- [[_COMMUNITY_Community 1264|Community 1264]]
+- [[_COMMUNITY_Community 1265|Community 1265]]
+- [[_COMMUNITY_Community 1266|Community 1266]]
+- [[_COMMUNITY_Community 1267|Community 1267]]
+- [[_COMMUNITY_Community 1268|Community 1268]]
+- [[_COMMUNITY_Community 1269|Community 1269]]
+- [[_COMMUNITY_Community 1270|Community 1270]]
+- [[_COMMUNITY_Community 1271|Community 1271]]
+- [[_COMMUNITY_Community 1272|Community 1272]]
+- [[_COMMUNITY_Community 1273|Community 1273]]
+- [[_COMMUNITY_Community 1274|Community 1274]]
+- [[_COMMUNITY_Community 1275|Community 1275]]
+- [[_COMMUNITY_Community 1276|Community 1276]]
+- [[_COMMUNITY_Community 1277|Community 1277]]
+- [[_COMMUNITY_Community 1278|Community 1278]]
+- [[_COMMUNITY_Community 1279|Community 1279]]
+- [[_COMMUNITY_Community 1280|Community 1280]]
+- [[_COMMUNITY_Community 1282|Community 1282]]
 
 ## God Nodes (most connected - your core abstractions)
-1. `MyAccessibilityService` - 63 edges
-2. `Build Guide` - 56 edges
-3. `flogDebug()` - 52 edges
-4. `KeyboardManager` - 49 edges
-5. `FlorisScreen()` - 49 edges
-6. `Florisboard Integration Plan` - 48 edges
-7. `Florisboard Feature Analysis` - 47 edges
-8. `all` - 44 edges
-9. `NlpEngine` - 43 edges
-10. `SnyggSinglePropertySetEditor` - 40 edges
+1. `MyAccessibilityService` - 64 edges
+2. `flogDebug()` - 56 edges
+3. `KeyboardManager` - 51 edges
+4. `FlorisScreen()` - 49 edges
+5. `Florisboard Integration Plan` - 48 edges
+6. `Florisboard Feature Analysis` - 47 edges
+7. `all` - 44 edges
+8. `NlpEngine` - 43 edges
+9. `SnyggSinglePropertySetEditor` - 40 edges
+10. `flogError()` - 38 edges
 
 ## Surprising Connections (you probably didn't know these)
-- `Keyboardkit Integration` --conceptually_related_to--> `Adaptive Learned Swipe Typing`  [INFERRED]
-  KEYBOARDKIT_INTEGRATION.md → docs/plans/adaptive-learned-swipe-typing.md
-- `Keyboard Roadmap` --conceptually_related_to--> `Adaptive Learned Swipe Typing`  [INFERRED]
-  KEYBOARD_ROADMAP.md → docs/plans/adaptive-learned-swipe-typing.md
-- `Kbimprov` --conceptually_related_to--> `Adaptive Learned Swipe Typing`  [INFERRED]
-  kbimprov.md → docs/plans/adaptive-learned-swipe-typing.md
-- `Florisboard Feature Analysis` --conceptually_related_to--> `Adaptive Learned Swipe Typing`  [INFERRED]
-  .copilot/FLORISBOARD_FEATURE_ANALYSIS.md → docs/plans/adaptive-learned-swipe-typing.md
-- `Florisboard Integration Plan` --conceptually_related_to--> `Adaptive Learned Swipe Typing`  [INFERRED]
-  .copilot/FLORISBOARD_INTEGRATION_PLAN.md → docs/plans/adaptive-learned-swipe-typing.md
+- `initialize()` --calls--> `MethodChannel`  [INFERRED]
+  android/app/src/main/kotlin/com/noxquill/rewordium/service/KeyboardSettingsBroadcastReceiver.kt → android/app/src/main/kotlin/com/noxquill/rewordium/MainActivity.kt
+- `ImportConfirmationDialog()` --calls--> `AlertDialog`  [INFERRED]
+  android/reboard_keyboard/src/main/kotlin/com/noxquill/rewordium/keyboard/ime/media/sticker/StickerImportActivity.kt → android/app/src/main/kotlin/com/noxquill/rewordium/service/MyAccessibilityService.kt
+- `StickerEditorScreen()` --calls--> `AlertDialog`  [INFERRED]
+  android/reboard_keyboard/src/main/kotlin/com/noxquill/rewordium/keyboard/app/settings/stickerstudio/StickerEditorScreen.kt → android/app/src/main/kotlin/com/noxquill/rewordium/service/MyAccessibilityService.kt
+- `drawBackdrop()` --calls--> `HighlightElement`  [INFERRED]
+  android/backdrop/src/main/java/com/kyant/backdrop/DrawBackdropModifier.kt → android/backdrop/src/main/java/com/kyant/backdrop/highlight/HighlightModifier.kt
+- `drawBackdrop()` --calls--> `InnerShadowElement`  [INFERRED]
+  android/backdrop/src/main/java/com/kyant/backdrop/DrawBackdropModifier.kt → android/backdrop/src/main/java/com/kyant/backdrop/shadow/InnerShadowModifier.kt
 
 ## Import Cycles
 - 1-file cycle: `android/reboard_lib/native/src/main/rust/src/lib.rs -> android/reboard_lib/native/src/main/rust/src/lib.rs`
@@ -1121,23 +1160,23 @@
 - 1-file cycle: `android/reboard_libnative/nlp/src/binary_trie.rs -> android/reboard_libnative/nlp/src/binary_trie.rs`
 - 1-file cycle: `android/reboard_libnative/nlp/src/lib.rs -> android/reboard_libnative/nlp/src/lib.rs`
 
-## Communities (1249 total, 101 thin omitted)
+## Communities (1285 total, 104 thin omitted)
 
 ### Community 0 - "Dictionary Word Data"
 Cohesion: 0.00
 Nodes (500): a, able, about, according, act, actually, after, again (+492 more)
 
 ### Community 1 - "AI Text Detection UI"
-Cohesion: 0.02
-Nodes (136): package:shimmer/shimmer.dart, AIDetectorPage, _AIDetectorPageState, _buildProbabilityMeter, _clearDocument, _controller, createState, _detectAIText (+128 more)
+Cohesion: 0.01
+Nodes (187): AutomaticKeepAliveClientMixin, bool get, _countWords, ../models/document_result.dart, DocumentResult, DocumentType, filePath, imagePaths (+179 more)
 
 ### Community 2 - "Admin Panel & Auth UI"
 Cohesion: 0.02
-Nodes (130): admin_panel.dart, build, _buildTextField, createState, dispose, _emailController, _ForgotPasswordSheet, _ForgotPasswordSheetState (+122 more)
+Nodes (170): admin_panel.dart, build, _buildTextField, createState, dispose, _emailController, _ForgotPasswordSheet, _ForgotPasswordSheetState (+162 more)
 
 ### Community 3 - "Native Settings Bridge"
 Cohesion: 0.02
-Nodes (117): dart:async, dart:ui, package:flutter/foundation.dart, package:flutter/services.dart, AISettingsBridge, _channel, getAIConfigForNative, initialize (+109 more)
+Nodes (125): package:flutter/foundation.dart, package:flutter/services.dart, build, _buildInfoRow, IntegrityBlockedScreen, _openPlayStore, _playStoreUrl, reason (+117 more)
 
 ### Community 4 - "Keyboard Editor Core"
 Cohesion: 0.05
@@ -1145,7 +1184,7 @@ Nodes (34): Boolean, CharSequence, Composer, EditorContent, EditorRange, Extensi
 
 ### Community 5 - "Settings & Onboarding"
 Cohesion: 0.02
-Nodes (96): KeyboardService, didChangePlatformBrightness, package:flutter_test/flutter_test.dart, package:provider/provider.dart, package:rewordium/pages/onboarding_page.dart, package:rewordium/screens/accessibility_disclosure_screen.dart, package:rewordium/theme/theme_provider.dart, package:shared_preferences/shared_preferences.dart (+88 more)
+Nodes (148): app_theme.dart, dart:ui, KeyboardService, didChangePlatformBrightness, package:flutter_test/flutter_test.dart, package:m3e_collection/m3e_collection.dart, package:provider/provider.dart, package:rewordium/pages/onboarding_page.dart (+140 more)
 
 ### Community 6 - "Onboarding Flow UI"
 Cohesion: 0.02
@@ -1156,16 +1195,16 @@ Cohesion: 0.05
 Nodes (44): Boolean, CharSequence, GlideTypingGesture, Int, List, Long, Subtype, TextKey (+36 more)
 
 ### Community 8 - "Home Screen Dashboard"
-Cohesion: 0.03
-Nodes (90): ../models/document_result.dart, package:expressive_refresh/expressive_refresh.dart, package:flutter/physics.dart, ../screens/ai_detector_page.dart, ../screens/document_viewer_screen.dart, ../screens/grammar_page.dart, _buildDocActionCard, _buildSectionTitle (+82 more)
+Cohesion: 0.04
+Nodes (47): 1.1 Remove Existing Spacebar Navigation, 1.2 Remove Existing Glide Typing, 1.3 Remove Visual Components, 1. **Spacebar Cursor Navigation** ✓, 2.1 Copy FlorisBoard Core Classes, 2.2 Adapt Package Structure, 2.3 Dependency Resolution, 2. **Glide Typing (Swipe Typing)** ✓ (+39 more)
 
 ### Community 9 - "Keyboard Preview & Policies"
-Cohesion: 0.03
-Nodes (82): IconData, build, _buildKey, _buildSpecialKey, isDarkMode, KeyboardPreview, themeColor, build (+74 more)
+Cohesion: 0.02
+Nodes (148): build, color, icon, isSmallScreen, subtitle, title, ToolCard, IconData (+140 more)
 
 ### Community 10 - "reboard_material_dark.json | clipboard-cle..."
 Cohesion: 0.02
-Nodes (91): clipboard-clear-all-dialog-buttons, padding, clipboard-clear-all-dialog-message, padding, clipboard-content, padding, clipboard-filter-chip-text, margin (+83 more)
+Nodes (88): clipboard-clear-all-dialog-buttons, padding, clipboard-clear-all-dialog-message, padding, clipboard-content, padding, clipboard-filter-chip-text, margin (+80 more)
 
 ### Community 11 - "reboard_material_amoled.json | clipboard-c..."
 Cohesion: 0.02
@@ -1188,36 +1227,36 @@ Cohesion: 0.02
 Nodes (82): clipboard-clear-all-dialog-buttons, padding, clipboard-clear-all-dialog-message, padding, clipboard-content, padding, clipboard-filter-chip-text, margin (+74 more)
 
 ### Community 16 - "animated_card.dart | custom_button.dart"
-Cohesion: 0.03
-Nodes (74): animated_card.dart, ../custom_button.dart, Duration, AssistantStatusCard, _AssistantStatusCardState, build, _buildContent, _buildDisabledState (+66 more)
+Cohesion: 0.02
+Nodes (98): animated_card.dart, ../custom_button.dart, ../experimental_keyboard_dialog.dart, AssistantStatusCard, _AssistantStatusCardState, build, _buildContent, _buildDisabledState (+90 more)
 
 ### Community 17 - "Boolean | Context"
 Cohesion: 0.05
 Nodes (19): Boolean, Context, DisplayLanguageNamesIn, EditorContent, Int, KeyData, KeyEvent, List (+11 more)
 
 ### Community 18 - "AccessibilityEvent | AccessibilityService"
-Cohesion: 0.07
-Nodes (24): AccessibilityEvent, AccessibilityService, AccessibilityNodeInfo, AIConfigProvider, Boolean, Context, Int, Job (+16 more)
+Cohesion: 0.09
+Nodes (17): AccessibilityService, AccessibilityNodeInfo, AIConfigProvider, Int, Job, List, Long, String (+9 more)
 
 ### Community 19 - "EdgeInsetsGeometry | tool_card.dart"
 Cohesion: 0.03
-Nodes (69): EdgeInsetsGeometry, build, color, icon, isSmallScreen, subtitle, title, ToolCard (+61 more)
+Nodes (66): AdminPanel, AnimationController, Duration, EdgeInsetsGeometry, _AdminPanelState, _AdminPanelState, _AdminPanelState, TickerProviderStateMixin (+58 more)
 
 ### Community 20 - "AnimationController | experimental_keyboar..."
-Cohesion: 0.04
-Nodes (66): AnimationController, ../experimental_keyboard_dialog.dart, FocusNode, build, _buildSettingItem, createState, didChangeAppLifecycleState, dispose (+58 more)
+Cohesion: 0.02
+Nodes (100): FocusNode, GlobalKey, HomePage, _acceptSuggestion, backspaceHandler, build, buildKey, buildKeyboardLayout (+92 more)
 
 ### Community 21 - "KeyboardSettingsPopup | _KeyboardSettingsP..."
 Cohesion: 0.03
-Nodes (69): KeyboardSettingsPopup, _KeyboardSettingsPopupState, HomePage, _StaggeredFadeIn, _StaggeredFadeInState, AdminPanel, AdminPanel, _ac (+61 more)
+Nodes (68): AdminPanel, HomePage, _StaggeredFadeIn, _StaggeredFadeInState, AdminPanel, AdminPanel, _ac, accent (+60 more)
 
 ### Community 22 - "KeyboardLayout get | keyboard_provider.dart"
 Cohesion: 0.03
 Nodes (67): KeyboardLayout get, _activePersona, addPersona, applyAllKeyboardSettings, _applyAllKeyboardSettingsNow, _applyDebounce, checkKeyboardStatus, clearSuggestions (+59 more)
 
 ### Community 23 - "convert | dart_jsonwebtoken.dart"
-Cohesion: 0.03
-Nodes (61): dart:convert, package:dart_jsonwebtoken/dart_jsonwebtoken.dart, package:flutter_dotenv/flutter_dotenv.dart, package:flutter_secure_storage/flutter_secure_storage.dart, package:http/http.dart, _accessToken, fcmBaseUrl, FCMOAuth2Service (+53 more)
+Cohesion: 0.05
+Nodes (45): package:flutter_dotenv/flutter_dotenv.dart, package:flutter_secure_storage/flutter_secure_storage.dart, package:http/http.dart, _apiKeyStorageKey, _baseUrl, _cachedApiKey, _CachedResponse, checkGrammar (+37 more)
 
 ### Community 24 - "admin_panel.dart | _apiUsageStats"
 Cohesion: 0.03
@@ -1225,7 +1264,7 @@ Nodes (60): _apiUsageStats, _applyFilterAndSort, _authenticate, _bodyController,
 
 ### Community 25 - "ProjectLicenseScreen.kt | ProjectLicenseSc..."
 Cohesion: 0.04
-Nodes (41): ProjectLicenseScreen(), ThirdPartyLicensesScreen(), OtherScreen(), PhysicalKeyboardScreen(), String, KClass, List, String (+33 more)
+Nodes (49): ProjectLicenseScreen(), ThirdPartyLicensesScreen(), OtherScreen(), PhysicalKeyboardScreen(), String, KClass, List, String (+41 more)
 
 ### Community 26 - "String | Array"
 Cohesion: 0.08
@@ -1236,24 +1275,24 @@ Cohesion: 0.03
 Nodes (57): package:m3e_design/m3e_design.dart, static BoxDecoration get, static ButtonStyle get, static Color get, static ColorScheme get, static TextStyle get, static ThemeData get, accentColor (+49 more)
 
 ### Community 28 - "Build Guide | 1. Install Flutter (Build Gu..."
-Cohesion: 0.04
-Nodes (57): Build Guide, 1. Install Flutter (Build Guide), 2. Install JDK 17 (Build Guide), 3. Install Android SDK (Build Guide), 4. Install Rust Toolchain (Build Guide), 4. Install Xcode (for iOS builds) (Build Guide), 5. Clone & Build (Build Guide), 5. Install Rust Toolchain (Build Guide) (+49 more)
+Cohesion: 0.06
+Nodes (32): Accept licenses: (Build Guide), Add Android cross-compilation target: (Build Guide), Add to PATH: (Build Guide), Add to PATH in ~/.zshrc: (Build Guide), Archive for App Store: (Build Guide), Build App Bundle (for Play Store) (Build Guide), Build debug APK (Build Guide), Build release APK (Build Guide) (+24 more)
 
 ### Community 29 - "Float | Int"
-Cohesion: 0.07
-Nodes (36): Float, Int, KeyHintConfiguration, Emoji, FlorisPreferenceModel, Int, List, String (+28 more)
+Cohesion: 0.11
+Nodes (18): Correction, Devtools, Dictionary, Emoji, FlorisPreferenceModel, Gestures, Glide, InputFeedback (+10 more)
 
 ### Community 30 - "lt.json | main"
 Cohesion: 0.07
 Nodes (55): main, relevant, all, a, c, d, e, g (+47 more)
 
 ### Community 31 - "AutocorrectSlot | Data"
-Cohesion: 0.07
-Nodes (38): AutocorrectSlot, Data, Equatable, HistoryEntry, HTTPURLResponse, AIAction, AIPersona, Error (+30 more)
+Cohesion: 0.17
+Nodes (17): Data, HTTPURLResponse, Bool, Double, Int, String, LocalizedError, Sendable (+9 more)
 
 ### Community 32 - "persona_model.dart | Persona?"
 Cohesion: 0.04
-Nodes (53): ../models/persona_model.dart, Persona?, _alternatives, _buildBottomBar, _buildCacheKeyForMode, _buildCacheKeyForPersona, _buildErrorBanner, _buildInputView (+45 more)
+Nodes (51): ../models/persona_model.dart, Persona?, _alternatives, _buildBottomBar, _buildCacheKeyForMode, _buildCacheKeyForPersona, _buildErrorBanner, _buildInputView (+43 more)
 
 ### Community 33 - "hi-IN.json | all"
 Cohesion: 0.07
@@ -1268,16 +1307,16 @@ Cohesion: 0.04
 Nodes (48): ../firebase_options.dart, package:cloud_firestore/cloud_firestore.dart, package:firebase_auth/firebase_auth.dart, consumeCredit, CreditService, _firestore, getCredits, _usersCollection (+40 more)
 
 ### Community 36 - "GlobalKey | main.dart"
-Cohesion: 0.04
-Nodes (49): GlobalKey, _AdaptiveScrollBehavior, authProvider, billingService, binding, buildOverscrollIndicator, buildScrollbar, buildSystemKeyboardOverlay (+41 more)
+Cohesion: 0.05
+Nodes (43): 10. 📚 Reference Links, 11. 🎯 Final Recommendation, 1. FlorisBoard Spacebar Navigation Analysis, 2. FlorisBoard Glide Typing Analysis, 3. Comparison: FlorisBoard vs Your Implementation, 4. ⚠️ Clipboard Issues to Fix First, 5. 🎯 Integration Recommendations, 6. 📝 Step-by-Step Migration Plan (If You Choose Hybrid) (+35 more)
 
 ### Community 37 - "Florisboard Integration Plan | 1.1 Remove ..."
 Cohesion: 0.04
 Nodes (48): Florisboard Integration Plan, 1.1 Remove Existing Spacebar Navigation (Florisboard Integration Plan), 1.2 Remove Existing Glide Typing (Florisboard Integration Plan), 1.3 Remove Visual Components (Florisboard Integration Plan), 1. **Spacebar Cursor Navigation** ✓ (Florisboard Integration Plan), 2.1 Copy FlorisBoard Core Classes (Florisboard Integration Plan), 2.2 Adapt Package Structure (Florisboard Integration Plan), 2.3 Dependency Resolution (Florisboard Integration Plan) (+40 more)
 
 ### Community 38 - "AdminPanel | _AdminPanelState"
-Cohesion: 0.04
-Nodes (47): AdminPanel, _AdminPanelState, _AdminPanelState, _AdminPanelState, _authenticate, _bodyController, build, _buildAccessDenied (+39 more)
+Cohesion: 0.05
+Nodes (42): _authenticate, _bodyController, build, _buildAccessDenied, _buildAdminDashboard, _buildHistoryCard, _buildHistoryTab, _buildNotificationsTab (+34 more)
 
 ### Community 39 - "Florisboard Feature Analysis | 10. 📚 Refer..."
 Cohesion: 0.04
@@ -1288,8 +1327,8 @@ Cohesion: 0.09
 Nodes (46): all, ~right, ক, গ, ঙ, চ, জ, ট (+38 more)
 
 ### Community 41 - "app_theme.dart | bool get"
-Cohesion: 0.04
-Nodes (42): app_theme.dart, bool get, _countWords, DocumentResult, DocumentType, filePath, imagePaths, importedAt (+34 more)
+Cohesion: 0.05
+Nodes (40): ../models/advanced_ai_settings.dart, ../screens/advanced_ai_settings_screen.dart, _channel, _checkPendingDeepLink, DeepLinkService, _enqueueRoute, _flushQueuedRoutes, _flushRetryScheduled (+32 more)
 
 ### Community 42 - "ckb.json | all"
 Cohesion: 0.05
@@ -1324,8 +1363,8 @@ Cohesion: 0.08
 Nodes (40): Boolean, Int, List, Modifier, MutableState, String, T, Boolean (+32 more)
 
 ### Community 50 - "Boolean | Map"
-Cohesion: 0.08
-Nodes (23): Boolean, Map, Regex, Set, SnyggRule, SnyggValueEncoder, String, JsonSchemaMeta (+15 more)
+Cohesion: 0.14
+Nodes (10): Regex, InheritBehavior, JsonSchemaMeta, JsonSchemaMetaBuilder, PropertySet, PropertySetBuilder, RuleDecl, SingleOrMultiple (+2 more)
 
 ### Community 51 - "login_screen.dart | integrity_blocked_scre..."
 Cohesion: 0.05
@@ -1333,11 +1372,11 @@ Nodes (41): auth/login_screen.dart, integrity_blocked_screen.dart, build, _build
 
 ### Community 52 - "AutomaticKeepAliveClientMixin | grammar_pa..."
 Cohesion: 0.05
-Nodes (42): AutomaticKeepAliveClientMixin, _buildBottomBar, _buildErrorBanner, _buildErrorItem, _buildInputArea, _buildResultView, _buildStatChip, _cacheGrammarResult (+34 more)
+Nodes (41): _buildBottomBar, _buildErrorBanner, _buildErrorItem, _buildInputArea, _buildResultView, _buildStatChip, _cacheGrammarResult, _checkGrammar (+33 more)
 
 ### Community 53 - "Curve | math"
-Cohesion: 0.05
-Nodes (41): Curve, dart:math, _addSegment, computeWordDiff, DiffOp, DiffSegment, _lcs, _lcsGreedy (+33 more)
+Cohesion: 0.07
+Nodes (29): Curve, bounciness, _BouncyCurve, BrokenScreen, _BrokenScreenState, build, _buildFakeButton, _buildFakeCard (+21 more)
 
 ### Community 54 - "oneOf | oneOf"
 Cohesion: 0.05
@@ -1348,24 +1387,24 @@ Cohesion: 0.05
 Nodes (41): animation_optimizer.dart, aiDetectorAnimation, _animationCache, _animationLastFrameTime, assistantAnimation, _baseAnimationPath, _buildPlaceholder, egmailAnimation (+33 more)
 
 ### Community 56 - "Completer | ProductDetails? get"
-Cohesion: 0.05
-Nodes (41): Completer, ProductDetails? get, PurchaseState get, dispose, _errorMessage, _handlePurchaseError, _handleSuccessfulPurchase, _inAppPurchase (+33 more)
+Cohesion: 0.03
+Nodes (62): ChangeNotifier, Completer, build, _buildOverlay, child, createState, dispose, _hideKeyboardSettings (+54 more)
 
 ### Community 57 - "DateTime? get | auth_provider.dart"
 Cohesion: 0.05
 Nodes (41): DateTime? get, activateProSubscription, canPerformAction, clearError, consumeCredit, _credits, deleteAccount, _error (+33 more)
 
 ### Community 58 - "Any | Boolean"
-Cohesion: 0.10
-Nodes (15): Any, Boolean, Bundle, FlutterEngine, Int, Intent, List, Long (+7 more)
+Cohesion: 0.06
+Nodes (25): Boolean, String, Any, Boolean, Bundle, ContentObserver, FlutterEngine, Int (+17 more)
 
 ### Community 59 - "BillingService | billing_client_wrappers.dart"
-Cohesion: 0.05
-Nodes (40): BillingService, package:in_app_purchase_android/billing_client_wrappers.dart, package:in_app_purchase_android/in_app_purchase_android.dart, package:in_app_purchase/in_app_purchase.dart, build, _buildAlreadyOwnedScreen, _buildErrorScreen, _buildFeaturesSection (+32 more)
+Cohesion: 0.06
+Nodes (31): aiBodyTxt, aiDD, aiDDtext, aiGen, auto, demoInput, io, knob (+23 more)
 
 ### Community 60 - "flutter_colorpicker.dart | keyboard_settin..."
 Cohesion: 0.05
-Nodes (40): package:flutter_colorpicker/flutter_colorpicker.dart, build, createState, _deleteSwipeEnabled, _directionalSwipeEnabled, _glideTypingEnabled, initState, _isAutoCapitalizeEnabled (+32 more)
+Nodes (38): package:flutter_colorpicker/flutter_colorpicker.dart, build, createState, _deleteSwipeEnabled, _directionalSwipeEnabled, _glideTypingEnabled, initState, _isAutoCapitalizeEnabled (+30 more)
 
 ### Community 61 - "fo.json | main"
 Cohesion: 0.07
@@ -1400,16 +1439,16 @@ Cohesion: 0.07
 Nodes (24): Canvas, Float, Int, Long, Runnable, Unit, ValueAnimator, Backdrop (+16 more)
 
 ### Community 69 - "ImageVector | Modifier"
-Cohesion: 0.08
-Nodes (33): ImageVector, Modifier, SnyggQueryAttributes, String, Unit, ComputingEvaluator, Modifier, QuickAction (+25 more)
+Cohesion: 0.11
+Nodes (23): ImageVector, Modifier, SnyggQueryAttributes, String, Unit, Alignment, Arrangement, Modifier (+15 more)
 
 ### Community 70 - "Deferred | Extension"
-Cohesion: 0.09
-Nodes (21): Deferred, Extension, FsDir, FsFile, Int, List, R, String (+13 more)
+Cohesion: 0.05
+Nodes (34): Boolean, ClipboardItem, ClipData, Context, Job, List, String, Deferred (+26 more)
 
 ### Community 71 - "Any | FontStyle"
-Cohesion: 0.07
-Nodes (22): Any, FontStyle, FontWeight, SnyggDynamicLightColorValue, SnyggSinglePropertySet, SnyggValue, String, TextAlign (+14 more)
+Cohesion: 0.05
+Nodes (34): Any, Dp, Float, FontFamily, FontStyle, FontWeight, Int, SnyggDynamicLightColorValue (+26 more)
 
 ### Community 72 - "Any | Int"
 Cohesion: 0.12
@@ -1424,16 +1463,16 @@ Cohesion: 0.05
 Nodes (37): fcm_oauth2_service.dart, ../models/user_model.dart, adminEmails, adminPassword, AdminService, _auth, _calculateSuccessRate, _emptyRevenueStats (+29 more)
 
 ### Community 75 - "Requirements | 1. Project Overview (Requir..."
-Cohesion: 0.05
-Nodes (38): Requirements, 1. Project Overview (Requirements), 2. Problem Statement (Requirements), 3. Objectives (Requirements), 4.1 Core Features (Requirements), 4.2 User Management (Requirements), 4.3 Advanced Features (Requirements), 4.4 Platform-Specific Features (Requirements) (+30 more)
+Cohesion: 0.10
+Nodes (37): 1. Project Overview, 2. Problem Statement, 3. Objectives, 4.1 Core Features, 4.2 User Management, 4.3 Advanced Features, 4.4 Platform-Specific Features, 4. Functional Requirements (+29 more)
 
 ### Community 76 - "CacheManager | Boolean"
-Cohesion: 0.10
-Nodes (32): CacheManager, Boolean, CacheManager, KClass, Modifier, String, T, ValidationResult (+24 more)
+Cohesion: 0.16
+Nodes (23): Boolean, CacheManager, KClass, Modifier, String, T, ValidationResult, FlorisButtonBar() (+15 more)
 
 ### Community 77 - "smooth_animations.dart | flutter_svg.dart"
 Cohesion: 0.06
-Nodes (35): package:flutter_svg/flutter_svg.dart, AdvancedAISettingsScreen, _AdvancedAISettingsScreenState, _apiKeyController, build, _buildApiKeyCard, _buildComparisonCard, _buildComparisonRow (+27 more)
+Nodes (34): package:flutter_svg/flutter_svg.dart, AdvancedAISettingsScreen, _AdvancedAISettingsScreenState, _apiKeyController, _buildApiKeyCard, _buildComparisonCard, _buildComparisonRow, _buildDefaultInfoCard (+26 more)
 
 ### Community 78 - "cs.json | relevant"
 Cohesion: 0.06
@@ -1444,8 +1483,8 @@ Cohesion: 0.06
 Nodes (36): relevant, all, a, c, d, e, i, l (+28 more)
 
 ### Community 80 - "Boolean | ComputingEvaluator"
-Cohesion: 0.12
-Nodes (21): Boolean, ComputingEvaluator, InputEventDispatcher, Int, Modifier, MotionEvent, PointerMap, PopupUiController (+13 more)
+Cohesion: 0.06
+Nodes (33): Boolean, GlideTypingClassifier, Int, List, TextKey, Boolean, Color, ComputingEvaluator (+25 more)
 
 ### Community 81 - "int get | flutter_quill.dart"
 Cohesion: 0.06
@@ -1472,16 +1511,16 @@ Cohesion: 0.10
 Nodes (34): main, all, a, c, g, i, o, ~right (+26 more)
 
 ### Community 87 - "Setup | 1. Clone & Install Dependencies (S..."
-Cohesion: 0.06
-Nodes (35): Setup, 1. Clone & Install Dependencies (Setup), 1. Environment variables (Setup), 2. Android local properties (Setup), 2. Secret Files Setup (Setup), 3. Firebase Functions (Setup), 3. Signing key (Setup), 4. Build & Run (Setup) (+27 more)
+Cohesion: 0.07
+Nodes (34): 1. Clone & Install Dependencies, 1. Environment variables (Setup), 2. Android local properties (Setup), 2. Secret Files Setup, 3. Firebase Functions, 3. Signing key (Setup), 4. Build & Run, 4. Firebase Android config (Setup) (+26 more)
 
 ### Community 88 - "SnyggStylesheetTest.kt | BasicTests"
 Cohesion: 0.06
 Nodes (6): BasicTests, FontAnnotationTests, LenientDeserialization, PrettyPrintSerialization, SnyggStylesheetTest, VariableTests
 
 ### Community 89 - "Context | Intent"
-Cohesion: 0.08
-Nodes (14): Context, Intent, Context, Intent, Int, BroadcastReceiver, ContextWrapper, BootComplete (+6 more)
+Cohesion: 0.10
+Nodes (10): Context, Intent, Int, ContextWrapper, BootComplete, FlorisApplication, getInstance(), getInstanceOrNull() (+2 more)
 
 ### Community 90 - "Context | FlorisLocale"
 Cohesion: 0.13
@@ -1521,7 +1560,7 @@ Nodes (32): relevant, all, a, d, e, i, l, n (+24 more)
 
 ### Community 99 - "AbstractComposeView | CharSequence"
 Cohesion: 0.08
-Nodes (17): AbstractComposeView, CharSequence, View, Boolean, ComposeView, ExtractEditText, FrameLayout, InputConnection (+9 more)
+Nodes (15): AbstractComposeView, CharSequence, View, ComposeView, ExtractEditText, FrameLayout, InputConnection, ComposeExtractedLandscapeInputView (+7 more)
 
 ### Community 100 - "Boolean | Density"
 Cohesion: 0.08
@@ -1561,7 +1600,7 @@ Nodes (12): android, Any, Boolean, Float, Int, Offset, Size, String (+4 more)
 
 ### Community 109 - "keyboard_settings_popup.dart | _animationC..."
 Cohesion: 0.06
-Nodes (30): _animationController, build, _buildSectionHeader, _buildSettingTile, _close, createState, _deleteSwipeEnabled, _directionalSwipeEnabled (+22 more)
+Nodes (32): _animationController, build, _buildSectionHeader, _buildSettingTile, _close, createState, _deleteSwipeEnabled, _directionalSwipeEnabled (+24 more)
 
 ### Community 110 - "es.json | main"
 Cohesion: 0.10
@@ -1576,16 +1615,16 @@ Cohesion: 0.07
 Nodes (30): build, _buildBulletPoint, checkAndPromptSubscription, _checkInterval, _checkUserSubscriptionStatus, createState, dontShowAgain, _getCurrentContext (+22 more)
 
 ### Community 113 - "ExtensionComponent | ExtensionMeta"
-Cohesion: 0.10
-Nodes (26): ExtensionComponent, ExtensionMeta, List, Modifier, String, T, Unit, Modifier (+18 more)
+Cohesion: 0.11
+Nodes (24): ExtensionComponent, ExtensionMeta, List, Modifier, String, T, Unit, Boolean (+16 more)
 
 ### Community 114 - "ClipboardItem | ClipData"
-Cohesion: 0.13
-Nodes (11): ClipboardItem, ClipData, Context, Job, List, String, AndroidClipboardManager_OnPrimaryClipChangedListener, ClipboardManager (+3 more)
+Cohesion: 0.07
+Nodes (28): 1. Excessive Logging Removed, 2. Unknown Button Removed ✅, After:, After (1 clipboard operation):, Before:, Before (1 clipboard operation):, 🚀 Build & Deploy, ✅ Changes Completed (+20 more)
 
 ### Community 115 - "Boolean | Context"
-Cohesion: 0.12
-Nodes (17): Boolean, Context, DisplayLanguageNamesIn, FlorisEditorInfo, FlorisLocale, ImageVector, Int, Keyboard (+9 more)
+Cohesion: 0.21
+Nodes (9): Boolean, FlorisEditorInfo, Int, Keyboard, KeyData, Subtype, ComputingEvaluator, DefaultComputingEvaluator (+1 more)
 
 ### Community 116 - "Boolean | Context"
 Cohesion: 0.14
@@ -1612,8 +1651,8 @@ Cohesion: 0.07
 Nodes (28): , package:pdf/pdf.dart, package:pdf/widgets.dart, package:share_plus/share_plus.dart, build, _buildExportOption, content, createState (+20 more)
 
 ### Community 122 - "AIException | AIManager"
-Cohesion: 0.24
-Nodes (9): AIException, AIManager, GroqRequest, Message, AIAction, AIPersona, Result, String (+1 more)
+Cohesion: 0.12
+Nodes (24): AIAction, AIException, AIManager, AIPersona, Choice, GeminiCandidate, GeminiContent, GeminiPart (+16 more)
 
 ### Community 123 - "AndroidSettings.kt | AndroidSettings"
 Cohesion: 0.10
@@ -1640,16 +1679,16 @@ Cohesion: 0.07
 Nodes (28): all, c, g, h, j, q, ~right, s (+20 more)
 
 ### Community 129 - "$defs | snygg-circle-shape-value"
-Cohesion: 0.07
-Nodes (29): $defs, snygg-circle-shape-value, snygg-content-scale-value, snygg-element-property-set, snygg-font-weight-value, snygg-no-value, snygg-padding-value, snygg-rounded-corner-percent-shape-value (+21 more)
+Cohesion: 0.08
+Nodes (26): $defs, snygg-cut-corner-dp-shape-value, snygg-font-style-value, snygg-generic-font-family-value, snygg-no-value, snygg-padding-value, snygg-rounded-corner-percent-shape-value, snygg-static-color-value (+18 more)
 
 ### Community 130 - "Array | Boolean"
 Cohesion: 0.15
 Nodes (12): Array, Boolean, Int, SpellingResult, Subtype, flogInfo(), FlorisSpellCheckerService, FlorisSpellCheckerSession (+4 more)
 
 ### Community 131 - "ConcurrentHashMap | File"
-Cohesion: 0.11
-Nodes (18): ConcurrentHashMap, File, FlorisLocale, Int, List, String, String, CurlyArg (+10 more)
+Cohesion: 0.14
+Nodes (15): ConcurrentHashMap, File, FlorisLocale, Int, List, String, CurlyArg, Int (+7 more)
 
 ### Community 132 - "Long | Modifier"
 Cohesion: 0.09
@@ -1675,23 +1714,23 @@ Nodes (28): double get, EdgeInsets, static const double, _, all, _designHeight, 
   gemini,
   openai,
   anthropic, | a..."
-Cohesion: 0.07
-Nodes (27): groq,
+Cohesion: 0.04
+Nodes (43): dart:convert, groq,
   gemini,
   openai,
-  anthropic,, AdvancedAISettings, AdvancedAISettingsService, AIProvider, apiKey, _cachedSettings, clearSettings, copyWith (+19 more)
+  anthropic,, AdvancedAISettings, AdvancedAISettingsService, AIProvider, apiKey, _cachedSettings, clearSettings (+35 more)
 
 ### Community 138 - "AIAction | AIPersona"
 Cohesion: 0.15
 Nodes (16): AIAction, AIPersona, AIService, Bool, Int, KeyboardInputViewController, String, Void (+8 more)
 
 ### Community 139 - "google_fonts.dart | m3e_collection.dart"
-Cohesion: 0.07
-Nodes (26): package:google_fonts/google_fonts.dart, package:m3e_collection/m3e_collection.dart, package:rewordium/services/play_integrity_service.dart, package:rewordium/utils/app_logger.dart, AccessibilityDisclosureScreen, _AccessibilityDisclosureScreenState, _bodyStyle, _bodySubtleStyle (+18 more)
+Cohesion: 0.14
+Nodes (14): package:google_fonts/google_fonts.dart, AccessibilityDisclosureScreen, _AccessibilityDisclosureScreenState, _bodyStyle, _bodySubtleStyle, build, _buildBackground, _bulletLine (+6 more)
 
 ### Community 140 - "rewordium_keyboard_service.dart | _channel"
 Cohesion: 0.07
-Nodes (27): _channel, forceKeyboardRecreation, forceRestartKeyboard, getContactsPermissionStatus, getKeyboardSettings, hasContactsPermission, _isAndroid, isKeyboardEnabled (+19 more)
+Nodes (28): 1. Unified ClipboardManager Instance, 2. Recently Deleted Tracking, 3. Smart UI Updates, Analysis Complete, Clipboard Fix, Clipboard Fix, Clipboard Fix, 📊 Code Statistics (+20 more)
 
 ### Community 141 - "Implementation Status | 1. Unified Clipboa..."
 Cohesion: 0.07
@@ -1702,16 +1741,16 @@ Cohesion: 0.11
 Nodes (23): Boolean, ExtensionComponentName, FlorisLocale, LayoutType, List, Long, Map, MutableState (+15 more)
 
 ### Community 143 - "KClass | Modifier"
-Cohesion: 0.09
-Nodes (24): KClass, Modifier, SnyggLevel, SnyggRule, String, TextKeyData, V, Boolean (+16 more)
+Cohesion: 0.13
+Nodes (14): Modifier, String, Modifier, Boolean, ImageVector, List, Modifier, Shape (+6 more)
 
 ### Community 144 - "Boolean | CharSequence"
-Cohesion: 0.14
-Nodes (12): Boolean, CharSequence, Double, EditorContent, Emoji, Int, List, String (+4 more)
+Cohesion: 0.06
+Nodes (34): Boolean, Context, FlorisLocale, List, String, SuggestionCandidate, WeakReference, Boolean (+26 more)
 
 ### Community 145 - "Boolean | String"
-Cohesion: 0.11
-Nodes (14): Boolean, String, Composable, String, Unit, FlorisAppBar(), FlorisScreenScope, FlorisScreenScopeImpl (+6 more)
+Cohesion: 0.10
+Nodes (16): String, Boolean, Modifier, Boolean, Window, Context, LayoutDirection, ProvideLocalizedResources() (+8 more)
 
 ### Community 146 - "Boolean | Context"
 Cohesion: 0.13
@@ -1722,8 +1761,8 @@ Cohesion: 0.17
 Nodes (16): Char, Context, Encoder, Int, List, String, default(), extendedAvailableLocales() (+8 more)
 
 ### Community 148 - "FirebaseAuth | GoogleSignIn"
-Cohesion: 0.07
-Nodes (26): FirebaseAuth, GoogleSignIn, AdminPanel, adminPassword, _auth, backendUrl, _bodyController, build (+18 more)
+Cohesion: 0.08
+Nodes (25): FirebaseAuth, GoogleSignIn, adminPassword, _auth, backendUrl, _bodyController, build, _buildAdminForm (+17 more)
 
 ### Community 149 - "in_app_review_service.dart | unified_ai_se..."
 Cohesion: 0.07
@@ -1750,12 +1789,12 @@ Cohesion: 0.08
 Nodes (26): relevant, all, a, c, e, l, n, o (+18 more)
 
 ### Community 155 - "keyboard_service.dart | bringAppToForeground"
-Cohesion: 0.07
-Nodes (26): bringAppToForeground, _channel, getCurrentLayout, hideSystemKeyboardOverlay, _instance, _isAndroid, isKeyboardEnabled, isKeyboardSelectedAsDefault (+18 more)
+Cohesion: 0.19
+Nodes (15): HistoryEntry, AIAction, AIPersona, Error, Never, Result, String, Task (+7 more)
 
 ### Community 156 - "version_service.dart | build"
-Cohesion: 0.07
-Nodes (26): build, checkForUpdate, config, defaultConfig, forceUpdate, forceUpdateTitle, fromFirestore, getCurrentBuildNumber (+18 more)
+Cohesion: 0.10
+Nodes (20): 10. Contact Us, 1. Scope and Purpose of Accessibility Service, 1. Zero-Data-Collection & Privacy-First Architecture, 2.1 Account and Security Information, 2.2 Billing & Subscription Data, 2.3 Transient Text Processing Data (Stateless Cloud Transit), 2.4 Secure Local Storage (Encryption Specs), 2. Information We Collect and Process (+12 more)
 
 ### Community 157 - "Array | Boolean"
 Cohesion: 0.13
@@ -1782,12 +1821,12 @@ Cohesion: 0.14
 Nodes (25): all, ~right, г, е, о, у, ь, і (+17 more)
 
 ### Community 163 - "AiPanel.kt | actionIcon()"
-Cohesion: 0.20
-Nodes (24): actionIcon(), actionLabel(), AiPanel(), ChipPill(), FooterButtons(), icon(), label(), ModeSegmented() (+16 more)
+Cohesion: 0.19
+Nodes (26): actionIcon(), actionLabel(), AiPanel(), ChipPill(), FooterButtons(), icon(), label(), ModeSegmented() (+18 more)
 
 ### Community 164 - "LayoutType | Context"
-Cohesion: 0.09
-Nodes (14): LayoutType, Context, ExtensionEditor, FsDir, LanguagePackExtension, List, String, ExtensionComponent (+6 more)
+Cohesion: 0.17
+Nodes (7): LanguagePackExtension, List, String, ExtensionComponent, LanguagePackComponent, PunctuationRule, PopupMappingComponent
 
 ### Community 165 - "Array | Boolean"
 Cohesion: 0.14
@@ -1850,8 +1889,8 @@ Cohesion: 0.15
 Nodes (9): Boolean, Int, MotionEvent, SharedPreferences, WindowManager, LottieAnimationView, ObjectAnimator, BubbleInteractionListener (+1 more)
 
 ### Community 180 - "Boolean | MutableState"
-Cohesion: 0.18
-Nodes (21): Boolean, MutableState, Boolean, Color, Composable, Dp, Modifier, PaddingValues (+13 more)
+Cohesion: 0.15
+Nodes (23): Boolean, MutableState, Boolean, Color, Composable, Dp, Modifier, PaddingValues (+15 more)
 
 ### Community 181 - "BoxShadow? | TextStyle"
 Cohesion: 0.08
@@ -1870,16 +1909,16 @@ Cohesion: 0.21
 Nodes (8): Array, Boolean, FloatArray, Int, IntArray, Long, String, LatinImeNative
 
 ### Community 185 - "Boolean | EditorContent"
-Cohesion: 0.15
-Nodes (7): Boolean, EditorContent, Job, SharedFlow, SuggestionCandidate, NlpManager, PunctuationRule
+Cohesion: 0.08
+Nodes (23): Boolean, BreakIteratorGroup, CharSequence, ClipboardItem, Double, EditorContent, EditorRange, Int (+15 more)
 
 ### Community 186 - "FlPluginRegistry | fl_register_plugins()"
 Cohesion: 0.11
 Nodes (20): FlPluginRegistry, fl_register_plugins(), GApplication, gboolean, gchar, GObject, GtkApplication, MyApplicationClass (+12 more)
 
 ### Community 187 - "Adaptive Learned Swipe Typing | 0. Quick o..."
-Cohesion: 0.09
-Nodes (23): Adaptive Learned Swipe Typing, 0. Quick orientation (read this first if you're a fresh agent) (Adaptive-Learned-Swipe-Typing), 1. How the existing system fits together (file:line references, all verified) (Adaptive-Learned-Swipe-Typing), 2. Design — five surgical changes, no architecture rewrite (Adaptive-Learned-Swipe-Typing), 3. Ranking semantics (no code change) (Adaptive-Learned-Swipe-Typing), 4. Performance budget (must hold) (Adaptive-Learned-Swipe-Typing), 5. Critical files (exhaustive list) (Adaptive-Learned-Swipe-Typing), 6. Implementation order (do strictly in this order) (Adaptive-Learned-Swipe-Typing) (+15 more)
+Cohesion: 0.17
+Nodes (22): 0. Quick orientation (read this first if you're a fresh agent), 1. How the existing system fits together (file:line references, all verified), 2. Design — five surgical changes, no architecture rewrite, 3. Ranking semantics (no code change), 4. Performance budget (must hold), 5. Critical files (exhaustive list), 6. Implementation order (do strictly in this order), 7. Verification (+14 more)
 
 ### Community 188 - "ko.json | all"
 Cohesion: 0.09
@@ -1910,12 +1949,12 @@ Cohesion: 0.20
 Nodes (15): AIConfigProvider, Response, String, DynamicApiService, GroqRequest, GroqResponse, DynamicApiService, DynamicRetrofitClient (+7 more)
 
 ### Community 195 - "android | androidx"
-Cohesion: 0.19
-Nodes (21): android, androidx, Bitmap, Boolean, File, Int, String, Uri (+13 more)
+Cohesion: 0.13
+Nodes (29): android, androidx, Bitmap, Boolean, Color, File, Float, Int (+21 more)
 
 ### Community 196 - "Boolean | Context"
-Cohesion: 0.15
-Nodes (13): Boolean, Context, FlorisLocale, List, String, SuggestionCandidate, WeakReference, default() (+5 more)
+Cohesion: 0.30
+Nodes (7): Emoji, FlorisPreferenceModel, Int, List, Unit, Editor, EmojiHistoryHelper
 
 ### Community 197 - "Any | Boolean"
 Cohesion: 0.15
@@ -1926,16 +1965,16 @@ Cohesion: 0.16
 Nodes (21): androidx, Boolean, Color, EmojiData, ImageVector, Int, LazyListState, List (+13 more)
 
 ### Community 199 - "Boolean | Int"
-Cohesion: 0.27
-Nodes (8): Boolean, Int, JsonElement, List, String, Category, GifResult, KlipyClient
+Cohesion: 0.25
+Nodes (9): Boolean, Int, JsonElement, List, String, Category, GifResult, KlipyClient (+1 more)
 
 ### Community 200 - "Boolean | Context"
 Cohesion: 0.19
 Nodes (15): Boolean, Context, File, List, StateFlow, String, Entry, favorites() (+7 more)
 
 ### Community 201 - "Float | Modifier"
-Cohesion: 0.10
-Nodes (19): Float, Modifier, Alignment, Arrangement, Modifier, SnyggQueryAttributes, SnyggSelector, String (+11 more)
+Cohesion: 0.09
+Nodes (22): Float, Modifier, Modifier, ImageVector, Modifier, SnyggQueryAttributes, SnyggSelector, String (+14 more)
 
 ### Community 202 - "ArrayList | Boolean"
 Cohesion: 0.13
@@ -1946,8 +1985,8 @@ Cohesion: 0.21
 Nodes (13): Boolean, Context, FlogTopic, Int, String, UInt, WeakReference, Flog (+5 more)
 
 ### Community 204 - "Boolean | Extension"
-Cohesion: 0.16
-Nodes (9): Boolean, Extension, List, String, T, Uri, ExtensionIndex, ExtensionManager (+1 more)
+Cohesion: 0.27
+Nodes (5): Boolean, Extension, String, Uri, ExtensionManager
 
 ### Community 205 - "Dp | Int"
 Cohesion: 0.19
@@ -1970,12 +2009,12 @@ Cohesion: 0.13
 Nodes (10): Any, Boolean, GraphicsLayer, InnerShadow, Int, Path, InnerShadowNode, Outline (+2 more)
 
 ### Community 210 - "String | Alignment"
-Cohesion: 0.11
-Nodes (16): String, Alignment, Boolean, Modifier, SnyggQueryAttributes, SnyggSelector, String, Boolean (+8 more)
+Cohesion: 0.08
+Nodes (24): ComputingEvaluator, Modifier, QuickAction, Modifier, String, Alignment, Boolean, Modifier (+16 more)
 
 ### Community 211 - "Boolean | Result"
-Cohesion: 0.18
-Nodes (19): Boolean, Result, SnyggJsonConfiguration, String, Json, JsonObject, SerializationException, fromJson() (+11 more)
+Cohesion: 0.14
+Nodes (22): Boolean, Comparator, Result, SnyggJsonConfiguration, SnyggRule, SnyggStylesheetEditor, String, Json (+14 more)
 
 ### Community 212 - "i | am"
 Cohesion: 0.10
@@ -2002,16 +2041,16 @@ Cohesion: 0.10
 Nodes (20): all, ~right, г, е, у, ь, є, і (+12 more)
 
 ### Community 218 - "static OverlayEntry? | rewordium_toast.dart"
-Cohesion: 0.10
-Nodes (20): static OverlayEntry?, _ac, build, createState, _dismiss, dispose, _entry, initState (+12 more)
+Cohesion: 0.05
+Nodes (36): BuildContext, dart:async, firebase_service.dart, groq_service.dart, _cacheCleanupTimer, CacheManager, cleanupCaches, dispose (+28 more)
 
 ### Community 219 - "Any | Boolean"
 Cohesion: 0.13
 Nodes (11): Any, Boolean, Int, LayoutCoordinates, Modifier, layerBackdrop(), LayerBackdropElement, LayerBackdropNode (+3 more)
 
 ### Community 220 - "Context | Cursor"
-Cohesion: 0.15
-Nodes (10): Context, Cursor, AutoMigrationSpec, ClipboardFileInfo, ClipboardFilesDao, ClipboardFilesDatabase, ClipboardHistoryDatabase, MIGRATE_3_TO_4 (+2 more)
+Cohesion: 0.24
+Nodes (8): Context, AutoMigrationSpec, ClipboardFilesDatabase, ClipboardHistoryDatabase, MIGRATE_3_TO_4, new(), text(), RoomDatabase
 
 ### Community 221 - "Boolean | FlorisLocale"
 Cohesion: 0.17
@@ -2023,19 +2062,19 @@ Nodes (13): Boolean, Context, File, KlipyClient, List, StateFlow, String, Entry 
 
 ### Community 223 - "Boolean | GlideTypingClassifier"
 Cohesion: 0.12
-Nodes (13): Boolean, GlideTypingClassifier, Int, List, TextKey, Color, Float, Long (+5 more)
+Nodes (16): 10. Subscription, Credits, & Google Play Billing, 11. Termination, 12. Contact Information, 1. Description of Service, 2.1 Billing and Charge Waiver, 2.2 Provider Terms Compliance & Liability, 2.3 Secure Local Key Storage, 2. Bring Your Own Key (BYOK) & Third-Party API Agreement (+8 more)
 
 ### Community 224 - "Boolean | Color"
 Cohesion: 0.23
 Nodes (16): Boolean, Color, ImageVector, List, Modifier, String, Unit, HeroCard() (+8 more)
 
 ### Community 225 - "Window | Canvas"
-Cohesion: 0.11
-Nodes (14): Window, Canvas, Color, ContentScale, Modifier, SnyggQueryAttributes, SnyggSelector, String (+6 more)
+Cohesion: 0.22
+Nodes (9): Canvas, Color, ContentScale, Modifier, SnyggQueryAttributes, SnyggSelector, String, drawToSurface() (+1 more)
 
 ### Community 226 - "Comparator | SnyggRule"
-Cohesion: 0.11
-Nodes (13): Comparator, SnyggRule, SnyggStylesheetEditor, Any, Int, List, Pair, SnyggRule (+5 more)
+Cohesion: 0.14
+Nodes (10): Any, Int, List, Pair, SnyggRule, SnyggSelector, SnyggStylesheet, String (+2 more)
 
 ### Community 227 - "is | a"
 Cohesion: 0.10
@@ -2054,8 +2093,8 @@ Cohesion: 0.13
 Nodes (9): Any, Boolean, GraphicsLayer, Int, Shadow, Modifier, ShadowElement, ShadowNode (+1 more)
 
 ### Community 231 - "Boolean | CacheManager"
-Cohesion: 0.15
-Nodes (16): Boolean, CacheManager, Int, Modifier, SnyggLevel, SnyggRule, String, UserDictionaryScreen() (+8 more)
+Cohesion: 0.09
+Nodes (27): KClass, Modifier, SnyggLevel, SnyggRule, String, TextKeyData, V, Boolean (+19 more)
 
 ### Community 232 - "Boolean | ExtensionComponentName"
 Cohesion: 0.12
@@ -2070,8 +2109,8 @@ Cohesion: 0.22
 Nodes (9): FlorisLocale, Int, R, String, Any, R, T, GuardedByLock (+1 more)
 
 ### Community 235 - "Double | List"
-Cohesion: 0.22
-Nodes (6): Double, List, Map, String, Subtype, SuggestionProvider
+Cohesion: 0.17
+Nodes (3): AccessibilityEvent, Boolean, CreditManager
 
 ### Community 236 - "Bundle | Color"
 Cohesion: 0.13
@@ -2086,8 +2125,8 @@ Cohesion: 0.25
 Nodes (13): Boolean, Decoder, Encoder, String, Uri, app(), assets(), cache() (+5 more)
 
 ### Community 239 - "Coordinator | AnyView"
-Cohesion: 0.16
-Nodes (12): Coordinator, AnyView, Context, KeyboardInputViewController, UIView, NSObject, UILongPressGestureRecognizer, UITapGestureRecognizer (+4 more)
+Cohesion: 0.09
+Nodes (21): Coordinator, FlutterBinaryMessenger, FlutterMethodCall, FlutterMethodChannel, FlutterResult, AnyView, Context, KeyboardInputViewController (+13 more)
 
 ### Community 240 - "it | can"
 Cohesion: 0.11
@@ -2114,16 +2153,16 @@ Cohesion: 0.11
 Nodes (17): assets, ddd, fr, h, ip, layers, markers, meta (+9 more)
 
 ### Community 246 - "Boolean | String"
-Cohesion: 0.25
-Nodes (6): Boolean, String, MethodChannel, PlayIntegrityHandler, IntegrityManager, MethodCall
+Cohesion: 0.19
+Nodes (8): Context, DisplayLanguageNamesIn, FlorisLocale, ImageVector, String, computeImageVector(), computeLabel(), computeLanguageDisplayName()
 
 ### Community 247 - "ColorScheme | Boolean"
-Cohesion: 0.16
-Nodes (16): ColorScheme, Boolean, Color, ColorScheme, ColorSpec, Double, PaletteStyle, AppTheme (+8 more)
+Cohesion: 0.05
+Nodes (46): ColorScheme, Bundle, Intent, Color, Dp, Map, Modifier, Shape (+38 more)
 
 ### Community 248 - "Boolean | ClipData"
-Cohesion: 0.20
-Nodes (8): Boolean, ClipData, List, LiveData, Long, ClipboardHistoryDao, ClipboardItem, fromClipData()
+Cohesion: 0.25
+Nodes (4): List, Long, ClipboardHistoryDao, ClipboardItem
 
 ### Community 249 - "EmojiData | List"
 Cohesion: 0.15
@@ -2131,31 +2170,31 @@ Nodes (14): EmojiData, List, Modifier, String, InputEventDispatcher, KeyData, Mo
 
 ### Community 250 - "android | Boolean"
 Cohesion: 0.18
-Nodes (17): android, Boolean, Color, KlipyClient, Modifier, String, Unit, downloadAndStore() (+9 more)
+Nodes (16): android, Boolean, Color, KlipyClient, Modifier, String, Unit, downloadAndStore() (+8 more)
 
 ### Community 251 - "Color | Modifier"
-Cohesion: 0.18
-Nodes (12): Color, Modifier, String, Boolean, List, String, EmptyKind, label() (+4 more)
+Cohesion: 0.36
+Nodes (6): Boolean, List, String, Pack, Sticker, WhatsAppStickerReader
 
 ### Community 252 - "Context | File"
-Cohesion: 0.23
+Cohesion: 0.24
 Nodes (9): Context, File, List, StateFlow, String, Uri, Entry, get() (+1 more)
 
 ### Community 253 - "List | Modifier"
-Cohesion: 0.14
-Nodes (14): List, Modifier, Modifier, String, Modifier, Modifier, NlpInlineAutofillSuggestion, QuickActionsRow() (+6 more)
+Cohesion: 0.17
+Nodes (12): List, Modifier, Modifier, String, Modifier, NlpInlineAutofillSuggestion, QuickActionsRow(), InlineSuggestionsStyleCache() (+4 more)
 
 ### Community 254 - "Any | FlorisPreferenceModel"
 Cohesion: 0.18
 Nodes (16): Any, FlorisPreferenceModel, Any, Float, Int, Pair, SnyggIdToValueMap, String (+8 more)
 
 ### Community 255 - "Color | ColorScheme"
-Cohesion: 0.33
-Nodes (7): Color, ColorScheme, Double, MaterialYouFlags, GboardStyleColorProcessor, gboardStyleDarkColorScheme(), rememberRewordiumColorScheme()
+Cohesion: 0.15
+Nodes (12): dart:math, _addSegment, computeWordDiff, DiffOp, DiffSegment, _lcs, _lcsGreedy, _mergeSegments (+4 more)
 
 ### Community 256 - "Array | Context"
-Cohesion: 0.18
-Nodes (15): Array, Context, CurlyArg, Int, LayoutDirection, String, ClipboardScreen(), formatString() (+7 more)
+Cohesion: 0.27
+Nodes (11): Array, CurlyArg, Int, String, formatString(), pluralsRes(), stringRes(), DeleteEmojiHistoryConfirmDialog() (+3 more)
 
 ### Community 257 - "grammar.json | assets"
 Cohesion: 0.11
@@ -2170,8 +2209,8 @@ Cohesion: 0.11
 Nodes (18): you, are, can, could, don't, get, have, know (+10 more)
 
 ### Community 260 - "keyboard_settings_overlay.dart | build"
-Cohesion: 0.12
-Nodes (17): build, _buildOverlay, child, createState, dispose, _hideKeyboardSettings, initState, KeyboardSettingsOverlay (+9 more)
+Cohesion: 0.39
+Nodes (4): Context, View, ImageView, TextView
 
 ### Community 261 - "personas.json | assets"
 Cohesion: 0.11
@@ -2210,8 +2249,8 @@ Cohesion: 0.21
 Nodes (10): Array, Boolean, Float, Int, Iterator, Key, TextKey, Keyboard (+2 more)
 
 ### Community 270 - "Boolean | Color"
-Cohesion: 0.24
-Nodes (14): Boolean, Color, ImageVector, Modifier, PaddingValues, Shape, String, ButtonColors (+6 more)
+Cohesion: 0.16
+Nodes (18): CacheManager, Boolean, Color, ImageVector, Modifier, PaddingValues, Shape, String (+10 more)
 
 ### Community 271 - "io | connectivity_plus.dart"
 Cohesion: 0.12
@@ -2234,8 +2273,8 @@ Cohesion: 0.15
 Nodes (9): String, UIView, AIService, Keyboard, KeyboardInputViewController, KeyboardApp, KeyboardInputViewController, KeyboardViewController (+1 more)
 
 ### Community 276 - "Keyboard Roadmap | D1. Eliminate Sideloadl..."
-Cohesion: 0.12
-Nodes (17): Keyboard Roadmap, D1. Eliminate Sideloadly install errors before they happen (Keyboard Roadmap), D2. Extension memory ceiling guards (Keyboard Roadmap), D3. Groq latency (Keyboard Roadmap), D4. Apply-flow edge cases (Keyboard Roadmap), D5. Haptics + audio feedback respect host settings (Keyboard Roadmap), D6. Localization (Keyboard Roadmap), D7. Telemetry hygiene (Keyboard Roadmap) (+9 more)
+Cohesion: 0.23
+Nodes (16): D1. Eliminate Sideloadly install errors before they happen, D2. Extension memory ceiling guards, D3. Groq latency, D4. Apply-flow edge cases, D5. Haptics + audio feedback respect host settings, D6. Localization, D7. Telemetry hygiene, Out of scope (intentionally) (+8 more)
 
 ### Community 277 - "hr.json | all"
 Cohesion: 0.13
@@ -2246,11 +2285,11 @@ Cohesion: 0.13
 Nodes (16): all, ~right, г, ь, є, і, code, label (+8 more)
 
 ### Community 279 - "Readme | About (Readme)"
-Cohesion: 0.12
-Nodes (17): Readme, About (Readme), 🧩 AI Engine Flow (Readme), 🧠 AI Tools (Readme), 🧠 AI Writing Tools (Readme), Attribution (Readme), 🏗️ Building From Source (Readme), 🎨 Design & Customization (Readme) (+9 more)
+Cohesion: 0.23
+Nodes (16): About, 🧩 AI Engine Flow, 🧠 AI Tools, 🧠 AI Writing Tools, Attribution, 🏗️ Building From Source, 🎨 Design & Customization, ✨ Features (+8 more)
 
 ### Community 280 - "KeyboardSettingsActivity.kt | KeyboardSett..."
-Cohesion: 0.20
+Cohesion: 0.22
 Nodes (8): KeyboardSettingsActivity, Activity, Boolean, Bundle, SharedPreferences, String, View, LinearLayout
 
 ### Community 281 - "BlendMode | Color"
@@ -2262,12 +2301,12 @@ Cohesion: 0.15
 Nodes (11): Bundle, Bundle, List, String, StringBuilder, ContactsPermissionActivity, ContactsPermissionScreen(), DialogCard() (+3 more)
 
 ### Community 283 - "Bundle | Intent"
-Cohesion: 0.17
-Nodes (10): Bundle, Intent, Modifier, String, AppTheme, FlorisAppActivity, PreviewFieldController, PreviewKeyboardField() (+2 more)
+Cohesion: 0.18
+Nodes (10): Boolean, Color, Modifier, Color, Modifier, String, CustomChip(), EmptyKind (+2 more)
 
 ### Community 284 - "ExtensionComponent | ExtensionEditor"
-Cohesion: 0.14
-Nodes (8): ExtensionComponent, ExtensionEditor, List, Extension, ExtensionEditor, KeyboardExtension, ThemeExtension, ThemeExtensionEditor
+Cohesion: 0.25
+Nodes (5): ExtensionComponent, ExtensionEditor, List, Extension, KeyboardExtension
 
 ### Community 285 - "Boolean | Context"
 Cohesion: 0.24
@@ -2286,8 +2325,8 @@ Cohesion: 0.20
 Nodes (15): Boolean, Color, Dp, Float, LazyListState, Modifier, florisHorizontalScroll(), florisScrollbar() (+7 more)
 
 ### Community 289 - "Dp | Float"
-Cohesion: 0.13
-Nodes (10): Dp, Float, Int, SnyggPaddingValue, SnyggStaticColorValue, SnyggCutCornerDpShapeValue, SnyggCutCornerPercentShapeValue, SnyggDpSizeValue (+2 more)
+Cohesion: 0.32
+Nodes (8): Map, Set, SnyggRule, String, JsonSchemaMeta, PropertySet, RuleDecl, SnyggSpecDecl
 
 ### Community 290 - "AutocompleteService | Bool"
 Cohesion: 0.17
@@ -2334,12 +2373,12 @@ Cohesion: 0.30
 Nodes (14): query(), read(), readAllText(), readText(), readToFile(), write(), writeAllText(), writeFromFile() (+6 more)
 
 ### Community 301 - "Int | String"
-Cohesion: 0.20
-Nodes (6): Int, String, Uri, Converters, ItemType, text()
+Cohesion: 0.26
+Nodes (5): Int, String, Uri, Converters, ItemType
 
 ### Community 302 - "Boolean | Modifier"
-Cohesion: 0.14
-Nodes (13): Boolean, Modifier, Boolean, ImageVector, Modifier, MutableInteractionSource, SnyggQueryAttributes, String (+5 more)
+Cohesion: 0.22
+Nodes (9): Boolean, ImageVector, Modifier, MutableInteractionSource, SnyggQueryAttributes, String, Indication, SimpleSnyggListItem() (+1 more)
 
 ### Community 303 - "ConcurrentHashMap | File"
 Cohesion: 0.24
@@ -2350,8 +2389,8 @@ Cohesion: 0.17
 Nodes (13): Arrangement, Boolean, Dp, Int, Key, List, Modifier, PopupUiController (+5 more)
 
 ### Community 305 - "Boolean | QuickAction"
-Cohesion: 0.18
-Nodes (7): Boolean, QuickAction, String, QuickActionArrangement, Serializer, QuickActionArrangementTest, Triple
+Cohesion: 0.20
+Nodes (6): Boolean, QuickAction, String, QuickActionArrangement, Serializer, QuickActionArrangementTest
 
 ### Community 306 - "Boolean | CharSequence"
 Cohesion: 0.18
@@ -2414,8 +2453,8 @@ Cohesion: 0.22
 Nodes (9): CacheEntry, SmartReplyApiResponse, SmartReplyChoice, SmartReplyEngine, SmartReplyMessage, SmartReplyRequest, Boolean, List (+1 more)
 
 ### Community 321 - "AlertDialog | android"
-Cohesion: 0.20
-Nodes (9): AlertDialog, android, Boolean, Bundle, MutableState, Uri, ImportConfirmationDialog(), StickerImportActivity (+1 more)
+Cohesion: 0.18
+Nodes (12): android, Boolean, Bundle, List, MutableState, String, Uri, MotionEvent (+4 more)
 
 ### Community 322 - "Backdrop | Boolean"
 Cohesion: 0.34
@@ -2430,11 +2469,11 @@ Cohesion: 0.34
 Nodes (13): Modifier, String, DebugLayoutComputationResult, DevtoolsClipboardOverlay(), DevtoolsInputStateOverlay(), DevtoolsLastLayoutComputationOverlay(), DevtoolsOverlay(), DevtoolsOverlayBox() (+5 more)
 
 ### Community 325 - "Color | Dp"
-Cohesion: 0.21
-Nodes (13): Color, Dp, Map, Modifier, Shape, SnyggValue, String, alwaysPercentShape() (+5 more)
+Cohesion: 0.33
+Nodes (5): LiveData, List, T, ExtensionIndex, FileObserver
 
 ### Community 326 - "Bitmap | Bundle"
-Cohesion: 0.20
+Cohesion: 0.18
 Nodes (8): Bitmap, Bundle, Intent, Uri, Image, CopyToClipboardError, FlorisCopyToClipboardActivity, CopyToClipboardError
 
 ### Community 327 - "Context | FsDir"
@@ -2478,12 +2517,12 @@ Cohesion: 0.14
 Nodes (14): would, appreciate, be, have, like, love, need, prefer (+6 more)
 
 ### Community 337 - "FlutterBinaryMessenger | FlutterMethodCall"
-Cohesion: 0.23
-Nodes (9): FlutterBinaryMessenger, FlutterMethodCall, FlutterMethodChannel, FlutterResult, Any, String, UserDefaults, KeyboardSettingsBridge (+1 more)
+Cohesion: 0.24
+Nodes (5): Boolean, SnyggValueEncoder, MutableSet, Property, PropertyBuilder
 
 ### Community 338 - "Kbimprov | 1. Per-User Gesture Profile (st..."
-Cohesion: 0.14
-Nodes (14): Kbimprov, 1. Per-User Gesture Profile (stored locally) (Kbimprov), 2. Background Calibration Loop (Kbimprov), 3. Real-Time Recognizer (Zero-Lag Path) (Kbimprov), 4. Error Signal Collection (Kbimprov), 5. Personalization Scope (Kbimprov), 6. What NOT to Do (Kbimprov), Adaptive Swipe Learning (Gboard-Style) (Kbimprov) (+6 more)
+Cohesion: 0.27
+Nodes (13): 1. Per-User Gesture Profile (stored locally), 2. Background Calibration Loop, 3. Real-Time Recognizer (Zero-Lag Path), 4. Error Signal Collection, 5. Personalization Scope, 6. What NOT to Do, Adaptive Swipe Learning (Gboard-Style), Keyboard Performance and Gesture Improvements (+5 more)
 
 ### Community 339 - "keyboardAI.json | assets"
 Cohesion: 0.14
@@ -2498,8 +2537,8 @@ Cohesion: 0.24
 Nodes (5): AIConfig, AIConfigProvider, Boolean, Context, String
 
 ### Community 342 - "AiInputLayout.kt | AiInputLayout()"
-Cohesion: 0.26
-Nodes (12): AiInputLayout(), AiMode, getActionLabel(), getPersonaLabel(), SmartChipSection(), SystemChipRow(), AIAction, AIPersona (+4 more)
+Cohesion: 0.24
+Nodes (14): AiInputLayout(), AiMode, getActionLabel(), getPersonaLabel(), SegmentButton(), SmartChipSection(), SystemChipRow(), AIAction (+6 more)
 
 ### Community 343 - "gmail.json | assets"
 Cohesion: 0.15
@@ -2510,8 +2549,8 @@ Cohesion: 0.24
 Nodes (5): Boolean, Context, String, AIConfig, AIConfigProvider
 
 ### Community 345 - "Extension | List"
-Cohesion: 0.19
-Nodes (10): Extension, List, NavController, AddonManagementReferenceBox(), ImportExtensionBox(), UpdateBox(), CheckUpdatesScreen(), ExtensionListScreenType (+2 more)
+Cohesion: 0.29
+Nodes (7): Extension, List, NavController, AddonManagementReferenceBox(), ImportExtensionBox(), UpdateBox(), ExtensionListScreenType
 
 ### Community 346 - "Dp | Float"
 Cohesion: 0.27
@@ -2522,12 +2561,12 @@ Cohesion: 0.35
 Nodes (12): Context, FlorisLocale, String, EmojiData, empty(), get(), loadEmojiDataMap(), newByCategory() (+4 more)
 
 ### Community 348 - "android | Color"
-Cohesion: 0.38
-Nodes (12): android, Color, String, cloneToClipboardStore(), downloadAndStore(), GifSearchResults(), MediaSearchOverlay(), SearchPill() (+4 more)
+Cohesion: 0.35
+Nodes (14): android, Color, String, KeyboardManager, cloneToClipboardStore(), Community, downloadAndStore(), GifSearchResults() (+6 more)
 
 ### Community 349 - "JsonElement | SnyggJsonConfiguration"
-Cohesion: 0.36
-Nodes (8): JsonElement, SnyggJsonConfiguration, SnyggRule, fromJsonElement(), fromJsonElementSpecialized(), SnyggMultiplePropertySets, SnyggPropertySet, SnyggPropertySetEditor
+Cohesion: 0.18
+Nodes (11): JsonElement, SnyggJsonConfiguration, SnyggRule, fromJsonElement(), fromJsonElementSpecialized(), SnyggMultiplePropertySets, SnyggPropertySet, SnyggMultiplePropertySetsEditor (+3 more)
 
 ### Community 350 - "Self | Eq"
 Cohesion: 0.22
@@ -2550,8 +2589,8 @@ Cohesion: 0.18
 Nodes (8): FlutterAppDelegate, Any, Bool, AppDelegate, Bool, AppDelegate, NSApplication, UIApplication
 
 ### Community 355 - "Keyboardkit Integration |  you don't need ..."
-Cohesion: 0.15
-Nodes (13): Keyboardkit Integration, Apple Developer account: you don't need it yet (Keyboardkit Integration), Architecture (Keyboardkit Integration), Build flow on Codemagic (Keyboardkit Integration), Codemagic build pattern (two-stage, why) (Keyboardkit Integration), Constraints worth remembering (Keyboardkit Integration), Files (Keyboardkit Integration), How settings flow from Flutter to the keyboard (Keyboardkit Integration) (+5 more)
+Cohesion: 0.29
+Nodes (12): Apple Developer account: you don't need it yet, Architecture, Build flow on Codemagic, Codemagic build pattern (two-stage, why), Constraints worth remembering, Files, How settings flow from Flutter to the keyboard, KeyboardKit iOS Integration (+4 more)
 
 ### Community 356 - "aiDetector.json | assets"
 Cohesion: 0.15
@@ -2590,8 +2629,8 @@ Cohesion: 0.15
 Nodes (13): snygg-font-property-set, oneOf, oneOf, additionalProperties, properties, required, type, font-style (+5 more)
 
 ### Community 365 - "AIManager.kt | AIAction"
-Cohesion: 0.17
-Nodes (11): AIAction, AIPersona, Choice, GeminiCandidate, GeminiContent, GeminiPart, GeminiResponse, GroqResponse (+3 more)
+Cohesion: 0.22
+Nodes (8): Accessibility, Design Engineering, Initial Response, prefers-reduced-motion, Review Checklist, Review Format (Required), Stagger Animations, Touch device hover states
 
 ### Community 366 - "paraphraser.json | assets"
 Cohesion: 0.17
@@ -2614,8 +2653,8 @@ Cohesion: 0.26
 Nodes (11): Boolean, Extension, NavController, String, EmptyThemesCard(), ExtensionListScreen(), ExtensionListScreenType, ModernExtensionCard() (+3 more)
 
 ### Community 371 - "android | Boolean"
-Cohesion: 0.27
-Nodes (11): android, Boolean, File, List, String, UserStickerStore, copyAssetToCache(), importAsset() (+3 more)
+Cohesion: 0.20
+Nodes (13): AlertDialog, android, Boolean, File, List, String, UserStickerStore, MyStickersScreen() (+5 more)
 
 ### Community 372 - "CoroutineScope | KeyboardMode"
 Cohesion: 0.33
@@ -2694,8 +2733,8 @@ Cohesion: 0.17
 Nodes (11): auth_provider_x509_cert_url, auth_uri, client_email, client_id, client_x509_cert_url, private_key, private_key_id, project_id (+3 more)
 
 ### Community 391 - ".consumeCreditAfterSuccess() | .getCachedC..."
-Cohesion: 0.33
-Nodes (4): AIConfigProvider, Boolean, Int, Unit
+Cohesion: 0.28
+Nodes (5): Context, ExtensionEditor, FsDir, LanguagePackExtension, SQLiteDatabase
 
 ### Community 392 - "Activity | Boolean"
 Cohesion: 0.33
@@ -2726,8 +2765,8 @@ Cohesion: 0.27
 Nodes (7): Boolean, Context, Int, List, InlineSuggestion, NlpInlineAutofill, NlpInlineAutofillSuggestion
 
 ### Community 399 - "BreakIteratorGroup | CharSequence"
-Cohesion: 0.18
-Nodes (6): BreakIteratorGroup, CharSequence, EditorRange, Int, SpellingProvider, SpellingResult
+Cohesion: 0.22
+Nodes (9): 1. Install Flutter, 2. Install JDK 17, 3. Install Android SDK, 4. Install Rust Toolchain, 5. Clone & Build, Building on a New Computer, Prerequisites (All Platforms), Troubleshooting (Windows) (+1 more)
 
 ### Community 400 - "Array | Boolean"
 Cohesion: 0.38
@@ -2746,8 +2785,8 @@ Cohesion: 0.18
 Nodes (11): on, a, how, it, my, that, the, this (+3 more)
 
 ### Community 404 - "firebase_service.dart | groq_service.dart"
-Cohesion: 0.18
-Nodes (10): firebase_service.dart, groq_service.dart, _cacheCleanupTimer, CacheManager, cleanupCaches, dispose, initialize, _isInitialized (+2 more)
+Cohesion: 0.20
+Nodes (9): _channel, checkForUpdate, completeFlexibleUpdate, InAppUpdateService, initialize, _initialized, _onUpdateDownloaded, static bool (+1 more)
 
 ### Community 405 - "_In_ | _In_opt_"
 Cohesion: 0.25
@@ -2790,8 +2829,8 @@ Cohesion: 0.29
 Nodes (4): Boolean, Int, SharedPreferences, CreditManager
 
 ### Community 415 - "Context | FlutterEngine"
-Cohesion: 0.31
-Nodes (8): Context, FlutterEngine, Intent, getInstance(), initialize(), KeyboardSettingsBroadcastReceiver, register(), unregister()
+Cohesion: 0.17
+Nodes (12): Context, FlutterEngine, Intent, Context, Intent, BroadcastReceiver, getInstance(), initialize() (+4 more)
 
 ### Community 416 - "Any | Boolean"
 Cohesion: 0.24
@@ -2802,12 +2841,12 @@ Cohesion: 0.27
 Nodes (6): Boolean, Float, Iterator, Key, KeyboardMode, Keyboard
 
 ### Community 418 - "ClipboardItem | Long"
-Cohesion: 0.27
-Nodes (4): ClipboardItem, Long, ClipboardSuggestionProvider, ProviderInstanceWrapper
+Cohesion: 0.22
+Nodes (8): Accessibility, Design Engineering, Initial Response, prefers-reduced-motion, Review Checklist, Review Format (Required), Stagger Animations, Touch device hover states
 
 ### Community 419 - "Boolean | CharSequence"
-Cohesion: 0.38
-Nodes (9): Boolean, CharSequence, Double, ImageVector, SuggestionProvider, ClipboardSuggestionCandidate, EmojiSuggestionCandidate, SuggestionCandidate (+1 more)
+Cohesion: 0.25
+Nodes (8): Animate enter states with @starting-style, Buttons must feel responsive, Component Building Principles, Make popovers origin-aware, Never animate from scale(0), Tooltips: skip delay on subsequent hovers, Use blur to mask imperfect transitions, Use CSS transitions over keyframes for interruptible UI
 
 ### Community 420 - "Int | Pair"
 Cohesion: 0.42
@@ -2911,7 +2950,7 @@ Nodes (9): $, meta, description, id, license, maintainers, title, version (+1 mo
 
 ### Community 445 - "Design | Brand & Style (Design)"
 Cohesion: 0.22
-Nodes (9): Design, Brand & Style (Design), Colors (Design), Components (Design), Do's and Don'ts (Design), Elevation & Depth (Design), Layout & Spacing (Design), Shapes (Design) (+1 more)
+Nodes (8): Brand & Style, Colors, Components, Do's and Don'ts, Elevation & Depth, Layout & Spacing, Shapes, Typography
 
 ### Community 446 - "firebase_options.dart | android"
 Cohesion: 0.22
@@ -2930,8 +2969,8 @@ Cohesion: 0.25
 Nodes (9): $, items, meta, description, id, license, maintainers, title (+1 more)
 
 ### Community 450 - "Plan | Assumptions (Plan)"
-Cohesion: 0.22
-Nodes (9): Plan, Assumptions (Plan), Constraints (Plan), Emoji Suggestions Behavior Plan (Plan), Goal (Plan), Notes on “Exact Gboard” (Plan), Open Questions (Plan), Plan (Plan) (+1 more)
+Cohesion: 0.42
+Nodes (8): Assumptions, Constraints, Emoji Suggestions Behavior Plan, Goal, Notes on “Exact Gboard”, Open Questions, Plan, Success Criteria
 
 ### Community 451 - "iw.json | all"
 Cohesion: 0.28
@@ -3014,12 +3053,8 @@ Cohesion: 0.25
 Nodes (6): AboutScreen(), Drawable, Int, Modifier, String, FlorisCanvasIcon()
 
 ### Community 472 - "ContentObserver | Boolean"
-Cohesion: 0.32
-Nodes (4): ContentObserver, Boolean, OnSystemSettingsChangedListener, SystemSettingsObserver
-
-### Community 473 - "Boolean | R"
 Cohesion: 0.29
-Nodes (4): Boolean, R, compareMimeTypes(), tryOrNull()
+Nodes (6): Extension, String, String, ExportScreen(), ExtensionExportScreen(), ExtensionNotFoundScreen()
 
 ### Community 474 - "ExtensionComponentName | String"
 Cohesion: 0.54
@@ -3110,8 +3145,8 @@ Cohesion: 0.25
 Nodes (7): database, entities, identityHash, setupQueries, version, views, formatVersion
 
 ### Community 496 - ".edit() | SnyggPropertySetEditor.kt"
-Cohesion: 0.29
-Nodes (3): SnyggMultiplePropertySetsEditor, SnyggPropertySetEditor, SnyggPropertySet
+Cohesion: 0.39
+Nodes (5): String, Editor, EmojiHistory, Serializer, UpdateStrategy
 
 ### Community 497 - "subtype-panel-header | background"
 Cohesion: 0.25
@@ -3166,8 +3201,8 @@ Cohesion: 0.29
 Nodes (6): client, configuration_version, project_info, project_id, project_number, storage_bucket
 
 ### Community 511 - "BuildContext | smooth_transitions.dart"
-Cohesion: 0.29
-Nodes (6): BuildContext, smoothBackGesture, SmoothNavigation, SmoothPageTransitions, SmoothTransitionType, RewordiumToastContext
+Cohesion: 0.25
+Nodes (8): 1. Install Flutter, 2. Install JDK 17, 3. Install Android SDK, 4. Install Xcode (for iOS builds), 5. Install Rust Toolchain, 6. Clone & Build, macOS, Troubleshooting (macOS)
 
 ### Community 512 - "Date | Bool"
 Cohesion: 0.29
@@ -3362,8 +3397,8 @@ Cohesion: 0.33
 Nodes (5): developers, licenses, name, uniqueId, website
 
 ### Community 560 - "Readme | Files in this folder (Readme)"
-Cohesion: 0.33
-Nodes (6): Readme, Files in this folder (Readme), RewordiumKeyboard target (Readme), What's deliberately not in v1 (Readme), What the keyboard shows (Readme), Wiring (Readme)
+Cohesion: 0.60
+Nodes (5): Files in this folder, RewordiumKeyboard target, What's deliberately not in v1, What the keyboard shows, Wiring
 
 ### Community 561 - "oneOf | snygg-defines-property-set"
 Cohesion: 0.33
@@ -3598,8 +3633,8 @@ Cohesion: 0.33
 Nodes (6): smartbar-shared-actions-toggle, background, foreground, margin, shadow-elevation, shape
 
 ### Community 619 - "Mode | actionGrid"
-Cohesion: 0.33
-Nodes (6): Mode, actionGrid, collapsed, error, result, running
+Cohesion: 0.19
+Nodes (12): AutocorrectSlot, Equatable, String, NSRange, AutocompleteService, AutocorrectSlot, Mode, actionGrid (+4 more)
 
 ### Community 620 - "EditorRange | String"
 Cohesion: 0.60
@@ -3845,13 +3880,17 @@ Nodes (3): Boolean, ExtensionValidation, validate()
 Cohesion: 0.50
 Nodes (3): Int, T, removeAndReturn()
 
+### Community 687 - "Lifecycle | DisposableLifecycleEffect.kt"
+Cohesion: 0.25
+Nodes (8): Animate enter states with @starting-style, Buttons must feel responsive, Component Building Principles, Make popovers origin-aware, Never animate from scale(0), Tooltips: skip delay on subsequent hovers, Use blur to mask imperfect transitions, Use CSS transitions over keyframes for interruptible UI
+
 ### Community 688 - "Boolean | Modifier"
 Cohesion: 0.50
 Nodes (3): Boolean, Modifier, conditional()
 
 ### Community 689 - "ChangeNotifier | AuthProvider"
-Cohesion: 0.50
-Nodes (4): ChangeNotifier, AuthProvider, KeyboardProvider, BillingService
+Cohesion: 0.32
+Nodes (3): ExtensionEditor, ThemeExtension, ThemeExtensionEditor
 
 ### Community 691 - "Snygg.kt | Snygg"
 Cohesion: 0.50
@@ -4097,6 +4136,10 @@ Nodes (4): smartbar-actions-editor, background, foreground, shape
 Cohesion: 0.50
 Nodes (4): subtype-panel, background, foreground, shape
 
+### Community 757 - "FontFamily | .genericFontFamily()"
+Cohesion: 0.33
+Nodes (6): android, Boolean, Uri, UserStickerStore, AnimatedStickerImportScreen(), transcodeAndImport()
+
 ### Community 764 - "い | main"
 Cohesion: 0.67
 Nodes (3): い, main, relevant
@@ -4122,8 +4165,8 @@ Cohesion: 0.67
 Nodes (3): snygg-custom-font-family-value, pattern, type
 
 ### Community 771 - "snygg-cut-corner-dp-shape-value | pattern"
-Cohesion: 0.67
-Nodes (3): snygg-cut-corner-dp-shape-value, pattern, type
+Cohesion: 0.38
+Nodes (3): Cursor, ClipboardFileInfo, ClipboardFilesDao
 
 ### Community 772 - "snygg-cut-corner-percent-shape-value | pat..."
 Cohesion: 0.67
@@ -4146,12 +4189,12 @@ Cohesion: 0.67
 Nodes (3): snygg-dynamic-light-color-value, pattern, type
 
 ### Community 777 - "snygg-font-style-value | enum"
-Cohesion: 0.67
-Nodes (3): snygg-font-style-value, enum, type
+Cohesion: 0.29
+Nodes (7): Key Configuration Files, KLIPY GIF API key, Media-panel feature configuration, Project Architecture, Quick Reference, Rewordium — Build Guide, WhatsApp sticker packs
 
 ### Community 778 - "snygg-generic-font-family-value | enum"
-Cohesion: 0.67
-Nodes (3): snygg-generic-font-family-value, enum, type
+Cohesion: 0.33
+Nodes (6): 1. Should this animate at all?, 2. What is the purpose?, 3. What easing should it use?, 4. How fast should it be?, Perceived performance, The Animation Decision Framework
 
 ### Community 779 - "snygg-inherit-value | const"
 Cohesion: 0.67
@@ -4170,8 +4213,8 @@ Cohesion: 0.67
 Nodes (3): snygg-sp-size-value, pattern, type
 
 ### Community 783 - "snygg-text-align-value | enum"
-Cohesion: 0.67
-Nodes (3): snygg-text-align-value, enum, type
+Cohesion: 0.33
+Nodes (6): clip-path for Animation, Comparison sliders, Hold-to-delete pattern, Image reveals on scroll, Tabs with perfect color transitions, The inset shape
 
 ### Community 784 - "snygg-text-decoration-line-value | enum"
 Cohesion: 0.67
@@ -4386,8 +4429,8 @@ Cohesion: 0.67
 Nodes (3): key[code=-11][shiftstate=`shifted_manual`], background, foreground
 
 ### Community 838 - "pressed | background"
-Cohesion: 0.67
-Nodes (3): key[code=-201,-202,-203]:pressed, background, foreground
+Cohesion: 0.33
+Nodes (6): CSS animations beat JS under load, CSS variables are inheritable, Framer Motion hardware acceleration caveat, Only animate transform and opacity, Performance Rules, Use WAAPI for programmatic CSS animations
 
 ### Community 839 - "pressed | background"
 Cohesion: 0.67
@@ -4690,32 +4733,32 @@ Cohesion: 0.67
 Nodes (3): key[code=-3]:pressed, background, foreground
 
 ### Community 914 - "pressed | background"
-Cohesion: 0.67
-Nodes (3): key[code=44]:pressed, background, foreground
+Cohesion: 0.33
+Nodes (6): Damping at boundaries, Friction instead of hard stops, Gesture and Drag Interactions, Momentum-based dismissal, Multi-touch protection, Pointer capture for drag
 
 ### Community 915 - "pressed | background"
-Cohesion: 0.67
-Nodes (3): key[code=46]:pressed, background, foreground
+Cohesion: 0.40
+Nodes (3): Boolean, ClipData, fromClipData()
 
 ### Community 916 - "key[code=47][mode=`characters`][variation=..."
 Cohesion: 0.67
 Nodes (3): key[code=47][mode=`characters`][variation=`uri`], background, foreground
 
 ### Community 917 - "pressed | background"
-Cohesion: 0.67
-Nodes (3): key[code=-4]:pressed, background, foreground
+Cohesion: 0.33
+Nodes (6): 1. Should this animate at all?, 2. What is the purpose?, 3. What easing should it use?, 4. How fast should it be?, Perceived performance, The Animation Decision Framework
 
 ### Community 918 - "pressed | background"
 Cohesion: 0.67
 Nodes (3): key[code=-7]:pressed, background, foreground
 
 ### Community 919 - "focus | background"
-Cohesion: 0.67
-Nodes (3): key-popup-element:focus, background, shape
+Cohesion: 0.33
+Nodes (6): clip-path for Animation, Comparison sliders, Hold-to-delete pattern, Image reveals on scroll, Tabs with perfect color transitions, The inset shape
 
 ### Community 920 - "pressed | background"
-Cohesion: 0.67
-Nodes (3): media-emoji-key:pressed, background, foreground
+Cohesion: 0.33
+Nodes (6): CSS animations beat JS under load, CSS variables are inheritable, Framer Motion hardware acceleration caveat, Only animate transform and opacity, Performance Rules, Use WAAPI for programmatic CSS animations
 
 ### Community 921 - "one-handed-panel | background"
 Cohesion: 0.67
@@ -5030,32 +5073,148 @@ Cohesion: 0.67
 Nodes (3): subtype-panel-list-item-icon-leading, font-size, padding
 
 ### Community 999 - "subtype-panel-list-item-text | text-max-lines"
-Cohesion: 0.67
-Nodes (3): subtype-panel-list-item-text, text-max-lines, text-overflow
+Cohesion: 0.33
+Nodes (6): Damping at boundaries, Friction instead of hard stops, Gesture and Drag Interactions, Momentum-based dismissal, Multi-touch protection, Pointer capture for drag
 
 ### Community 1000 - "window | background"
 Cohesion: 0.67
 Nodes (3): window, background, foreground
 
+### Community 1249 - "Community 1249"
+Cohesion: 0.40
+Nodes (5): 3D transforms for depth, CSS Transform Mastery, scale() scales children too, transform-origin, translateY with percentages
+
+### Community 1250 - "Community 1250"
+Cohesion: 0.40
+Nodes (5): Asymmetric enter/exit timing, Cohesion matters, Review your work the next day, The opacity + height combination, The Sonner Principles (Building Loved Components)
+
+### Community 1251 - "Community 1251"
+Cohesion: 0.40
+Nodes (5): Interruptibility advantage, Spring Animations, Spring-based mouse interactions, Spring configuration, When to use springs
+
+### Community 1252 - "Community 1252"
+Cohesion: 0.40
+Nodes (3): Float, KeyHintConfiguration, Keyboard
+
+### Community 1253 - "Community 1253"
+Cohesion: 0.40
+Nodes (3): String, SnyggAssetResolver, FlorisAssetResolver
+
+### Community 1254 - "Community 1254"
+Cohesion: 0.40
+Nodes (4): images, info, author, version
+
+### Community 1255 - "Community 1255"
+Cohesion: 0.40
+Nodes (5): 3D transforms for depth, CSS Transform Mastery, scale() scales children too, transform-origin, translateY with percentages
+
+### Community 1256 - "Community 1256"
+Cohesion: 0.40
+Nodes (5): Asymmetric enter/exit timing, Cohesion matters, Review your work the next day, The opacity + height combination, The Sonner Principles (Building Loved Components)
+
+### Community 1257 - "Community 1257"
+Cohesion: 0.40
+Nodes (5): Interruptibility advantage, Spring Animations, Spring-based mouse interactions, Spring configuration, When to use springs
+
+### Community 1258 - "Community 1258"
+Cohesion: 0.50
+Nodes (4): Beauty is leverage, Core Philosophy, Taste is trained, not innate, Unseen details compound
+
+### Community 1259 - "Community 1259"
+Cohesion: 0.50
+Nodes (4): Debugging Animations, Frame-by-frame inspection, Slow motion testing, Test on real devices
+
+### Community 1260 - "Community 1260"
+Cohesion: 0.50
+Nodes (3): Int, Clipboard, PreferenceData
+
+### Community 1262 - "Community 1262"
+Cohesion: 0.50
+Nodes (4): Beauty is leverage, Core Philosophy, Taste is trained, not innate, Unseen details compound
+
+### Community 1263 - "Community 1263"
+Cohesion: 0.50
+Nodes (4): Debugging Animations, Frame-by-frame inspection, Slow motion testing, Test on real devices
+
+### Community 1264 - "Community 1264"
+Cohesion: 0.50
+Nodes (3): Google Play Store App Description - Accessibility Service Compliant, Long Description (4000 characters max), Short Description (80 characters max)
+
+### Community 1265 - "Community 1265"
+Cohesion: 0.67
+Nodes (3): SDK & Toolchain Versions (March 2026 Update), What Changed, What Was Removed
+
+### Community 1267 - "Community 1267"
+Cohesion: 0.67
+Nodes (3): snygg-circle-shape-value, pattern, type
+
+### Community 1268 - "Community 1268"
+Cohesion: 0.67
+Nodes (3): snygg-content-scale-value, enum, type
+
+### Community 1269 - "Community 1269"
+Cohesion: 0.67
+Nodes (3): snygg-element-property-set, additionalProperties, type
+
+### Community 1270 - "Community 1270"
+Cohesion: 0.67
+Nodes (3): snygg-font-weight-value, enum, type
+
+### Community 1271 - "Community 1271"
+Cohesion: 0.67
+Nodes (3): snygg-text-overflow-value, enum, type
+
+### Community 1272 - "Community 1272"
+Cohesion: 0.67
+Nodes (3): smartbar-actions-editor-header-button, margin, shape
+
+### Community 1273 - "Community 1273"
+Cohesion: 0.67
+Nodes (3): key[code=44], background, foreground
+
+### Community 1274 - "Community 1274"
+Cohesion: 0.67
+Nodes (3): key[code=46], background, foreground
+
+### Community 1275 - "Community 1275"
+Cohesion: 0.67
+Nodes (3): key[code=47][mode=`characters`][variation=`uri`]:pressed, background, foreground
+
+### Community 1276 - "Community 1276"
+Cohesion: 0.67
+Nodes (3): key[code=-5]:pressed, background, foreground
+
+### Community 1277 - "Community 1277"
+Cohesion: 0.67
+Nodes (3): key-popup-element[code=-255], font-size, text-max-lines
+
+### Community 1278 - "Community 1278"
+Cohesion: 0.67
+Nodes (3): key:pressed, background, foreground
+
+### Community 1279 - "Community 1279"
+Cohesion: 0.67
+Nodes (3): key[code=44], background, foreground
+
 ## Knowledge Gaps
-- **7759 isolated node(s):** `allow`, `images`, `version`, `author`, `images` (+7754 more)
+- **7877 isolated node(s):** `allow`, `images`, `version`, `author`, `images` (+7872 more)
   These have ≤1 connection - possible missing edges or undocumented components.
-- **101 thin communities (<3 nodes) omitted from report** — run `graphify query` to explore isolated nodes.
+- **104 thin communities (<3 nodes) omitted from report** — run `graphify query` to explore isolated nodes.
 
 ## Suggested Questions
 _Questions this graph is uniquely positioned to answer:_
 
-- **Why does `flogError()` connect `ConcurrentHashMap | File` to `AbstractComposeView | CharSequence`, `LayoutType | Context`, `Boolean | Context`, `ConcurrentHashMap | Double`, `Boolean | Context`, `Boolean | Extension`, `ConcurrentHashMap | File`, `Boolean | Context`, `BackupScreen.kt | Backup`, `Boolean | BreakIteratorGroup`, `Boolean | Context`, `Array | Boolean`, `Context | Intent`, `Boolean | Context`, `Context | File`, `Float | Int`, `Boolean | Context`?**
+- **Why does `flogError()` connect `ConcurrentHashMap | File` to `AbstractComposeView | CharSequence`, `Color | Dp`, `Community 1253`, `.consumeCreditAfterSuccess() | .getCachedC...`, `Boolean | Context`, `ConcurrentHashMap | Double`, `Boolean | Context`, `ConcurrentHashMap | File`, `.edit() | SnyggPropertySetEditor.kt`, `Boolean | Context`, `BackupScreen.kt | Backup`, `Boolean | BreakIteratorGroup`, `Boolean | Context`, `Array | Boolean`, `Context | Intent`, `Context | File`, `Boolean | Context`, `Boolean | Context`?**
   _High betweenness centrality (0.014) - this node is a cross-community bridge._
-- **Why does `flogDebug()` connect `Boolean | ComputingEvaluator` to `Glide Typing Gesture Engine`, `Context | FsFile`, `Boolean | Context`, `Boolean | Context`, `Boolean | Context`, `Array | Boolean`, `Boolean | CharSequence`, `AlertDialog | android`, `Boolean | Int`, `ArrayList | Boolean`, `Boolean | Context`, `Boolean | Extension`, `Boolean | BreakIteratorGroup`, `Context | Intent`, `android | Color`, `Boolean | InputKeyEventReceiver`, `Boolean | Double`, `Boolean | Double`, `CoroutineScope | KeyboardMode`, `android | Boolean`, `Color | Modifier`?**
-  _High betweenness centrality (0.010) - this node is a cross-community bridge._
-- **Why does `KSerializer` connect `Decoder | SerialDescriptor` to `Decoder | Encoder`, `Decoder | Encoder`, `Decoder | Encoder`, `AbstractKeyData | Any`, `Boolean | Context`, `Boolean | Decoder`, `Decoder | Encoder`, `Decoder | Encoder`, `Decoder | Encoder`, `ColorSpec | Decoder`?**
+- **Why does `flogDebug()` connect `AlertDialog | android` to `Glide Typing Gesture Engine`, `Context | FsFile`, `Boolean | Context`, `Bundle | Intent`, `Boolean | Context`, `Boolean | Context`, `Context | FlutterEngine`, `Array | Boolean`, `Boolean | CharSequence`, `Color | Dp`, `Boolean | Int`, `ArrayList | Boolean`, `Boolean | Context`, `Boolean | ComputingEvaluator`, `Boolean | BreakIteratorGroup`, `android | Color`, `Boolean | InputKeyEventReceiver`, `Boolean | Double`, `Boolean | Double`, `CoroutineScope | KeyboardMode`, `android | Boolean`, `Color | Modifier`?**
+  _High betweenness centrality (0.011) - this node is a cross-community bridge._
+- **Why does `BackupScreen()` connect `BackupScreen.kt | Backup` to `ProjectLicenseScreen.kt | ProjectLicenseSc...`, `Boolean | MutableState`, `ConcurrentHashMap | File`, `CacheManager | Boolean`?**
   _High betweenness centrality (0.009) - this node is a cross-community bridge._
+- **Are the 52 inferred relationships involving `flogDebug()` (e.g. with `.loadNameBigrams()` and `.loadNameTokens()`) actually correct?**
+  _`flogDebug()` has 52 INFERRED edges - model-reasoned connections that need verification._
 - **What connects `allow`, `images`, `version` to the rest of the system?**
-  _7762 weakly-connected nodes found - possible documentation gaps or missing edges._
+  _7879 weakly-connected nodes found - possible documentation gaps or missing edges._
 - **Should `Dictionary Word Data` be split into smaller, more focused modules?**
   _Cohesion score 0.003992015968063872 - nodes in this community are weakly interconnected._
 - **Should `AI Text Detection UI` be split into smaller, more focused modules?**
-  _Cohesion score 0.016109422492401215 - nodes in this community are weakly interconnected._
-- **Should `Admin Panel & Auth UI` be split into smaller, more focused modules?**
-  _Cohesion score 0.020199753114128607 - nodes in this community are weakly interconnected._
+  _Cohesion score 0.012379571117787216 - nodes in this community are weakly interconnected._
