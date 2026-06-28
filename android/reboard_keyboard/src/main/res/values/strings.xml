@@ -127,6 +127,7 @@
     <string name="ai__action_fix_grammar">Fix Grammar</string>
     <string name="ai__action_make_formal">Make Formal</string>
     <string name="ai__action_make_casual">Make Casual</string>
+    <string name="ai__action_translate">Translate</string>
     <string name="ai__hint_enter_text">Enter text to rewrite…</string>
     <string name="ai__generating">Generating…</string>
     <string name="ai__error_no_text">Please enter some text first</string>

@@ -722,7 +722,7 @@ class _OnboardingPageState extends State<OnboardingPage>
     // Single typeface across the entire flow. Variable weight does what a
     // second display face was doing.
     final themedData = baseTheme.copyWith(
-      textTheme: GoogleFonts.ibmPlexSansTextTheme(baseTheme.textTheme).apply(
+      textTheme: GoogleFonts.plusJakartaSansTextTheme(baseTheme.textTheme).apply(
         bodyColor: baseTheme.colorScheme.onSurface,
         displayColor: baseTheme.colorScheme.onSurface,
       ),
@@ -804,7 +804,7 @@ class _OnboardingPageState extends State<OnboardingPage>
       children: [
         Text(
           'rewordium',
-          style: GoogleFonts.ibmPlexSans(
+          style: GoogleFonts.plusJakartaSans(
             fontSize: 15,
             fontWeight: FontWeight.w500,
             letterSpacing: -0.1,
@@ -818,7 +818,7 @@ class _OnboardingPageState extends State<OnboardingPage>
             padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 6),
             child: Text(
               'Skip',
-              style: GoogleFonts.ibmPlexSans(
+              style: GoogleFonts.plusJakartaSans(
                 fontSize: 13,
                 fontWeight: FontWeight.w500,
                 color: cs.onSurfaceVariant,
@@ -865,7 +865,7 @@ class _OnboardingPageState extends State<OnboardingPage>
     final current = (_step + 1).toString().padLeft(2, '0');
     return Text(
       'Step $current · $total',
-      style: GoogleFonts.ibmPlexSans(
+      style: GoogleFonts.plusJakartaSans(
         fontSize: 12,
         fontWeight: FontWeight.w500,
         letterSpacing: 0.4,
@@ -877,7 +877,7 @@ class _OnboardingPageState extends State<OnboardingPage>
 
   TextStyle _headlineStyle(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
-    return GoogleFonts.ibmPlexSans(
+    return GoogleFonts.plusJakartaSans(
       fontSize: 30,
       fontWeight: FontWeight.w700,
       letterSpacing: -0.6,
@@ -888,7 +888,7 @@ class _OnboardingPageState extends State<OnboardingPage>
 
   TextStyle _cardTitleStyle(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
-    return GoogleFonts.ibmPlexSans(
+    return GoogleFonts.plusJakartaSans(
       fontSize: 15,
       fontWeight: FontWeight.w600,
       letterSpacing: -0.1,
@@ -898,7 +898,7 @@ class _OnboardingPageState extends State<OnboardingPage>
 
   TextStyle _bodyStyle(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
-    return GoogleFonts.ibmPlexSans(
+    return GoogleFonts.plusJakartaSans(
       fontSize: 14,
       fontWeight: FontWeight.w400,
       height: 1.5,
@@ -908,7 +908,7 @@ class _OnboardingPageState extends State<OnboardingPage>
 
   TextStyle _bodySubtleStyle(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
-    return GoogleFonts.ibmPlexSans(
+    return GoogleFonts.plusJakartaSans(
       fontSize: 13,
       fontWeight: FontWeight.w400,
       height: 1.45,
@@ -918,7 +918,7 @@ class _OnboardingPageState extends State<OnboardingPage>
 
   TextStyle _sectionLabelStyle(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
-    return GoogleFonts.ibmPlexSans(
+    return GoogleFonts.plusJakartaSans(
       fontSize: 11,
       fontWeight: FontWeight.w600,
       letterSpacing: 0.8,
@@ -965,7 +965,7 @@ class _OnboardingPageState extends State<OnboardingPage>
               width: 28,
               child: Text(
                 n.toString().padLeft(2, '0'),
-                style: GoogleFonts.ibmPlexSans(
+                style: GoogleFonts.plusJakartaSans(
                   fontSize: 13,
                   fontWeight: FontWeight.w500,
                   color: cs.onSurfaceVariant,
@@ -1005,7 +1005,7 @@ class _OnboardingPageState extends State<OnboardingPage>
                   child: Center(
                     child: Text(
                       'Open Settings',
-                      style: GoogleFonts.ibmPlexSans(
+                      style: GoogleFonts.plusJakartaSans(
                         fontSize: 14,
                         fontWeight: FontWeight.w600,
                         color: cs.onPrimary,
@@ -1115,7 +1115,7 @@ class _OnboardingPageState extends State<OnboardingPage>
                     width: 32,
                     child: Text(
                       (i + 1).toString().padLeft(2, '0'),
-                      style: GoogleFonts.ibmPlexSans(
+                      style: GoogleFonts.plusJakartaSans(
                         fontSize: 13,
                         fontWeight: FontWeight.w500,
                         color: cs.onSurfaceVariant,
@@ -1787,7 +1787,7 @@ class _OnboardingPageState extends State<OnboardingPage>
         ),
         child: Text(
           label,
-          style: GoogleFonts.ibmPlexSans(
+          style: GoogleFonts.plusJakartaSans(
             fontSize: 13,
             fontWeight: FontWeight.w500,
             color: selected ? cs.primary : cs.onSurface,
