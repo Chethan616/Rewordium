@@ -17,6 +17,9 @@
 package com.noxquill.rewordium.keyboard.ime.smartbar
 
 import android.content.Intent
+import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.awaitEachGesture
 import androidx.compose.foundation.gestures.awaitFirstDown
@@ -38,6 +41,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -46,6 +50,7 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.PointerEventTimeoutCancellationException
 import androidx.compose.ui.input.pointer.PointerInputChange
 import androidx.compose.ui.input.pointer.pointerInput
@@ -65,6 +70,7 @@ import com.noxquill.rewordium.keyboard.keyboardManager
 import com.noxquill.rewordium.keyboard.nlpManager
 import com.noxquill.rewordium.keyboard.subtypeManager
 import dev.patrickgold.jetpref.datastore.model.observeAsState
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import org.florisboard.lib.compose.conditional
 import org.florisboard.lib.compose.florisHorizontalScroll
@@ -162,6 +168,29 @@ fun CandidatesRow(modifier: Modifier = Modifier) {
                 else -> candidates
             }
             for ((n, candidate) in list.withIndex()) {
+                // ── Stagger entrance animation ───────────────────────────────────
+                // Each chip animates in with a 30 ms delay per item so they
+                // cascade in rather than all appearing at once. The alpha +
+                // translateY combination follows Emil's philosophy: elements
+                // should not pop into existence; they should emerge.
+                val staggerAlpha = remember(candidates) { Animatable(0f) }
+                val staggerTranslate = remember(candidates) { Animatable(8f) } // dp, converted below
+                val density = LocalDensity.current
+                LaunchedEffect(candidates) {
+                    delay(n * 35L) // 35 ms stagger between items
+                    staggerAlpha.animateTo(
+                        targetValue = 1f,
+                        animationSpec = tween(180, easing = FastOutSlowInEasing),
+                    )
+                }
+                LaunchedEffect(candidates) {
+                    delay(n * 35L)
+                    staggerTranslate.animateTo(
+                        targetValue = 0f,
+                        animationSpec = tween(180, easing = FastOutSlowInEasing),
+                    )
+                }
+                // ── End stagger setup ───────────────────────────────────────────
                 if (n > 0) {
                     SnyggSpacer(
                         elementName = FlorisImeUi.SmartbarCandidateSpacer.elementName,
@@ -172,7 +201,10 @@ fun CandidatesRow(modifier: Modifier = Modifier) {
                     )
                 }
                 CandidateItem(
-                    modifier = candidateModifier,
+                    modifier = candidateModifier.graphicsLayer {
+                        alpha = staggerAlpha.value
+                        translationY = with(density) { staggerTranslate.value.dp.toPx() }
+                    },
                     candidate = candidate,
                     displayMode = displayMode,
                     onClick = {

@@ -16,10 +16,20 @@
 
 package com.noxquill.rewordium.keyboard.ime.ai
 
+import android.content.ClipData
+import android.content.ClipboardManager
+import android.content.Context
 import android.content.Intent
 import android.widget.Toast
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.InfiniteTransition
+import androidx.compose.animation.core.LinearEasing
+import androidx.compose.animation.core.RepeatMode
+import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutVertically
@@ -27,13 +37,17 @@ import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -44,7 +58,9 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowForward
 import androidx.compose.material.icons.filled.ArrowDownward
 import androidx.compose.material.icons.filled.AutoFixHigh
+import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.ContentCopy
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material3.ButtonDefaults
@@ -65,12 +81,15 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.noxquill.rewordium.keyboard.R
@@ -79,6 +98,7 @@ import com.noxquill.rewordium.keyboard.editorInstance
 import com.noxquill.rewordium.keyboard.ime.keyboard.FlorisImeSizing
 import com.noxquill.rewordium.keyboard.ime.theme.FlorisImeUi
 import com.noxquill.rewordium.keyboard.keyboardManager
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import org.florisboard.lib.snygg.ui.rememberSnyggThemeQuery
 
@@ -153,11 +173,22 @@ fun AiPanel(
     var selectedAction by remember { mutableStateOf(AIAction.REWRITE) }
     var isGenerating by remember { mutableStateOf(false) }
     var generatedText by remember { mutableStateOf<String?>(null) }
+    // Typewriter buffer — accumulates streaming tokens before they become `generatedText`
+    var streamingBuffer by remember { mutableStateOf("") }
+    var isStreaming by remember { mutableStateOf(false) }
     var errorMessage by remember { mutableStateOf<String?>(null) }
     var wasUsingAllText by remember { mutableStateOf(false) }
     var sourceTextLen by remember { mutableStateOf(0) }
+    var sourceWordCount by remember { mutableStateOf(0) }
     var sourceWasSelection by remember { mutableStateOf(false) }
     var showApiKeyToast by remember { mutableStateOf(false) }
+    // Remembers the last-used source + mode/action so Regenerate can replay them
+    var lastSource by remember { mutableStateOf("") }
+    var lastMode by remember { mutableStateOf(AiMode.REWRITE) }
+    var lastAction by remember { mutableStateOf(AIAction.REWRITE) }
+    var lastPersona by remember { mutableStateOf(AIPersona.CASUAL) }
+    // Language picker — only active when selectedAction == TRANSLATE
+    var selectedLanguage by remember { mutableStateOf("Spanish") }
 
     // Keep mode aligned with whether we're in an AI app — but let user
     // override (so if they explicitly flip to Rewrite inside ChatGPT, we
@@ -237,6 +268,7 @@ fun AiPanel(
                 // ─── Source-text hint ────────────────────────────────
                 SourceHint(
                     selectionLen = sourceTextLen,
+                    wordCount = sourceWordCount,
                     wasSelection = sourceWasSelection,
                     fgMuted = onSurfaceVar,
                 )
@@ -249,15 +281,32 @@ fun AiPanel(
                         aiManager.setPersona(it)
                     },
                     selectedAction = selectedAction,
-                    onActionSelected = { selectedAction = it },
+                    onActionSelected = {
+                        selectedAction = it
+                        generatedText = null
+                        errorMessage = null
+                    },
                     fgMuted = onSurfaceVar,
                     accent = primary,
                     outline = outline,
                 )
 
+                // ─── Language picker (only shown when Translate is selected) ───
+                if (selectedAction == AIAction.TRANSLATE) {
+                    LanguageChipRow(
+                        selectedLanguage = selectedLanguage,
+                        onLanguageSelected = { selectedLanguage = it },
+                        accent = primary,
+                        fgMuted = onSurfaceVar,
+                        outline = outline,
+                    )
+                }
+
                 // ─── Result / loading / placeholder ──────────────────
                 ResultArea(
                     isGenerating = isGenerating,
+                    isStreaming = isStreaming,
+                    streamingText = streamingBuffer,
                     text = generatedText,
                     error = errorMessage,
                     fg = onSurface,
@@ -265,6 +314,11 @@ fun AiPanel(
                     surface = surfaceVariant,
                     accent = primary,
                     errorColor = errorColor,
+                    onCopy = { text ->
+                        val cm = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
+                        cm.setPrimaryClip(ClipData.newPlainText("AI result", text))
+                        Toast.makeText(context, "Copied!", Toast.LENGTH_SHORT).show()
+                    },
                     modifier = Modifier
                         .fillMaxWidth()
                         .weight(1f),
@@ -282,11 +336,39 @@ fun AiPanel(
                     outline = outline,
                     onDiscard = {
                         generatedText = null
+                        streamingBuffer = ""
                         errorMessage = null
                     },
                     onRegenerate = {
-                        generatedText = null
-                        errorMessage = null
+                        // Re-run the exact same request that produced the last result.
+                        if (lastSource.isNotBlank()) {
+                            generatedText = null
+                            streamingBuffer = ""
+                            errorMessage = null
+                            scope.launch {
+                                isGenerating = true
+                                isStreaming = false
+                                aiManager.setPersona(lastPersona)
+                                val result = when (lastMode) {
+                                    AiMode.ENHANCE -> aiManager.enhancePrompt(lastSource, aiAppName)
+                                    AiMode.APPEND -> aiManager.continueTextWithAction(lastSource, lastAction)
+                                    AiMode.REWRITE -> aiManager.rewriteText(lastSource, lastAction)
+                                    AiMode.CONTEXT -> aiManager.contextPolishText(lastSource)
+                                }
+                                isGenerating = false
+                                result.fold(
+                                    onSuccess = { generatedText = it },
+                                    onFailure = { e ->
+                                        val msg = e.message ?: context.getString(R.string.ai__error_api)
+                                        if (msg.contains("No API key", ignoreCase = true)) {
+                                            showApiKeyToast = true
+                                        } else {
+                                            errorMessage = msg
+                                        }
+                                    },
+                                )
+                            }
+                        }
                     },
                     onPrimaryAction = {
                         val text = generatedText
@@ -300,16 +382,57 @@ fun AiPanel(
                                 wasUsingAllText = !hasSel
                                 sourceWasSelection = hasSel
                                 sourceTextLen = source.length
+                                sourceWordCount = source.trim().split(Regex("\\s+")).count { it.isNotBlank() }
+                                // Snapshot for regenerate
+                                lastSource = source
+                                lastMode = aiMode
+                                lastAction = selectedAction
+                                lastPersona = selectedPersona
+                                // also snapshot language for regenerate
+                                val snapshotLanguage = selectedLanguage
                                 if (source.isBlank()) {
                                     errorMessage = context.getString(R.string.ai__error_no_text)
                                     return@launch
                                 }
                                 isGenerating = true
+                                isStreaming = false
+                                streamingBuffer = ""
                                 errorMessage = null
+                                // ── Streaming typewriter path ──────────────────────────
+                                try {
+                                    val flow = when {
+                                        aiMode == AiMode.REWRITE && selectedAction == AIAction.TRANSLATE -> null // translate is batch-only
+                                        aiMode == AiMode.REWRITE -> aiManager.rewriteStreaming(source, selectedAction)
+                                        else -> null // ENHANCE, APPEND, CONTEXT go to batch
+                                    }
+                                    if (flow != null) {
+                                        isGenerating = false
+                                        isStreaming = true
+                                        val buf = StringBuilder()
+                                        flow.collect { token ->
+                                            buf.append(token)
+                                            streamingBuffer = buf.toString()
+                                        }
+                                        isStreaming = false
+                                        generatedText = buf.toString().ifBlank { null }
+                                        streamingBuffer = ""
+                                        return@launch
+                                    }
+                                } catch (_: Exception) {
+                                    // streaming not available — fall through to batch
+                                    isStreaming = false
+                                    streamingBuffer = ""
+                                    isGenerating = true
+                                }
+                                // ── Batch (non-streaming) fallback ────────────────────
                                 val result = when (aiMode) {
                                     AiMode.ENHANCE -> aiManager.enhancePrompt(source, aiAppName)
                                     AiMode.APPEND -> aiManager.continueTextWithAction(source, selectedAction)
-                                    AiMode.REWRITE -> aiManager.rewriteText(source, selectedAction)
+                                    AiMode.REWRITE -> if (selectedAction == AIAction.TRANSLATE) {
+                                        aiManager.translateText(source, snapshotLanguage)
+                                    } else {
+                                        aiManager.rewriteText(source, selectedAction)
+                                    }
                                     AiMode.CONTEXT -> aiManager.contextPolishText(source)
                                 }
                                 isGenerating = false
@@ -474,13 +597,14 @@ private fun ModeSegmented(
 @Composable
 private fun SourceHint(
     selectionLen: Int,
+    wordCount: Int,
     wasSelection: Boolean,
     fgMuted: Color,
 ) {
     val label = when {
         selectionLen == 0 -> "No text in field yet"
-        wasSelection -> "Source: $selectionLen chars selected"
-        else -> "Source: all text in field"
+        wasSelection -> "Source: $selectionLen chars · ~$wordCount words selected"
+        else -> "Source: all text · ~$wordCount words"
     }
     Text(
         label,
@@ -551,6 +675,8 @@ private fun ChipPill(
     outline: Color,
     onClick: () -> Unit,
 ) {
+    val interactionSource = remember { MutableInteractionSource() }
+    val isPressed by interactionSource.collectIsPressedAsState()
     val bg by animateColorAsState(
         if (selected) accent.copy(alpha = 0.12f) else Color.Transparent,
         tween(180),
@@ -561,14 +687,24 @@ private fun ChipPill(
         tween(180),
         label = "chipFg",
     )
+    // Animate scale: 0.95 on press, 1.0 at rest (instant press, eased release)
+    val scale by androidx.compose.animation.core.animateFloatAsState(
+        targetValue = if (isPressed) 0.95f else 1f,
+        animationSpec = if (isPressed) tween(80) else tween(160),
+        label = "chipScale",
+    )
     val borderColor = if (selected) accent.copy(alpha = 0.3f) else outline
     Surface(
         color = bg,
         shape = RoundedCornerShape(15.dp),
         modifier = Modifier
             .height(30.dp)
+            .graphicsLayer {
+                scaleX = scale
+                scaleY = scale
+            }
             .clip(RoundedCornerShape(15.dp))
-            .clickable(onClick = onClick),
+            .clickable(interactionSource = interactionSource, indication = null, onClick = onClick),
     ) {
         Box(
             modifier = Modifier
@@ -583,21 +719,14 @@ private fun ChipPill(
                 fontWeight = if (selected) FontWeight.Medium else FontWeight.Normal,
             )
         }
-        // Subtle border via outline-only Box overlay; M3's Surface border
-        // adds a stroke that flickers on rapid selection changes — avoiding
-        // that by treating border as an alpha-blended underlay.
-        Box(
-            modifier = Modifier
-                .height(30.dp)
-                .clip(RoundedCornerShape(15.dp))
-                .background(borderColor.copy(alpha = 0.0f)),
-        )
     }
 }
 
 @Composable
 private fun ResultArea(
     isGenerating: Boolean,
+    isStreaming: Boolean,
+    streamingText: String,
     text: String?,
     error: String?,
     fg: Color,
@@ -605,8 +734,18 @@ private fun ResultArea(
     surface: Color,
     accent: Color,
     errorColor: Color,
+    onCopy: (String) -> Unit,
     modifier: Modifier = Modifier,
 ) {
+    // Copy button state — shows a brief ✓ after copy
+    var didCopy by remember { mutableStateOf(false) }
+    LaunchedEffect(didCopy) {
+        if (didCopy) {
+            delay(1_500)
+            didCopy = false
+        }
+    }
+
     Surface(
         color = surface,
         shape = RoundedCornerShape(10.dp),
@@ -620,14 +759,45 @@ private fun ResultArea(
         ) {
             when {
                 isGenerating -> {
-                    // Shimmer-light skeleton: a row of accent-tinted bars
-                    // alternating widths so the loading state feels alive
-                    // without spinning a wheel.
+                    // Shimmering skeleton bars — accent-tinted with a travelling
+                    // highlight so the loading state feels alive, not frozen.
+                    val infiniteTransition = rememberInfiniteTransition(label = "shimmer")
+                    val shimmerOffset by infiniteTransition.animateFloat(
+                        initialValue = -1f,
+                        targetValue = 2f,
+                        animationSpec = infiniteRepeatable(
+                            animation = tween(1_200, easing = LinearEasing),
+                            repeatMode = RepeatMode.Restart,
+                        ),
+                        label = "shimmerOffset",
+                    )
                     Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                        SkeletonBar(accent.copy(alpha = 0.18f), 1f)
-                        SkeletonBar(accent.copy(alpha = 0.14f), 0.85f)
-                        SkeletonBar(accent.copy(alpha = 0.10f), 0.65f)
+                        ShimmerBar(accent, shimmerOffset, 1f)
+                        ShimmerBar(accent, shimmerOffset, 0.82f)
+                        ShimmerBar(accent, shimmerOffset, 0.60f)
                     }
+                }
+                isStreaming && streamingText.isNotBlank() -> {
+                    // Typewriter: show buffered tokens as they arrive.
+                    // The trailing cursor blinks to indicate live generation.
+                    val cursorVisible by rememberInfiniteTransition(label = "cursor").animateFloat(
+                        initialValue = 1f,
+                        targetValue = 0f,
+                        animationSpec = infiniteRepeatable(
+                            animation = tween(500, easing = LinearEasing),
+                            repeatMode = RepeatMode.Reverse,
+                        ),
+                        label = "cursorAlpha",
+                    )
+                    Text(
+                        streamingText + "▍",
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .verticalScroll(rememberScrollState())
+                            .graphicsLayer { alpha = 1f }, // force layer
+                        color = fg,
+                        fontSize = 13.sp,
+                    )
                 }
                 error != null -> {
                     Text(
@@ -638,14 +808,35 @@ private fun ResultArea(
                     )
                 }
                 text != null -> {
-                    Text(
-                        text,
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .verticalScroll(rememberScrollState()),
-                        color = fg,
-                        fontSize = 13.sp,
-                    )
+                    // Show the result text + a Copy icon in the top-right corner
+                    Box(modifier = Modifier.fillMaxSize()) {
+                        Text(
+                            text,
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(end = 28.dp) // make room for copy icon
+                                .verticalScroll(rememberScrollState()),
+                            color = fg,
+                            fontSize = 13.sp,
+                        )
+                        // Copy / Copied checkmark button
+                        IconButton(
+                            onClick = {
+                                onCopy(text)
+                                didCopy = true
+                            },
+                            modifier = Modifier
+                                .size(24.dp)
+                                .align(Alignment.TopEnd),
+                        ) {
+                            Icon(
+                                imageVector = if (didCopy) Icons.Default.Check else Icons.Default.ContentCopy,
+                                contentDescription = if (didCopy) "Copied" else "Copy",
+                                tint = if (didCopy) accent else fgMuted,
+                                modifier = Modifier.size(14.dp),
+                            )
+                        }
+                    }
                 }
                 else -> {
                     Text(
@@ -659,14 +850,30 @@ private fun ResultArea(
     }
 }
 
+/**
+ * Skeleton bar with a travelling shimmer highlight.
+ * [shimmerOffset] should range from -1..2 (driven by an InfiniteTransition).
+ */
 @Composable
-private fun SkeletonBar(color: Color, widthFraction: Float) {
+private fun ShimmerBar(accent: Color, shimmerOffset: Float, widthFraction: Float) {
+    val baseColor = accent.copy(alpha = 0.12f)
+    val highlightColor = accent.copy(alpha = 0.32f)
     Box(
         modifier = Modifier
             .fillMaxWidth(widthFraction)
             .height(10.dp)
             .clip(RoundedCornerShape(5.dp))
-            .background(color),
+            .background(
+                brush = Brush.horizontalGradient(
+                    colors = listOf(
+                        baseColor,
+                        highlightColor,
+                        baseColor,
+                    ),
+                    startX = shimmerOffset * 400f,
+                    endX = (shimmerOffset + 1f) * 400f,
+                ),
+            ),
     )
 }
 
@@ -778,4 +985,42 @@ private fun actionLabel(action: AIAction): String = when (action) {
     AIAction.FIX_GRAMMAR -> stringResource(R.string.ai__action_fix_grammar)
     AIAction.MAKE_FORMAL -> stringResource(R.string.ai__action_make_formal)
     AIAction.MAKE_CASUAL -> stringResource(R.string.ai__action_make_casual)
+    AIAction.TRANSLATE -> stringResource(R.string.ai__action_translate)
 }
+
+// ── Language picker row (shown only when Translate action is selected) ────
+
+private val TRANSLATE_LANGUAGES = listOf(
+    "Spanish", "French", "German", "Italian", "Portuguese",
+    "Hindi", "Arabic", "Japanese", "Korean", "Chinese",
+    "Russian", "Turkish", "Dutch", "Polish", "Swedish",
+    "Greek", "Hebrew", "Thai", "Vietnamese", "Indonesian",
+)
+
+@Composable
+private fun LanguageChipRow(
+    selectedLanguage: String,
+    onLanguageSelected: (String) -> Unit,
+    accent: Color,
+    fgMuted: Color,
+    outline: Color,
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .horizontalScroll(rememberScrollState()),
+        horizontalArrangement = Arrangement.spacedBy(6.dp),
+    ) {
+        TRANSLATE_LANGUAGES.forEach { lang ->
+            ChipPill(
+                label = lang,
+                selected = selectedLanguage == lang,
+                accent = accent,
+                fgMuted = fgMuted,
+                outline = outline,
+                onClick = { onLanguageSelected(lang) },
+            )
+        }
+    }
+}
+

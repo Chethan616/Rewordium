@@ -54,7 +54,7 @@ class WhatsNewSheet {
             'Express yourself better with full support for the latest Android emojis.',
       ),
       const _WhatsNewItem(
-        icon: CupertinoIcons.square_on_square_fill,
+        icon: CupertinoIcons.square_fill_on_square_fill,
         color: Color(0xFF3B82F6),
         title: 'Massive Sticker Library',
         description:

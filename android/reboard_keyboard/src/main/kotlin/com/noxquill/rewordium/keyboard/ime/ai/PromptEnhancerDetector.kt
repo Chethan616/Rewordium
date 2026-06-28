@@ -90,21 +90,48 @@ object PromptEnhancerDetector {
         
         // Phind
         "com.phind.search",
-        
+
         // Notion AI
         "notion.id",
-        
+
         // Writesonic / Chatsonic
         "com.writesonic.app",
-        
+
         // Copy.ai
         "com.copyai.app",
-        
+
         // Samsung Bixby (AI features)
         "com.samsung.android.bixby.agent",
-        
+
         // Brave Leo AI
         "com.brave.browser",
+
+        // Sora (OpenAI video / chat)
+        "com.openai.sora",
+
+        // Meta AI (standalone app)
+        "com.facebook.metaai",
+        "com.meta.ai",
+
+        // Google NotebookLM
+        "com.google.android.apps.notebooklm",
+
+        // Google AI Studio / MakerSuite
+        "com.google.android.apps.aistudio",
+
+        // Alibaba Qwen (Tongyi Qianwen)
+        "com.alibaba.qwen",
+        "com.alibaba.tongyi",
+
+        // Moonshot AI — Kimi
+        "com.moonshot.kimi",
+
+        // 01.ai (Yi / Wanx)
+        "ai.01.wanx",
+        "com.zerone.wanx",
+
+        // Kling AI (Kuaishou)
+        "com.kuaishou.kling",
     )
 
     /**
@@ -122,6 +149,17 @@ object PromptEnhancerDetector {
         "huggingface",
         "openai",
         "anthropic",
+        // New apps
+        "notebooklm",
+        "aistudio",
+        "qwen",
+        "tongyi",
+        "kimi",
+        "moonshot",
+        "metaai",
+        "kling",
+        "wanx",
+        "sora",
     )
 
     /**
@@ -180,11 +218,20 @@ object PromptEnhancerDetector {
             "ai.replika.app" -> "Replika"
             "com.brave.browser" -> "Brave Leo"
             "notion.id" -> "Notion AI"
+            "com.openai.sora" -> "Sora"
+            "com.facebook.metaai", "com.meta.ai" -> "Meta AI"
+            "com.google.android.apps.notebooklm" -> "NotebookLM"
+            "com.google.android.apps.aistudio" -> "AI Studio"
+            "com.alibaba.qwen", "com.alibaba.tongyi" -> "Qwen"
+            "com.moonshot.kimi" -> "Kimi"
+            "ai.01.wanx", "com.zerone.wanx" -> "01.ai"
+            "com.kuaishou.kling" -> "Kling AI"
             else -> {
                 // Try pattern matching for display name
                 val pkg = packageName.lowercase()
                 when {
                     pkg.contains("chatgpt") || pkg.contains("openai") -> "ChatGPT"
+                    pkg.contains("sora") -> "Sora"
                     pkg.contains("gemini") -> "Gemini"
                     pkg.contains("claude") || pkg.contains("anthropic") -> "Claude"
                     pkg.contains("copilot") -> "Copilot"
@@ -192,6 +239,13 @@ object PromptEnhancerDetector {
                     pkg.contains("deepseek") -> "DeepSeek"
                     pkg.contains("mistral") -> "Mistral"
                     pkg.contains("huggingface") -> "HuggingChat"
+                    pkg.contains("notebooklm") -> "NotebookLM"
+                    pkg.contains("aistudio") -> "AI Studio"
+                    pkg.contains("qwen") || pkg.contains("tongyi") -> "Qwen"
+                    pkg.contains("kimi") || pkg.contains("moonshot") -> "Kimi"
+                    pkg.contains("metaai") -> "Meta AI"
+                    pkg.contains("kling") -> "Kling AI"
+                    pkg.contains("wanx") -> "01.ai"
                     else -> "AI App"
                 }
             }
