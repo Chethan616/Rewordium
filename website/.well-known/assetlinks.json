@@ -1,0 +1,15 @@
+[
+  {
+    "relation": [
+      "delegate_permission/common.handle_all_urls",
+      "delegate_permission/common.get_login_creds"
+    ],
+    "target": {
+      "namespace": "android_app",
+      "package_name": "com.noxquill.rewordium",
+      "sha256_cert_fingerprints": [
+        "86:12:04:9C:1D:B0:60:45:D0:1A:8B:AE:23:73:E8:4B:0F:33:99:FA:66:EC:46:5C:AB:8C:8D:6B:7B:F1:58:BC"
+      ]
+    }
+  }
+]

@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>404 · Page Not Found · Rewordium</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400..800&family=Plus+Jakarta+Sans:wght@400..800&family=Caveat:wght@600;700&display=swap" rel="stylesheet" />
+<link rel="stylesheet" href="../styles.css" />
+<style>
+  .nf-wrap { min-height: 100vh; display: grid; place-items: center; padding: 120px 20px 60px; text-align: center; }
+  .nf-badge { display: inline-flex; align-items: center; gap: 8px; background: #FFE7E5; border: 1px solid #FECACA; color: var(--rose); font-weight: 800; font-size: 12.5px; letter-spacing: .04em; padding: 8px 16px; border-radius: 999px; }
+  .nf-badge .dot { width: 7px; height: 7px; border-radius: 50%; background: var(--rose); animation: blink 1.4s ease infinite; }
+  .nf-404 { font-family: var(--display); font-weight: 800; font-size: clamp(120px, 30vw, 240px); line-height: .85; letter-spacing: -.05em; color: var(--purple); margin: 18px 0 4px; text-shadow: 8px 8px 0 var(--lilac); }
+  .nf-h2 { font-family: var(--display); font-weight: 800; font-size: clamp(34px, 7vw, 58px); line-height: .98; letter-spacing: -.035em; }
+  .nf-h2 em { font-style: normal; color: var(--green-deep); }
+  .nf-lede { margin: 18px auto 0; max-width: 56ch; font-size: 18px; color: var(--ink-2); font-weight: 500; line-height: 1.55; }
+  .nf-info { display: grid; grid-template-columns: repeat(3,1fr); gap: 16px; max-width: 720px; margin: 38px auto 0; }
+  .nf-info .cell { background: #fff; border: 1px solid var(--line); border-radius: var(--r-md); padding: 24px; box-shadow: var(--shadow-card); }
+  .nf-info .ci { width: 46px; height: 46px; border-radius: 13px; background: var(--lilac); display: grid; place-items: center; margin: 0 auto 12px; }
+  .nf-info .ci svg { width: 22px; height: 22px; color: var(--purple); }
+  .nf-info h3 { font-weight: 800; font-size: 15px; }
+  .nf-info p { margin-top: 6px; font-size: 13.5px; color: var(--muted); font-weight: 500; line-height: 1.5; }
+  .nf-ctas { display: flex; gap: 14px; justify-content: center; flex-wrap: wrap; margin-top: 38px; }
+  @media (max-width: 600px){ .nf-info { grid-template-columns: 1fr; } .nf-ctas .btn { width: 100%; } }
+</style>
+</head>
+<body>
+
+<div class="navdock">
+  <nav class="pillnav" id="pillnav" aria-label="Primary">
+    <span class="pill-glow" id="pillGlow"></span>
+    <a href="../Rewordium Landing.html#features" class="pl">Features</a>
+    <a href="../Rewordium Landing.html#demo" class="pl">Live demo</a>
+    <a href="../Rewordium Landing.html#tools" class="pl">Tools</a>
+    <a href="../Rewordium Landing.html#privacy" class="pl">Privacy</a>
+  </nav>
+</div>
+
+<div class="nf-wrap">
+  <div>
+    <span class="nf-badge"><span class="dot"></span>Error Detected</span>
+    <div class="nf-404">404</div>
+    <h2 class="nf-h2">Oops! Something<br /><em>went wrong</em></h2>
+    <p class="nf-lede">The page you're looking for doesn't exist or has been moved. Don't worry — head back to the home page and keep exploring.</p>
+
+    <div class="nf-info">
+      <div class="cell">
+        <div class="ci"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg></div>
+        <h3>Page Not Found</h3>
+        <p>The URL you entered doesn't exist in our system.</p>
+      </div>
+      <div class="cell">
+        <div class="ci"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><path d="M9 22V12h6v10"/></svg></div>
+        <h3>Try Again</h3>
+        <p>Go back to the home page and explore.</p>
+      </div>
+      <div class="cell">
+        <div class="ci"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 8v4M12 16h.01"/></svg></div>
+        <h3>Need Help?</h3>
+        <p>Contact support if the issue persists.</p>
+      </div>
+    </div>
+
+    <div class="nf-ctas">
+      <a href="../Rewordium Landing.html" class="btn btn-purple btn-lg">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:18px;height:18px"><path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><path d="M9 22V12h6v10"/></svg>
+        Back to Home
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:18px;height:18px"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+      </a>
+      <a href="mailto:noxquilltech@gmail.com?subject=404%20Error%20Report" class="btn btn-outline btn-lg">Report Issue</a>
+    </div>
+  </div>
+</div>
+
+<script src="subpage.js"></script>
+</body>
+</html>
