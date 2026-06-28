@@ -34,12 +34,14 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.ui.draw.alpha
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.staggeredgrid.LazyVerticalStaggeredGrid
 import androidx.compose.foundation.lazy.staggeredgrid.StaggeredGridCells
 import androidx.compose.foundation.lazy.staggeredgrid.items
 import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
@@ -51,14 +53,15 @@ import androidx.compose.material.icons.filled.Star
 import androidx.compose.material.icons.outlined.GifBox
 import androidx.compose.material.icons.outlined.Schedule
 import androidx.compose.material.icons.outlined.StarBorder
+import androidx.compose.material.icons.outlined.ContentPasteGo
+import org.florisboard.lib.compose.rippleClickable
 import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.DropdownMenu
-import androidx.compose.material3.DropdownMenuItem
-import androidx.compose.ui.window.PopupProperties
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import com.noxquill.rewordium.keyboard.ime.media.CustomChip
 import com.noxquill.rewordium.keyboard.keyboardManager
+import com.noxquill.rewordium.keyboard.ime.theme.FlorisImeUi
+import org.florisboard.lib.snygg.ui.SnyggColumn
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -71,6 +74,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
@@ -145,6 +149,8 @@ fun GifPanel(
     var loading by remember { mutableStateOf(false) }
     val dim = fg.copy(alpha = 0.55f)
 
+    var popupGif by remember { mutableStateOf<KlipyClient.GifResult?>(null) }
+
     val recentsStore = remember { GifCollectionStore.recents(context) }
     val favoritesStore = remember { GifCollectionStore.favorites(context) }
     val recentEntries by recentsStore.entriesFlow.collectAsState()
@@ -198,138 +204,230 @@ fun GifPanel(
         GifSource.Favorites -> favoriteEntries.map { it.toGifResult() }
     }
 
-    Column(modifier = modifier.fillMaxSize()) {
-        // M3 chip strip: pinned Recents (clock) + Favorites (star) icon
-        // chips at the very start (Gboard's pattern — both are categories,
-        // distinguishable as icons rather than labels), then the KLIPY
-        // category chips inline after them. FilterChip handles the
-        // selected-state surface tint, ripple, and outline.
-        LazyRow(
-            modifier = Modifier.fillMaxWidth().padding(horizontal = 8.dp),
-            horizontalArrangement = Arrangement.spacedBy(6.dp),
-            contentPadding = PaddingValues(vertical = 6.dp),
-        ) {
-            item(key = "__recents") {
-                CustomChip(
-                    selected = source == GifSource.Recents,
-                    onClick = {
-                        source = if (source == GifSource.Recents) GifSource.Trending else GifSource.Recents
-                    },
-                    fg = fg,
-                    accent = accent
-                ) {
-                    Icon(
-                        imageVector = Icons.Outlined.Schedule,
-                        contentDescription = "Recents",
-                        modifier = Modifier.size(18.dp),
-                    )
-                }
-            }
-            item(key = "__favorites") {
-                CustomChip(
-                    selected = source == GifSource.Favorites,
-                    onClick = {
-                        source = if (source == GifSource.Favorites) GifSource.Trending else GifSource.Favorites
-                    },
-                    fg = fg,
-                    accent = accent
-                ) {
-                    Icon(
-                        imageVector = if (source == GifSource.Favorites) Icons.Filled.Star
-                        else Icons.Outlined.StarBorder,
-                        contentDescription = "Favorites",
-                        modifier = Modifier.size(18.dp),
-                    )
-                }
-            }
-            if (query.isNotEmpty() && source == GifSource.Trending) {
-                item(key = "__temp_query") {
+    Box(modifier = modifier.fillMaxSize()) {
+        val mainAlpha by animateFloatAsState(targetValue = if (popupGif != null) 0.12f else 1f)
+
+        Column(modifier = Modifier.fillMaxSize().alpha(mainAlpha)) {
+            // M3 chip strip: pinned Recents (clock) + Favorites (star) icon
+            // chips at the very start (Gboard's pattern — both are categories,
+            // distinguishable as icons rather than labels), then the KLIPY
+            // category chips inline after them. FilterChip handles the
+            // selected-state surface tint, ripple, and outline.
+            LazyRow(
+                modifier = Modifier.fillMaxWidth().padding(horizontal = 8.dp),
+                horizontalArrangement = Arrangement.spacedBy(6.dp),
+                contentPadding = PaddingValues(vertical = 6.dp),
+            ) {
+                item(key = "__recents") {
                     CustomChip(
-                        selected = true,
+                        selected = source == GifSource.Recents,
                         onClick = {
-                            query = ""
-                            keyboardManager.endMediaSearch()
+                            source = if (source == GifSource.Recents) GifSource.Trending else GifSource.Recents
                         },
                         fg = fg,
                         accent = accent
                     ) {
-                        Text(text = "$query ✕")
+                        Icon(
+                            imageVector = Icons.Outlined.Schedule,
+                            contentDescription = "Recents",
+                            modifier = Modifier.size(18.dp),
+                        )
                     }
                 }
-            }
-            if (categories.isNotEmpty() && source == GifSource.Trending) {
-                items(categories, key = { "cat:${it.name}" }) { category ->
-                    val isActive = query.equals(category.name, ignoreCase = true)
+                item(key = "__favorites") {
                     CustomChip(
-                        selected = isActive,
-                        onClick = { query = if (isActive) "" else category.name },
+                        selected = source == GifSource.Favorites,
+                        onClick = {
+                            source = if (source == GifSource.Favorites) GifSource.Trending else GifSource.Favorites
+                        },
                         fg = fg,
                         accent = accent
                     ) {
-                        Text(text = category.name.replaceFirstChar { it.uppercase() })
+                        Icon(
+                            imageVector = if (source == GifSource.Favorites) Icons.Filled.Star
+                            else Icons.Outlined.StarBorder,
+                            contentDescription = "Favorites",
+                            modifier = Modifier.size(18.dp),
+                        )
+                    }
+                }
+                if (query.isNotEmpty() && source == GifSource.Trending) {
+                    item(key = "__temp_query") {
+                        CustomChip(
+                            selected = true,
+                            onClick = {
+                                query = ""
+                                keyboardManager.endMediaSearch()
+                            },
+                            fg = fg,
+                            accent = accent
+                        ) {
+                            Text(text = "$query ✕")
+                        }
+                    }
+                }
+                if (categories.isNotEmpty() && source == GifSource.Trending) {
+                    items(categories, key = { "cat:${it.name}" }) { category ->
+                        val isActive = query.equals(category.name, ignoreCase = true)
+                        CustomChip(
+                            selected = isActive,
+                            onClick = { query = if (isActive) "" else category.name },
+                            fg = fg,
+                            accent = accent
+                        ) {
+                            Text(text = category.name.replaceFirstChar { it.uppercase() })
+                        }
+                    }
+                }
+            }
+
+            AnimatedContent(
+                targetState = GifGridState(source, displayed, loading),
+                transitionSpec = {
+                    fadeIn(tween(180)) togetherWith fadeOut(tween(120))
+                },
+                contentKey = { it.source },
+                label = "gif-grid-source",
+            ) { state ->
+                when {
+                    state.loading && state.items.isEmpty() && state.source == GifSource.Trending -> {
+                        Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                            CircularProgressIndicator(
+                                color = accent,
+                                strokeWidth = 2.dp,
+                                modifier = Modifier.size(28.dp),
+                            )
+                        }
+                    }
+                    state.items.isEmpty() -> GifEmptyState(source = state.source, fg = fg, accent = accent)
+                    else -> LazyVerticalStaggeredGrid(
+                        columns = StaggeredGridCells.Fixed(2),
+                        modifier = Modifier.fillMaxSize().padding(horizontal = 6.dp),
+                        verticalItemSpacing = 6.dp,
+                        horizontalArrangement = Arrangement.spacedBy(6.dp),
+                        contentPadding = PaddingValues(vertical = 6.dp),
+                    ) {
+                        items(state.items, key = { it.id }) { gif ->
+                            GifTile(
+                                gif = gif,
+                                context = context,
+                                imageLoader = imageLoader,
+                                isFavorited = gif.id in favoriteIds,
+                                fg = fg,
+                                accent = accent,
+                                onTap = {
+                                    scope.launch {
+                                        recentsStore.add(gif)
+                                        val uri = downloadAndStore(context, gif.gifUrl)
+                                        if (uri != null) onGifPicked(uri, gif.contentDescription)
+                                    }
+                                },
+                                onLongPress = { popupGif = gif },
+                            )
+                        }
                     }
                 }
             }
         }
 
-        AnimatedContent(
-            targetState = GifGridState(source, displayed, loading),
-            transitionSpec = {
-                fadeIn(tween(180)) togetherWith fadeOut(tween(120))
-            },
-            contentKey = { it.source },
-            label = "gif-grid-source",
-        ) { state ->
-            when {
-                state.loading && state.items.isEmpty() && state.source == GifSource.Trending -> {
-                    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                        CircularProgressIndicator(
-                            color = accent,
-                            strokeWidth = 2.dp,
-                            modifier = Modifier.size(28.dp),
-                        )
+        // Fullscreen overlay UI matching the clipboard's style
+        if (popupGif != null) {
+            val gif = popupGif!!
+            val isFavorited = gif.id in favoriteIds
+
+            Row(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .pointerInput(Unit) {
+                        detectTapGestures { popupGif = null }
+                    },
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceAround,
+            ) {
+                Column(
+                    modifier = Modifier
+                        .weight(0.5f)
+                        .padding(horizontal = 8.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
+                    SnyggColumn(
+                        elementName = FlorisImeUi.ClipboardItemPopup.elementName,
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalAlignment = Alignment.CenterHorizontally
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth(0.9f)
+                                .aspectRatio(1f)
+                                .clip(RoundedCornerShape(10.dp)),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            AsyncImage(
+                                model = ImageRequest.Builder(context)
+                                    .data(gif.previewUrl)
+                                    .crossfade(true)
+                                    .build(),
+                                imageLoader = imageLoader,
+                                contentDescription = gif.contentDescription,
+                                modifier = Modifier.fillMaxSize(),
+                            )
+                        }
                     }
                 }
-                state.items.isEmpty() -> GifEmptyState(source = state.source, fg = fg, accent = accent)
-                else -> LazyVerticalStaggeredGrid(
-                    columns = StaggeredGridCells.Fixed(2),
-                    modifier = Modifier.fillMaxSize().padding(horizontal = 6.dp),
-                    verticalItemSpacing = 6.dp,
-                    horizontalArrangement = Arrangement.spacedBy(6.dp),
-                    contentPadding = PaddingValues(vertical = 6.dp),
+                Column(
+                    modifier = Modifier
+                        .weight(0.5f)
+                        .padding(horizontal = 8.dp),
+                    verticalArrangement = Arrangement.Center
                 ) {
-                    items(state.items, key = { it.id }) { gif ->
-                        GifTile(
-                            gif = gif,
-                            context = context,
-                            imageLoader = imageLoader,
-                            isFavorited = gif.id in favoriteIds,
-                            fg = fg,
+                    SnyggColumn(
+                        elementName = FlorisImeUi.ClipboardItemActions.elementName,
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        PopupAction(
+                            icon = if (isFavorited) Icons.Filled.Star else Icons.Outlined.StarBorder,
+                            text = if (isFavorited) "Remove from favorites" else "Add to favorites",
                             accent = accent,
-                            onTap = {
+                            fg = fg,
+                            onClick = {
                                 scope.launch {
-                                    // Auto-track as recent regardless of source —
-                                    // the user just picked it, so it's a recent
-                                    // use even if they picked from favorites.
-                                    recentsStore.add(gif)
-                                    val uri = downloadAndStore(context, gif.gifUrl)
-                                    if (uri != null) onGifPicked(uri, gif.contentDescription)
-                                }
-                            },
-                            onToggleFavorite = {
-                                scope.launch {
-                                    val nowFavorited = favoritesStore.toggle(gif)
+                                    favoritesStore.toggle(gif)
                                     Toast.makeText(
                                         context,
-                                        if (nowFavorited) "Added to favorites"
+                                        if (!isFavorited) "Added to favorites"
                                         else "Removed from favorites",
                                         Toast.LENGTH_SHORT,
                                     ).show()
                                 }
-                            },
-                            onRemoveRecent = if (source == GifSource.Recents) {
-                                { scope.launch { recentsStore.remove(gif.id) } }
-                            } else null,
+                                popupGif = null
+                            }
+                        )
+                        val isRecent = recentEntries.any { it.id == gif.id }
+                        if (isRecent) {
+                            PopupAction(
+                                icon = Icons.Outlined.Schedule,
+                                text = "Remove from recents",
+                                accent = accent,
+                                fg = fg,
+                                onClick = {
+                                    scope.launch { recentsStore.remove(gif.id) }
+                                    popupGif = null
+                                }
+                            )
+                        }
+                        PopupAction(
+                            icon = Icons.Outlined.ContentPasteGo,
+                            text = "Send GIF",
+                            accent = accent,
+                            fg = fg,
+                            onClick = {
+                                scope.launch {
+                                    recentsStore.add(gif)
+                                    val uri = downloadAndStore(context, gif.gifUrl)
+                                    if (uri != null) onGifPicked(uri, gif.contentDescription)
+                                }
+                                popupGif = null
+                            }
                         )
                     }
                 }
@@ -354,13 +452,11 @@ private fun GifTile(
     fg: Color,
     accent: Color,
     onTap: () -> Unit,
-    onToggleFavorite: () -> Unit,
-    onRemoveRecent: (() -> Unit)?,
+    onLongPress: () -> Unit,
 ) {
     val aspect = if (gif.width > 0 && gif.height > 0) {
         gif.width.toFloat() / gif.height.toFloat()
     } else 1f
-    var menuOpen by remember(gif.id) { mutableStateOf(false) }
     val inputFeedbackController = com.noxquill.rewordium.keyboard.ime.input
         .LocalInputFeedbackController.current
     Box(
@@ -377,7 +473,12 @@ private fun GifTile(
                         )
                         onTap()
                     },
-                    onLongPress = { menuOpen = true },
+                    onLongPress = {
+                        inputFeedbackController.keyPress(
+                            com.noxquill.rewordium.keyboard.ime.text.keyboard.TextKeyData.UNSPECIFIED,
+                        )
+                        onLongPress()
+                    },
                 )
             },
     ) {
@@ -406,60 +507,6 @@ private fun GifTile(
                     tint = accent,
                     modifier = Modifier.size(12.dp),
                 )
-            }
-        }
-        // Gboard-style long-press menu — anchored to the tile, dismisses
-        // on tap-outside. `focusable = false` keeps the IME alive (the
-        // default M3 menu is focusable and the system kills the keyboard
-        // when its input view loses focus).
-        val mediaStyle = org.florisboard.lib.snygg.ui.rememberSnyggThemeQuery(
-            com.noxquill.rewordium.keyboard.ime.theme.FlorisImeUi.Media.elementName
-        )
-        val containerBg = mediaStyle.background(default = androidx.compose.material3.MaterialTheme.colorScheme.surface)
-
-        androidx.compose.material3.MaterialTheme(
-            colorScheme = androidx.compose.material3.MaterialTheme.colorScheme.copy(
-                surface = containerBg,
-                onSurface = fg,
-                surfaceVariant = containerBg,
-                onSurfaceVariant = fg.copy(alpha = 0.8f),
-                primary = accent,
-                surfaceTint = Color.Transparent
-            )
-        ) {
-            DropdownMenu(
-                expanded = menuOpen,
-                onDismissRequest = { menuOpen = false },
-                properties = PopupProperties(focusable = false),
-                modifier = Modifier.background(containerBg)
-            ) {
-                DropdownMenuItem(
-                    text = {
-                        Text(if (isFavorited) "Remove from favorites" else "Add to favorites")
-                    },
-                    leadingIcon = {
-                        Icon(
-                            imageVector = if (isFavorited) Icons.Filled.Star else Icons.Outlined.StarBorder,
-                            contentDescription = null,
-                        )
-                    },
-                    onClick = {
-                        menuOpen = false
-                        onToggleFavorite()
-                    },
-                )
-                if (onRemoveRecent != null) {
-                    DropdownMenuItem(
-                        text = { Text("Remove from recents") },
-                        leadingIcon = {
-                            Icon(imageVector = Icons.Outlined.Schedule, contentDescription = null)
-                        },
-                        onClick = {
-                            menuOpen = false
-                            onRemoveRecent()
-                        },
-                    )
-                }
             }
         }
     }
@@ -544,3 +591,37 @@ private suspend fun downloadAndStore(
         null
     }
 }
+
+@Composable
+private fun PopupAction(
+    icon: ImageVector,
+    text: String,
+    accent: Color,
+    fg: Color,
+    modifier: Modifier = Modifier,
+    onClick: () -> Unit,
+) {
+    Row(
+        modifier = modifier
+            .fillMaxWidth()
+            .rippleClickable(onClick = onClick)
+            .padding(vertical = 12.dp, horizontal = 16.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Icon(
+            imageVector = icon,
+            contentDescription = null,
+            tint = accent,
+            modifier = Modifier.size(20.dp),
+        )
+        Spacer(modifier = Modifier.width(12.dp))
+        Text(
+            text = text,
+            color = fg,
+            fontSize = 14.sp,
+            fontWeight = FontWeight.Medium,
+            modifier = Modifier.weight(1f),
+        )
+    }
+}
+

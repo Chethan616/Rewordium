@@ -1009,4 +1009,5 @@ private fun getActionLabel(action: AIAction): String = when (action) {
     AIAction.FIX_GRAMMAR -> stringResource(R.string.ai__action_fix_grammar)
     AIAction.MAKE_FORMAL -> stringResource(R.string.ai__action_make_formal)
     AIAction.MAKE_CASUAL -> stringResource(R.string.ai__action_make_casual)
+    AIAction.TRANSLATE   -> stringResource(R.string.ai__action_translate)
 }
