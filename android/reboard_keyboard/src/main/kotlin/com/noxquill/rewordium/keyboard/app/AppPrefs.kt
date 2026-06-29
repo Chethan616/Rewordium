@@ -215,6 +215,10 @@ abstract class FlorisPreferenceModel : PreferenceModel() {
             key = "devtools__show_drag_and_drop_helpers",
             default = false,
         )
+        val experimentalRoundedSmartbar = boolean(
+            key = "devtools__experimental_rounded_smartbar",
+            default = false,
+        )
     }
 
     val dictionary = Dictionary()
