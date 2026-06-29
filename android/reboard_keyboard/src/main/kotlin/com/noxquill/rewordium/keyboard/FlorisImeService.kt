@@ -41,6 +41,8 @@ import android.widget.LinearLayout
 import android.widget.inline.InlinePresentationSpec
 import androidx.annotation.RequiresApi
 import androidx.compose.foundation.background
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.ui.draw.clip
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -133,6 +135,7 @@ import org.florisboard.lib.snygg.ui.SnyggRow
 import org.florisboard.lib.snygg.ui.SnyggSurfaceView
 import org.florisboard.lib.snygg.ui.SnyggText
 import org.florisboard.lib.snygg.ui.rememberSnyggThemeQuery
+import org.florisboard.lib.snygg.ui.uriOrNull
 import kotlinx.coroutines.launch
 
 /**
@@ -695,6 +698,7 @@ class FlorisImeService : LifecycleInputMethodService() {
         val w = window?.window ?: return
         // TODO: Verify that this doesn't give us a padding problem
         WindowCompat.setDecorFitsSystemWindows(w, false)
+        w.setBackgroundDrawable(android.graphics.drawable.ColorDrawable(android.graphics.Color.TRANSPARENT))
         ViewUtils.updateLayoutHeightOf(w, WindowManager.LayoutParams.MATCH_PARENT)
         val layoutHeight = if (isFullscreenUiMode) {
             WindowManager.LayoutParams.WRAP_CONTENT
@@ -748,9 +752,14 @@ class FlorisImeService : LifecycleInputMethodService() {
                                         .weight(1f),
                                 )
                             }
+                            val roundedSmartbar by prefs.devtools.experimentalRoundedSmartbar.observeAsState()
+                            val keyboardShape = if (roundedSmartbar) {
+                                RoundedCornerShape(topStart = 16.dp, topEnd = 16.dp)
+                            } else null
                             Column(
                                 modifier = Modifier
                                     .fillMaxWidth()
+                                    .then(if (keyboardShape != null) Modifier.clip(keyboardShape) else Modifier)
                                     .background(windowBg)
                             ) {
                                 ImeUi()
@@ -775,6 +784,8 @@ class FlorisImeService : LifecycleInputMethodService() {
         LaunchedEffect(layoutDirection) {
             keyboardManager.activeState.layoutDirection = layoutDirection
         }
+        val windowStyle = rememberSnyggThemeQuery(FlorisImeUi.Window.elementName)
+        val hasBackgroundImage = windowStyle.backgroundImage.uriOrNull() != null
         CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Ltr) {
             SnyggBox(
                 elementName = FlorisImeUi.Window.elementName,
@@ -792,11 +803,13 @@ class FlorisImeService : LifecycleInputMethodService() {
                 // The SurfaceView is used to render the background image under inline-autofill chips. These are only
                 // available on Android >=11, and SurfaceView causes trouble on Android 8/9, thus we render the image
                 // in the SurfaceView for Android >=11, and in the Compose View Tree for Android <=10.
-                if (AndroidVersion.ATLEAST_API30_R) {
+                if (AndroidVersion.ATLEAST_API30_R && hasBackgroundImage) {
+                    val roundedSmartbar by prefs.devtools.experimentalRoundedSmartbar.observeAsState()
                     SnyggSurfaceView(
                         elementName = FlorisImeUi.Window.elementName,
                         attributes = attributes,
                         modifier = Modifier.matchParentSize(),
+                        clipToRoundedSmartbar = roundedSmartbar,
                     )
                 }
                 val configuration = LocalConfiguration.current

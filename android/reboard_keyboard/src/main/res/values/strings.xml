@@ -798,6 +798,9 @@
     <string name="devtools__show_key_touch_boundaries__summary" comment="Summary of Show key touch boundaries in Devtools">Outline the key touch boundaries in red</string>
     <string name="devtools__show_drag_and_drop_helpers__label" comment="Label of Show drag and drop helpers in Devtools">Show drag&amp;drop helpers</string>
     <string name="devtools__show_drag_and_drop_helpers__summary" comment="Summary of Show drag and drop helpers in Devtools">Render otherwise invisible helpers in drag&amp;drop screens for debugging</string>
+    <string name="devtools__experimental_view__title">Experimental View</string>
+    <string name="devtools__experimental_rounded_smartbar__label">Rounded Smartbar</string>
+    <string name="devtools__experimental_rounded_smartbar__summary">Curves the top corners of the smartbar for a pill-shaped keyboard top edge</string>
     <string name="devtools__clear_udm_internal_database__label" comment="Label of Clear internal user dictionary database in Devtools">Clear internal user dictionary database</string>
     <string name="devtools__clear_udm_internal_database__summary" comment="Summary of Clear internal user dictionary database in Devtools">Clears all words from the dictionary database table</string>
     <string name="devtools__reset_quick_actions_to_default__label">Reset Smartbar quick actions</string>
