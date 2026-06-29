@@ -21,6 +21,7 @@ import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.Icon
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.painter.Painter
 import androidx.compose.ui.graphics.vector.ImageVector
@@ -58,13 +59,14 @@ fun SnyggIcon(
     modifier: Modifier = Modifier,
     imageVector: ImageVector,
     contentDescription: String? = null,
+    tint: Color = Color.Unspecified,
 ) {
     ProvideSnyggStyle(elementName, attributes, selector) { style ->
         Icon(
             modifier = modifier.snyggIconSize(style),
             imageVector = imageVector,
             contentDescription = contentDescription,
-            tint = style.foreground(),
+            tint = if (tint != Color.Unspecified) tint else style.foreground(),
         )
     }
 }
@@ -96,13 +98,14 @@ fun SnyggIcon(
     modifier: Modifier = Modifier,
     bitmap: ImageBitmap,
     contentDescription: String? = null,
+    tint: Color = Color.Unspecified,
 ) {
     ProvideSnyggStyle(elementName, attributes, selector) { style ->
         Icon(
             modifier = modifier.snyggIconSize(style),
             bitmap = bitmap,
             contentDescription = contentDescription,
-            tint = style.foreground(),
+            tint = if (tint != Color.Unspecified) tint else style.foreground(),
         )
     }
 }
@@ -134,13 +137,14 @@ fun SnyggIcon(
     modifier: Modifier = Modifier,
     painter: Painter,
     contentDescription: String? = null,
+    tint: Color = Color.Unspecified,
 ) {
     ProvideSnyggStyle(elementName, attributes, selector) { style ->
         Icon(
             modifier = modifier.snyggIconSize(style),
             painter = painter,
             contentDescription = contentDescription,
-            tint = style.foreground(),
+            tint = if (tint != Color.Unspecified) tint else style.foreground(),
         )
     }
 }

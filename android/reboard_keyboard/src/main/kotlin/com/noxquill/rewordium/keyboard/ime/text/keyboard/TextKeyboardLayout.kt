@@ -63,6 +63,8 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.toSize
 import com.noxquill.rewordium.keyboard.FlorisImeService
 import com.noxquill.rewordium.keyboard.app.FlorisPreferenceStore
+import com.noxquill.rewordium.keyboard.ime.input.InputShiftState
+import androidx.compose.material3.MaterialTheme
 import com.noxquill.rewordium.keyboard.editorInstance
 import com.noxquill.rewordium.keyboard.glideTypingManager
 import com.noxquill.rewordium.keyboard.ime.editor.OperationScope
@@ -347,12 +349,20 @@ private fun TextKeyButton(
         key.isPressed -> SnyggSelector.PRESSED
         else -> SnyggSelector.NONE
     }
+    val isShiftKey = key.computedData.code == KeyCode.SHIFT
+    val boxAttributes = if (isShiftKey) {
+        attributes.toMutableMap().apply {
+            put(FlorisImeUi.Attr.ShiftState, InputShiftState.UNSHIFTED.name.lowercase())
+        }
+    } else {
+        attributes
+    }
     val size = remember(key, desiredKey) {
         key.visibleBounds.size.toDpSize()
     }
     SnyggBox(
         FlorisImeUi.Key.elementName,
-        attributes = attributes,
+        attributes = boxAttributes,
         selector = selector,
         modifier = Modifier
             .requiredSize(size)
@@ -380,7 +390,7 @@ private fun TextKeyButton(
         key.hintedLabel?.let { hintedLabel ->
             SnyggText(
                 elementName = FlorisImeUi.KeyHint.elementName,
-                attributes = attributes,
+                attributes = boxAttributes,
                 selector = selector,
                 modifier = Modifier
                     .wrapContentSize()
@@ -389,10 +399,18 @@ private fun TextKeyButton(
             )
         }
         key.foregroundImageVector?.let { imageVector ->
+            val shiftState = evaluator.state.inputShiftState
+            val isShiftActive = shiftState != InputShiftState.UNSHIFTED
+            val iconTint = if (isShiftKey && isShiftActive) {
+                MaterialTheme.colorScheme.primary
+            } else {
+                Color.Unspecified
+            }
             SnyggIcon(
                 modifier = Modifier.align(Alignment.Center),
                 imageVector = imageVector,
                 contentDescription = null,
+                tint = iconTint,
             )
         }
     }
