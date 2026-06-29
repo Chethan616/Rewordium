@@ -69,8 +69,10 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.graphics.vector.PathParser
+import androidx.compose.ui.res.vectorResource
 import android.widget.Toast
 import androidx.compose.ui.text.font.FontWeight
+import com.noxquill.rewordium.keyboard.R
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.noxquill.rewordium.keyboard.app.FlorisPreferenceStore
@@ -646,8 +648,7 @@ private fun EmojiPanelBottomBar(
 
         // Smiley slot
         BottomBarSlot(
-            label = "😀",
-            fontSize = 18.sp,
+            icon = ImageVector.vectorResource(id = R.drawable.ic_custom_emoji),
             fg = fg,
             isActive = activeMode == EmojiPanelMode.EMOJI,
             activeBg = activePillBg,
@@ -656,8 +657,7 @@ private fun EmojiPanelBottomBar(
 
         // GIF slot — KLIPY-backed picker (Task D).
         BottomBarSlot(
-            label = "GIF",
-            fontSize = 13.sp,
+            icon = ImageVector.vectorResource(id = R.drawable.ic_custom_gif),
             fg = if (activeMode == EmojiPanelMode.GIF) fg else fg.copy(alpha = 0.55f),
             isActive = activeMode == EmojiPanelMode.GIF,
             activeBg = activePillBg,
@@ -666,7 +666,7 @@ private fun EmojiPanelBottomBar(
 
         // Sticker slot — user-imported + WhatsApp packs (Task E).
         BottomBarSlot(
-            icon = StickerIcon,
+            icon = ImageVector.vectorResource(id = R.drawable.ic_custom_sticker),
             fg = fg,
             isActive = activeMode == EmojiPanelMode.STICKER,
             activeBg = activePillBg,
@@ -755,25 +755,6 @@ private val EMOTICONS = listOf(
     "(ToT)", "(=_=)", "d(-_^)", "(´･ω･`)", "(｀_´)", "(>_>)", "(<_<)",
     "ಠ_ಠ", "(ง •̀_•́)ง", "༼ つ ◕_◕ ༽つ", "(づ｡◕‿‿◕｡)づ", "♥‿♥", "ᕙ(⇀‸↼‶)ᕗ"
 )
-
-private val StickerIcon: ImageVector
-    get() = ImageVector.Builder(
-        name = "Sticker",
-        defaultWidth = 24.dp,
-        defaultHeight = 24.dp,
-        viewportWidth = 960f,
-        viewportHeight = 960f
-    ).apply {
-        addGroup(
-            name = "translateGroup",
-            translationY = 960f,
-        )
-        addPath(
-            pathData = PathParser().parsePathString("M460-360q69 0 120-45t60-113l-320 90q26 32 62 50t78 18ZM294-510l106-30q4-28-14-49t-46-21q-25 0-42.5 17.5T280-550q0 11 4 21t10 19Zm240-70 106-30q5-28-13.5-49T580-680q-25 0-42.5 17.5T520-620q0 11 4 21t10 19Zm106 460H200q-33 0-56.5-23.5T120-200v-560q0-33 23.5-56.5T200-840h560q33 0 56.5 23.5T840-760v440L640-120Zm-40-80v-80q0-33 23.5-56.5T680-360h80v-400H200v560h400Zm0 0Zm-400 0v-560 560Z").toNodes(),
-            fill = SolidColor(Color.White)
-        )
-        clearGroup()
-    }.build()
 
 @Composable
 private fun EmoticonGrid(

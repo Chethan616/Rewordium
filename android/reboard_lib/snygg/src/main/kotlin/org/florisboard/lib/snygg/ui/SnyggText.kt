@@ -16,6 +16,7 @@
 
 package org.florisboard.lib.snygg.ui
 
+import androidx.compose.ui.unit.TextUnit
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -55,6 +56,7 @@ fun SnyggText(
     selector: SnyggSelector? = null,
     modifier: Modifier = Modifier,
     text: String,
+    fontSize: TextUnit = TextUnit.Unspecified,
 ) {
     ProvideSnyggStyle(elementName, attributes, selector) { style ->
         Text(
@@ -66,7 +68,7 @@ fun SnyggText(
                 .snyggPadding(style),
             text = text,
             color = style.foreground(),
-            fontSize = style.fontSize(),
+            fontSize = if (fontSize != TextUnit.Unspecified) fontSize else style.fontSize(),
             fontStyle = style.fontStyle(),
             fontWeight = style.fontWeight(),
             fontFamily = style.fontFamily(LocalSnyggPreloadedCustomFontFamilies.current),
