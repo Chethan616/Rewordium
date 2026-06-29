@@ -227,10 +227,10 @@ fun ComputingEvaluator.computeImageVector(data: KeyData): ImageVector? {
             Icons.Outlined.Mic
         }
         KeyCode.AI_REWRITE -> {
-            context()?.vectorResource(id = R.drawable.ic_quick_ai_rewrite)
+            context()?.vectorResource(id = R.drawable.ic_custom_ai)
         }
         KeyCode.AI_PANEL_TOGGLE -> {
-            context()?.vectorResource(id = R.drawable.ic_quick_ai_panel)
+            context()?.vectorResource(id = R.drawable.ic_custom_ai)
         }
         KeyCode.IME_HIDE_UI -> {
             Icons.Outlined.KeyboardHide
@@ -242,17 +242,17 @@ fun ComputingEvaluator.computeImageVector(data: KeyData): ImageVector? {
             val imeOptions = evaluator.editorInfo.imeOptions
             val inputAttributes = evaluator.editorInfo.inputAttributes
             if (imeOptions.flagNoEnterAction || inputAttributes.flagTextMultiLine) {
-                Icons.AutoMirrored.Outlined.KeyboardReturn
+                context()?.vectorResource(id = R.drawable.ic_custom_return)
             } else {
                 when (imeOptions.action) {
-                    ImeOptions.Action.DONE -> Icons.Outlined.Done
-                    ImeOptions.Action.GO -> if (isBrowserApp) Icons.Outlined.Search else Icons.AutoMirrored.Outlined.ArrowRightAlt
-                    ImeOptions.Action.NEXT -> if (isBrowserApp) Icons.Outlined.Search else Icons.AutoMirrored.Outlined.ArrowRightAlt
-                    ImeOptions.Action.NONE -> Icons.AutoMirrored.Outlined.KeyboardReturn
-                    ImeOptions.Action.PREVIOUS -> if (isBrowserApp) Icons.Outlined.Search else Icons.AutoMirrored.Outlined.ArrowRightAlt
-                    ImeOptions.Action.SEARCH -> Icons.Outlined.Search
-                    ImeOptions.Action.SEND -> Icons.AutoMirrored.Outlined.Send
-                    ImeOptions.Action.UNSPECIFIED -> Icons.AutoMirrored.Outlined.KeyboardReturn
+                    ImeOptions.Action.DONE -> context()?.vectorResource(id = R.drawable.ic_custom_done)
+                    ImeOptions.Action.GO -> if (isBrowserApp) context()?.vectorResource(id = R.drawable.ic_custom_search) else context()?.vectorResource(id = R.drawable.ic_custom_return)
+                    ImeOptions.Action.NEXT -> if (isBrowserApp) context()?.vectorResource(id = R.drawable.ic_custom_search) else context()?.vectorResource(id = R.drawable.ic_custom_return)
+                    ImeOptions.Action.NONE -> context()?.vectorResource(id = R.drawable.ic_custom_return)
+                    ImeOptions.Action.PREVIOUS -> if (isBrowserApp) context()?.vectorResource(id = R.drawable.ic_custom_search) else context()?.vectorResource(id = R.drawable.ic_custom_return)
+                    ImeOptions.Action.SEARCH -> context()?.vectorResource(id = R.drawable.ic_custom_search)
+                    ImeOptions.Action.SEND -> context()?.vectorResource(id = R.drawable.ic_custom_return)
+                    ImeOptions.Action.UNSPECIFIED -> context()?.vectorResource(id = R.drawable.ic_custom_return)
                 }
             }
         }
@@ -263,13 +263,13 @@ fun ComputingEvaluator.computeImageVector(data: KeyData): ImageVector? {
             Icons.Outlined.Mood
         }
         KeyCode.IME_UI_MODE_CLIPBOARD -> {
-            Icons.Outlined.ContentPaste
+            context()?.vectorResource(id = R.drawable.ic_custom_clipboard)
         }
         KeyCode.LANGUAGE_SWITCH -> {
             Icons.Outlined.Language
         }
         KeyCode.SETTINGS -> {
-            Icons.Outlined.Settings
+            context()?.vectorResource(id = R.drawable.ic_custom_settings)
         }
         KeyCode.SHIFT -> {
             when (evaluator.state.inputShiftState) {
@@ -291,13 +291,13 @@ fun ComputingEvaluator.computeImageVector(data: KeyData): ImageVector? {
             }
         }
         KeyCode.UNDO -> {
-            Icons.AutoMirrored.Outlined.Undo
+            context()?.vectorResource(id = R.drawable.ic_custom_undo)
         }
         KeyCode.REDO -> {
-            Icons.AutoMirrored.Outlined.Redo
+            context()?.vectorResource(id = R.drawable.ic_custom_redo)
         }
         KeyCode.TOGGLE_ACTIONS_OVERFLOW -> {
-            Icons.Outlined.MoreHoriz
+            context()?.vectorResource(id = R.drawable.ic_custom_more_horiz)
         }
         KeyCode.TOGGLE_INCOGNITO_MODE -> {
             if (evaluator.state.isIncognitoMode) {
