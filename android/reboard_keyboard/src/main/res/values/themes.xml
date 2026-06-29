@@ -30,6 +30,8 @@
         <item name="android:forceDarkAllowed" tools:targetApi="q">false</item>
         <!-- FFS -->
         <item name="android:navigationBarColor">@android:color/transparent</item>
+        <item name="android:windowBackground">@android:color/transparent</item>
+        <item name="android:colorBackground">@android:color/transparent</item>
     </style>
 
     <style name="FlorisAppTheme.Transparent" parent="android:style/Theme.Material.NoActionBar">
