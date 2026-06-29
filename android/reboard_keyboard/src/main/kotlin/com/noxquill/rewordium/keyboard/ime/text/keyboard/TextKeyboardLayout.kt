@@ -60,6 +60,8 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.toSize
 import com.noxquill.rewordium.keyboard.FlorisImeService
 import com.noxquill.rewordium.keyboard.app.FlorisPreferenceStore
@@ -371,6 +373,7 @@ private fun TextKeyButton(
         val isTelPadKey = key.computedData.type == KeyType.NUMERIC && evaluator.keyboard.mode == KeyboardMode.PHONE
         key.label?.let { label ->
             var customLabel = label
+            var customFontSize = TextUnit.Unspecified
             if (key.computedData.code == KeyCode.SPACE) {
                 val prefs by FlorisPreferenceStore
                 val spaceBarMode by prefs.keyboard.spaceBarMode.observeAsState()
@@ -379,12 +382,15 @@ private fun TextKeyButton(
                     SpaceBarMode.CURRENT_LANGUAGE -> {}
                     SpaceBarMode.SPACE_BAR_KEY -> customLabel = "␣"
                 }
+            } else if (key.computedData.code == KeyCode.VIEW_SYMBOLS) {
+                customFontSize = 14.sp
             }
             SnyggText(
                 modifier = Modifier
                     .wrapContentSize()
                     .align(if (isTelPadKey) BiasAlignment(-0.5f, 0f) else Alignment.Center),
                 text = customLabel,
+                fontSize = customFontSize,
             )
         }
         key.hintedLabel?.let { hintedLabel ->
@@ -399,13 +405,7 @@ private fun TextKeyButton(
             )
         }
         key.foregroundImageVector?.let { imageVector ->
-            val shiftState = evaluator.state.inputShiftState
-            val isShiftActive = shiftState != InputShiftState.UNSHIFTED
-            val iconTint = if (isShiftKey && isShiftActive) {
-                MaterialTheme.colorScheme.primary
-            } else {
-                Color.Unspecified
-            }
+            val iconTint = Color.Unspecified
             SnyggIcon(
                 modifier = Modifier.align(Alignment.Center),
                 imageVector = imageVector,
