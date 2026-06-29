@@ -140,6 +140,14 @@ fun DevtoolsScreen() = FlorisScreen {
             )
         }
 
+        PreferenceGroup(title = stringRes(R.string.devtools__experimental_view__title)) {
+            SwitchPreference(
+                prefs.devtools.experimentalRoundedSmartbar,
+                title = stringRes(R.string.devtools__experimental_rounded_smartbar__label),
+                summary = stringRes(R.string.devtools__experimental_rounded_smartbar__summary),
+            )
+        }
+
         PreferenceGroup(title = stringRes(R.string.devtools__group_android__title)) {
             Preference(
                 title = stringRes(R.string.devtools__android_settings_global__title),

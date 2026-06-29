@@ -83,6 +83,7 @@ fun SnyggSurfaceView(
     selector: SnyggSelector? = null,
     modifier: Modifier = Modifier,
     backgroundImageDescription: String? = null,
+    clipToRoundedSmartbar: Boolean = false,
 ) {
     ProvideSnyggStyle(elementName, attributes, selector) { style ->
         val assetResolver = LocalSnyggAssetResolver.current
@@ -148,6 +149,18 @@ fun SnyggSurfaceView(
                         if (lp == null || lp.width != parentSize.width || lp.height != parentSize.height) {
                             view.layoutParams = ViewGroup.LayoutParams(parentSize.width, parentSize.height)
                             view.requestLayout()
+                        }
+                        if (clipToRoundedSmartbar) {
+                            view.clipToOutline = true
+                            view.outlineProvider = object : android.view.ViewOutlineProvider() {
+                                override fun getOutline(view: android.view.View, outline: android.graphics.Outline) {
+                                    val radius = (16 * view.resources.displayMetrics.density).toInt()
+                                    outline.setRoundRect(0, 0, view.width, view.height + radius, radius.toFloat())
+                                }
+                            }
+                        } else {
+                            view.clipToOutline = false
+                            view.outlineProvider = null
                         }
                         Log.d("SnyggSurfaceView", "updateSize(height=${view.height},width=${view.width})")
                     }
