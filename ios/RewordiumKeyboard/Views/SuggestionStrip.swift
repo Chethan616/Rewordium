@@ -158,26 +158,14 @@ struct SuggestionStrip: View {
 
     private struct StripBackground: View {
         var body: some View {
-            if #available(iOS 26.0, *) {
-                Rectangle()
-                    .fill(.thinMaterial)
-                    .glassEffect()
-                    .overlay(
-                        Rectangle()
-                            .frame(height: RewordiumTokens.Stroke.hairline)
-                            .foregroundStyle(.quaternary),
-                        alignment: .bottom
-                    )
-            } else {
-                Rectangle()
-                    .fill(.thinMaterial)
-                    .overlay(
-                        Rectangle()
-                            .frame(height: RewordiumTokens.Stroke.hairline)
-                            .foregroundStyle(.quaternary),
-                        alignment: .bottom
-                    )
-            }
+            Rectangle()
+                .fill(.thinMaterial)
+                .overlay(
+                    Rectangle()
+                        .frame(height: RewordiumTokens.Stroke.hairline)
+                        .foregroundStyle(.quaternary),
+                    alignment: .bottom
+                )
         }
     }
 }

@@ -51,7 +51,6 @@ struct AIToolbar: View {
                 syncMode(from: newStatus)
             }
             .sensoryFeedback(.selection, trigger: mode)
-            .rewordiumGlassContainer()
     }
 
     // MARK: - Mode dispatch
@@ -512,14 +511,8 @@ private struct AIActionChip: View {
 private struct GlassSurfaceBackground: View {
     var body: some View {
         ZStack {
-            if #available(iOS 26.0, *) {
-                Rectangle()
-                    .fill(.regularMaterial)
-                    .glassEffect()
-            } else {
-                Rectangle()
-                    .fill(.ultraThinMaterial)
-            }
+            Rectangle()
+                .fill(.ultraThinMaterial)
         }
         .overlay(
             Rectangle()

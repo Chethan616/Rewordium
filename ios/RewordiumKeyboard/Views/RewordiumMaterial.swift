@@ -37,12 +37,7 @@ enum RewordiumTokens {
 
 /// Background material for the toolbar surface.
 ///
-/// iOS 15-25: `.ultraThinMaterial` matches the system predictive bar.
-/// iOS 26+:   `.glassEffect()` applies Liquid Glass — a subtle refraction
-///            + edge-light treatment that the system itself uses on
-///            toolbars and sheets. We pick the more diffuse `.regular`
-///            variant so the bar reads as a calm surface above the
-///            keyboard, not a flashy element competing for attention.
+/// `.ultraThinMaterial` matches the system predictive bar.
 struct RewordiumSurface: ViewModifier {
     func body(content: Content) -> some View {
         content
@@ -59,17 +54,11 @@ struct RewordiumSurface: ViewModifier {
         var body: some View {
             Rectangle()
                 .fill(.regularMaterial)
-                .glassEffect()
         }
     }
 }
 
 /// Chip background — flat, hairline border, faint primary tint when pressed.
-///
-/// On iOS 26 we adopt `.glassEffect(.regular, in: …)` so the chip refracts
-/// the toolbar surface beneath it. The `GlassEffectContainer` wrapping the
-/// whole AIToolbar coalesces neighboring chips so they blend instead of
-/// stacking glass-on-glass.
 struct RewordiumChipSurface: ViewModifier {
     var isPressed: Bool = false
     var isHighlighted: Bool = false
@@ -78,16 +67,12 @@ struct RewordiumChipSurface: ViewModifier {
         content
             .background(
                 RoundedRectangle(cornerRadius: RewordiumTokens.Radius.chip, style: .continuous)
-                    .fill(Color.accentColor.opacity(isHighlighted ? 0.18 : 0.0))
-            )
-            .glassEffect(
-                isHighlighted ? .regular.tint(.accentColor.opacity(0.15)) : .regular,
-                in: RoundedRectangle(cornerRadius: RewordiumTokens.Radius.chip, style: .continuous)
+                    .fill(isHighlighted ? Color.accentColor.opacity(0.18) : .background.opacity(0.6))
             )
             .overlay(
                 RoundedRectangle(cornerRadius: RewordiumTokens.Radius.chip, style: .continuous)
                     .strokeBorder(
-                        isHighlighted ? Color.accentColor.opacity(0.7) : Color.primary.opacity(0.08),
+                        isHighlighted ? Color.accentColor.opacity(0.7) : Color.primary.opacity(0.12),
                         lineWidth: isHighlighted ? 1.2 : RewordiumTokens.Stroke.hairline
                     )
             )
@@ -97,20 +82,19 @@ struct RewordiumChipSurface: ViewModifier {
 }
 
 /// Pill surface for persona chips, suggestion-strip slots, and small CTAs.
-/// Same Liquid Glass treatment as a chip but with a pill radius and a tint
-/// when selected.
 struct RewordiumPillSurface: ViewModifier {
     var isSelected: Bool = false
 
     func body(content: Content) -> some View {
         content
-            .glassEffect(
-                isSelected ? .regular.tint(.accentColor.opacity(0.22)) : .regular,
-                in: Capsule()
+            .background(
+                Capsule().fill(isSelected
+                    ? Color.accentColor.opacity(0.18)
+                    : Color.primary.opacity(0.06))
             )
             .overlay(
                 Capsule().strokeBorder(
-                    isSelected ? Color.accentColor.opacity(0.7) : Color.primary.opacity(0.10),
+                    isSelected ? Color.accentColor.opacity(0.6) : Color.primary.opacity(0.10),
                     lineWidth: isSelected ? 1.0 : RewordiumTokens.Stroke.hairline
                 )
             )
@@ -122,13 +106,13 @@ struct RewordiumPillSurface: ViewModifier {
 struct RewordiumCardSurface: ViewModifier {
     func body(content: Content) -> some View {
         content
-            .glassEffect(
-                .regular.tint(.accentColor.opacity(0.08)),
-                in: RoundedRectangle(cornerRadius: RewordiumTokens.Radius.card, style: .continuous)
+            .background(
+                RoundedRectangle(cornerRadius: RewordiumTokens.Radius.card, style: .continuous)
+                    .fill(.ultraThinMaterial)
             )
             .overlay(
                 RoundedRectangle(cornerRadius: RewordiumTokens.Radius.card, style: .continuous)
-                    .strokeBorder(Color.primary.opacity(0.08), lineWidth: RewordiumTokens.Stroke.hairline)
+                    .strokeBorder(Color.primary.opacity(0.10), lineWidth: RewordiumTokens.Stroke.hairline)
             )
     }
 }
@@ -146,20 +130,13 @@ extension View {
 
     func rewordiumCard() -> some View { modifier(RewordiumCardSurface()) }
 
-    /// Prominent CTA button style. On iOS 26 we adopt the Liquid Glass
-    /// `glassProminent` style (matches the upstream KeyboardKit demo). Older
-    /// targets keep the capsule + accent-color background already encoded in
-    /// the calling view — so this modifier is intentionally a no-op pre-26.
     @ViewBuilder
     func rewordiumProminentStyle() -> some View {
-        self.buttonStyle(.glassProminent)
+        self.buttonStyle(.plain)
     }
 
-    /// Wraps content in a `GlassEffectContainer` on iOS 26 so neighboring
-    /// glass surfaces coalesce into one refraction layer instead of
-    /// stacking. No-op on earlier OSes.
     @ViewBuilder
     func rewordiumGlassContainer() -> some View {
-        GlassEffectContainer { self }
+        self
     }
 }
