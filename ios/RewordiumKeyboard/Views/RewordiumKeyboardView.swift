@@ -61,7 +61,6 @@ struct RewordiumKeyboardView: View {
     private var keyboard: some View {
         KeyboardView(
             layout: customLayout,
-            state: state,
             services: services,
             buttonContent: { params in
                 switch params.item.action {
