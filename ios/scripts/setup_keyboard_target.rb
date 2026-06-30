@@ -39,7 +39,7 @@ KB_DIR              = 'RewordiumKeyboard'
 RUNNER_ENTITLEMENTS = 'Runner/Runner.entitlements'
 
 KEYBOARDKIT_URL      = 'https://github.com/KeyboardKit/KeyboardKit.git'
-KEYBOARDKIT_VERSION  = '10.5.0'         # pin minor — KeyboardKit ships often
+KEYBOARDKIT_VERSION  = '10.4.0'         # pin minor — KeyboardKit ships often
 KEYBOARDKIT_PRODUCT  = 'KeyboardKit'
 
 # ----------------------------------------------------------------------------
