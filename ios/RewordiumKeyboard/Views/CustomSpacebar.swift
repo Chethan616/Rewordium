@@ -8,9 +8,9 @@ import KeyboardKit
 /// on-device that the right binary loaded. The keyboard's actual space
 /// behavior (long-press cursor move, predictive locale label, etc.) is
 /// untouched — we layer purely visual content over `defaultView`.
-struct CustomSpacebar: View {
+struct CustomSpacebar<Content: View>: View {
 
-    let defaultView: AnyView
+    let defaultView: Content
 
     var body: some View {
         defaultView

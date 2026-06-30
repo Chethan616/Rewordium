@@ -14,9 +14,9 @@ import KeyboardKit
 /// Behavior matches the system keyboard's globe key:
 ///   • Tap         → `advanceToNextInputMode()` (cycle to next enabled keyboard)
 ///   • Long-press  → `handleInputModeList(from:with:)` (system picker)
-struct GlobeButtonView: View {
+struct GlobeButtonView<Content: View>: View {
 
-    let defaultView: AnyView
+    let defaultView: Content
     unowned let controller: KeyboardInputViewController
 
     var body: some View {

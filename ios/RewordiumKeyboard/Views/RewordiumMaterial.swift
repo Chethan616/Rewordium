@@ -57,14 +57,9 @@ struct RewordiumSurface: ViewModifier {
 
     private struct GlassyBackground: View {
         var body: some View {
-            if #available(iOS 26.0, *) {
-                Rectangle()
-                    .fill(.regularMaterial)
-                    .glassEffect()
-            } else {
-                Rectangle()
-                    .fill(.ultraThinMaterial)
-            }
+            Rectangle()
+                .fill(.regularMaterial)
+                .glassEffect()
         }
     }
 }
@@ -80,45 +75,24 @@ struct RewordiumChipSurface: ViewModifier {
     var isHighlighted: Bool = false
 
     func body(content: Content) -> some View {
-        if #available(iOS 26.0, *) {
-            content
-                .background(
-                    RoundedRectangle(cornerRadius: RewordiumTokens.Radius.chip, style: .continuous)
-                        .fill(Color.accentColor.opacity(isHighlighted ? 0.18 : 0.0))
-                )
-                .glassEffect(
-                    isHighlighted ? .regular.tint(.accentColor.opacity(0.15)) : .regular,
-                    in: RoundedRectangle(cornerRadius: RewordiumTokens.Radius.chip, style: .continuous)
-                )
-                .overlay(
-                    RoundedRectangle(cornerRadius: RewordiumTokens.Radius.chip, style: .continuous)
-                        .strokeBorder(
-                            isHighlighted ? Color.accentColor.opacity(0.7) : Color.primary.opacity(0.08),
-                            lineWidth: isHighlighted ? 1.2 : RewordiumTokens.Stroke.hairline
-                        )
-                )
-                .scaleEffect(isPressed ? 0.96 : 1.0)
-                .animation(RewordiumTokens.AnimationCurve.tap, value: isPressed)
-        } else {
-            content
-                .background(
-                    RoundedRectangle(cornerRadius: RewordiumTokens.Radius.chip, style: .continuous)
-                        .fill(.background.opacity(isHighlighted ? 0.0 : 0.6))
-                )
-                .background(
-                    RoundedRectangle(cornerRadius: RewordiumTokens.Radius.chip, style: .continuous)
-                        .fill(Color.accentColor.opacity(isHighlighted ? 0.10 : 0.0))
-                )
-                .overlay(
-                    RoundedRectangle(cornerRadius: RewordiumTokens.Radius.chip, style: .continuous)
-                        .strokeBorder(
-                            isHighlighted ? Color.accentColor.opacity(0.7) : Color.primary.opacity(0.12),
-                            lineWidth: isHighlighted ? 1.2 : RewordiumTokens.Stroke.hairline
-                        )
-                )
-                .scaleEffect(isPressed ? 0.96 : 1.0)
-                .animation(RewordiumTokens.AnimationCurve.tap, value: isPressed)
-        }
+        content
+            .background(
+                RoundedRectangle(cornerRadius: RewordiumTokens.Radius.chip, style: .continuous)
+                    .fill(Color.accentColor.opacity(isHighlighted ? 0.18 : 0.0))
+            )
+            .glassEffect(
+                isHighlighted ? .regular.tint(.accentColor.opacity(0.15)) : .regular,
+                in: RoundedRectangle(cornerRadius: RewordiumTokens.Radius.chip, style: .continuous)
+            )
+            .overlay(
+                RoundedRectangle(cornerRadius: RewordiumTokens.Radius.chip, style: .continuous)
+                    .strokeBorder(
+                        isHighlighted ? Color.accentColor.opacity(0.7) : Color.primary.opacity(0.08),
+                        lineWidth: isHighlighted ? 1.2 : RewordiumTokens.Stroke.hairline
+                    )
+            )
+            .scaleEffect(isPressed ? 0.96 : 1.0)
+            .animation(RewordiumTokens.AnimationCurve.tap, value: isPressed)
     }
 }
 
@@ -129,32 +103,17 @@ struct RewordiumPillSurface: ViewModifier {
     var isSelected: Bool = false
 
     func body(content: Content) -> some View {
-        if #available(iOS 26.0, *) {
-            content
-                .glassEffect(
-                    isSelected ? .regular.tint(.accentColor.opacity(0.22)) : .regular,
-                    in: Capsule()
+        content
+            .glassEffect(
+                isSelected ? .regular.tint(.accentColor.opacity(0.22)) : .regular,
+                in: Capsule()
+            )
+            .overlay(
+                Capsule().strokeBorder(
+                    isSelected ? Color.accentColor.opacity(0.7) : Color.primary.opacity(0.10),
+                    lineWidth: isSelected ? 1.0 : RewordiumTokens.Stroke.hairline
                 )
-                .overlay(
-                    Capsule().strokeBorder(
-                        isSelected ? Color.accentColor.opacity(0.7) : Color.primary.opacity(0.10),
-                        lineWidth: isSelected ? 1.0 : RewordiumTokens.Stroke.hairline
-                    )
-                )
-        } else {
-            content
-                .background(
-                    Capsule().fill(isSelected
-                        ? Color.accentColor.opacity(0.18)
-                        : Color.primary.opacity(0.06))
-                )
-                .overlay(
-                    Capsule().strokeBorder(
-                        isSelected ? Color.accentColor.opacity(0.6) : Color.primary.opacity(0.10),
-                        lineWidth: isSelected ? 1.0 : RewordiumTokens.Stroke.hairline
-                    )
-                )
-        }
+            )
     }
 }
 
@@ -162,27 +121,15 @@ struct RewordiumPillSurface: ViewModifier {
 /// and a subtle accent tint to set it apart from the chip grid.
 struct RewordiumCardSurface: ViewModifier {
     func body(content: Content) -> some View {
-        if #available(iOS 26.0, *) {
-            content
-                .glassEffect(
-                    .regular.tint(.accentColor.opacity(0.08)),
-                    in: RoundedRectangle(cornerRadius: RewordiumTokens.Radius.card, style: .continuous)
-                )
-                .overlay(
-                    RoundedRectangle(cornerRadius: RewordiumTokens.Radius.card, style: .continuous)
-                        .strokeBorder(Color.primary.opacity(0.08), lineWidth: RewordiumTokens.Stroke.hairline)
-                )
-        } else {
-            content
-                .background(
-                    RoundedRectangle(cornerRadius: RewordiumTokens.Radius.card, style: .continuous)
-                        .fill(.ultraThinMaterial)
-                )
-                .overlay(
-                    RoundedRectangle(cornerRadius: RewordiumTokens.Radius.card, style: .continuous)
-                        .strokeBorder(Color.primary.opacity(0.10), lineWidth: RewordiumTokens.Stroke.hairline)
-                )
-        }
+        content
+            .glassEffect(
+                .regular.tint(.accentColor.opacity(0.08)),
+                in: RoundedRectangle(cornerRadius: RewordiumTokens.Radius.card, style: .continuous)
+            )
+            .overlay(
+                RoundedRectangle(cornerRadius: RewordiumTokens.Radius.card, style: .continuous)
+                    .strokeBorder(Color.primary.opacity(0.08), lineWidth: RewordiumTokens.Stroke.hairline)
+            )
     }
 }
 
@@ -205,11 +152,7 @@ extension View {
     /// the calling view — so this modifier is intentionally a no-op pre-26.
     @ViewBuilder
     func rewordiumProminentStyle() -> some View {
-        if #available(iOS 26.0, *) {
-            self.buttonStyle(.glassProminent)
-        } else {
-            self
-        }
+        self.buttonStyle(.glassProminent)
     }
 
     /// Wraps content in a `GlassEffectContainer` on iOS 26 so neighboring
@@ -217,10 +160,6 @@ extension View {
     /// stacking. No-op on earlier OSes.
     @ViewBuilder
     func rewordiumGlassContainer() -> some View {
-        if #available(iOS 26.0, *) {
-            GlassEffectContainer { self }
-        } else {
-            self
-        }
+        GlassEffectContainer { self }
     }
 }

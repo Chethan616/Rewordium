@@ -65,16 +65,28 @@ struct RewordiumKeyboardView: View {
         KeyboardView(
             layout: nil,
             services: services,
-            buttonContent: { $0.view },
-            buttonView:    { params in
-                let defaultView = AnyView(params.view)
+            buttonContent: { params in
+                switch params.item.action {
+                case .nextKeyboard:
+                    Image(systemName: "globe")
+                        .font(.body)
+                        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .center)
+                case .keyboardType(.emojis):
+                    Image(systemName: "face.smiling")
+                        .font(.body)
+                        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .center)
+                default:
+                    params.view
+                }
+            },
+            buttonView: { params in
                 switch params.item.action {
                 case .space:
-                    AnyView(CustomSpacebar(defaultView: defaultView))
+                    CustomSpacebar(defaultView: params.view)
                 case .nextKeyboard:
-                    AnyView(GlobeButtonView(defaultView: defaultView, controller: controller))
+                    GlobeButtonView(defaultView: params.view, controller: controller)
                 default:
-                    defaultView
+                    params.view
                 }
             },
             collapsedView: { $0.view },
