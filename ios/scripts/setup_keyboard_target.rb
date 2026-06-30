@@ -249,10 +249,8 @@ end
 
 embed_phase = target.copy_files_build_phases.find { |p| p.name == 'Embed Frameworks' }
 unless embed_phase
-  embed_phase = project.new(Xcodeproj::Project::Object::PBXCopyFilesBuildPhase)
-  embed_phase.name = 'Embed Frameworks'
-  embed_phase.symbolic_dst = :frameworks
-  target.build_phases << embed_phase
+  embed_phase = target.new_copy_files_build_phase('Embed Frameworks')
+  embed_phase.symbol_dst_subfolder_spec = :frameworks
 end
 
 dep = target.package_product_dependencies.find { |d| d.product_name == KEYBOARDKIT_PRODUCT }
