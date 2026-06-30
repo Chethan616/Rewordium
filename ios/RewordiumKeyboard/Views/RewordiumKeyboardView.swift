@@ -51,14 +51,8 @@ struct RewordiumKeyboardView: View {
     /// intact — we're only decorating, not replacing the button's gesture
     /// stack.
     private var keyboard: some View {
-        var layout = services.layoutProvider.keyboardLayout(for: state.keyboardContext)
-        // Strip out Tab and CapsLock entirely from the layout so they leave no gaps
-        layout.itemRows = layout.itemRows.map { row in
-            row.filter { $0.action != KeyboardAction.capsLock && $0.action != KeyboardAction.tab }
-        }
-
-        return KeyboardView(
-            layout: layout,
+        KeyboardView(
+            state: state,
             services: services,
             buttonContent: { params in
                 switch params.item.action {
@@ -115,6 +109,8 @@ struct RewordiumKeyboardView: View {
                     GlobeButtonView(defaultView: params.view, controller: controller)
                 case .backspace:
                     SmartBackspaceButton(controller: controller, defaultView: params.view)
+                case .capsLock, .tab:
+                    EmptyView()
                 default:
                     params.view
                 }
