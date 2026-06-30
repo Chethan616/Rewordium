@@ -51,10 +51,10 @@ struct RewordiumKeyboardView: View {
     /// intact — we're only decorating, not replacing the button's gesture
     /// stack.
     private var keyboard: some View {
-        var layout = services.layoutService.keyboardLayout(for: state.keyboardContext)
+        var layout = services.layoutProvider.keyboardLayout(for: state.keyboardContext)
         // Strip out Tab and CapsLock entirely from the layout so they leave no gaps
         layout.itemRows = layout.itemRows.map { row in
-            row.filter { $0.action != .capsLock && $0.action != .tab }
+            row.filter { $0.action != KeyboardAction.capsLock && $0.action != KeyboardAction.tab }
         }
 
         return KeyboardView(
