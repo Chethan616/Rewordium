@@ -1,26 +1,11 @@
-<!--
-  Rewordium AI mark — used in the smartbar quick-action row for AI Rewrite.
-
-  Visual: three filled sparkle shapes (one large + two small accents) sitting
-  in the smartbar slot. Filled rather than stroked so the icon has the same
-  optical weight as Gboard's "magic" mark and reads cleanly at 24dp on light
-  AND dark themes. Reference: aiiconref.jpg.
-
-  Paths are simple closed polygons — flipping from strokeColor to fillColor
-  is enough to produce the solid version; no path-data changes required.
--->
 <vector xmlns:android="http://schemas.android.com/apk/res/android"
     android:width="24dp"
     android:height="24dp"
-    android:viewportWidth="24"
-    android:viewportHeight="24">
-    <path
-        android:fillColor="#000"
-        android:pathData="M11,4 L12.5,8.5 L17,10 L12.5,11.5 L11,16 L9.5,11.5 L5,10 L9.5,8.5 Z" />
-    <path
-        android:fillColor="#000"
-        android:pathData="M18.5,14 L19.25,16.25 L21.5,17 L19.25,17.75 L18.5,20 L17.75,17.75 L15.5,17 L17.75,16.25 Z" />
-    <path
-        android:fillColor="#000"
-        android:pathData="M5,16 L5.5,17.5 L7,18 L5.5,18.5 L5,20 L4.5,18.5 L3,18 L4.5,17.5 Z" />
+    android:viewportWidth="960"
+    android:viewportHeight="960">
+    <group android:translateY="960">
+        <path
+            android:fillColor="#000"
+            android:pathData="M715-715q-35-35-35-85t35-85q35-35 85-35t85 35q35 35 35 85t-35 85q-35 35-85 35t-85-35ZM554-120q-54 0-91-37t-37-89q0-76 61.5-137.5T641-460q-3-36-18-54.5T582-533q-30 0-65 25t-83 82q-78 93-114.5 121T241-277q-51 0-86-38t-35-92q0-54 23.5-110.5T223-653q19-26 28-44t9-29q0-7-2.5-10.5T250-740q-5 0-12 3t-15 11q-15 14-34.5 15T155-724q-15-16-15.5-37.5T155-797q24-21 48-32t47-11q46 0 78 32t32 80q0 29-15 64t-50 84q-38 54-56.5 95T220-413q0 17 5.5 26.5T241-377q10 0 17.5-5.5T286-409q13-14 31-34.5t44-50.5q63-75 114-107t107-32q67 0 110 45t49 123h49q21 0 35.5 14.5T840-415q0 21-14.5 35.5T790-365h-49q-8 112-58.5 178.5T554-120Zm2-100q32 0 54-36.5T640-358q-46 11-80 43.5T526-250q0 14 8 22t22 8Z" />
+    </group>
 </vector>

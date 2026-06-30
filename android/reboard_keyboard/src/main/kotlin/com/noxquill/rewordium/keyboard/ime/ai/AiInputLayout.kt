@@ -82,7 +82,9 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalLayoutDirection
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.graphics.vector.rememberVectorPainter
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
@@ -378,12 +380,12 @@ fun AiInputLayout(
                                 fg = fg,
                                 icon = {
                                     Icon(
-                                        when (mode) {
-                                            AiMode.CONTEXT -> Icons.Default.AutoFixHigh
-                                            AiMode.REWRITE, AiMode.ENHANCE -> Icons.Default.Edit
-                                            AiMode.APPEND -> Icons.Default.ArrowDownward
+                                        painter = when (mode) {
+                                            AiMode.CONTEXT -> painterResource(id = R.drawable.ic_quick_ai_context)
+                                            AiMode.REWRITE, AiMode.ENHANCE -> painterResource(id = R.drawable.ic_quick_ai_rewrite)
+                                            AiMode.APPEND -> painterResource(id = R.drawable.ic_quick_ai_append)
                                         },
-                                        null, tint = fg, modifier = Modifier.size(14.dp)
+                                        contentDescription = null, tint = fg, modifier = Modifier.size(14.dp)
                                     )
                                 },
                                 label = {
@@ -563,9 +565,9 @@ fun AiInputLayout(
                                             modifier = Modifier.padding(16.dp)
                                         ) {
                                             Icon(
-                                                imageVector = when (aiMode) {
-                                                    AiMode.ENHANCE -> Icons.Default.Edit
-                                                    else -> Icons.Default.AutoFixHigh
+                                                painter = when (aiMode) {
+                                                    AiMode.ENHANCE -> painterResource(id = R.drawable.ic_quick_ai_rewrite)
+                                                    else -> painterResource(id = R.drawable.ic_quick_ai_context)
                                                 },
                                                 contentDescription = null,
                                                 tint = primary.copy(alpha = 0.5f),
@@ -742,11 +744,11 @@ fun AiInputLayout(
                                 contentPadding = PaddingValues(horizontal = 12.dp, vertical = 0.dp),
                             ) {
                                 Icon(
-                                    when (aiMode) {
-                                        AiMode.ENHANCE, AiMode.REWRITE, AiMode.CONTEXT -> Icons.Default.Check
-                                        AiMode.APPEND -> Icons.Default.ArrowDownward
+                                    painter = when (aiMode) {
+                                        AiMode.ENHANCE, AiMode.REWRITE, AiMode.CONTEXT -> rememberVectorPainter(Icons.Default.Check)
+                                        AiMode.APPEND -> painterResource(id = R.drawable.ic_quick_ai_append)
                                     },
-                                    null,
+                                    contentDescription = null,
                                     modifier = Modifier.size(19.dp),
                                 )
                                 Spacer(Modifier.width(4.dp))
@@ -802,16 +804,18 @@ fun AiInputLayout(
                                 .fillMaxHeight(0.84f),
                             contentPadding = PaddingValues(horizontal = 12.dp, vertical = 0.dp),
                         ) {
-                            Icon(
-                                when (aiMode) {
-                                    AiMode.ENHANCE, AiMode.REWRITE -> Icons.Default.Edit
-                                    AiMode.APPEND -> Icons.Default.ArrowDownward
-                                    AiMode.CONTEXT -> Icons.Default.AutoFixHigh
-                                },
-                                null,
-                                modifier = Modifier.size(18.dp),
-                            )
-                            Spacer(Modifier.width(6.dp))
+                            if (aiMode != AiMode.CONTEXT) {
+                                Icon(
+                                    painter = when (aiMode) {
+                                        AiMode.ENHANCE, AiMode.REWRITE -> painterResource(id = R.drawable.ic_quick_ai_rewrite)
+                                        AiMode.APPEND -> painterResource(id = R.drawable.ic_quick_ai_append)
+                                        else -> painterResource(id = R.drawable.ic_quick_ai_rewrite)
+                                    },
+                                    contentDescription = null,
+                                    modifier = Modifier.size(18.dp),
+                                )
+                                Spacer(Modifier.width(6.dp))
+                            }
                             Text(
                                 when (aiMode) {
                                     AiMode.ENHANCE -> stringResource(R.string.ai__prompt_enhancer_action)

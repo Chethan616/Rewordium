@@ -26,6 +26,7 @@ import com.noxquill.rewordium.keyboard.ime.keyboard.KeyData
 import com.noxquill.rewordium.keyboard.ime.text.key.KeyCode
 import com.noxquill.rewordium.keyboard.ime.text.keyboard.TextKey
 import com.noxquill.rewordium.keyboard.nlpManager
+import com.noxquill.rewordium.keyboard.editorInstance
 import java.text.Normalizer
 import java.util.*
 import java.util.concurrent.ConcurrentHashMap
@@ -36,6 +37,7 @@ import kotlin.math.max
 import kotlin.math.min
 import kotlin.math.pow
 import kotlin.math.sqrt
+import kotlin.math.ln
 
 private fun TextKey.baseCode(): Int {
     return (data as? KeyData)?.code ?: KeyCode.UNSPECIFIED
@@ -48,6 +50,8 @@ private fun TextKey.baseCode(): Int {
  */
 class StatisticalGlideTypingClassifier(context: Context) : GlideTypingClassifier {
     private val nlpManager by context.nlpManager()
+    private val editorInstance by context.editorInstance()
+    private val reranker = ContextLmReranker(context)
 
     private val gesture = Gesture()
     private var keysByCharacter: SparseArrayCompat<TextKey> = SparseArrayCompat()
@@ -432,10 +436,48 @@ class StatisticalGlideTypingClassifier(context: Context) : GlideTypingClassifier
                 val it = beam.entries.iterator()
                 while (it.hasNext()) if (!keepers.contains(it.next().key)) it.remove()
             }
-            return beam.entries.sortedBy { it.value }.take(maxSuggestionCount).map { it.key }
+            val beamCandidates = beam.entries.sortedBy { it.value }.take(maxSuggestionCount * 2)
+            
+            // Apply Context LM Reranking
+            val contextText = editorInstance.run { activeContent.getTextBeforeCursor(25) }
+            val contextWords = contextText.split("\\s+".toRegex()).filter { it.isNotBlank() }
+            
+            val candidatesWithProbs = beamCandidates.map { entry ->
+                // Convert confidence (cost) to pseudo log-probability
+                entry.key to ln(1.0f / entry.value.coerceAtLeast(0.000001f))
+            }
+            
+            val reranked = reranker.rerank(candidatesWithProbs, contextWords)
+            
+            // Apply Apostrophe penalty
+            val finalReranked = reranked.map { word ->
+                val penalty = if (word.contains("'")) -0.01f else 0f
+                val origScore = candidatesWithProbs.find { it.first == word }?.second ?: 0f
+                word to (origScore + penalty)
+            }.sortedByDescending { it.second }.map { it.first }
+            
+            return finalReranked.take(maxSuggestionCount)
         }
 
-        return candidates
+        // Apply Context LM Reranking (Non-Beam Path)
+        val contextText = editorInstance.run { activeContent.getTextBeforeCursor(25) }
+        val contextWords = contextText.split("\\s+".toRegex()).filter { it.isNotBlank() }
+        
+        val candidatesWithProbs = candidates.mapIndexed { idx, word ->
+            val conf = candidateWeights[idx]
+            word to ln(1.0f / conf.coerceAtLeast(0.000001f))
+        }
+        
+        val reranked = reranker.rerank(candidatesWithProbs, contextWords)
+        
+        // Apply Apostrophe penalty
+        val finalReranked = reranked.map { word ->
+            val penalty = if (word.contains("'")) -0.01f else 0f
+            val origScore = candidatesWithProbs.find { it.first == word }?.second ?: 0f
+            word to (origScore + penalty)
+        }.sortedByDescending { it.second }.map { it.first }
+
+        return finalReranked.take(maxSuggestionCount)
     }
 
     /**

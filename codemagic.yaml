@@ -176,6 +176,11 @@ workflows:
             -scheme "$XCODE_SCHEME" \
             -clonedSourcePackagesDirPath build/ios/SourcePackages
 
+      - name: Strip App Groups for Sideloadly (Free Apple ID compatibility)
+        script: |
+          /usr/libexec/PlistBuddy -c "Delete :com.apple.security.application-groups" ios/Runner/Runner.entitlements || true
+          /usr/libexec/PlistBuddy -c "Delete :com.apple.security.application-groups" ios/RewordiumKeyboard/RewordiumKeyboard.entitlements || true
+
       - name: Build iOS app (no codesign)
         script: |
           # Read the canonical version from pubspec.yaml so the Runner app

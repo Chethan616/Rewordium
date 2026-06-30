@@ -47,6 +47,7 @@ import com.noxquill.rewordium.keyboard.ime.smartbar.SmartbarLayout
 import com.noxquill.rewordium.keyboard.ime.smartbar.quickaction.QuickAction
 import com.noxquill.rewordium.keyboard.ime.smartbar.quickaction.QuickActionArrangement
 import com.noxquill.rewordium.keyboard.ime.smartbar.quickaction.QuickActionJsonConfig
+import com.noxquill.rewordium.keyboard.ime.text.gestures.GlideTypingEngine
 import com.noxquill.rewordium.keyboard.ime.text.gestures.SwipeAction
 import com.noxquill.rewordium.keyboard.ime.text.key.KeyCode
 import com.noxquill.rewordium.keyboard.ime.text.key.KeyHintConfiguration
@@ -360,6 +361,10 @@ abstract class FlorisPreferenceModel : PreferenceModel() {
         val enabled = boolean(
             key = "glide__enabled",
             default = true,
+        )
+        val engine = enum(
+            key = "glide__engine",
+            default = GlideTypingEngine.STATISTICAL,
         )
         val showTrail = boolean(
             key = "glide__show_trail",

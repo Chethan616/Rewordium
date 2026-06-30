@@ -42,6 +42,7 @@ import com.noxquill.rewordium.keyboard.ime.smartbar.SmartbarLayout
 import com.noxquill.rewordium.keyboard.ime.text.gestures.SwipeAction
 import com.noxquill.rewordium.keyboard.ime.text.key.KeyHintMode
 import com.noxquill.rewordium.keyboard.ime.text.key.UtilityKeyAction
+import com.noxquill.rewordium.keyboard.ime.text.gestures.GlideTypingEngine
 import com.noxquill.rewordium.keyboard.ime.theme.ThemeMode
 import dev.patrickgold.jetpref.datastore.ui.ListPreferenceEntry
 import dev.patrickgold.jetpref.datastore.ui.listPrefEntries
@@ -726,6 +727,22 @@ private val ENUM_DISPLAY_ENTRIES = mapOf<Pair<KClass<*>, String>, @Composable ()
             entry(
                 key = UtilityKeyAction.DYNAMIC_SWITCH_LANGUAGE_EMOJIS,
                 label = stringRes(R.string.enum__utility_key_action__dynamic_switch_language_emojis),
+            )
+        }
+    },
+    GlideTypingEngine::class to DEFAULT to {
+        listPrefEntries {
+            entry(
+                key = GlideTypingEngine.NATIVE,
+                label = stringRes(R.string.enum__glide_typing_engine__native),
+            )
+            entry(
+                key = GlideTypingEngine.STATISTICAL,
+                label = stringRes(R.string.enum__glide_typing_engine__statistical),
+            )
+            entry(
+                key = GlideTypingEngine.NEURAL,
+                label = stringRes(R.string.enum__glide_typing_engine__neural),
             )
         }
     },

@@ -36,7 +36,7 @@ import kotlin.math.min
  * Handles the [GlideTypingClassifier]. Basically responsible for linking [GlideTypingGesture.Detector]
  * with [GlideTypingClassifier].
  */
-class GlideTypingManager(context: Context) : GlideTypingGesture.Listener {
+class GlideTypingManager(private val context: Context) : GlideTypingGesture.Listener {
     companion object {
         private const val MAX_SUGGESTION_COUNT = 6
         // Number of mid-gesture preview candidates shown while the user is still swiping.
@@ -50,19 +50,16 @@ class GlideTypingManager(context: Context) : GlideTypingGesture.Listener {
     private val subtypeManager by context.subtypeManager()
 
     private val scope = CoroutineScope(Dispatchers.Default + SupervisorJob())
-    // Phase 5f: dispatch on ENABLE_NATIVE_GLIDE. When the flag is on AND the
-    // native library loaded successfully, route gestures through AOSP's
-    // Suggest pipeline via NativeGlideTypingClassifier. Otherwise keep the
-    // hand-rolled Kotlin shape matcher so the keyboard still works if the
-    // native build is missing or rolled back. Default-off until on-device
-    // calibration confirms parity.
-    private var glideTypingClassifier: GlideTypingClassifier =
-        if (BuildConfig.ENABLE_NATIVE_GLIDE && LatinImeNative.ensureLoaded()) {
-            NativeGlideTypingClassifier(context)
-        } else {
-            StatisticalGlideTypingClassifier(context)
-        }
+    private var glideTypingClassifier: GlideTypingClassifier = createClassifier(prefs.glide.engine.get())
     private var lastTime = System.currentTimeMillis()
+
+    private fun createClassifier(engine: GlideTypingEngine): GlideTypingClassifier {
+        return when (engine) {
+            GlideTypingEngine.NEURAL -> NeuralGlideTypingClassifier(context)
+            GlideTypingEngine.NATIVE -> if (LatinImeNative.ensureLoaded()) NativeGlideTypingClassifier(context) else StatisticalGlideTypingClassifier(context)
+            GlideTypingEngine.STATISTICAL -> StatisticalGlideTypingClassifier(context)
+        }
+    }
 
     init {
         // Adaptive learned swipe typing: listen for "vocabulary changed
@@ -72,6 +69,18 @@ class GlideTypingManager(context: Context) : GlideTypingGesture.Listener {
         scope.launch {
             nlpManager.wordDataDirtyFlow.collect { subtype ->
                 glideTypingClassifier.setWordData(subtype, force = true)
+            }
+        }
+        
+        scope.launch {
+            prefs.glide.engine.asFlow().collect { engine ->
+                val newClassifier = createClassifier(engine)
+                val activeSubtype = subtypeManager.activeSubtype
+                if (activeSubtype != null) {
+                    newClassifier.setWordData(activeSubtype, force = true)
+                }
+                glideTypingClassifier.clear()
+                glideTypingClassifier = newClassifier
             }
         }
     }

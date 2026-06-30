@@ -173,6 +173,21 @@ class LearnedWordsStore(private val context: Context) {
     }
 
     /**
+     * Set the frequency of [word] under [locale] explicitly. 
+     * Useful for unlearning built-in words by setting their freq to 1.
+     */
+    fun set(locale: FlorisLocale, word: String, freq: Int) {
+        val tag = locale.languageTag()
+        val now = System.currentTimeMillis() / 1000
+        val sub = perLocale.getOrPut(tag) { ConcurrentHashMap() }
+        sub[word] = LearnedEntry(f = freq.coerceIn(0, MAX_FREQ), t = now)
+        if (sub.size > LOCALE_CAP) {
+            evictLocale(sub, now)
+        }
+        dirtyChannel.trySend(Unit)
+    }
+
+    /**
      * Drop the lowest-scoring [EVICT_FRACTION] of entries when [sub] outgrows
      * [LOCALE_CAP]. Score = freq × exp(-(age in seconds) / DECAY_SECONDS).
      * Worst case is one O(n log n) sort when n = LOCALE_CAP (cheap at ~5000).

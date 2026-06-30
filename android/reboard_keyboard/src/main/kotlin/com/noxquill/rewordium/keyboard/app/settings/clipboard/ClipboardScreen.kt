@@ -30,6 +30,8 @@ import dev.patrickgold.jetpref.datastore.ui.SwitchPreference
 import org.florisboard.lib.android.AndroidVersion
 import org.florisboard.lib.compose.pluralsRes
 import org.florisboard.lib.compose.stringRes
+import com.noxquill.rewordium.keyboard.clipboardManager
+import org.florisboard.lib.android.showShortToastSync
 
 @OptIn(ExperimentalJetPrefDatastoreUi::class)
 @Composable
@@ -74,6 +76,29 @@ fun ClipboardScreen() = FlorisScreen {
         }
 
         PreferenceGroup(title = stringRes(R.string.pref__clipboard__group_clipboard_history__label)) {
+            val context = androidx.compose.ui.platform.LocalContext.current
+            val clipboardManager = context.clipboardManager().value
+            val exportLauncher = androidx.activity.compose.rememberLauncherForActivityResult(
+                contract = androidx.activity.result.contract.ActivityResultContracts.CreateDocument("text/plain"),
+                onResult = { uri ->
+                    if (uri != null) {
+                        val success = clipboardManager.exportHistoryAsText(uri)
+                        if (success) {
+                            context.showShortToastSync("Export successful")
+                        } else {
+                            context.showShortToastSync("Export failed")
+                        }
+                    }
+                }
+            )
+
+            dev.patrickgold.jetpref.datastore.ui.Preference(
+                title = "Export Clipboard History",
+                summary = "Save history as a text file",
+                onClick = { exportLauncher.launch("clipboard_history.txt") },
+                enabledIf = { prefs.clipboard.historyEnabled isEqualTo true }
+            )
+
             SwitchPreference(
                 prefs.clipboard.historyEnabled,
                 title = stringRes(R.string.pref__clipboard__enable_clipboard_history__label),

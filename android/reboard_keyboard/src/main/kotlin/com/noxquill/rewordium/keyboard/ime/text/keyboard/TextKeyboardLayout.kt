@@ -1030,7 +1030,7 @@ private class TextKeyboardLayoutController(
     ) {
         if (gestureData.size < 2) return
 
-        val now = System.currentTimeMillis()
+        val now = gestureData.last().second
         val maxAgeMs = prefs.glide.trailDuration.get().toLong()
 
         // Collect points that are still within the trail-duration window, in chronological order.
