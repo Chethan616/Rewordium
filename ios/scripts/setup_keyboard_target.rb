@@ -155,6 +155,9 @@ end
 # ----------------------------------------------------------------------------
 # Find or create the extension target.
 
+kb_group = project.main_group.find_subpath(KB_DIR, true)
+kb_group.set_source_tree('<group>')
+
 target = project.targets.find { |t| t.name == TARGET_NAME }
 if target
   log "Target '#{TARGET_NAME}' already exists — verifying SPM link + version."
@@ -211,8 +214,6 @@ end
 # ----------------------------------------------------------------------------
 # Sync Swift sources
 # ----------------------------------------------------------------------------
-kb_group = project.main_group.find_subpath(KB_DIR, true)
-kb_group.set_source_tree('<group>')
 
 sources = Dir.glob(File.join(IOS_DIR, KB_DIR, '**', '*.swift')).sort
 abort "No Swift sources found in #{KB_DIR}" if sources.empty?
