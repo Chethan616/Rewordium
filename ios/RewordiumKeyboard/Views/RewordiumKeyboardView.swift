@@ -46,12 +46,21 @@ struct RewordiumKeyboardView: View {
     /// KeyboardKit's stock keyboard view with our overrides.
     ///
     /// `buttonView` lets us intercept per-button rendering. We layer SwiftUI
-    /// content over `params.view` (the framework's default rendering) so
-    /// press feedback, repeat behavior, and background materials stay
+    private var customLayout: KeyboardLayout {
+        var layout = KeyboardLayout.standard(for: state.keyboardContext)
+        layout.itemRows = layout.itemRows.map { row in
+            row.filter { $0.action != KeyboardAction.capsLock && $0.action != KeyboardAction.tab }
+        }
+        return layout
+    }
+
+    /// This view is the main view of the keyboard. We use the default `KeyboardView`
+    /// but intercept `.space` and `.nextKeyboard` (Globe). We leave the rest
     /// intact — we're only decorating, not replacing the button's gesture
     /// stack.
     private var keyboard: some View {
         KeyboardView(
+            layout: customLayout,
             state: state,
             services: services,
             buttonContent: { params in
@@ -109,8 +118,6 @@ struct RewordiumKeyboardView: View {
                     GlobeButtonView(defaultView: params.view, controller: controller)
                 case .backspace:
                     SmartBackspaceButton(controller: controller, defaultView: params.view)
-                case .capsLock, .tab:
-                    EmptyView()
                 default:
                     params.view
                 }
