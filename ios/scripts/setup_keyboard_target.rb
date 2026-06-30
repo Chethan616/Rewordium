@@ -243,6 +243,28 @@ unless linked_products.include?(KEYBOARDKIT_PRODUCT)
 end
 
 # ----------------------------------------------------------------------------
+# Embed the SPM product into the extension
+# Xcode does not automatically embed dynamic SPM products into App Extensions.
+# We must explicitly add a Copy Files phase to copy it into Frameworks/.
+
+embed_phase = target.copy_files_build_phases.find { |p| p.name == 'Embed Frameworks' }
+unless embed_phase
+  embed_phase = project.new(Xcodeproj::Project::Object::PBXCopyFilesBuildPhase)
+  embed_phase.name = 'Embed Frameworks'
+  embed_phase.symbolic_dst = :frameworks
+  target.build_phases << embed_phase
+end
+
+dep = target.package_product_dependencies.find { |d| d.product_name == KEYBOARDKIT_PRODUCT }
+unless embed_phase.files.any? { |f| f.product_ref == dep }
+  embed_file = project.new(Xcodeproj::Project::Object::PBXBuildFile)
+  embed_file.product_ref = dep
+  embed_file.settings = { 'ATTRIBUTES' => ['CodeSignOnCopy', 'RemoveHeadersOnCopy'] }
+  embed_phase.files << embed_file
+  log "Embedded SPM product: #{KEYBOARDKIT_PRODUCT}"
+end
+
+# ----------------------------------------------------------------------------
 # Embed the extension into the Runner app.
 #
 # BUILD-PHASE ORDERING:
