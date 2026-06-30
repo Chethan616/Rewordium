@@ -243,23 +243,28 @@ unless linked_products.include?(KEYBOARDKIT_PRODUCT)
 end
 
 # ----------------------------------------------------------------------------
-# Embed the SPM product into the extension
-# Xcode does not automatically embed dynamic SPM products into App Extensions.
-# We must explicitly add a Copy Files phase to copy it into Frameworks/.
+# Embed the SPM product by linking it to the host Runner app.
+# Xcode automatically embeds dynamic SPM products into App targets (but fails
+# for App Extensions). By linking KeyboardKit to the host app, it is embedded
+# in Runner.app/Frameworks, and the extension finds it via its runpath
+# (@executable_path/../../Frameworks).
 
-embed_phase = target.copy_files_build_phases.find { |p| p.name == 'Embed Frameworks' }
-unless embed_phase
-  embed_phase = target.new_copy_files_build_phase('Embed Frameworks')
-  embed_phase.symbol_dst_subfolder_spec = :frameworks
-end
+runner_linked_products = runner.frameworks_build_phase.files.map do |bf|
+  bf.respond_to?(:product_ref) ? bf.product_ref&.product_name : nil
+end.compact
 
-dep = target.package_product_dependencies.find { |d| d.product_name == KEYBOARDKIT_PRODUCT }
-unless embed_phase.files.any? { |f| f.product_ref == dep }
-  embed_file = project.new(Xcodeproj::Project::Object::PBXBuildFile)
-  embed_file.product_ref = dep
-  embed_file.settings = { 'ATTRIBUTES' => ['CodeSignOnCopy', 'RemoveHeadersOnCopy'] }
-  embed_phase.files << embed_file
-  log "Embedded SPM product: #{KEYBOARDKIT_PRODUCT}"
+unless runner_linked_products.include?(KEYBOARDKIT_PRODUCT)
+  dep = runner.package_product_dependencies.find { |d| d.product_name == KEYBOARDKIT_PRODUCT }
+  unless dep
+    dep = project.new(Xcodeproj::Project::Object::XCSwiftPackageProductDependency)
+    dep.product_name = KEYBOARDKIT_PRODUCT
+    dep.package      = package_ref
+    runner.package_product_dependencies << dep
+  end
+  build_file = project.new(Xcodeproj::Project::Object::PBXBuildFile)
+  build_file.product_ref = dep
+  runner.frameworks_build_phase.files << build_file
+  log "Linked SPM product to Runner (to force embedding): #{KEYBOARDKIT_PRODUCT}"
 end
 
 # ----------------------------------------------------------------------------
