@@ -67,7 +67,11 @@ struct RewordiumChipSurface: ViewModifier {
         content
             .background(
                 RoundedRectangle(cornerRadius: RewordiumTokens.Radius.chip, style: .continuous)
-                    .fill(isHighlighted ? Color.accentColor.opacity(0.18) : .background.opacity(0.6))
+                    .fill(.background.opacity(isHighlighted ? 0.0 : 0.6))
+            )
+            .background(
+                RoundedRectangle(cornerRadius: RewordiumTokens.Radius.chip, style: .continuous)
+                    .fill(Color.accentColor.opacity(isHighlighted ? 0.18 : 0.0))
             )
             .overlay(
                 RoundedRectangle(cornerRadius: RewordiumTokens.Radius.chip, style: .continuous)

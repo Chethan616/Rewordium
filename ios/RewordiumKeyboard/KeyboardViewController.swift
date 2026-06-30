@@ -108,9 +108,6 @@ final class KeyboardViewController: KeyboardInputViewController {
 
     /// Small quality-of-life tweaks applied after KeyboardKit boots.
     private func applyDefaultStateTweaks() {
-        // Replace layout provider to remove caps lock
-        services.layoutProvider = RewordiumLayoutProvider(base: services.layoutProvider)
-        
         // Long-press space moves the cursor — matches the iOS system keyboard.
         state.keyboardContext.settings.spacebarLongPressBehavior = .moveInputCursor
 
