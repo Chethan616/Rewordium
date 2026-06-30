@@ -163,6 +163,7 @@ android {
         //   wiring a real gesture suggest policy (substantial undertaking).
         buildConfigField("boolean", "ENABLE_NATIVE_SUGGESTER", "true")
         buildConfigField("boolean", "ENABLE_NATIVE_GLIDE", "false")
+        buildConfigField("boolean", "ENABLE_NEURAL_GLIDE", "true")
         // Phase 7: when true, MediaInputLayout uses the androidx.emoji2
         // emojipicker-based NativeEmojiPanel instead of the legacy hand-
         // rolled EmojiPaletteView.

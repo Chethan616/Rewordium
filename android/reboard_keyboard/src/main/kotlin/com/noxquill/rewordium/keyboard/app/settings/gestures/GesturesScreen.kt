@@ -41,6 +41,12 @@ fun GesturesScreen() = FlorisScreen {
                 title = stringRes(R.string.pref__glide__enabled__label),
                 summary = stringRes(R.string.pref__glide__enabled__summary),
             )
+            ListPreference(
+                prefs.glide.engine,
+                title = stringRes(R.string.pref__glide__engine__label),
+                entries = enumDisplayEntriesOf(com.noxquill.rewordium.keyboard.ime.text.gestures.GlideTypingEngine::class),
+                enabledIf = { prefs.glide.enabled isEqualTo true },
+            )
             SwitchPreference(
                 prefs.glide.showTrail,
                 title = stringRes(R.string.pref__glide__show_trail__label),

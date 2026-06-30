@@ -582,6 +582,10 @@
     <string name="pref__glide__title" comment="Preference group title">Glide typing</string>
     <string name="pref__glide__enabled__label" comment="Preference title">Enable glide typing</string>
     <string name="pref__glide__enabled__summary" comment="Preference summary">Type in a word by sliding your finger through its letters</string>
+    <string name="pref__glide__engine__label" comment="Preference title">Glide typing engine</string>
+    <string name="enum__glide_typing_engine__native">Native Engine (Old)</string>
+    <string name="enum__glide_typing_engine__statistical">Statistical Engine (Recommended)</string>
+    <string name="enum__glide_typing_engine__neural">Neural Engine (New)</string>
     <string name="pref__glide__show_trail__label" comment="Preference title">Show glide trail</string>
     <string name="pref__glide__show_trail__summary" comment="Preference summary">Will disappear after each word</string>
     <string name="pref__glide_trail_fade_duration">Glide trail fade time</string>

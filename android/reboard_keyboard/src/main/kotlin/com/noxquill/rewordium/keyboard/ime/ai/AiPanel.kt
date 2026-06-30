@@ -87,6 +87,9 @@ import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.graphics.vector.rememberVectorPainter
+import androidx.compose.ui.graphics.painter.Painter
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.IntOffset
@@ -579,7 +582,7 @@ private fun ModeSegmented(
                         horizontalArrangement = Arrangement.Center,
                         verticalAlignment = Alignment.CenterVertically,
                     ) {
-                        Icon(mode.icon(), null, tint = segFg, modifier = Modifier.size(14.dp))
+                        Icon(painter = mode.icon(), contentDescription = null, tint = segFg, modifier = Modifier.size(14.dp))
                         Spacer(Modifier.width(4.dp))
                         Text(
                             mode.label(),
@@ -923,8 +926,8 @@ private fun FooterButtons(
             modifier = Modifier.weight(if (hasResult) 2f else 1f).height(36.dp),
         ) {
             Icon(
-                aiMode.actionIcon(hasResult),
-                null,
+                painter = aiMode.actionIcon(hasResult),
+                contentDescription = null,
                 modifier = Modifier.size(16.dp),
             )
             Spacer(Modifier.width(6.dp))
@@ -946,10 +949,11 @@ private fun AiMode.label(): String = when (this) {
     AiMode.CONTEXT -> "Context"
 }
 
-private fun AiMode.icon() = when (this) {
-    AiMode.REWRITE, AiMode.ENHANCE -> Icons.Default.Edit
-    AiMode.APPEND -> Icons.Default.ArrowDownward
-    AiMode.CONTEXT -> Icons.Default.AutoFixHigh
+@Composable
+private fun AiMode.icon(): Painter = when (this) {
+    AiMode.REWRITE, AiMode.ENHANCE -> painterResource(id = R.drawable.ic_quick_ai_rewrite)
+    AiMode.APPEND -> painterResource(id = R.drawable.ic_quick_ai_append)
+    AiMode.CONTEXT -> painterResource(id = R.drawable.ic_quick_ai_context)
 }
 
 // Per-mode CTA: when a result is on screen, the button commits it; otherwise
@@ -961,10 +965,11 @@ private fun AiMode.actionLabel(hasResult: Boolean): String = when (this) {
     AiMode.CONTEXT -> if (hasResult) "Apply" else "Polish"
 }
 
-private fun AiMode.actionIcon(hasResult: Boolean) = when {
+@Composable
+private fun AiMode.actionIcon(hasResult: Boolean): Painter = when {
     !hasResult -> icon()
-    this == AiMode.APPEND -> Icons.Default.ArrowDownward
-    else -> Icons.AutoMirrored.Filled.ArrowForward
+    this == AiMode.APPEND -> painterResource(id = R.drawable.ic_quick_ai_append)
+    else -> rememberVectorPainter(Icons.AutoMirrored.Filled.ArrowForward)
 }
 
 @Composable

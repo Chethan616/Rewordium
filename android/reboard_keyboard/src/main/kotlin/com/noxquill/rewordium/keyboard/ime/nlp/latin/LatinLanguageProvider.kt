@@ -280,20 +280,14 @@ class LatinLanguageProvider(context: Context) : SpellingProvider, SuggestionProv
                 val ok = nativeDictionary.loadFromAssets(appContext)
                 flogDebug { "LatinLanguageProvider: native dict load = $ok" }
                 if (ok && nativeDictionary.isLoaded) {
-                    val learnedSnapshot = learnedStore.snapshot(subtype.primaryLocale)
                     var merged = 0
-                    for ((word, entry) in learnedSnapshot) {
-                        if (nativeDictionary.addLearnedWord(word, entry.f)) merged++
-                    }
-                    flogDebug { "LatinLanguageProvider: merged $merged learned words into native dict" }
-
-                    if (contactTokens != null) {
-                        var added = 0
-                        for (token in contactTokens) {
-                            if (nativeDictionary.addLearnedWord(token, CONTACT_NAME_PROBABILITY)) added++
+                    wordData.withLock { data ->
+                        for ((word, freq) in data) {
+                            if (nativeDictionary.addLearnedWord(word, freq)) merged++
                         }
-                        flogDebug { "LatinLanguageProvider: added $added contact name tokens to native dict" }
                     }
+                    flogDebug { "LatinLanguageProvider: merged $merged personal/contact words into native dict" }
+
                     if (contactBigrams != null) {
                         for ((_, next) in contactBigrams) {
                             nativeDictionary.addLearnedWord(next, CONTACT_NAME_PROBABILITY)
@@ -358,10 +352,17 @@ class LatinLanguageProvider(context: Context) : SpellingProvider, SuggestionProv
         val word = rawWord.trim().lowercase()
         if (word.length < LEARN_WORD_MIN_LEN || word.length > LEARN_WORD_MAX_LEN) return
         if (!LEARN_WORD_PATTERN.matches(word)) return
+        
+        val clampedFreq = freq.coerceIn(64, 255)
         wordData.withLock { data ->
             val current = data[word] ?: 0
-            data[word] = maxOf(current, freq.coerceIn(64, 255))
+            data[word] = maxOf(current, clampedFreq)
         }
+        
+        if (BuildConfig.ENABLE_NATIVE_SUGGESTER && nativeDictionary.isLoaded) {
+            nativeDictionary.addLearnedWord(word, clampedFreq)
+        }
+
         // Rebuild glide Pruner immediately — unlike learnWord(), there's no
         // need to debounce a single explicit user-add action.
         _wordDataDirtyFlow.tryEmit(subtype)
@@ -443,32 +444,26 @@ class LatinLanguageProvider(context: Context) : SpellingProvider, SuggestionProv
         if (word.length < LEARN_WORD_MIN_LEN || word.length > LEARN_WORD_MAX_LEN) return
         if (!LEARN_WORD_PATTERN.matches(word)) return
 
-        // Only unlearn words that the user actually taught us. The caller
-        // (EditorInstance.deleteBackwards via lastCommittedNovelWord) already
-        // scopes this to "the word the user just committed and immediately
-        // backspaced", but that word may still be a built-in dict entry the
-        // user happened to type then delete — touching that would be wrong.
-        // The learnedStore is the source of truth for "what we learned".
-        val wasLearned = learnedStore.snapshot(subtype.primaryLocale).containsKey(word)
-        if (!wasLearned) return
+        // We explicitly ALLOW unlearning built-in system words (like "wasn't") by forcing
+        // their frequency to 1. This prevents the glide classifier from constantly 
+        // suggesting them over valid alternatives (like "want").
 
         // Symmetric purge across all three suggestion sources so the rejected
         // word stops surfacing IMMEDIATELY (Kotlin suggest path, native
         // suggest path, and glide classifier) — not just after the next
         // IME process restart.
-        wordData.withLock { data -> data.remove(word) }
+        wordData.withLock { data -> data[word] = 1 }
 
         if (BuildConfig.ENABLE_NATIVE_SUGGESTER && nativeDictionary.isLoaded) {
-            nativeDictionary.removeLearnedWord(word)
+            // Use addLearnedWord with freq 1 to OVERRIDE the system dictionary's frequency!
+            // Do NOT use removeLearnedWord, because that simply removes our override and 
+            // reverts back to the system dictionary's default high frequency.
+            nativeDictionary.addLearnedWord(word, 1)
         }
 
-        // -255 fully removes the entry from the persisted learnedStore so
-        // it won't be restored on the next process restart.
-        learnedStore.bump(
-            subtype.primaryLocale,
-            word,
-            freqDelta = -255,
-        )
+        // Persist the demotion so it survives process restarts.
+        // It will be reloaded into wordData and pushed to the NativeDictionary with freq 1 on boot.
+        learnedStore.set(subtype.primaryLocale, word, 1)
 
         // Force a glide-classifier rebuild so swipe input drops the word too.
         _wordDataDirtyFlow.tryEmit(subtype)

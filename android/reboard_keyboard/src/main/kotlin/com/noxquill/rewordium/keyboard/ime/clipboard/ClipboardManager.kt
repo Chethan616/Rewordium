@@ -18,6 +18,7 @@ package com.noxquill.rewordium.keyboard.ime.clipboard
 
 import android.content.ClipData
 import android.content.Context
+import android.net.Uri
 import com.noxquill.rewordium.keyboard.app.FlorisPreferenceStore
 import com.noxquill.rewordium.keyboard.appContext
 import com.noxquill.rewordium.keyboard.editorInstance
@@ -403,5 +404,30 @@ class ClipboardManager(
     override fun close() {
         systemClipboardManager.removePrimaryClipChangedListener(this)
         cleanUpJob.cancel()
+    }
+
+    /**
+     * Exports the clipboard history to the provided Uri as a text file.
+     */
+    fun exportHistoryAsText(uri: Uri): Boolean {
+        return try {
+            appContext.contentResolver.openOutputStream(uri)?.use { outputStream ->
+                val items = clipHistoryDao?.getAll() ?: emptyList()
+                outputStream.bufferedWriter().use { writer ->
+                    for (item in items) {
+                        val text = item.text
+                        if (text != null) {
+                            writer.write("--- [${item.creationTimestampMs}] ---\n")
+                            writer.write(text)
+                            writer.write("\n\n")
+                        }
+                    }
+                }
+            }
+            true
+        } catch (e: Exception) {
+            e.printStackTrace()
+            false
+        }
     }
 }
