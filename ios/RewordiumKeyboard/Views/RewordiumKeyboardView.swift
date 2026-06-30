@@ -51,8 +51,14 @@ struct RewordiumKeyboardView: View {
     /// intact — we're only decorating, not replacing the button's gesture
     /// stack.
     private var keyboard: some View {
-        KeyboardView(
-            layout: nil,
+        var layout = services.layoutService.keyboardLayout(for: state.keyboardContext)
+        // Strip out Tab and CapsLock entirely from the layout so they leave no gaps
+        layout.itemRows = layout.itemRows.map { row in
+            row.filter { $0.action != .capsLock && $0.action != .tab }
+        }
+
+        return KeyboardView(
+            layout: layout,
             services: services,
             buttonContent: { params in
                 switch params.item.action {
@@ -60,18 +66,34 @@ struct RewordiumKeyboardView: View {
                     Image(systemName: "globe")
                         .font(.body)
                         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .center)
-                case .keyboardType(.emojis):
-                    Image(systemName: "face.smiling")
+                case .dismissKeyboard:
+                    Image(systemName: "keyboard.chevron.compact.down")
                         .font(.body)
                         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .center)
+                case .keyboardType(let type):
+                    switch type {
+                    case .emojis:
+                        Image(systemName: "face.smiling")
+                            .font(.body)
+                            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .center)
+                    case .numeric:
+                        Text("123")
+                            .font(.body)
+                            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .center)
+                    case .alphabetic:
+                        Text("ABC")
+                            .font(.body)
+                            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .center)
+                    case .symbolic:
+                        Text("#+=")
+                            .font(.body)
+                            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .center)
+                    default:
+                        params.view
+                    }
                 case .backspace:
                     Image(systemName: "delete.left")
                         .font(.body)
-                        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .center)
-                case .capsLock:
-                    Image(systemName: "capslock.fill")
-                        .font(.body)
-                        .foregroundStyle(Color.accentColor)
                         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .center)
                 case .shift(let currentCase):
                     let isCaps = currentCase == .capsLocked

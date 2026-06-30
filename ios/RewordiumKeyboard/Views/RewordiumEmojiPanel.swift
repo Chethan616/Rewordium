@@ -242,28 +242,33 @@ private struct EmojiCell: View {
     let onTap: () -> Void
     let onLongPress: (() -> Void)?
 
-    @State private var isPressed = false
-
     var body: some View {
-        Text(emoji)
-            .font(.system(size: 30))
-            .frame(maxWidth: .infinity, maxHeight: .infinity)
+        Button(action: onTap) {
+            Text(emoji)
+                .font(.system(size: 30))
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+                .contentShape(Rectangle())
+        }
+        .buttonStyle(EmojiButtonStyle(onLongPress: onLongPress))
+    }
+}
+
+private struct EmojiButtonStyle: ButtonStyle {
+    let onLongPress: (() -> Void)?
+    
+    func makeBody(configuration: Configuration) -> some View {
+        configuration.label
             .background(
                 RoundedRectangle(cornerRadius: 6)
-                    .fill(isPressed ? Color.primary.opacity(0.08) : Color.clear)
-            )
-            .contentShape(Rectangle())
-            .onTapGesture { onTap() }
-            .simultaneousGesture(
-                DragGesture(minimumDistance: 0)
-                    .onChanged { _ in isPressed = true }
-                    .onEnded { _ in isPressed = false }
+                    .fill(configuration.isPressed ? Color.primary.opacity(0.08) : Color.clear)
             )
             .simultaneousGesture(
                 LongPressGesture(minimumDuration: 0.35)
                     .onEnded { _ in
-                        UIImpactFeedbackGenerator(style: .medium).impactOccurred()
-                        onLongPress?()
+                        if let onLongPress {
+                            UIImpactFeedbackGenerator(style: .medium).impactOccurred()
+                            onLongPress()
+                        }
                     }
             )
     }
