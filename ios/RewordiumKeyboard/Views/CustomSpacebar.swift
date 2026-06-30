@@ -14,13 +14,5 @@ struct CustomSpacebar<Content: View>: View {
 
     var body: some View {
         defaultView
-            .overlay(alignment: .center) {
-                Text("rew testing")
-                    .font(.system(size: 11, weight: .medium, design: .rounded))
-                    .foregroundStyle(.secondary)
-                    .lineLimit(1)
-                    .minimumScaleFactor(0.85)
-                    .allowsHitTesting(false)
-            }
     }
 }

@@ -113,6 +113,8 @@ struct RewordiumKeyboardView: View {
                     CustomSpacebar(defaultView: params.view)
                 case .nextKeyboard:
                     GlobeButtonView(defaultView: params.view, controller: controller)
+                case .backspace:
+                    SmartBackspaceButton(controller: controller, defaultView: params.view)
                 default:
                     params.view
                 }

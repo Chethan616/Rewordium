@@ -89,9 +89,15 @@ struct AIToolbar: View {
             }
         } label: {
             HStack(spacing: 6) {
-                Image(systemName: "sparkles")
-                    .font(.system(size: 13, weight: .medium))
-                    .symbolRenderingMode(.hierarchical)
+                if #available(iOS 18.1, *) {
+                    Image(systemName: "apple.intelligence")
+                        .font(.system(size: 13, weight: .medium))
+                        .symbolRenderingMode(.hierarchical)
+                } else {
+                    Image(systemName: "sparkles")
+                        .font(.system(size: 13, weight: .medium))
+                        .symbolRenderingMode(.hierarchical)
+                }
                 Text("AI")
                     .font(.system(size: 13, weight: .semibold))
             }
@@ -117,10 +123,17 @@ struct AIToolbar: View {
                     .font(.system(size: 13, weight: .medium))
                     .foregroundStyle(.primary)
                 Spacer()
-                Image(systemName: "sparkles")
-                    .font(.system(size: 12, weight: .medium))
-                    .foregroundStyle(Color.accentColor)
-                    .matchedGeometryEffect(id: "ai-anchor", in: morphNamespace)
+                if #available(iOS 18.1, *) {
+                    Image(systemName: "apple.intelligence")
+                        .font(.system(size: 12, weight: .medium))
+                        .foregroundStyle(Color.accentColor)
+                        .matchedGeometryEffect(id: "ai-anchor", in: morphNamespace)
+                } else {
+                    Image(systemName: "sparkles")
+                        .font(.system(size: 12, weight: .medium))
+                        .foregroundStyle(Color.accentColor)
+                        .matchedGeometryEffect(id: "ai-anchor", in: morphNamespace)
+                }
                 closeButton
             }
 

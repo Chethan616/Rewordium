@@ -198,19 +198,6 @@ else
     bs['SWIFT_OPTIMIZATION_LEVEL']       = config.name == 'Debug' ? '-Onone' : '-O'
   end
 
-  # Compile sources: every .swift file under ios/RewordiumKeyboard/.
-  kb_group = project.main_group.find_subpath(KB_DIR, true)
-  kb_group.set_source_tree('<group>')
-
-  sources = Dir.glob(File.join(IOS_DIR, KB_DIR, '**', '*.swift')).sort
-  abort "No Swift sources found in #{KB_DIR}" if sources.empty?
-  sources.each do |abs_path|
-    rel = Pathname.new(abs_path).relative_path_from(Pathname.new(IOS_DIR)).to_s.tr('\\', '/')
-    file_ref = kb_group.new_reference(rel)
-    target.source_build_phase.add_file_reference(file_ref, true)
-  end
-  log "Added #{sources.size} Swift sources from #{KB_DIR}"
-
   # Plist + entitlements + privacy manifest are referenced from build settings
   # but the privacy manifest still needs to be copied into the bundle.
   privacy_manifest = File.join(IOS_DIR, KB_DIR, 'PrivacyInfo.xcprivacy')
@@ -220,6 +207,29 @@ else
     log "Added PrivacyInfo.xcprivacy as resource"
   end
 end
+
+# ----------------------------------------------------------------------------
+# Sync Swift sources
+# ----------------------------------------------------------------------------
+kb_group = project.main_group.find_subpath(KB_DIR, true)
+kb_group.set_source_tree('<group>')
+
+sources = Dir.glob(File.join(IOS_DIR, KB_DIR, '**', '*.swift')).sort
+abort "No Swift sources found in #{KB_DIR}" if sources.empty?
+
+existing_files = target.source_build_phase.files.map { |bf| bf.file_ref&.path }.compact
+added = 0
+
+sources.each do |abs_path|
+  rel = Pathname.new(abs_path).relative_path_from(Pathname.new(IOS_DIR)).to_s.tr('\\', '/')
+  basename = File.basename(rel)
+  unless existing_files.include?(rel) || existing_files.include?(basename)
+    file_ref = kb_group.new_reference(rel)
+    target.source_build_phase.add_file_reference(file_ref, true)
+    added += 1
+  end
+end
+log "Added #{added} new Swift sources from #{KB_DIR} (Total: #{sources.size})"
 
 # ----------------------------------------------------------------------------
 # Ensure the SPM product is linked (works for both fresh + existing targets).
