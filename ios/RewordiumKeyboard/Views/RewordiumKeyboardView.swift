@@ -36,17 +36,6 @@ struct RewordiumKeyboardView: View {
         // root replacing itself with a stock-looking layout that would mask
         // the failure.
         VStack(spacing: 0) {
-            // 22pt top inset: the UIKit diagnostic banner that
-            // KeyboardViewController installs in viewDidLoad sits at the top
-            // of self.view with height 22. The SwiftUI hierarchy lives
-            // inside the SAME self.view (KeyboardKit's hosting controller
-            // makes it a subview), so without this inset the SwiftUI
-            // content draws over the UIKit banner. The inset is invisible
-            // to the user — they just see the purple UIKit banner above a
-            // slightly-shifted SwiftUI hierarchy.
-            Color.clear.frame(height: 22)
-
-            BuildBanner()
             AIToolbar(aiService: aiService, controller: controller)
             SuggestionStrip(controller: controller)
             keyboard
@@ -74,6 +63,23 @@ struct RewordiumKeyboardView: View {
                 case .keyboardType(.emojis):
                     Image(systemName: "face.smiling")
                         .font(.body)
+                        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .center)
+                case .backspace:
+                    Image(systemName: "delete.left")
+                        .font(.body)
+                        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .center)
+                case .capsLock:
+                    Image(systemName: "capslock.fill")
+                        .font(.body)
+                        .foregroundStyle(Color.accentColor)
+                        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .center)
+                case .shift(let currentCase):
+                    let isCaps = currentCase == .capsLocked
+                    let isUpper = currentCase == .uppercased
+                    let active = isCaps || isUpper
+                    Image(systemName: isCaps ? "capslock.fill" : (isUpper ? "shift.fill" : "shift"))
+                        .font(.body)
+                        .foregroundStyle(active ? Color.accentColor : Color.primary)
                         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .center)
                 default:
                     params.view

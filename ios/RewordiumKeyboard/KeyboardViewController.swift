@@ -29,17 +29,11 @@ final class KeyboardViewController: KeyboardInputViewController {
     /// by reference and observes via `@Observable` macro tracking.
     private let aiService = AIService()
 
-    /// The UIKit-only diagnostic banner — owned by the controller, added as
-    /// a subview of self.view in viewDidLoad. Kept around so we can re-pin
-    /// it on top if KeyboardKit's view setup reorders subviews.
-    private var diagnosticBanner: UIView?
-
     // MARK: - Lifecycle
 
     override func viewDidLoad() {
         super.viewDidLoad()
         NSLog("[RewordiumKeyboard] viewDidLoad — bundleId=\(Bundle.main.bundleIdentifier ?? "?") version=\(Self.shortVersion)+\(Self.bundleVersion)")
-        installDiagnosticBanner()
     }
 
     /// Re-pin the banner on top whenever the view layout cycles. iOS keyboard
@@ -48,13 +42,6 @@ final class KeyboardViewController: KeyboardInputViewController {
     /// changes; this keeps the banner on the screen.
     override func viewDidLayoutSubviews() {
         super.viewDidLayoutSubviews()
-        if let banner = diagnosticBanner, banner.superview === view {
-            view.bringSubviewToFront(banner)
-        } else if diagnosticBanner == nil {
-            // Safety: viewDidLoad was somehow skipped (shouldn't happen but
-            // costs nothing to be defensive).
-            installDiagnosticBanner()
-        }
     }
 
     /// Called once when the keyboard extension launches. Configure services
@@ -121,43 +108,7 @@ final class KeyboardViewController: KeyboardInputViewController {
         }
     }
 
-    // MARK: - Diagnostic banner
-
-    /// Pure UIKit. No SwiftUI. No KeyboardKit. No App Group. No external
-    /// resources. The simplest possible "I am running" signal — a coloured
-    /// strip with version text pinned to the top of self.view.
-    private func installDiagnosticBanner() {
-        let banner = UIView()
-        banner.translatesAutoresizingMaskIntoConstraints = false
-        banner.backgroundColor = UIColor.systemPurple.withAlphaComponent(0.95)
-        banner.isUserInteractionEnabled = false
-
-        let label = UILabel()
-        label.translatesAutoresizingMaskIntoConstraints = false
-        label.text = "REWORDIUM v\(Self.shortVersion) (\(Self.bundleVersion)) • LOADED ✓"
-        label.font = .systemFont(ofSize: 12, weight: .semibold)
-        label.textColor = .white
-        label.textAlignment = .center
-        label.adjustsFontSizeToFitWidth = true
-        label.minimumScaleFactor = 0.7
-
-        banner.addSubview(label)
-        view.addSubview(banner)
-
-        NSLayoutConstraint.activate([
-            banner.topAnchor.constraint(equalTo: view.topAnchor),
-            banner.leadingAnchor.constraint(equalTo: view.leadingAnchor),
-            banner.trailingAnchor.constraint(equalTo: view.trailingAnchor),
-            banner.heightAnchor.constraint(equalToConstant: 22),
-
-            label.leadingAnchor.constraint(equalTo: banner.leadingAnchor, constant: 8),
-            label.trailingAnchor.constraint(equalTo: banner.trailingAnchor, constant: -8),
-            label.centerYAnchor.constraint(equalTo: banner.centerYAnchor),
-        ])
-
-        diagnosticBanner = banner
-        NSLog("[RewordiumKeyboard] diagnostic banner installed at top of self.view")
-    }
+    // MARK: - App Version
 
     private static var shortVersion: String {
         (Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String) ?? "?"

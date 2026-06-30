@@ -1,161 +1,161 @@
-name: iOS Sideloadly Build
-
-on:
-  push:
-    branches:
-      - main
-  workflow_dispatch:
-
-jobs:
-  build:
-    runs-on: macos-latest
-    
-    steps:
-      - name: Checkout Code
-        uses: actions/checkout@v4
-
-      - name: Select Xcode
-        uses: maxim-lobanov/setup-xcode@v1
-        with:
-          xcode-version: 'latest'
-
-      - name: Setup Flutter
-        uses: subosito/flutter-action@v2
-        with:
-          channel: 'stable'
-          cache: true
-
-      - name: Install dependencies
-        run: |
-          flutter config --no-enable-swift-package-manager
-          mkdir -p build/ios/SourcePackages
-          mkdir -p build/macos/SourcePackages
-          rm -rf ios/Pods ios/Podfile.lock ios/.symlinks
-          rm -rf ios/Flutter/ephemeral
-          flutter pub upgrade cloud_firestore cloud_firestore_platform_interface cloud_firestore_web
-          flutter pub get
-
-      - name: Stub FLTPipelineParser.m (iOS Firestore Pipeline workaround)
-        run: |
-          set -e
-          PIPELINE_FILE=$(find "$HOME/.pub-cache/hosted/pub.dev" \
-            -path "*cloud_firestore-*" \
-            -name "FLTPipelineParser.m" \
-            -type f 2>/dev/null | head -1)
-          if [ -z "$PIPELINE_FILE" ]; then
-            echo "No FLTPipelineParser.m found in pub-cache."
-          else
-            echo "Stubbing out $PIPELINE_FILE"
-            echo "// Stubbed out to fix Pipeline API missing selectors in older firebase-ios-sdk" > "$PIPELINE_FILE"
-          fi
-
-      - name: Prepare .env for CI
-        run: |
-          cat > .env <<EOF
-          GROQ_API_KEY=${{ secrets.GROQ_API_KEY }}
-          EOF
-
-      - name: Restore Firebase iOS config
-        env:
-          IOS_GOOGLESERVICE_INFO_PLIST_BASE64: ${{ secrets.IOS_GOOGLESERVICE_INFO_PLIST_BASE64 }}
-          IOS_FIREBASE_APP_ID_FILE_BASE64: ${{ secrets.IOS_FIREBASE_APP_ID_FILE_BASE64 }}
-        run: |
-          python3 - <<'PY'
-          import base64
-          import os
-          import pathlib
-          import sys
-
-          gs = os.environ.get("IOS_GOOGLESERVICE_INFO_PLIST_BASE64", "")
-          if not gs:
-              sys.stderr.write("Missing IOS_GOOGLESERVICE_INFO_PLIST_BASE64\n")
-              sys.exit(1)
-
-          pathlib.Path("ios/Runner").mkdir(parents=True, exist_ok=True)
-          with open("ios/Runner/GoogleService-Info.plist", "wb") as f:
-              f.write(base64.b64decode(gs))
-
-          app_id = os.environ.get("IOS_FIREBASE_APP_ID_FILE_BASE64", "")
-          if app_id:
-              pathlib.Path("ios").mkdir(parents=True, exist_ok=True)
-              with open("ios/firebase_app_id_file.json", "wb") as f:
-                  f.write(base64.b64decode(app_id))
-          PY
-
-      - name: Set iOS bundle identifier
-        run: |
-          /usr/libexec/PlistBuddy -c "Set :CFBundleIdentifier com.noxquill.rewordium" ios/Runner/Info.plist || \
-          /usr/libexec/PlistBuddy -c "Add :CFBundleIdentifier string com.noxquill.rewordium" ios/Runner/Info.plist
-
-      - name: Wire RewordiumKeyboard extension target
-        run: |
-          gem list xcodeproj -i >/dev/null 2>&1 || sudo gem install xcodeproj --no-document
-          cd ios
-          ruby scripts/setup_keyboard_target.rb
-
-      - name: Resolve SwiftPM packages
-        run: |
-          xcodebuild -resolvePackageDependencies \
-            -workspace "ios/Runner.xcworkspace" \
-            -scheme "Runner" \
-            -clonedSourcePackagesDirPath build/ios/SourcePackages
-
-      - name: Strip App Groups for Sideloadly (Free Apple ID compatibility)
-        run: |
-          /usr/libexec/PlistBuddy -c "Delete :com.apple.security.application-groups" ios/Runner/Runner.entitlements || true
-          /usr/libexec/PlistBuddy -c "Delete :com.apple.security.application-groups" ios/RewordiumKeyboard/RewordiumKeyboard.entitlements || true
-
-      - name: Build iOS app (no codesign)
-        run: |
-          PUBSPEC_VERSION_LINE=$(grep -E '^version:' pubspec.yaml | head -1 | awk '{print $2}')
-          PUBSPEC_MARKETING="${PUBSPEC_VERSION_LINE%+*}"
-          PUBSPEC_BUILD="${PUBSPEC_VERSION_LINE##*+}"
-          
-          FLUTTER_BUILD_NAME_VAL="${PUBSPEC_MARKETING}"
-          FLUTTER_BUILD_NUMBER_VAL="${PUBSPEC_BUILD}"
-          
-          flutter build ios --release --no-codesign \
-            --build-name="${FLUTTER_BUILD_NAME_VAL}" \
-            --build-number="${FLUTTER_BUILD_NUMBER_VAL}" \
-            || echo "(flutter post-build validation failed — continuing)"
-            
-          if [ ! -d build/ios/iphoneos/Runner.app ]; then
-            echo "ERROR: build/ios/iphoneos/Runner.app missing after flutter build"
-            exit 1
-          fi
-          if [ ! -d build/ios/iphoneos/Runner.app/PlugIns/RewordiumKeyboard.appex ]; then
-            echo "ERROR: RewordiumKeyboard.appex was not embedded into Runner.app/PlugIns/"
-            exit 1
-          fi
-
-      - name: Diagnose & harden keyboard extension
-        run: |
-          set -e
-          APP="build/ios/iphoneos/Runner.app"
-          EXT="$APP/PlugIns/RewordiumKeyboard.appex"
-          
-          HOST_SHORT=$(/usr/libexec/PlistBuddy -c "Print :CFBundleShortVersionString" "$APP/Info.plist")
-          HOST_BUILD=$(/usr/libexec/PlistBuddy -c "Print :CFBundleVersion" "$APP/Info.plist")
-          HOST_BUNDLE=$(/usr/libexec/PlistBuddy -c "Print :CFBundleIdentifier" "$APP/Info.plist")
-          
-          /usr/libexec/PlistBuddy -c "Set :CFBundleShortVersionString $HOST_SHORT" "$EXT/Info.plist"
-          /usr/libexec/PlistBuddy -c "Set :CFBundleVersion $HOST_BUILD"            "$EXT/Info.plist"
-          
-          EXPECTED_EXT_BUNDLE="${HOST_BUNDLE}.keyboard"
-          ACTUAL_EXT_BUNDLE=$(/usr/libexec/PlistBuddy -c "Print :CFBundleIdentifier" "$EXT/Info.plist")
-          if [ "$ACTUAL_EXT_BUNDLE" != "$EXPECTED_EXT_BUNDLE" ]; then
-            /usr/libexec/PlistBuddy -c "Set :CFBundleIdentifier $EXPECTED_EXT_BUNDLE" "$EXT/Info.plist"
-          fi
-
-      - name: Package Unsigned IPA for Sideloadly
-        run: |
-          rm -rf Payload rewordium-unsigned.ipa
-          mkdir -p Payload
-          cp -R build/ios/iphoneos/Runner.app Payload/
-          zip -r -q rewordium-unsigned.ipa Payload
-
-      - name: Upload IPA Artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: rewordium-ios-sideloadly
-          path: rewordium-unsigned.ipa
+# name: iOS Sideloadly Build
+# 
+# on:
+#   push:
+#     branches:
+#       - main
+#   workflow_dispatch:
+# 
+# jobs:
+#   build:
+#     runs-on: macos-latest
+#     
+#     steps:
+#       - name: Checkout Code
+#         uses: actions/checkout@v4
+# 
+#       - name: Select Xcode
+#         uses: maxim-lobanov/setup-xcode@v1
+#         with:
+#           xcode-version: 'latest'
+# 
+#       - name: Setup Flutter
+#         uses: subosito/flutter-action@v2
+#         with:
+#           channel: 'stable'
+#           cache: true
+# 
+#       - name: Install dependencies
+#         run: |
+#           flutter config --no-enable-swift-package-manager
+#           mkdir -p build/ios/SourcePackages
+#           mkdir -p build/macos/SourcePackages
+#           rm -rf ios/Pods ios/Podfile.lock ios/.symlinks
+#           rm -rf ios/Flutter/ephemeral
+#           flutter pub upgrade cloud_firestore cloud_firestore_platform_interface cloud_firestore_web
+#           flutter pub get
+# 
+#       - name: Stub FLTPipelineParser.m (iOS Firestore Pipeline workaround)
+#         run: |
+#           set -e
+#           PIPELINE_FILE=$(find "$HOME/.pub-cache/hosted/pub.dev" \
+#             -path "*cloud_firestore-*" \
+#             -name "FLTPipelineParser.m" \
+#             -type f 2>/dev/null | head -1)
+#           if [ -z "$PIPELINE_FILE" ]; then
+#             echo "No FLTPipelineParser.m found in pub-cache."
+#           else
+#             echo "Stubbing out $PIPELINE_FILE"
+#             echo "// Stubbed out to fix Pipeline API missing selectors in older firebase-ios-sdk" > "$PIPELINE_FILE"
+#           fi
+# 
+#       - name: Prepare .env for CI
+#         run: |
+#           cat > .env <<EOF
+#           GROQ_API_KEY=${{ secrets.GROQ_API_KEY }}
+#           EOF
+# 
+#       - name: Restore Firebase iOS config
+#         env:
+#           IOS_GOOGLESERVICE_INFO_PLIST_BASE64: ${{ secrets.IOS_GOOGLESERVICE_INFO_PLIST_BASE64 }}
+#           IOS_FIREBASE_APP_ID_FILE_BASE64: ${{ secrets.IOS_FIREBASE_APP_ID_FILE_BASE64 }}
+#         run: |
+#           python3 - <<'PY'
+#           import base64
+#           import os
+#           import pathlib
+#           import sys
+# 
+#           gs = os.environ.get("IOS_GOOGLESERVICE_INFO_PLIST_BASE64", "")
+#           if not gs:
+#               sys.stderr.write("Missing IOS_GOOGLESERVICE_INFO_PLIST_BASE64\n")
+#               sys.exit(1)
+# 
+#           pathlib.Path("ios/Runner").mkdir(parents=True, exist_ok=True)
+#           with open("ios/Runner/GoogleService-Info.plist", "wb") as f:
+#               f.write(base64.b64decode(gs))
+# 
+#           app_id = os.environ.get("IOS_FIREBASE_APP_ID_FILE_BASE64", "")
+#           if app_id:
+#               pathlib.Path("ios").mkdir(parents=True, exist_ok=True)
+#               with open("ios/firebase_app_id_file.json", "wb") as f:
+#                   f.write(base64.b64decode(app_id))
+#           PY
+# 
+#       - name: Set iOS bundle identifier
+#         run: |
+#           /usr/libexec/PlistBuddy -c "Set :CFBundleIdentifier com.noxquill.rewordium" ios/Runner/Info.plist || \
+#           /usr/libexec/PlistBuddy -c "Add :CFBundleIdentifier string com.noxquill.rewordium" ios/Runner/Info.plist
+# 
+#       - name: Wire RewordiumKeyboard extension target
+#         run: |
+#           gem list xcodeproj -i >/dev/null 2>&1 || sudo gem install xcodeproj --no-document
+#           cd ios
+#           ruby scripts/setup_keyboard_target.rb
+# 
+#       - name: Resolve SwiftPM packages
+#         run: |
+#           xcodebuild -resolvePackageDependencies \
+#             -workspace "ios/Runner.xcworkspace" \
+#             -scheme "Runner" \
+#             -clonedSourcePackagesDirPath build/ios/SourcePackages
+# 
+#       - name: Strip App Groups for Sideloadly (Free Apple ID compatibility)
+#         run: |
+#           /usr/libexec/PlistBuddy -c "Delete :com.apple.security.application-groups" ios/Runner/Runner.entitlements || true
+#           /usr/libexec/PlistBuddy -c "Delete :com.apple.security.application-groups" ios/RewordiumKeyboard/RewordiumKeyboard.entitlements || true
+# 
+#       - name: Build iOS app (no codesign)
+#         run: |
+#           PUBSPEC_VERSION_LINE=$(grep -E '^version:' pubspec.yaml | head -1 | awk '{print $2}')
+#           PUBSPEC_MARKETING="${PUBSPEC_VERSION_LINE%+*}"
+#           PUBSPEC_BUILD="${PUBSPEC_VERSION_LINE##*+}"
+#           
+#           FLUTTER_BUILD_NAME_VAL="${PUBSPEC_MARKETING}"
+#           FLUTTER_BUILD_NUMBER_VAL="${PUBSPEC_BUILD}"
+#           
+#           flutter build ios --release --no-codesign \
+#             --build-name="${FLUTTER_BUILD_NAME_VAL}" \
+#             --build-number="${FLUTTER_BUILD_NUMBER_VAL}" \
+#             || echo "(flutter post-build validation failed — continuing)"
+#             
+#           if [ ! -d build/ios/iphoneos/Runner.app ]; then
+#             echo "ERROR: build/ios/iphoneos/Runner.app missing after flutter build"
+#             exit 1
+#           fi
+#           if [ ! -d build/ios/iphoneos/Runner.app/PlugIns/RewordiumKeyboard.appex ]; then
+#             echo "ERROR: RewordiumKeyboard.appex was not embedded into Runner.app/PlugIns/"
+#             exit 1
+#           fi
+# 
+#       - name: Diagnose & harden keyboard extension
+#         run: |
+#           set -e
+#           APP="build/ios/iphoneos/Runner.app"
+#           EXT="$APP/PlugIns/RewordiumKeyboard.appex"
+#           
+#           HOST_SHORT=$(/usr/libexec/PlistBuddy -c "Print :CFBundleShortVersionString" "$APP/Info.plist")
+#           HOST_BUILD=$(/usr/libexec/PlistBuddy -c "Print :CFBundleVersion" "$APP/Info.plist")
+#           HOST_BUNDLE=$(/usr/libexec/PlistBuddy -c "Print :CFBundleIdentifier" "$APP/Info.plist")
+#           
+#           /usr/libexec/PlistBuddy -c "Set :CFBundleShortVersionString $HOST_SHORT" "$EXT/Info.plist"
+#           /usr/libexec/PlistBuddy -c "Set :CFBundleVersion $HOST_BUILD"            "$EXT/Info.plist"
+#           
+#           EXPECTED_EXT_BUNDLE="${HOST_BUNDLE}.keyboard"
+#           ACTUAL_EXT_BUNDLE=$(/usr/libexec/PlistBuddy -c "Print :CFBundleIdentifier" "$EXT/Info.plist")
+#           if [ "$ACTUAL_EXT_BUNDLE" != "$EXPECTED_EXT_BUNDLE" ]; then
+#             /usr/libexec/PlistBuddy -c "Set :CFBundleIdentifier $EXPECTED_EXT_BUNDLE" "$EXT/Info.plist"
+#           fi
+# 
+#       - name: Package Unsigned IPA for Sideloadly
+#         run: |
+#           rm -rf Payload rewordium-unsigned.ipa
+#           mkdir -p Payload
+#           cp -R build/ios/iphoneos/Runner.app Payload/
+#           zip -r -q rewordium-unsigned.ipa Payload
+# 
+#       - name: Upload IPA Artifact
+#         uses: actions/upload-artifact@v4
+#         with:
+#           name: rewordium-ios-sideloadly
+#           path: rewordium-unsigned.ipa

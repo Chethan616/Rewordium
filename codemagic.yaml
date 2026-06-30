@@ -6,11 +6,8 @@ workflows:
 
     environment:
       flutter: stable
-      # Xcode 26.5 (Swift 6.3, iOS 26 SDK):
-      #  • KeyboardKit 10.5+ binary compiled with Swift 6.2.4 — needs ≥6.2 compiler
-      #  • Xcode 26.4 only has Swift 6.1.2 → "SDK not supported by the compiler"
-      #  • Liquid Glass / FoundationModels APIs require iOS 26 SDK
-      xcode: 26.5
+      # Xcode latest to match ios.yml
+      xcode: latest
       cocoapods: default
 
       vars:
