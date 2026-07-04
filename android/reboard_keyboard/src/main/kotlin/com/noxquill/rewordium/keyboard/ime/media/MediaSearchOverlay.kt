@@ -25,6 +25,7 @@ import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -83,6 +84,7 @@ import coil.decode.ImageDecoderDecoder
 import coil.request.ImageRequest
 import com.noxquill.rewordium.keyboard.editorInstance
 import com.noxquill.rewordium.keyboard.ime.input.LocalInputFeedbackController
+import androidx.compose.ui.input.pointer.pointerInput
 import com.noxquill.rewordium.keyboard.ime.keyboard.KeyboardManager
 import com.noxquill.rewordium.keyboard.ime.media.gif.GifCollectionStore
 import com.noxquill.rewordium.keyboard.ime.media.gif.KlipyClient
@@ -444,8 +446,10 @@ internal fun StickerSearchResults(
     fg: Color,
     accent: Color,
     onStickerPicked: (android.net.Uri, String, String) -> Unit,
+    onLongPress: ((StickerRef, android.net.Uri, String, String) -> Unit)? = null,
 ) {
     val context = LocalContext.current
+    val inputFeedbackController = LocalInputFeedbackController.current
     val store = remember { UserStickerStore.get(context) }
     val whatsapp = remember { WhatsAppStickerReader(context) }
     val recentsStore = remember { StickerCollectionStore.recents(context) }
@@ -531,36 +535,60 @@ internal fun StickerSearchResults(
                             .aspectRatio(1f)
                             .clip(RoundedCornerShape(8.dp))
                             .background(fg.copy(alpha = 0.05f))
-                            .clickable {
-                                scope.launch {
-                                    when (item) {
-                                        is StickerSearchItem.User -> {
-                                            store.touch(item.entry)
-                                            recentsStore.add(StickerRef.User(item.entry.id))
-                                            val file = store.fileFor(item.entry)
-                                            if (!file.exists()) return@launch
-                                            val uri = withContext(Dispatchers.IO) {
-                                                cloneToClipboardStore(context, android.net.Uri.fromFile(file), item.entry.mime)
-                                            } ?: return@launch
-                                            onStickerPicked(uri, item.entry.mime, "Sticker")
+                            .pointerInput(item.key) {
+                                detectTapGestures(
+                                    onTap = {
+                                        inputFeedbackController.keyPress(TextKeyData.UNSPECIFIED)
+                                        scope.launch {
+                                            when (item) {
+                                                is StickerSearchItem.User -> {
+                                                    store.touch(item.entry)
+                                                    recentsStore.add(StickerRef.User(item.entry.id))
+                                                    val file = store.fileFor(item.entry)
+                                                    if (!file.exists()) return@launch
+                                                    val uri = withContext(Dispatchers.IO) {
+                                                        cloneToClipboardStore(context, android.net.Uri.fromFile(file), item.entry.mime)
+                                                    } ?: return@launch
+                                                    onStickerPicked(uri, item.entry.mime, "Sticker")
+                                                }
+                                                is StickerSearchItem.WhatsApp -> {
+                                                    recentsStore.add(
+                                                        StickerRef.WhatsApp(item.sticker.uri.toString(), item.sticker.emojis),
+                                                    )
+                                                    val uri = withContext(Dispatchers.IO) {
+                                                        cloneToClipboardStore(context, item.sticker.uri, "image/webp")
+                                                    } ?: return@launch
+                                                    onStickerPicked(uri, "image/webp", item.sticker.emojis.ifBlank { "Sticker" })
+                                                }
+                                                is StickerSearchItem.Community -> {
+                                                    val uri = withContext(Dispatchers.IO) {
+                                                        downloadAndStore(context, item.sticker.stickerUrl, "image/webp")
+                                                    } ?: return@launch
+                                                    onStickerPicked(uri, "image/webp", item.sticker.contentDescription.ifBlank { "Sticker" })
+                                                }
+                                            }
                                         }
-                                        is StickerSearchItem.WhatsApp -> {
-                                            recentsStore.add(
-                                                StickerRef.WhatsApp(item.sticker.uri.toString(), item.sticker.emojis),
-                                            )
-                                            val uri = withContext(Dispatchers.IO) {
-                                                cloneToClipboardStore(context, item.sticker.uri, "image/webp")
-                                            } ?: return@launch
-                                            onStickerPicked(uri, "image/webp", item.sticker.emojis.ifBlank { "Sticker" })
-                                        }
-                                        is StickerSearchItem.Community -> {
-                                            val uri = withContext(Dispatchers.IO) {
-                                                downloadAndStore(context, item.sticker.stickerUrl, "image/webp")
-                                            } ?: return@launch
-                                            onStickerPicked(uri, "image/webp", item.sticker.contentDescription.ifBlank { "Sticker" })
+                                    },
+                                    onLongPress = {
+                                        inputFeedbackController.keyPress(TextKeyData.UNSPECIFIED)
+                                        if (onLongPress != null) {
+                                            when (item) {
+                                                is StickerSearchItem.User -> {
+                                                    val ref = StickerRef.User(item.entry.id)
+                                                    onLongPress(ref, android.net.Uri.fromFile(store.fileFor(item.entry)), item.entry.mime, "Sticker")
+                                                }
+                                                is StickerSearchItem.WhatsApp -> {
+                                                    val ref = StickerRef.WhatsApp(item.sticker.uri.toString(), item.sticker.emojis)
+                                                    onLongPress(ref, item.sticker.uri, "image/webp", item.sticker.emojis.ifBlank { "Sticker" })
+                                                }
+                                                is StickerSearchItem.Community -> {
+                                                    val ref = StickerRef.WhatsApp(item.sticker.stickerUrl, item.sticker.contentDescription)
+                                                    onLongPress(ref, android.net.Uri.parse(item.sticker.previewUrl), "image/webp", item.sticker.contentDescription)
+                                                }
+                                            }
                                         }
                                     }
-                                }
+                                )
                             },
                     ) {
                         val model: Any = when (item) {

@@ -46,6 +46,19 @@ import java.util.UUID
 class UserStickerStore(private val context: Context) {
 
     @Serializable
+    data class StickerPack(
+        val id: String,
+        val name: String,
+        val t: Long = System.currentTimeMillis() / 1000
+    )
+
+    @Serializable
+    data class StoreManifest(
+        val packs: List<StickerPack> = emptyList(),
+        val entries: List<Entry> = emptyList()
+    )
+
+    @Serializable
     data class Entry(
         /** Stable UUID — used as the filename stem. */
         val id: String,
@@ -57,6 +70,8 @@ class UserStickerStore(private val context: Context) {
         val t: Long,
         /** User-created tags/categories for this sticker. */
         val tags: List<String> = emptyList(),
+        /** Pack ID if it belongs to a custom pack. */
+        val packId: String? = null
     )
 
     private val mutex = Mutex()
@@ -68,6 +83,10 @@ class UserStickerStore(private val context: Context) {
     val entriesFlow: StateFlow<List<Entry>> = _entries.asStateFlow()
     private val entries: List<Entry> get() = _entries.value
 
+    private val _packs = MutableStateFlow<List<StickerPack>>(emptyList())
+    val packsFlow: StateFlow<List<StickerPack>> = _packs.asStateFlow()
+    private val packs: List<StickerPack> get() = _packs.value
+
     private val dir: File by lazy {
         File(context.filesDir, DIR_NAME).also { it.mkdirs() }
     }
@@ -77,7 +96,8 @@ class UserStickerStore(private val context: Context) {
         ignoreUnknownKeys = true
         encodeDefaults = true
     }
-    private val listSerializer = ListSerializer(Entry.serializer())
+    private val manifestSerializer = StoreManifest.serializer()
+    private val legacyListSerializer = ListSerializer(Entry.serializer())
 
     /** Idempotent. Reads the manifest off disk on first call. */
     suspend fun ensureLoaded() {
@@ -88,7 +108,16 @@ class UserStickerStore(private val context: Context) {
                 if (manifestFile.exists()) {
                     val text = manifestFile.readText(Charsets.UTF_8)
                     if (text.isNotBlank()) {
-                        _entries.value = json.decodeFromString(listSerializer, text)
+                        try {
+                            val manifest = json.decodeFromString(manifestSerializer, text)
+                            _entries.value = manifest.entries
+                            _packs.value = manifest.packs
+                        } catch (e: Exception) {
+                            // Try legacy format
+                            val legacy = json.decodeFromString(legacyListSerializer, text)
+                            _entries.value = legacy
+                            _packs.value = emptyList()
+                        }
                     }
                 }
             } catch (e: Exception) {
@@ -100,8 +129,11 @@ class UserStickerStore(private val context: Context) {
 
     /** Defensive copy of the current manifest, sorted newest-first. */
     fun snapshot(): List<Entry> {
-        val current = entries
-        return current.sortedByDescending { it.t }
+        return entries.sortedByDescending { it.t }
+    }
+    
+    fun getSortedPacks(): List<StickerPack> {
+        return packs.sortedByDescending { it.t }
     }
 
     /** Resolve [Entry] → on-disk [File]. */
@@ -117,7 +149,7 @@ class UserStickerStore(private val context: Context) {
      * (tmp + rename) so a process kill leaves either the previous manifest
      * or the new one — never a partial.
      */
-    suspend fun import(sourceUri: Uri, mimeType: String, tags: List<String> = emptyList()): Entry? = withContext(Dispatchers.IO) {
+    suspend fun import(sourceUri: Uri, mimeType: String, tags: List<String> = emptyList(), packId: String? = null): Entry? = withContext(Dispatchers.IO) {
         ensureLoaded()
         val ext = mimeToExt(mimeType)
         val id = UUID.randomUUID().toString()
@@ -131,7 +163,7 @@ class UserStickerStore(private val context: Context) {
             outFile.delete()
             return@withContext null
         }
-        val entry = Entry(id, ext, mimeType, System.currentTimeMillis() / 1000, tags)
+        val entry = Entry(id, ext, mimeType, System.currentTimeMillis() / 1000, tags, packId)
         mutex.withLock {
             _entries.value = _entries.value + entry
             writeManifest()
@@ -163,13 +195,41 @@ class UserStickerStore(private val context: Context) {
     private fun writeManifest() {
         try {
             val tmp = File(dir, "$MANIFEST_NAME.tmp")
-            tmp.writeText(json.encodeToString(listSerializer, entries), Charsets.UTF_8)
+            val manifest = StoreManifest(packs, entries)
+            tmp.writeText(json.encodeToString(manifestSerializer, manifest), Charsets.UTF_8)
             if (!tmp.renameTo(manifestFile)) {
                 manifestFile.writeText(tmp.readText(Charsets.UTF_8), Charsets.UTF_8)
                 tmp.delete()
             }
         } catch (e: Exception) {
             flogError { "UserStickerStore: manifest write failed ($e)" }
+        }
+    }
+
+    suspend fun createPack(name: String): StickerPack = withContext(Dispatchers.IO) {
+        ensureLoaded()
+        val pack = StickerPack(UUID.randomUUID().toString(), name)
+        mutex.withLock {
+            _packs.value = _packs.value + pack
+            writeManifest()
+        }
+        pack
+    }
+
+    suspend fun deletePack(packId: String) = withContext(Dispatchers.IO) {
+        ensureLoaded()
+        mutex.withLock {
+            _packs.value = _packs.value.filterNot { it.id == packId }
+            _entries.value = _entries.value.map { if (it.packId == packId) it.copy(packId = null) else it }
+            writeManifest()
+        }
+    }
+
+    suspend fun renamePack(packId: String, newName: String) = withContext(Dispatchers.IO) {
+        ensureLoaded()
+        mutex.withLock {
+            _packs.value = _packs.value.map { if (it.id == packId) it.copy(name = newName) else it }
+            writeManifest()
         }
     }
 

@@ -288,6 +288,9 @@ fun StickerPanel(
                         fg = fg,
                         accent = accent,
                         onStickerPicked = onStickerPicked,
+                        onLongPress = { ref, model, mime, description ->
+                            popupSticker = ref to ResolvedSticker(ref, model, mime, description)
+                        }
                     )
                 }
             } else {

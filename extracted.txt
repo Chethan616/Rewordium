@@ -1,0 +1,1088 @@
+--- STEP 137 ---
+Chunk 0:
+Target:
+package com.noxquill.rewordium.keyboard.app.settings.stickerstudio
+
+import android.graphics.Bitmap
+import android.graphics.BitmapFactory
+import android.graphics.Canvas
+import android.graphics.Color as AndroidColor
+import android.graphics.Paint
+import android.graphics.PorterDuff
+import android.graphics.RectF
+import android.net.Uri
+import android.view.ViewGroup
+import android.widget.Toast
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
+import com.canhub.cropper.CropImageOptions
+import androidx.compose.material.icons.outlined.Close
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import org.florisboard.lib.compose.FlorisIconButton
+import org.florisboard.lib.compose.autoMirrorForRtl
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.aspectRatio
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.lazy.LazyRow
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.BasicTextField
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.outlined.Redo
+import androidx.compose.material.icons.automirrored.outlined.Undo
+import androidx.compose.material.icons.outlined.AutoAwesome
+import androidx.compose.material.icons.outlined.Brush
+import androidx.compose.material.icons.outlined.Cancel
+import androidx.compose.material.icons.outlined.Check
+import androidx.compose.material.icons.outlined.Crop
+import androidx.compose.material.icons.outlined.Delete
+import androidx.compose.material.icons.outlined.Flip
+import androidx.compose.material.icons.outlined.PhotoLibrary
+import androidx.compose.material.icons.outlined.RotateLeft
+import androidx.compose.material.icons.outlined.RotateRight
+import androidx.compose.material.icons.outlined.TextFields
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Button
+import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.FilledTonalButton
+import androidx.compose.material3.FilledTonalIconButton
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.Slider
+import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.SolidColor
+import androidx.compose.ui.graphics.toArgb
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import androidx.compose.ui.viewinterop.AndroidView
+import com.canhub.cropper.CropImageView
+import com.noxquill.rewordium.keyboard.app.LocalNavController
+import com.noxquill.rewordium.keyboard.ime.media.sticker.UserStickerStore
+import com.noxquill.rewordium.keyboard.lib.compose.FlorisScreen
+import ja.burhanrashid52.photoeditor.PhotoEditor
+import ja.burhanrashid52.photoeditor.PhotoEditorView
+import ja.burhanrashid52.photoeditor.SaveSettings
+import ja.burhanrashid52.photoeditor.shape.ShapeBuilder
+import ja.burhanrashid52.photoeditor.shape.ShapeType
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+import java.io.File
+import java.io.FileOutputStream
+Replace:
+package com.noxquill.rewordium.keyboard.app.settings.stickerstudio
+
+import android.graphics.Bitmap
+import android.graphics.BitmapFactory
+import android.graphics.Canvas
+import android.graphics.Color as AndroidColor
+import android.graphics.Paint
+import android.graphics.PorterDuff
+import android.graphics.RectF
+import android.graphics.Typeface
+import android.net.Uri
+import android.view.ViewGroup
+import android.widget.Toast
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
+import com.canhub.cropper.CropImageOptions
+import androidx.compose.material.icons.outlined.Close
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import org.florisboard.lib.compose.FlorisIconButton
+import org.florisboard.lib.compose.autoMirrorForRtl
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.aspectRatio
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.lazy.LazyRow
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.BasicTextField
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.outlined.Redo
+import androidx.compose.material.icons.automirrored.outlined.Undo
+import androidx.compose.material.icons.outlined.AutoAwesome
+import androidx.compose.material.icons.outlined.Brush
+import androidx.compose.material.icons.outlined.Cancel
+import androidx.compose.material.icons.outlined.Check
+import androidx.compose.material.icons.outlined.Crop
+import androidx.compose.material.icons.outlined.Delete
+import androidx.compose.material.icons.outlined.Flip
+import androidx.compose.material.icons.outlined.PhotoLibrary
+import androidx.compose.material.icons.outlined.RotateLeft
+import androidx.compose.material.icons.outlined.RotateRight
+import androidx.compose.material.icons.outlined.TextFields
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Button
+import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.FilledTonalButton
+import androidx.compose.material3.FilledTonalIconButton
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.Slider
+import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableFloatStateOf
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.SolidColor
+import androidx.compose.ui.graphics.toArgb
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import androidx.compose.ui.viewinterop.AndroidView
+import com.canhub.cropper.CropImageView
+import com.noxquill.rewordium.keyboard.app.LocalNavController
+import com.noxquill.rewordium.keyboard.aiManager
+import com.noxquill.rewordium.keyboard.ime.media.sticker.UserStickerStore
+import com.noxquill.rewordium.keyboard.lib.compose.FlorisScreen
+import ja.burhanrashid52.photoeditor.PhotoEditor
+import ja.burhanrashid52.photoeditor.PhotoEditorView
+import ja.burhanrashid52.photoeditor.SaveSettings
+import ja.burhanrashid52.photoeditor.TextStyleBuilder
+import ja.burhanrashid52.photoeditor.shape.ShapeBuilder
+import ja.burhanrashid52.photoeditor.shape.ShapeType
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+import java.io.File
+import java.io.FileOutputStream
+Chunk 1:
+Target:
+)
+
+/**
+Replace:
+)
+
+/**
+ * Text styles available in the sticker text editor.
+ */
+private enum class StickerTextStyle(val label: String) {
+    Plain("Plain"),
+    Bold("Bold"),
+    Meme("Meme"),
+    Bubbly("Bubbly"),
+}
+
+/**
+Chunk 2:
+Target:
+    if (showTextDialog) {
+        var draft by remember { mutableStateOf("") }
+        var textColor by remember { mutableStateOf(PALETTE[0]) }
+        AlertDialog(
+            onDismissRequest = { showTextDialog = false },
+            title = { Text("Add text") },
+            text = {
+                Column {
+                    BasicTextField(
+                        value = draft,
+                        onValueChange = { draft = it },
+                        textStyle = androidx.compose.ui.text.TextStyle(
+                            color = MaterialTheme.colorScheme.onSurface,
+                            fontSize = 16.sp,
+                            fontWeight = FontWeight.Bold,
+                        ),
+                        cursorBrush = SolidColor(MaterialTheme.colorScheme.primary),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clip(RoundedCornerShape(8.dp))
+                            .background(MaterialTheme.colorScheme.surfaceContainerHighest)
+                            .padding(12.dp),
+                    )
+                    Spacer(Modifier.height(12.dp))
+                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        PALETTE.forEach { c ->
+                            Box(
+                                modifier = Modifier
+                                    .size(28.dp)
+                                    .clip(CircleShape)
+                                    .background(c)
+                                    .border(
+                                        width = if (textColor == c) 2.dp else 0.dp,
+                                        color = MaterialTheme.colorScheme.primary,
+                                        shape = CircleShape,
+                                    )
+                                    .clickable { textColor = c },
+                            )
+                        }
+                    }
+                }
+            },
+            confirmButton = {
+                TextButton(onClick = {
+                    if (draft.isNotBlank()) {
+                        photoEditor?.addText(draft, textColor.toArgb())
+                    }
+                    showTextDialog = false
+                }) { Text("Add") }
+            },
+            dismissButton = {
+                TextButton(onClick = { showTextDialog = false }) { Text("Cancel") }
+            },
+        )
+    }
+Replace:
+    if (showTextDialog) {
+        var draft by remember { mutableStateOf("") }
+        var textColor by remember { mutableStateOf(PALETTE[1]) } // White default for stickers
+        var selectedStyle by remember { mutableStateOf(StickerTextStyle.Meme) }
+        var fontSize by remember { mutableFloatStateOf(48f) }
+        var aiLoading by remember { mutableStateOf(false) }
+        var aiError by remember { mutableStateOf<String?>(null) }
+        val dialogScope = rememberCoroutineScope()
+        val dialogContext = LocalContext.current
+
+        AlertDialog(
+            onDismissRequest = { showTextDialog = false },
+            title = { Text("Add text") },
+            text = {
+                Column(
+                    modifier = Modifier.verticalScroll(rememberScrollState()),
+                ) {
+                    // ── Text input ─────────────────────────────────
+                    BasicTextField(
+                        value = draft,
+                        onValueChange = { draft = it },
+                        textStyle = androidx.compose.ui.text.TextStyle(
+                            color = MaterialTheme.colorScheme.onSurface,
+                            fontSize = 16.sp,
+                            fontWeight = FontWeight.Bold,
+                        ),
+                        cursorBrush = SolidColor(MaterialTheme.colorScheme.primary),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clip(RoundedCornerShape(8.dp))
+                            .background(MaterialTheme.colorScheme.surfaceContainerHighest)
+                            .padding(12.dp),
+                        decorationBox = { innerTextField ->
+                            Box {
+                                if (draft.isEmpty()) {
+                                    Text(
+                                        "Type your text…",
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f),
+                                        fontSize = 16.sp,
+                                    )
+                                }
+                                innerTextField()
+                            }
+                        },
+                    )
+
+                    // ── AI Generate button ─────────────────────────
+                    Spacer(Modifier.height(8.dp))
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        FilledTonalButton(
+                            onClick = {
+                                aiLoading = true
+                                aiError = null
+                                dialogScope.launch {
+                                    try {
+                                        val aiManager by dialogContext.aiManager()
+                                        val result = aiManager.rewriteTextWithPrompt(
+                                            """Generate a single short, funny, punchy meme caption for a sticker. 
+It should be 1-4 words max, all caps, like classic internet meme text.
+Examples: "BRUH", "THUG LIFE", "LITERALLY ME", "SEND HELP", "NO CAP", "BIG MOOD", "VIBE CHECK", "SHEESH".
+Just output the caption text, nothing else. No quotes, no explanation.""",
+                                        )
+                                        result.onSuccess { caption ->
+                                            draft = caption.trim().uppercase()
+                                        }
+                                        result.onFailure { e ->
+                                            aiError = e.message ?: "AI generation failed"
+                                        }
+                                    } catch (e: Exception) {
+                                        aiError = e.message ?: "AI generation failed"
+                                    }
+                                    aiLoading = false
+                                }
+                            },
+                            enabled = !aiLoading,
+                        ) {
+                            if (aiLoading) {
+                                CircularProgressIndicator(
+                                    modifier = Modifier.size(16.dp),
+                                    strokeWidth = 2.dp,
+                                )
+                            } else {
+                                Icon(
+                                    Icons.Outlined.AutoAwesome,
+                                    contentDescription = null,
+                                    modifier = Modifier.size(16.dp),
+                                )
+                            }
+                            Spacer(Modifier.width(6.dp))
+                            Text(if (aiLoading) "Generating…" else "AI Caption ✨")
+                        }
+                    }
+                    if (aiError != null) {
+                        Spacer(Modifier.height(4.dp))
+                        Text(
+                            text = aiError ?: "",
+                            color = MaterialTheme.colorScheme.error,
+                            fontSize = 12.sp,
+                        )
+                    }
+
+                    // ── Style selector ─────────────────────────────
+                    Spacer(Modifier.height(12.dp))
+                    Text(
+                        "Style",
+                        style = MaterialTheme.typography.labelMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                    Spacer(Modifier.height(6.dp))
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .horizontalScroll(rememberScrollState()),
+                        horizontalArrangement = Arrangement.spacedBy(6.dp),
+                    ) {
+                        StickerTextStyle.values().forEach { style ->
+                            Box(
+                                modifier = Modifier
+                                    .clip(RoundedCornerShape(8.dp))
+                                    .background(
+                                        if (selectedStyle == style) MaterialTheme.colorScheme.primaryContainer
+                                        else MaterialTheme.colorScheme.surfaceVariant
+                                    )
+                                    .clickable { selectedStyle = style }
+                                    .padding(horizontal = 12.dp, vertical = 6.dp),
+                            ) {
+                                Text(
+                                    text = style.label,
+                                    style = MaterialTheme.typography.labelMedium,
+                                    fontWeight = if (selectedStyle == style) FontWeight.Bold else FontWeight.Normal,
+                                    color = if (selectedStyle == style) MaterialTheme.colorScheme.onPrimaryContainer
+                                    else MaterialTheme.colorScheme.onSurfaceVariant,
+                                )
+                            }
+                        }
+                    }
+
+                    // ── Font size slider ───────────────────────────
+                    Spacer(Modifier.height(12.dp))
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        modifier = Modifier.fillMaxWidth(),
+                    ) {
+                        Text(
+                            "Size",
+                            style = MaterialTheme.typography.labelMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                        Spacer(Modifier.width(8.dp))
+                        Slider(
+                            value = fontSize,
+                            onValueChange = { fontSize = it },
+                            valueRange = 24f..96f,
+                            modifier = Modifier.weight(1f),
+                        )
+                        Spacer(Modifier.width(8.dp))
+                        Text(
+                            "${fontSize.toInt()}",
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    }
+
+                    // ── Color picker ───────────────────────────────
+                    Spacer(Modifier.height(8.dp))
+                    Text(
+                        "Color",
+                        style = MaterialTheme.typography.labelMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                    Spacer(Modifier.height(6.dp))
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .horizontalScroll(rememberScrollState()),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    ) {
+                        PALETTE.forEach { c ->
+                            Box(
+                                modifier = Modifier
+                                    .size(28.dp)
+                                    .clip(CircleShape)
+                                    .background(c)
+                                    .border(
+                                        width = if (textColor == c) 2.dp else 0.dp,
+                                        color = MaterialTheme.colorScheme.primary,
+                                        shape = CircleShape,
+                                    )
+                                    .clickable { textColor = c },
+                            )
+                        }
+                    }
+
+                    // ── Live preview ───────────────────────────────
+                    if (draft.isNotBlank()) {
+                        Spacer(Modifier.height(12.dp))
+                        Text(
+                            "Preview",
+                            style = MaterialTheme.typography.labelMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                        Spacer(Modifier.height(6.dp))
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clip(RoundedCornerShape(12.dp))
+                                .checkerboard()
+                                .padding(16.dp),
+                            contentAlignment = Alignment.Center,
+                        ) {
+                            when (selectedStyle) {
+                                StickerTextStyle.Plain -> Text(
+                                    text = draft,
+                                    color = textColor,
+                                    fontSize = (fontSize / 3).sp,
+                                    fontWeight = FontWeight.Normal,
+                                    textAlign = TextAlign.Center,
+                                )
+                                StickerTextStyle.Bold -> Text(
+                                    text = draft,
+                                    color = textColor,
+                                    fontSize = (fontSize / 3).sp,
+                                    fontWeight = FontWeight.ExtraBold,
+                                    textAlign = TextAlign.Center,
+                                )
+                                StickerTextStyle.Meme -> {
+                                    // Meme: white fill with thick black stroke
+                                    Box(contentAlignment = Alignment.Center) {
+                                        // Stroke layer
+                                        Text(
+                                            text = draft.uppercase(),
+                                            color = Color.Black,
+                                            fontSize = (fontSize / 3).sp,
+                                            fontWeight = FontWeight.Black,
+                                            textAlign = TextAlign.Center,
+                                            style = androidx.compose.ui.text.TextStyle(
+                                                drawStyle = androidx.compose.ui.graphics.drawscope.Stroke(
+                                                    width = 8f,
+                                                ),
+                                            ),
+                                        )
+                                        // Fill layer
+                                        Text(
+                                            text = draft.uppercase(),
+                                            color = textColor,
+                                            fontSize = (fontSize / 3).sp,
+                                            fontWeight = FontWeight.Black,
+                                            textAlign = TextAlign.Center,
+                                        )
+                                    }
+                                }
+                                StickerTextStyle.Bubbly -> {
+                                    Box(
+                                        modifier = Modifier
+                                            .clip(RoundedCornerShape(12.dp))
+                                            .background(textColor)
+                                            .padding(horizontal = 12.dp, vertical = 6.dp),
+                                    ) {
+                                        Text(
+                                            text = draft,
+                                            color = if (textColor.luminance() > 0.5f) Color.Black else Color.White,
+                                            fontSize = (fontSize / 3).sp,
+                                            fontWeight = FontWeight.Bold,
+                                            textAlign = TextAlign.Center,
+                                        )
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            },
+            confirmButton = {
+                TextButton(onClick = {
+                    if (draft.isNotBlank()) {
+                        val editor = photoEditor
+                        val editorView = photoEditorView
+                        if (editor != null && editorView != null) {
+                            when (selectedStyle) {
+                                StickerTextStyle.Plain -> {
+                                    val tsb = TextStyleBuilder()
+                                    tsb.withTextColor(textColor.toArgb())
+                                    tsb.withTextSize(fontSize)
+                                    editor.addText(draft, tsb)
+                                }
+                                StickerTextStyle.Bold -> {
+                                    val tsb = TextStyleBuilder()
+                                    tsb.withTextColor(textColor.toArgb())
+                                    tsb.withTextSize(fontSize)
+                                    tsb.withTextFont(Typeface.DEFAULT_BOLD)
+                                    editor.addText(draft, tsb)
+                                }
+                                StickerTextStyle.Meme -> {
+                                    // Render meme text as a bitmap and add as image overlay
+                                    scope.launch {
+                                        val bmp = withContext(Dispatchers.Default) {
+                                            renderStyledTextBitmap(
+                                                text = draft.uppercase(),
+                                                textColor = textColor.toArgb(),
+                                                fontSize = fontSize,
+                                                style = StickerTextStyle.Meme,
+                                            )
+                                        }
+                                        editor.addImage(bmp)
+                                    }
+                                }
+                                StickerTextStyle.Bubbly -> {
+                                    scope.launch {
+                                        val bmp = withContext(Dispatchers.Default) {
+                                            renderStyledTextBitmap(
+                                                text = draft,
+                                                textColor = textColor.toArgb(),
+                                                fontSize = fontSize,
+                                                style = StickerTextStyle.Bubbly,
+                                            )
+                                        }
+                                        editor.addImage(bmp)
+                                    }
+                                }
+                            }
+                        }
+                    }
+                    showTextDialog = false
+                }) { Text("Add") }
+            },
+            dismissButton = {
+                TextButton(onClick = { showTextDialog = false }) { Text("Cancel") }
+            },
+        )
+    }
+Chunk 3:
+Target:
+private enum class EditorMode { Idle, Draw, Erase }
+Replace:
+private enum class EditorMode { Idle, Draw, Erase }
+
+/**
+ * Renders styled text (Meme or Bubbly) to a Bitmap that can be added
+ * as an image overlay via PhotoEditor.addImage(). This avoids the
+ * limitations of PhotoEditor's built-in text which doesn't support
+ * outlined or pill-background text.
+ */
+private fun renderStyledTextBitmap(
+    text: String,
+    textColor: Int,
+    fontSize: Float,
+    style: StickerTextStyle,
+): Bitmap {
+    val density = 2f // Render at 2x for crispness
+    val scaledFontSize = fontSize * density
+
+    val fillPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        color = textColor
+        textSize = scaledFontSize
+        typeface = Typeface.DEFAULT_BOLD
+        textAlign = Paint.Align.CENTER
+    }
+
+    // Measure text bounds
+    val textBounds = android.graphics.Rect()
+    fillPaint.getTextBounds(text, 0, text.length, textBounds)
+    val textWidth = fillPaint.measureText(text)
+
+    return when (style) {
+        StickerTextStyle.Meme -> {
+            val strokeWidth = scaledFontSize * 0.12f
+            val padH = (strokeWidth * 2).toInt()
+            val padV = (strokeWidth * 2).toInt()
+            val bmpW = (textWidth + padH * 2).toInt().coerceAtLeast(1)
+            val bmpH = (textBounds.height() + padV * 2).toInt().coerceAtLeast(1)
+            val bmp = Bitmap.createBitmap(bmpW, bmpH, Bitmap.Config.ARGB_8888)
+            val canvas = Canvas(bmp)
+            canvas.drawColor(AndroidColor.TRANSPARENT, PorterDuff.Mode.CLEAR)
+
+            val cx = bmpW / 2f
+            val cy = bmpH / 2f + textBounds.height() / 2f - textBounds.bottom
+
+            // Draw stroke (black outline)
+            val strokePaint = Paint(fillPaint).apply {
+                color = AndroidColor.BLACK
+                this.style = Paint.Style.STROKE
+                this.strokeWidth = strokeWidth
+                strokeJoin = Paint.Join.ROUND
+                strokeCap = Paint.Cap.ROUND
+            }
+            canvas.drawText(text, cx, cy, strokePaint)
+
+            // Draw fill on top
+            fillPaint.style = Paint.Style.FILL
+            canvas.drawText(text, cx, cy, fillPaint)
+
+            bmp
+        }
+        StickerTextStyle.Bubbly -> {
+            val padH = (scaledFontSize * 0.5f).toInt()
+            val padV = (scaledFontSize * 0.35f).toInt()
+            val bmpW = (textWidth + padH * 2).toInt().coerceAtLeast(1)
+            val bmpH = (textBounds.height() + padV * 2).toInt().coerceAtLeast(1)
+            val bmp = Bitmap.createBitmap(bmpW, bmpH, Bitmap.Config.ARGB_8888)
+            val canvas = Canvas(bmp)
+            canvas.drawColor(AndroidColor.TRANSPARENT, PorterDuff.Mode.CLEAR)
+
+            // Draw pill background
+            val cornerRadius = bmpH / 2f
+            val bgPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+                color = textColor
+                this.style = Paint.Style.FILL
+            }
+            canvas.drawRoundRect(
+                RectF(0f, 0f, bmpW.toFloat(), bmpH.toFloat()),
+                cornerRadius, cornerRadius, bgPaint,
+            )
+
+            // Draw text in contrasting color
+            val cx = bmpW / 2f
+            val cy = bmpH / 2f + textBounds.height() / 2f - textBounds.bottom
+            val luminance = AndroidColor.luminance(textColor)
+            fillPaint.color = if (luminance > 0.5f) AndroidColor.BLACK else AndroidColor.WHITE
+            fillPaint.style = Paint.Style.FILL
+            canvas.drawText(text, cx, cy, fillPaint)
+
+            bmp
+        }
+        else -> {
+            // Fallback: simple colored text
+            val padH = 8
+            val padV = 8
+            val bmpW = (textWidth + padH * 2).toInt().coerceAtLeast(1)
+            val bmpH = (textBounds.height() + padV * 2).toInt().coerceAtLeast(1)
+            val bmp = Bitmap.createBitmap(bmpW, bmpH, Bitmap.Config.ARGB_8888)
+            val canvas = Canvas(bmp)
+            canvas.drawColor(AndroidColor.TRANSPARENT, PorterDuff.Mode.CLEAR)
+            val cx = bmpW / 2f
+            val cy = bmpH / 2f + textBounds.height() / 2f - textBounds.bottom
+            fillPaint.style = Paint.Style.FILL
+            canvas.drawText(text, cx, cy, fillPaint)
+            bmp
+        }
+    }
+}
+--- STEP 154 ---
+Chunk 0:
+Target:
+import androidx.compose.material.icons.outlined.TextFields
+Replace:
+import androidx.compose.material.icons.outlined.TextFields
+import androidx.compose.material.icons.outlined.RoundedCorner
+Chunk 1:
+Target:
+    var showSaveDialog by remember { mutableStateOf(false) }
+    var saveTagsText by remember { mutableStateOf("") }
+Replace:
+    var showSaveDialog by remember { mutableStateOf(false) }
+    var saveTagsText by remember { mutableStateOf("") }
+    var outlineRunning by remember { mutableStateOf(false) }
+Chunk 2:
+Target:
+                    item {
+                        ToolButton(
+                            icon = Icons.Outlined.TextFields,
+                            label = "Text",
+                            enabled = !imageUri.isNullOrBlank(),
+                            onClick = {
+                                photoEditor?.setBrushDrawingMode(false)
+                                mode = EditorMode.Idle
+                                showTextDialog = true
+                            },
+                        )
+                    }
+Replace:
+                    item {
+                        ToolButton(
+                            icon = Icons.Outlined.TextFields,
+                            label = "Text",
+                            enabled = !imageUri.isNullOrBlank(),
+                            onClick = {
+                                photoEditor?.setBrushDrawingMode(false)
+                                mode = EditorMode.Idle
+                                showTextDialog = true
+                            },
+                        )
+                    }
+                    item {
+                        ToolButton(
+                            icon = Icons.Outlined.RoundedCorner,
+                            label = "Outline",
+                            enabled = !imageUri.isNullOrBlank() && !outlineRunning,
+                            onClick = {
+                                val editor = photoEditor ?: return@ToolButton
+                                val view = photoEditorView ?: return@ToolButton
+                                photoEditor?.setBrushDrawingMode(false)
+                                mode = EditorMode.Idle
+                                outlineRunning = true
+                                scope.launch {
+                                    val rasterized = rasterizeEditor(editor)
+                                    if (rasterized != null) {
+                                        val outlined = withContext(Dispatchers.Default) {
+                                            addStickerOutline(
+                                                src = rasterized,
+                                                outlineColor = AndroidColor.WHITE,
+                                                outlineWidth = 12,
+                                            )
+                                        }
+                                        // Write to cache and reload into editor
+                                        val cacheFile = withContext(Dispatchers.IO) {
+                                            val f = File(context.cacheDir, "outline_${System.nanoTime()}.png")
+                                            FileOutputStream(f).use {
+                                                outlined.compress(Bitmap.CompressFormat.PNG, 100, it)
+                                            }
+                                            f
+                                        }
+                                        imageUri = Uri.fromFile(cacheFile).toString()
+                                    } else {
+                                        Toast.makeText(context, "Couldn't apply outline", Toast.LENGTH_SHORT).show()
+                                    }
+                                    outlineRunning = false
+                                }
+                            },
+                        )
+                    }
+Chunk 3:
+Target:
+                        if (saving || bgRemovalRunning) {
+Replace:
+                        if (saving || bgRemovalRunning || outlineRunning) {
+Chunk 4:
+Target:
+                                    Text(
+                                        text = if (saving) "Saving…" else "Removing background…",
+                                        color = Color.White,
+                                    )
+Replace:
+                                    Text(
+                                        text = when {
+                                            saving -> "Saving…"
+                                            outlineRunning -> "Adding outline…"
+                                            else -> "Removing background…"
+                                        },
+                                        color = Color.White,
+                                    )
+--- STEP 168 ---
+Target:
+// ── Image helpers ──────────────────────────────────────────────────────────
+Replace:
+// ── Sticker outline (die-cut border) ──────────────────────────────────────
+
+/**
+ * Produces a die-cut sticker outline by dilating the alpha channel of [src]
+ * by [outlineWidth] pixels and drawing the dilated region in [outlineColor]
+ * behind the original image. The result is a new bitmap where the subject
+ * has a thick colored border like a real printed sticker.
+ */
+private fun addStickerOutline(
+    src: Bitmap,
+    outlineColor: Int = AndroidColor.WHITE,
+    outlineWidth: Int = 12,
+): Bitmap {
+    val w = src.width
+    val h = src.height
+    // Expand canvas to accommodate the outline
+    val expandedW = w + outlineWidth * 2
+    val expandedH = h + outlineWidth * 2
+    val result = Bitmap.createBitmap(expandedW, expandedH, Bitmap.Config.ARGB_8888)
+    val canvas = Canvas(result)
+    canvas.drawColor(AndroidColor.TRANSPARENT, PorterDuff.Mode.CLEAR)
+
+    // Build an alpha mask from the source
+    val alphaPixels = IntArray(w * h)
+    src.getPixels(alphaPixels, 0, w, 0, 0, w, h)
+
+    // Create dilated alpha mask
+    val dilatedAlpha = BooleanArray(expandedW * expandedH)
+    val radiusSq = outlineWidth * outlineWidth
+
+    for (y in 0 until h) {
+        for (x in 0 until w) {
+            val alpha = (alphaPixels[y * w + x] ushr 24) and 0xFF
+            if (alpha > 20) { // Threshold to skip near-transparent pixels
+                // Mark all pixels within outlineWidth radius as dilated
+                val cx = x + outlineWidth
+                val cy = y + outlineWidth
+                for (dy in -outlineWidth..outlineWidth) {
+                    for (dx in -outlineWidth..outlineWidth) {
+                        if (dx * dx + dy * dy <= radiusSq) {
+                            val nx = cx + dx
+                            val ny = cy + dy
+                            if (nx in 0 until expandedW && ny in 0 until expandedH) {
+                                dilatedAlpha[ny * expandedW + nx] = true
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    // Draw outline from dilated mask
+    val outlinePaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        color = outlineColor
+        style = Paint.Style.FILL
+    }
+    val outlineBmp = Bitmap.createBitmap(expandedW, expandedH, Bitmap.Config.ARGB_8888)
+    val outlinePixels = IntArray(expandedW * expandedH)
+    for (i in dilatedAlpha.indices) {
+        outlinePixels[i] = if (dilatedAlpha[i]) outlineColor else AndroidColor.TRANSPARENT
+    }
+    outlineBmp.setPixels(outlinePixels, 0, expandedW, 0, 0, expandedW, expandedH)
+    canvas.drawBitmap(outlineBmp, 0f, 0f, null)
+    outlineBmp.recycle()
+
+    // Draw original image centered on top
+    canvas.drawBitmap(src, outlineWidth.toFloat(), outlineWidth.toFloat(), null)
+
+    return result
+}
+
+// ── Image helpers ──────────────────────────────────────────────────────────
+--- STEP 174 ---
+Chunk 0:
+Target:
+import androidx.compose.material.icons.outlined.TextFields
+import androidx.compose.material.icons.outlined.RoundedCorner
+Replace:
+import androidx.compose.material.icons.outlined.TextFields
+import androidx.compose.material.icons.outlined.RoundedCorner
+import androidx.compose.material.icons.outlined.EmojiEmotions
+Chunk 1:
+Target:
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+Replace:
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.lazy.grid.GridCells
+import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
+import androidx.compose.foundation.lazy.grid.items
+Chunk 2:
+Target:
+    var outlineRunning by remember { mutableStateOf(false) }
+Replace:
+    var outlineRunning by remember { mutableStateOf(false) }
+    var showDecorateSheet by remember { mutableStateOf(false) }
+Chunk 3:
+Target:
+                    }
+Replace:
+                    }
+                    item {
+                        ToolButton(
+                            icon = Icons.Outlined.EmojiEmotions,
+                            label = "Decorate",
+                            enabled = !imageUri.isNullOrBlank(),
+                            onClick = {
+                                photoEditor?.setBrushDrawingMode(false)
+                                mode = EditorMode.Idle
+                                showDecorateSheet = true
+                            },
+                        )
+                    }
+--- STEP 180 ---
+Target:
+        )\n    }\n}
+Replace:
+        )\n    }\n\n    if (showDecorateSheet) {\n        AlertDialog(\n            onDismissRequest = { showDecorateSheet = false },\n            title = { Text(\"Add decoration\") },\n            text = {\n                Column {\n                    Text(\n                        \"Tap to place on your sticker\",\n                        color = MaterialTheme.colorScheme.onSurfaceVariant,\n                        fontSize = 13.sp,\n                    )\n                    Spacer(Modifier.height(12.dp))\n                    LazyVerticalGrid(\n                        columns = GridCells.Fixed(5),\n                        modifier = Modifier\n                            .fillMaxWidth()\n                            .heightIn(max = 280.dp),\n                        verticalArrangement = Arrangement.spacedBy(8.dp),\n                        horizontalArrangement = Arrangement.spacedBy(8.dp),\n                    ) {\n                        items(DECORATION_ITEMS) { (emoji, label) ->\n                            Box(\n                                modifier = Modifier\n                                    .aspectRatio(1f)\n                                    .clip(RoundedCornerShape(10.dp))\n                                    .background(MaterialTheme.colorScheme.surfaceContainerHigh)\n                                    .clickable {\n                                        val editor = photoEditor ?: return@clickable\n                                        scope.launch {\n                                            val bmp = withContext(Dispatchers.Default) {\n                                                emojiToBitmap(emoji, 192)\n                                            }\n                                            editor.addImage(bmp)\n                                        }\n                                        showDecorateSheet = false\n                                    },\n                                contentAlignment = Alignment.Center,\n                            ) {\n                                Text(\n                                    text = emoji,\n                                    fontSize = 28.sp,\n                                )\n                            }\n                        }\n                    }\n                }\n            },\n            confirmButton = {\n                TextButton(onClick = { showDecorateSheet = false }) { Text(\"Close\") }\n            },\n        )\n    }\n}
+--- STEP 184 ---
+Target:
+
+Replace:
+    }\n\n    if (showDecorateSheet) {\n        AlertDialog(\n            onDismissRequest = { showDecorateSheet = false },\n            title = { Text(\"Add decoration\") },\n            text = {\n                Column {\n                    Text(\n                        \"Tap to place on your sticker\",\n                        color = MaterialTheme.colorScheme.onSurfaceVariant,\n                        fontSize = 13.sp,\n                    )\n                    Spacer(Modifier.height(12.dp))\n                    LazyVerticalGrid(\n                        columns = GridCells.Fixed(5),\n                        modifier = Modifier\n                            .fillMaxWidth()\n                            .heightIn(max = 280.dp),\n                        verticalArrangement = Arrangement.spacedBy(8.dp),\n                        horizontalArrangement = Arrangement.spacedBy(8.dp),\n                    ) {\n                        items(DECORATION_ITEMS) { (emoji, label) ->\n                            Box(\n                                modifier = Modifier\n                                    .aspectRatio(1f)\n                                    .clip(RoundedCornerShape(10.dp))\n                                    .background(MaterialTheme.colorScheme.surfaceContainerHigh)\n                                    .clickable {\n                                        val editor = photoEditor ?: return@clickable\n                                        scope.launch {\n                                            val bmp = withContext(Dispatchers.Default) {\n                                                emojiToBitmap(emoji, 192)\n                                            }\n                                            editor.addImage(bmp)\n                                        }\n                                        showDecorateSheet = false\n                                    },\n                                contentAlignment = Alignment.Center,\n                            ) {\n                                Text(\n                                    text = emoji,\n                                    fontSize = 28.sp,\n                                )\n                            }\n                        }\n                    }\n                }\n            },\n            confirmButton = {\n                TextButton(onClick = { showDecorateSheet = false }) { Text(\"Close\") }\n            },\n        )\n    }\n}", "StartLine": 1421, "TargetContent": "    }\n}"}, {"AllowMultiple": false, "EndLine": 1424, "ReplacementContent": "private val DECORATION_ITEMS = listOf(\n    \"\ud83d\ude0e\" to \"Sunglasses\",\n    \"\ud83e\udd20\" to \"Cowboy Hat\",\n    \"\ud83d\udc51\" to \"Crown\",\n    \"\ud83c\udfa9\" to \"Top Hat\",\n    \"\ud83e\udde2\" to \"Cap\",\n    \"\ud83d\udcac\" to \"Speech Bubble\",\n    \"\ud83d\udcad\" to \"Thought Bubble\",\n    \"\ud83d\udca5\" to \"Explosion\",\n    \"\ud83d\udd25\" to \"Fire\",\n    \"\u2b50\" to \"Star\",\n    \"\u2764\ufe0f\" to \"Heart\",\n    \"\ud83d\udca2\" to \"Anger\",\n    \"\ud83d\udca7\" to \"Sweat\",\n    \"\ud83c\udf1f\" to \"Sparkle\",\n    \"\ud83c\udf08\" to \"Rainbow\",\n    \"\ud83d\udcaf\" to \"100\",\n    \"\ud83d\udc80\" to \"Skull\",\n    \"\ud83e\udd21\" to \"Clown\",\n    \"\ud83d\udc7b\" to \"Ghost\",\n    \"\ud83d\udc4d\" to \"Thumbs Up\",\n    \"\u270c\ufe0f\" to \"Peace\",\n    \"\ud83e\udd18\" to \"Rock On\",\n    \"\ud83c\udf89\" to \"Party\",\n    \"\ud83d\udca3\" to \"Bomb\",\n    \"\ud83d\udcaa\" to \"Muscles\",\n)\n\n/**\n * Renders a single emoji character into a transparent Bitmap of the\n * given [sizePx]. Uses the system's emoji font for maximum compatibility.\n */\nprivate fun emojiToBitmap(emoji: String, sizePx: Int): Bitmap {\n    val paint = Paint(Paint.ANTI_ALIAS_FLAG).apply {\n        textSize = sizePx * 0.8f\n        textAlign = Paint.Align.CENTER\n    }\n    val bmp = Bitmap.createBitmap(sizePx, sizePx, Bitmap.Config.ARGB_8888)\n    val canvas = Canvas(bmp)\n    canvas.drawColor(AndroidColor.TRANSPARENT, PorterDuff.Mode.CLEAR)\n    val fm = paint.fontMetrics\n    val cx = sizePx / 2f\n    val cy = sizePx / 2f - (fm.ascent + fm.descent) / 2f\n    canvas.drawText(emoji, cx, cy, paint)\n    return bmp\n}\n\nprivate enum class EditorMode { Idle, Draw, Erase }", "StartLine": 1424, "TargetContent": "private enum class EditorMode { Idle, Draw, Erase }"}, {"AllowMultiple": false, "EndLine": 1424, "ReplacementContent": "", "StartLine": 1424, "TargetContent": ""}]
+--- STEP 186 ---
+Chunk 0:
+Target:
+    }
+}
+Replace:
+    }
+
+    if (showDecorateSheet) {
+        AlertDialog(
+            onDismissRequest = { showDecorateSheet = false },
+            title = { Text("Add decoration") },
+            text = {
+                Column {
+                    Text(
+                        "Tap to place on your sticker",
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        fontSize = 13.sp,
+                    )
+                    Spacer(Modifier.height(12.dp))
+                    LazyVerticalGrid(
+                        columns = GridCells.Fixed(5),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .heightIn(max = 280.dp),
+                        verticalArrangement = Arrangement.spacedBy(8.dp),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    ) {
+                        items(DECORATION_ITEMS) { (emoji, label) ->
+                            Box(
+                                modifier = Modifier
+                                    .aspectRatio(1f)
+                                    .clip(RoundedCornerShape(10.dp))
+                                    .background(MaterialTheme.colorScheme.surfaceContainerHigh)
+                                    .clickable {
+                                        val editor = photoEditor ?: return@clickable
+                                        scope.launch {
+                                            val bmp = withContext(Dispatchers.Default) {
+                                                emojiToBitmap(emoji, 192)
+                                            }
+                                            editor.addImage(bmp)
+                                        }
+                                        showDecorateSheet = false
+                                    },
+                                contentAlignment = Alignment.Center,
+                            ) {
+                                Text(
+                                    text = emoji,
+                                    fontSize = 28.sp,
+                                )
+                            }
+                        }
+                    }
+                }
+            },
+            confirmButton = {
+                TextButton(onClick = { showDecorateSheet = false }) { Text("Close") }
+            },
+        )
+    }
+}
+Chunk 1:
+Target:
+private enum class EditorMode { Idle, Draw, Erase }
+Replace:
+private val DECORATION_ITEMS = listOf(
+    "😎" to "Sunglasses",
+    "🤠" to "Cowboy Hat",
+    "👑" to "Crown",
+    "🎩" to "Top Hat",
+    "🧢" to "Cap",
+    "💬" to "Speech Bubble",
+    "💭" to "Thought Bubble",
+    "💥" to "Explosion",
+    "🔥" to "Fire",
+    "⭐" to "Star",
+    "❤️" to "Heart",
+    "💢" to "Anger",
+    "💧" to "Sweat",
+    "🌟" to "Sparkle",
+    "🌈" to "Rainbow",
+    "💯" to "100",
+    "💀" to "Skull",
+    "🤡" to "Clown",
+    "👻" to "Ghost",
+    "👍" to "Thumbs Up",
+    "✌️" to "Peace",
+    "🤘" to "Rock On",
+    "🎉" to "Party",
+    "💣" to "Bomb",
+    "💪" to "Muscles",
+)
+
+/**
+ * Renders a single emoji character into a transparent Bitmap of the
+ * given [sizePx]. Uses the system's emoji font for maximum compatibility.
+ */
+private fun emojiToBitmap(emoji: String, sizePx: Int): Bitmap {
+    val paint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        textSize = sizePx * 0.8f
+        textAlign = Paint.Align.CENTER
+    }
+    val bmp = Bitmap.createBitmap(sizePx, sizePx, Bitmap.Config.ARGB_8888)
+    val canvas = Canvas(bmp)
+    canvas.drawColor(AndroidColor.TRANSPARENT, PorterDuff.Mode.CLEAR)
+    val fm = paint.fontMetrics
+    val cx = sizePx / 2f
+    val cy = sizePx / 2f - (fm.ascent + fm.descent) / 2f
+    canvas.drawText(emoji, cx, cy, paint)
+    return bmp
+}
+
+private enum class EditorMode { Idle, Draw, Erase }
+--- STEP 349 ---
+Chunk 0:
+Target:
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.asImageBitmap
+Replace:
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.ui.graphics.drawscope.drawIntoCanvas
+import androidx.compose.ui.graphics.luminance
