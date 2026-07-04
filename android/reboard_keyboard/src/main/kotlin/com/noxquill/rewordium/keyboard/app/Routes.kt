@@ -70,7 +70,6 @@ import com.noxquill.rewordium.keyboard.app.settings.localization.LocalizationScr
 import com.noxquill.rewordium.keyboard.app.settings.localization.SelectLocaleScreen
 import com.noxquill.rewordium.keyboard.app.settings.localization.SubtypeEditorScreen
 import com.noxquill.rewordium.keyboard.app.settings.media.MediaScreen
-import com.noxquill.rewordium.keyboard.app.settings.stickerstudio.AnimatedStickerImportScreen
 import com.noxquill.rewordium.keyboard.app.settings.stickerstudio.MyStickersScreen
 import com.noxquill.rewordium.keyboard.app.settings.stickerstudio.PremadeLibraryScreen
 import com.noxquill.rewordium.keyboard.app.settings.stickerstudio.StickerEditorScreen
@@ -193,6 +192,7 @@ object Routes {
         data class StickerEditor(
             /** Optional source URI to load as the base layer. Null = blank. */
             val sourceUri: String? = null,
+            val gifMode: Boolean = false,
         )
 
         @Serializable
@@ -349,10 +349,9 @@ object Routes {
             composableWithDeepLink(Settings.MyStickers::class) { MyStickersScreen() }
             composableWithDeepLink(Settings.StickerEditor::class) { navBackStack ->
                 val payload = navBackStack.toRoute<Settings.StickerEditor>()
-                StickerEditorScreen(sourceUri = payload.sourceUri)
+                StickerEditorScreen(sourceUri = payload.sourceUri, gifMode = payload.gifMode)
             }
             composableWithDeepLink(Settings.PremadeLibrary::class) { PremadeLibraryScreen() }
-            composableWithDeepLink(Settings.AnimatedStickerImport::class) { AnimatedStickerImportScreen() }
 
             composableWithDeepLink(Settings.Other::class) { OtherScreen() }
             composableWithDeepLink(Settings.PhysicalKeyboard::class) { PhysicalKeyboardScreen() }

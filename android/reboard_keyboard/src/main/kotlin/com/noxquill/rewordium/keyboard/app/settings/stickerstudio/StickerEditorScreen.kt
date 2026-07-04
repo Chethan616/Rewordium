@@ -68,6 +68,7 @@ import androidx.compose.material.icons.outlined.Flip
 import androidx.compose.material.icons.outlined.PhotoLibrary
 import androidx.compose.material.icons.outlined.RotateLeft
 import androidx.compose.material.icons.outlined.RotateRight
+import androidx.compose.material.icons.filled.ArrowDropDown
 import androidx.compose.material.icons.outlined.TextFields
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
@@ -130,6 +131,11 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.io.File
 import java.io.FileOutputStream
+import coil.imageLoader
+import coil.request.ImageRequest
+import com.noxquill.rewordium.keyboard.app.settings.stickerstudio.AnimatedGifEncoder
+import com.noxquill.rewordium.keyboard.app.settings.stickerstudio.StandardGifDecoder
+import com.noxquill.rewordium.keyboard.app.settings.stickerstudio.GifHeaderParser
 
 private const val EXPORT_SIZE = 512
 
@@ -161,7 +167,7 @@ private val PALETTE = listOf(
  * is prompted to pick one.
  */
 @Composable
-fun StickerEditorScreen(sourceUri: String?) = FlorisScreen {
+fun StickerEditorScreen(sourceUri: String?, gifMode: Boolean = false) = FlorisScreen {
     title = "Sticker editor"
     previewFieldVisible = false
     scrollable = false
@@ -183,6 +189,9 @@ fun StickerEditorScreen(sourceUri: String?) = FlorisScreen {
     var outlineRunning by remember { mutableStateOf(false) }
     var saving by remember { mutableStateOf(false) }
     var bgRemovalRunning by remember { mutableStateOf(false) }
+    var isGif by remember { mutableStateOf(false) }
+    var removeBgRequested by remember { mutableStateOf(false) }
+    var outlineRequested by remember { mutableStateOf(false) }
     var imageUri by rememberSaveable { mutableStateOf(sourceUri) }
     var showSaveDialog by remember { mutableStateOf(false) }
     var saveTagsText by remember { mutableStateOf("") }
@@ -325,14 +334,49 @@ fun StickerEditorScreen(sourceUri: String?) = FlorisScreen {
         val view = photoEditorView ?: return@LaunchedEffect
         val uriStr = imageUri
         if (uriStr.isNullOrBlank()) return@LaunchedEffect
-        val bmp = decodeUriToBitmap(context, Uri.parse(uriStr), EXPORT_SIZE)
-        if (bmp != null) view.source.setImageBitmap(bmp)
+        val uri = Uri.parse(uriStr)
+        val mimeType = context.contentResolver.getType(uri)
+        var isGifFile = mimeType?.contains("gif") == true || uriStr.lowercase().endsWith(".gif")
+        if (!isGifFile) {
+            try {
+                context.contentResolver.openInputStream(uri)?.use { 
+                    val bytes = ByteArray(3)
+                    it.read(bytes)
+                    val header = String(bytes)
+                    if (header == "GIF") isGifFile = true
+                }
+            } catch (e: Exception) {}
+        }
+        isGif = gifMode || isGifFile
+        if (isGif) {
+            val request = coil.request.ImageRequest.Builder(context)
+                .data(uri)
+                .decoderFactory(
+                    if (android.os.Build.VERSION.SDK_INT >= 28) {
+                        coil.decode.ImageDecoderDecoder.Factory()
+                    } else {
+                        coil.decode.GifDecoder.Factory()
+                    }
+                )
+                .target(view.source)
+                .listener(
+                    onSuccess = { _, result ->
+                        (result.drawable as? android.graphics.drawable.Animatable)?.start()
+                    }
+                )
+                .build()
+            context.imageLoader.enqueue(request)
+        } else {
+            val bmp = decodeUriToBitmap(context, uri, EXPORT_SIZE)
+            if (bmp != null) view.source.setImageBitmap(bmp)
+        }
     }
 
     // Auto-launch image picker if no source URI is provided.
     LaunchedEffect(Unit) {
         if (imageUri.isNullOrBlank()) {
-            imagePickerLauncher.launch("image/*")
+            val mime = if (gifMode) "image/gif" else "image/*"
+            imagePickerLauncher.launch(mime)
         }
     }
 
@@ -755,14 +799,17 @@ fun StickerEditorScreen(sourceUri: String?) = FlorisScreen {
                         ToolButton(
                             icon = Icons.Outlined.PhotoLibrary,
                             label = "Photo",
-                            onClick = { imagePickerLauncher.launch("image/*") },
+                            onClick = { 
+                                val mime = if (gifMode || isGif) "image/gif" else "image/*"
+                                imagePickerLauncher.launch(mime) 
+                            },
                         )
                     }
                     item {
                         ToolButton(
                             icon = Icons.Outlined.Crop,
                             label = "Crop",
-                            enabled = !imageUri.isNullOrBlank(),
+                            enabled = !imageUri.isNullOrBlank() && !isGif,
                             onClick = {
                                 val view = photoEditorView ?: return@ToolButton
                                 scope.launch {
@@ -781,6 +828,11 @@ fun StickerEditorScreen(sourceUri: String?) = FlorisScreen {
                             enabled = !imageUri.isNullOrBlank(),
                             onClick = {
                                 val view = photoEditorView ?: return@ToolButton
+                                if (isGif) {
+                                    removeBgRequested = true
+                                    Toast.makeText(context, "Background will be removed when saving.", Toast.LENGTH_SHORT).show()
+                                    return@ToolButton
+                                }
                                 bgRemovalRunning = true
                                 scope.launch {
                                     val bmp = view.source.drawableToBitmap()
@@ -801,6 +853,35 @@ fun StickerEditorScreen(sourceUri: String?) = FlorisScreen {
                                     }
                                 }
                             },
+                        )
+                    }
+                    item {
+                        ToolButton(
+                            icon = Icons.Outlined.RoundedCorner,
+                            label = "Outline",
+                            enabled = !imageUri.isNullOrBlank(),
+                            onClick = {
+                                val editor = photoEditor ?: return@ToolButton
+                                val view = photoEditorView ?: return@ToolButton
+                                if (isGif) {
+                                    outlineRequested = true
+                                    Toast.makeText(context, "Outline will be added when saving.", Toast.LENGTH_SHORT).show()
+                                    return@ToolButton
+                                }
+                                outlineRunning = true
+                                scope.launch {
+                                    addStickerOutline(editor, view)
+                                    outlineRunning = false
+                                }
+                            }
+                        )
+                    }
+                    item {
+                        ToolButton(
+                            icon = Icons.Outlined.EmojiEmotions,
+                            label = "Decorate",
+                            enabled = !imageUri.isNullOrBlank(),
+                            onClick = { showDecorateSheet = true }
                         )
                     }
                     item {
@@ -1118,27 +1199,36 @@ fun StickerEditorScreen(sourceUri: String?) = FlorisScreen {
             title = { Text("Save sticker") },
             text = {
                 Column {
-                    if (packs.isNotEmpty()) {
-                        Text("Sticker Pack:", color = MaterialTheme.colorScheme.onSurfaceVariant, style = MaterialTheme.typography.labelMedium)
-                        Spacer(modifier = Modifier.height(8.dp))
-                        LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                            item {
-                                FilterChip(
-                                    selected = savePackId == null,
-                                    onClick = { savePackId = null },
-                                    label = { Text("None") }
-                                )
-                            }
-                            items(packs) { pack ->
-                                FilterChip(
-                                    selected = savePackId == pack.id,
-                                    onClick = { savePackId = pack.id },
-                                    label = { Text(pack.name) }
+                    var expanded by remember { mutableStateOf(false) }
+                    val selectedPackName = if (savePackId == null) "None (Uncategorized)" else packs.find { it.id == savePackId }?.name ?: "None"
+                    Text("Sticker Pack:", color = MaterialTheme.colorScheme.onSurfaceVariant, style = MaterialTheme.typography.labelMedium)
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Box {
+                        androidx.compose.material3.OutlinedTextField(
+                            value = selectedPackName,
+                            onValueChange = {},
+                            readOnly = true,
+                            trailingIcon = {
+                                IconButton(onClick = { expanded = true }) {
+                                    Icon(androidx.compose.material.icons.Icons.Default.ArrowDropDown, "Select pack")
+                                }
+                            },
+                            modifier = Modifier.fillMaxWidth().clickable { expanded = true }
+                        )
+                        androidx.compose.material3.DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
+                            androidx.compose.material3.DropdownMenuItem(
+                                text = { Text("None (Uncategorized)") },
+                                onClick = { savePackId = null; expanded = false }
+                            )
+                            packs.forEach { pack ->
+                                androidx.compose.material3.DropdownMenuItem(
+                                    text = { Text(pack.name) },
+                                    onClick = { savePackId = pack.id; expanded = false }
                                 )
                             }
                         }
-                        Spacer(modifier = Modifier.height(16.dp))
                     }
+                    Spacer(modifier = Modifier.height(16.dp))
                     Text(
                         text = "Add tags to categorize this sticker (comma separated):",
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -1164,7 +1254,14 @@ fun StickerEditorScreen(sourceUri: String?) = FlorisScreen {
                         val view = photoEditorView ?: return@TextButton
                         saving = true
                         scope.launch {
-                            val ok = exportAndImport(context, editor, view, store, tagsList, savePackId)
+                            val ok = if (isGif) {
+                                exportAnimatedGif(
+                                    context, editor, view, store, tagsList, savePackId,
+                                    Uri.parse(imageUri!!), removeBgRequested, outlineRequested
+                                )
+                            } else {
+                                exportAndImport(context, editor, view, store, tagsList, savePackId)
+                            }
                             saving = false
                             if (ok) {
                                 Toast.makeText(context, "Sticker saved", Toast.LENGTH_SHORT).show()
@@ -1440,7 +1537,7 @@ private suspend fun exportAndImport(
             // WEBP_LOSSLESS preserves the transparent background that cutouts produce.
             normalized.compress(Bitmap.CompressFormat.WEBP_LOSSLESS, 100, it)
         }
-        val entry = store.import(Uri.fromFile(cacheFile), "image/webp", tags)
+        val entry = store.import(Uri.fromFile(cacheFile), "image/webp", tags, packId)
         cacheFile.delete()
         entry != null
     } catch (e: Exception) {
@@ -1538,3 +1635,141 @@ private fun Modifier.checkerboard(
 
 private class Ref<T>(var value: T? = null)
 
+
+
+private fun applyOutlineToBitmap(bmp: Bitmap): Bitmap? {
+    val width = bmp.width
+    val height = bmp.height
+    val out = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888)
+    val outCanvas = Canvas(out)
+    val paint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        color = AndroidColor.WHITE
+        style = Paint.Style.STROKE
+        strokeWidth = 24f
+        strokeJoin = Paint.Join.ROUND
+        strokeCap = Paint.Cap.ROUND
+    }
+    val pixels = IntArray(width * height)
+    bmp.getPixels(pixels, 0, width, 0, 0, width, height)
+    for (y in 0 until height) {
+        for (x in 0 until width) {
+            val p = pixels[y * width + x]
+            if (android.graphics.Color.alpha(p) > 10) {
+                outCanvas.drawPoint(x.toFloat(), y.toFloat(), paint)
+            }
+        }
+    }
+    outCanvas.drawBitmap(bmp, 0f, 0f, null)
+    return out
+}
+
+class SimpleBitmapProvider : com.noxquill.rewordium.keyboard.app.settings.stickerstudio.GifDecoder.BitmapProvider {
+    override fun obtain(width: Int, height: Int, config: Bitmap.Config): Bitmap {
+        return Bitmap.createBitmap(width, height, config)
+    }
+    override fun release(bitmap: Bitmap) {
+        bitmap.recycle()
+    }
+    override fun obtainByteArray(size: Int): ByteArray = ByteArray(size)
+    override fun release(bytes: ByteArray) {}
+    override fun obtainIntArray(size: Int): IntArray = IntArray(size)
+    override fun release(array: IntArray) {}
+}
+
+private suspend fun exportAnimatedGif(
+    context: android.content.Context,
+    editor: PhotoEditor,
+    view: PhotoEditorView,
+    store: UserStickerStore,
+    tags: List<String> = emptyList(),
+    packId: String? = null,
+    sourceUri: Uri,
+    removeBg: Boolean,
+    outline: Boolean
+): Boolean = withContext(Dispatchers.IO) {
+    try {
+        val overlayBitmap = withContext(Dispatchers.Main) {
+            val bmp = Bitmap.createBitmap(view.width, view.height, Bitmap.Config.ARGB_8888)
+            val canvas = Canvas(bmp)
+            view.source.visibility = android.view.View.INVISIBLE
+            view.draw(canvas)
+            view.source.visibility = android.view.View.VISIBLE
+            bmp
+        }
+
+        val bytes = context.contentResolver.openInputStream(sourceUri)?.use { it.readBytes() }
+            ?: return@withContext false
+
+        val parser = GifHeaderParser()
+        parser.setData(bytes)
+        val header = parser.parseHeader()
+        if (header.status != 0) return@withContext false
+
+        val decoder = StandardGifDecoder(SimpleBitmapProvider())
+        decoder.setData(header, bytes)
+        val frameCount = decoder.frameCount
+        if (frameCount == 0) return@withContext false
+
+        val outBytes = java.io.ByteArrayOutputStream()
+        val encoder = AnimatedGifEncoder()
+        encoder.start(outBytes)
+        encoder.setRepeat(0)
+
+        val targetSize = EXPORT_SIZE.toFloat()
+        val w = decoder.width.toFloat()
+        val h = decoder.height.toFloat()
+        val scale = if (w > h) targetSize / w else targetSize / h
+        val outW = (w * scale).toInt()
+        val outH = (h * scale).toInt()
+        encoder.setSize(outW, outH)
+
+        val framesToKeep = minOf(frameCount, 40)
+        
+        for (i in 0 until framesToKeep) {
+            decoder.advance()
+            val originalFrame = decoder.nextFrame ?: continue
+            var frame = Bitmap.createScaledBitmap(originalFrame, outW, outH, true)
+            
+            if (removeBg) {
+                val cutout = SubjectSegmentationHelper.run(frame)
+                if (cutout != null) frame = cutout
+            }
+            
+            if (outline) {
+                val outlined = applyOutlineToBitmap(frame)
+                if (outlined != null) frame = outlined
+            }
+            
+            val composite = Bitmap.createBitmap(EXPORT_SIZE, EXPORT_SIZE, Bitmap.Config.ARGB_8888)
+            val canvas = Canvas(composite)
+            
+            val left = (EXPORT_SIZE - frame.width) / 2f
+            val top = (EXPORT_SIZE - frame.height) / 2f
+            canvas.drawBitmap(frame, left, top, null)
+            
+            val overlayPad = squarePad(overlayBitmap, EXPORT_SIZE)
+            canvas.drawBitmap(overlayPad, 0f, 0f, null)
+            
+            encoder.setDelay(decoder.nextDelay)
+            encoder.addFrame(composite)
+            
+            frame.recycle()
+            composite.recycle()
+            overlayPad.recycle()
+        }
+        
+        encoder.finish()
+        overlayBitmap.recycle()
+        
+        val cacheOut = File(context.cacheDir, "anim_out_.gif")
+        FileOutputStream(cacheOut).use { it.write(outBytes.toByteArray()) }
+
+        val entry = store.import(Uri.fromFile(cacheOut), "image/gif", tags, packId)
+        cacheOut.delete()
+        
+        entry != null
+    } catch (e: Exception) {
+        e.printStackTrace()
+        false
+    }
+}
