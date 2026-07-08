@@ -1,28 +1,25 @@
-# ✨ Rewordium — AI Writing Assistant & Keyboard
+# 🐼 Rewordium — The AI-Powered Writing Assistant & Keyboard
 
 <p align="center">
-  <img alt="Rewordium Banner" src="https://img.shields.io/badge/Rewordium-AI_Writing_Suite-brightgreen?style=for-the-badge&labelColor=111&color=32CD32" />
+  <img alt="Rewordium Banner" src="https://img.shields.io/badge/Rewordium-AI_Writing_Suite-32CD32?style=for-the-badge&labelColor=111" />
 </p>
 
 <div align="center">
 
 <a href="https://github.com/Chethan616/Rewordium/releases/latest">
-  <img alt="Latest Release" src="https://img.shields.io/github/v/release/Chethan616/Rewordium?label=%F0%9F%A6%8E%20Latest&color=32CD32">
+  <img alt="Latest Release" src="https://img.shields.io/github/v/release/Chethan616/Rewordium?label=%F0%9F%90%BC%20Latest%20Panda&color=32CD32">
 </a>
-<img alt="Version" src="https://img.shields.io/badge/version-1.0.10%2B10-white.svg">
-<img alt="Platform" src="https://img.shields.io/badge/platform-Android-brightgreen.svg">
-<img alt="License" src="https://img.shields.io/badge/license-Proprietary-black.svg">
+<img alt="Version" src="https://img.shields.io/badge/version-1.0.28-white.svg">
+<img alt="Platform" src="https://img.shields.io/badge/platform-Android%20%7C%20iOS-brightgreen.svg">
+<img alt="License" src="https://img.shields.io/badge/license-Proprietary%20%28RSAL%29-black.svg">
 <img alt="Build" src="https://img.shields.io/badge/build-passing-brightgreen.svg">
-<a href="https://github.com/Chethan616/Rewordium/releases">
-  <img alt="Downloads" src="https://img.shields.io/github/downloads/Chethan616/Rewordium/total?color=32CD32">
-</a>
 
 ---
 
-**Rewordium** is a next-generation **AI writing assistant & keyboard** for Android.  
-Rewrite, summarize, refine, and write anywhere — *privately, beautifully, intelligently.*
+**Rewordium** is an advanced, high-performance **AI writing assistant & smart keyboard** built for Android and iOS.  
+Refine, translate, summarize, and adapt your tone instantly across any application — *privately, seamlessly, and securely.*
 
-[🌊 Features](#-features) • [📥 Installation](#-installation) • [🧠 AI Tools](#-ai-tools) • [🏗️ Building](#-building-from-source) • [🎨 Visuals](#-visual-experience) • [🛠️ Tech Stack](#-tech-stack) • [🤝 Contributing](#-contributing)
+[🌊 Features](#-features) • [📥 Installation](#-installation) • [🧠 AI Tools](#-ai-tools) • [🏗️ Building](#-building-from-source) • [🧩 Architecture](#-ai-engine-flow) • [🤝 Contributing](#-contributing)
 
 </div>
 
@@ -30,71 +27,60 @@ Rewrite, summarize, refine, and write anywhere — *privately, beautifully, inte
 
 ## About
 
-Rewordium combines the power of **AI writing tools**, a **smart keyboard**, and a **floating rewrite assistant** — all built with **privacy at its core**.  
-It’s designed for creators, professionals, and anyone who values effortless, intelligent writing.
+Rewordium merges the utility of a modern, tactile soft keyboard with the capabilities of state-of-the-art Large Language Models. Featuring a floating assistant bubble, unified sticker utility, and local privacy-first sandboxing, it is built to protect user confidentiality while enhancing productivity.
 
-> “Like the Axolotl, Rewordium regenerates — your creativity, your words, your ideas.”
+> “Like the Panda, Rewordium is composed, focused, and balanced — quietly processing language with power and poise.”
 
 ---
 
 ## ✨ Features
 
-### 🧠 AI Writing Tools
-- ✍️ Rewrite, summarize, and refine text instantly  
-- 🎭 Adjust tone — formal, creative, or concise  
-- 💬 Works across any app via the floating AI bubble  
-- ⚡ Lightning-fast response with privacy-first AI  
+### 🧠 AI Writing Suite
+- ✍️ **Natural Paraphraser:** Rephrase sentences to improve clarity, vocabulary, or length.
+- 🎭 **Multi-Tone Adaptability:** Instantly adjust prose to formal, casual, concise, or creative tones.
+- 🪶 **Grammar Optimization:** Identify structural errors, grammar issues, and improve flow.
+- 💬 **Context-Aware Assistance:** A persistent assistant floating panel that works natively over any text input field.
 
-### 🎹 Intelligent Keyboard
-- 🚀 Five-tier **Turbo Delete** acceleration  
-- 🎧 Premium haptics and smooth key transitions  
-- 💡 Smart clipboard integration  
-- 🌗 Adaptive theme and animation transitions  
+### 🎹 Intelligent Input Engine
+- 🚀 **Turbo Delete:** A smooth 5-tier progressive acceleration system for efficient, natural backspacing.
+- 🖼️ **Sticker Studio & GIF Panel:** Fully unified clipboard, sticker, and animated GIF panels featuring tag filtering.
+- 🎧 **Tactile Haptics:** Custom low-latency haptics designed to mimic high-end hardware keyboards.
+- 🌗 **Adaptive Themes:** Fluid light/dark color transitions matching the host OS theme settings.
 
-### 🔒 Privacy & Security
-- No tracking, no ads, no data collection  
-- Local-first text processing  
-- Transparent permission and privacy controls  
-
-### 🎨 Design & Customization
-- Light/dark green gradient themes  
-- Adjustable keyboard height and spacing  
-- Fluid, minimal interface with responsive design  
+### 🔒 Privacy & Sandboxing
+- Local-first text routing for maximum confidentiality.
+- Strict security controls ensuring zero diagnostic reporting, telemetry, or user tracking.
+- Compliant sandbox routing for all inputs, secrets, and clipboard logs.
 
 ---
 
-## 🦎 Latest Release — *v1.0.10 “Axolotl”*
+## 🐼 Latest Release — *v1.0.28 “Panda”*
 
-> *Regeneration through refinement.*
+- 🎨 **Material 3 Redesign:** Upgraded Tools Floating Action Button into a modern fan-out menu.
+- 🖼️ **Sticker Studio Integration:** Support for animated GIFs, custom sticker packs, and search tag filters.
+- 🍏 **iOS Engine Upgrades:** Full compatibility with Swift 6 and KeyboardKit v10, centered modifier layouts, and Apple HIG styling.
+- 🧹 **Stabilization:** Resolved `CropImageView` looping issues, bypassed deep-link startup recreation loops, and cached picked URIs safely.
 
-- ✅ Turbo Delete 2.0 — smoother acceleration  
-- ✅ Fixed overflow in experimental dialog  
-- ✅ Refined popup animations  
-- ✅ Improved haptics and transitions  
-
-📄 [Full Changelog →](playstore_releases/RELEASE_NOTES_AXOLOTL.md)
+📄 [Full Changelog →](playstore_releases/RELEASE_NOTES_PANDA.md)
 
 ---
 
 ## 📥 Installation
 
-### From GitHub
-1. Visit [**Releases**](https://github.com/Chethan616/Rewordium/releases)  
-2. Download the latest build (for example, `v1.0.10-Axolotl.apk`)  
-3. Transfer it to your Android device or download directly  
-4. Install it (you may need to allow *Install from Unknown Sources*)  
-5. Enable Rewordium in  
-   `Settings → System → Languages & input → On-screen keyboard`  
-6. Open the app to customize theme, keyboard height, haptics, and preferences  
+### Android (APK)
+1. Navigate to [**Releases**](https://github.com/Chethan616/Rewordium/releases) and download the latest `v1.0.28-Panda.apk`.
+2. Allow installation from unknown sources if prompted.
+3. Enable the keyboard layout via:
+   `Settings → System → Languages & input → On-screen keyboard → Manage keyboards`
 
 ---
 
-### From Google Play
+### Google Play Store
 <a href="https://play.google.com/store/apps/details?id=com.noxquill.rewordium" style="text-decoration:none">
   <img alt="Play Store" src="https://img.shields.io/badge/📱%20Get%20it%20on-Google%20Play-brightgreen?style=for-the-badge&logo=google-play&logoColor=white" />
 </a>  
 
-**Package name:** `com.noxquill.rewordium`
+**Package Name:** `com.noxquill.rewordium`
 
 ---
 
@@ -102,17 +88,17 @@ It’s designed for creators, professionals, and anyone who values effortless, i
 
 | Tool | Description |
 |------|-------------|
-| ✍️ **Rewrite** | Reword sentences naturally with AI |
-| 🧾 **Summarize** | Condense long text into concise ideas |
-| 🎭 **Tone Shift** | Instantly switch tone between creative, formal, or casual |
-| 🪶 **Grammar Fix** | Correct grammar, punctuation, and flow |
-| 💬 **Ask AI** | Get rewriting help anywhere, inside any app |
+| ✍️ **Rewrite** | Reformulate text naturally to improve readability. |
+| 🧾 **Summarize** | Condense lengthy articles or notes into clean bulleted summaries. |
+| 🎭 **Tone Shift** | Transition text tone between formal, creative, or casual. |
+| 🪶 **Grammar Fix** | Automatically detect and fix syntax errors. |
+| 💬 **Ask AI** | Interact directly with the language engine inside any app. |
 
 ---
 
 ## 🧩 AI Engine Flow
 
-The following diagram reflects the **exact production architecture** as implemented in the codebase.
+The pipeline below outlines how user text is captured, authorized, routed through LLMs, sanitized, and returned back to the editor view:
 
 ```mermaid
 flowchart TD
@@ -189,23 +175,16 @@ flowchart TD
 
 ### Key Architecture Notes
 
-| Component | Implementation |
-|-----------|---------------|
-| **Default LLM** | `qwen/qwen3-32b` via Groq Cloud (`UnifiedAIService._makeGroqRequest`) |
-| **Think-tag stripping** | `_stripThinkTags()` removes `<think>…</think>` from all Qwen3 output |
-| **JSON extraction** | `_extractJson()` tolerates markdown fences + stray prose from all models |
-| **Credit system** | 1 credit deducted per successful default-provider call via `FirebaseService.consumeCredit` |
-| **Large docs** | `DocumentChunkingService` splits text, runs parallel AI calls, merges results |
-| **Document import** | `DocumentService` handles PDF (Syncfusion), DOCX (archive+xml), TXT/MD (dart:io), URL (HTTP + BeautifulSoup) |
-| **OCR scanning** | `CunningDocumentScanner` → `MLKit TextRecognizer(script: TextRecognitionScript.latin)` |
-| **Keyboard AI** | Reboard IME sends text to `GroqService` directly via `RewordiumKeyboardService` |
-| **Custom providers** | Gemini, OpenAI, Anthropic, and any OpenAI-compat endpoint — user-configured in Advanced AI Settings |
-
+- **Default LLM Provider:** Utilizes `qwen/qwen3-32b` via Groq Cloud by default.
+- **Result Optimization:** Post-processes raw LLM responses using `_stripThinkTags()` and `_extractJson()` to sanitize raw output before rendering.
+- **Auth and Quotas:** Integrates with Firestore to manage request routing, active user sessions, and credit deductions securely.
+- **Large Document Processing:** Uses `DocumentChunkingService` to divide inputs exceeding model contexts, sending sub-requests asynchronously and merging results.
 
 ---
+
 ## 🏗️ Building From Source
 
-You can easily build Rewordium from source using Flutter:
+You can build and deploy the application locally using Flutter:
 
 ```bash
 git clone https://github.com/Chethan616/Rewordium.git
@@ -217,11 +196,10 @@ flutter build apk --release
 
 ---
 
-## Attribution
+## Attribution & Licensing
 
-Rewordium includes modified keyboard components based on FlorisBoard.
+This project utilizes custom elements of the open-source **FlorisBoard** input engine. 
 
-- FlorisBoard: https://github.com/florisboard/florisboard
-- License: Apache License 2.0
-- Copyright: Patrick Goldinger and contributors
-- Notices: See NOTICE and in-app Credits & Licenses
+- **FlorisBoard Project:** [GitHub Repository](https://github.com/florisboard/florisboard)
+- **License Type:** Apache License 2.0
+- **Notice & Declarations:** Refer to the [NOTICE](NOTICE) file and in-app credits page for full attribution details.
