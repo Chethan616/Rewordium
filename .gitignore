@@ -52,6 +52,9 @@ upload-keystore.jks
 # Secret files that must be supplied via CI environment variables:
 ios/Runner/GoogleService-Info.plist
 ios/firebase_app_id_file.json
+# Firebase service account private key — NEVER commit this
+rewordium-*.json
+*-firebase-adminsdk-*.json
 
 # ===========================================================
 # OS / Editor files
