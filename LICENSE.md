@@ -1,108 +1,99 @@
-REWORDIUM — PROPRIETARY LICENSE (SOURCE-AVAILABLE)
-Version 1.0 — November 2025
+REWORDIUM SOURCE AVAILABLE LICENSE (RSAL)
+Version 1.1 — July 2026
 
-Copyright (c) 2025  Chethan Krishna Manikonda and Rupak R
+Copyright (c) 2025-2026 Chethan Krishna Manikonda and Rupak R (the "Licensors").
 All rights reserved.
 
-Rewordium is proprietary software developed and maintained by
-Chethan Krishna Manikonda and Rupak R.
+-------------------------------------------------------------------------------
+1. PURPOSE & PREAMBLE
+-------------------------------------------------------------------------------
+Rewordium (the "Software") is made available in source form for educational, 
+research, and contribution purposes. While the source code is viewable and 
+clonable, it is proprietary software and does not constitute free or 
+open-source software under the Open Source Initiative (OSI) definition. 
+
+Commercial utilization, public redistribution, and the release of derivative 
+works are strictly restricted under this license to preserve the integrity and 
+ownership of the Software.
 
 -------------------------------------------------------------------------------
-PREAMBLE
+2. LICENSE GRANT
 -------------------------------------------------------------------------------
-Rewordium is made available for educational, research, and contribution
-purposes. While its source code may be viewed and cloned, it is not
-free or open-source software. Commercial use, redistribution, or public
-derivative releases are strictly prohibited unless explicit permission
-is granted by the copyright holders.
+Subject to the terms and conditions of this License, the Licensors hereby 
+grant you a non-exclusive, non-transferable, non-sublicensable, royalty-free, 
+worldwide right and license to:
 
-The intent of this license is to allow transparency and community input
-without surrendering ownership or commercial control.
-
--------------------------------------------------------------------------------
-PERMISSIONS
--------------------------------------------------------------------------------
-Permission is hereby granted, free of charge, to any person obtaining a
-copy of this software and associated documentation files (the “Software”),
-to view, clone, and use the Software locally for educational or
-contribution purposes, subject to the following conditions:
-
-1. You may submit pull requests or file issues to suggest improvements or
-   report bugs.
-2. You may use the Software locally for learning, research, or experimentation.
+a. View, clone, and download the source code of the Software.
+b. Compile and run the Software locally for personal, non-commercial use, 
+   educational learning, research, or evaluation.
+c. Create and submit modifications, improvements, or bug fixes (collectively, 
+   "Contributions") back to the official repository of the Software.
 
 -------------------------------------------------------------------------------
-RESTRICTIONS
+3. LICENSE RESTRICTIONS
 -------------------------------------------------------------------------------
-The following actions are strictly prohibited without explicit written
-permission from the copyright holders:
+Except as explicitly permitted in Section 2, you may not:
 
-1. Redistribution, publication, or repackaging of this Software (in whole
-   or in part) for public or commercial use.
-2. Commercial use of the Software or any of its assets.
-3. Claiming ownership, modifying branding, or releasing derivative works
-   publicly.
-4. Decompiling, reverse-engineering, or extracting proprietary assets or
-   code for reuse.
-
--------------------------------------------------------------------------------
-CONTRIBUTIONS
--------------------------------------------------------------------------------
-By submitting a contribution (including but not limited to pull requests,
-patches, or documentation), you agree that:
-
-1. Your contribution becomes part of Rewordium and is licensed under the
-   same terms stated in this document.
-2. You grant Chethan Krishna Manikonda and Rupak R a perpetual,
-   irrevocable, worldwide, royalty-free right to use, modify, and
-   distribute your contribution (including for commercial purposes)
-   without further compensation.
-
-If you wish to contribute under different terms, you must contact the
-authors before submitting substantial work.
+a. Copy, modify, host, publish, distribute, rent, lease, sell, or sublicense 
+   the Software (in whole or in part) to any third party.
+b. Use the Software, or any substantial portion of it, to provide a commercial 
+   service, software-as-a-service (SaaS) platform, or cloud hosting solution.
+c. Release, publish, or deploy any public fork, clone, or derivative work of 
+   the Software.
+d. Reuse, extract, or repackage proprietary components, assets, custom 
+   designs, or visual elements of the Software in other projects.
 
 -------------------------------------------------------------------------------
-TRADEMARKS AND BRANDING
+4. CONTRIBUTIONS AND INTELLECTUAL PROPERTY
 -------------------------------------------------------------------------------
-"Rewordium" and all related names, logos, and assets are trademarks or
-trade names of their respective creators. Use of these marks requires
-explicit written permission.
+By submitting a Contribution to the Software (via pull requests, issues, 
+patches, or other transmission channels), you agree that:
+
+a. Your Contribution is submitted under the terms of this License.
+b. You grant the Licensors a perpetual, irrevocable, worldwide, royalty-free, 
+   non-exclusive, sublicensable, and transferable license to use, reproduce, 
+   modify, adapt, distribute, and commercially exploit your Contribution in 
+   any manner, without compensation or attribution.
+c. You represent and warrant that you hold all necessary rights to grant the 
+   aforementioned rights to your Contribution.
 
 -------------------------------------------------------------------------------
-SECURITY AND SECRETS
+5. TRADEMARKS AND BRANDING
 -------------------------------------------------------------------------------
-This repository must not contain production credentials (such as API keys,
-service account files, or private keys). If you discover an exposed secret,
-please report it privately to the contact below.
+"Rewordium", "NoxQuill", and all related logos, icons, designs, and brand 
+elements are proprietary trademarks of the Licensors. This License grants no 
+rights, licenses, or permissions to use these marks in connection with any 
+product, service, or repository outside the official project.
 
 -------------------------------------------------------------------------------
-CONTACT INFORMATION
+6. SECURITY AND SECRETS
 -------------------------------------------------------------------------------
-Chethan Krishna Manikonda
-Email: chethankrishna2022@gmail.com
-
-Rupak R
-Email: rupakr31@gmail.com
-
--------------------------------------------------------------------------------
-DISCLAIMER
--------------------------------------------------------------------------------
-THIS SOFTWARE IS PROVIDED “AS IS”, WITHOUT WARRANTY OF ANY KIND, EXPRESS
-OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES, OR OTHER LIABILITY,
-WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF,
-OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
-SOFTWARE.
+This repository is distributed without API keys, service credentials, or 
+private keys. In the event that you discover exposed credentials or security 
+vulnerabilities, you agree to report them privately to the Licensors and 
+abstain from public disclosure.
 
 -------------------------------------------------------------------------------
-NOTES
+7. DISCLAIMER OF WARRANTIES
 -------------------------------------------------------------------------------
-This is a source-available proprietary license:
-- You may read and contribute to the code, but redistribution and commercial
-  reuse are restricted.
-- Copyright ownership remains with the listed authors.
-- This license may be updated at any time without prior notice.
+THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" 
+AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE 
+IMPLIED WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE, AND 
+NON-INFRINGEMENT ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR 
+CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, 
+EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, 
+PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; 
+OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, 
+WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR 
+OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF 
+ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+
+-------------------------------------------------------------------------------
+8. CONTACT INFORMATION
+-------------------------------------------------------------------------------
+For licensing inquiries, commercial requests, or permissions, please contact:
+- Chethan Krishna Manikonda (chethankrishna2022@gmail.com)
+- Rupak R (rupakr31@gmail.com)
 
 -------------------------------------------------------------------------------
 SPDX-License-Identifier: LicenseRef-Rewordium-Proprietary
