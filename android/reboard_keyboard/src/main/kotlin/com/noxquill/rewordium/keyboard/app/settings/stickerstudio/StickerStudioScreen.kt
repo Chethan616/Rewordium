@@ -82,7 +82,7 @@ fun StickerStudioScreen() = FlorisScreen {
                 icon = Icons.Outlined.AddCircleOutline,
                 iconTint = MaterialTheme.colorScheme.primary,
                 onClick = {
-                    navController.navigate(Routes.Settings.StickerEditor(sourceUri = null, gifMode = true))
+                    navController.navigate(Routes.Settings.StickerEditor(sourceUri = null, gifMode = false))
                 },
             )
             SettingItem(

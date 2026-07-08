@@ -284,24 +284,24 @@ private fun ImportConfirmationDialog(
                 horizontalAlignment = Alignment.End
             ) {
                 Button(
+                    onClick = onKeep,
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Text("Add sticker")
+                }
+                Spacer(modifier = Modifier.height(8.dp))
+                OutlinedButton(
                     onClick = onRemoveBg,
                     modifier = Modifier.fillMaxWidth()
                 ) {
-                    Text("Remove background")
+                    Text("Cutout background")
                 }
                 Spacer(modifier = Modifier.height(8.dp))
                 OutlinedButton(
                     onClick = onEdit,
                     modifier = Modifier.fillMaxWidth()
                 ) {
-                    Text("Edit")
-                }
-                Spacer(modifier = Modifier.height(8.dp))
-                TextButton(
-                    onClick = onKeep,
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    Text("Keep as-is")
+                    Text("Edit in Studio")
                 }
                 Spacer(modifier = Modifier.height(8.dp))
                 TextButton(

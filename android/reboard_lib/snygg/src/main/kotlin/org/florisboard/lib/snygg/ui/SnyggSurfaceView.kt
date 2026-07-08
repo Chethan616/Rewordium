@@ -154,7 +154,7 @@ fun SnyggSurfaceView(
                             view.clipToOutline = true
                             view.outlineProvider = object : android.view.ViewOutlineProvider() {
                                 override fun getOutline(view: android.view.View, outline: android.graphics.Outline) {
-                                    val radius = (16 * view.resources.displayMetrics.density).toInt()
+                                    val radius = (28 * view.resources.displayMetrics.density).toInt()
                                     outline.setRoundRect(0, 0, view.width, view.height + radius, radius.toFloat())
                                 }
                             }

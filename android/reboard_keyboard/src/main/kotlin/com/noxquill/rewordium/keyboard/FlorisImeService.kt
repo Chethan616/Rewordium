@@ -754,7 +754,7 @@ class FlorisImeService : LifecycleInputMethodService() {
                             }
                             val roundedSmartbar by prefs.devtools.experimentalRoundedSmartbar.observeAsState()
                             val keyboardShape = if (roundedSmartbar) {
-                                RoundedCornerShape(topStart = 16.dp, topEnd = 16.dp)
+                                RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp)
                             } else null
                             Column(
                                 modifier = Modifier
