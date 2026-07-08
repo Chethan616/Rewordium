@@ -310,6 +310,7 @@ fun GboardEmojiPanel(
                     VerticalEmojiSections(
                         sections = sections,
                         gridState = lazyGridState,
+                        fg = onContainer,
                         onEmojiPicked = { emoji ->
                             inputFeedbackController.keyPress(TextKeyData.UNSPECIFIED)
                             // Capture previousWord context BEFORE the commit
@@ -516,7 +517,7 @@ private fun EmojiPanelHeader(
                         Icon(
                             imageVector = category.icon(),
                             contentDescription = category.id,
-                            tint = if (isActive) accent else fg.copy(alpha = 0.7f),
+                            tint = if (isActive) fg else fg.copy(alpha = 0.45f),
                             modifier = Modifier.size(20.dp),
                         )
                     }
@@ -561,6 +562,7 @@ private fun EmojiCategory.sectionTitle(): String = when (this) {
 private fun VerticalEmojiSections(
     sections: List<EmojiSection>,
     gridState: androidx.compose.foundation.lazy.grid.LazyGridState,
+    fg: Color,
     onEmojiPicked: (Emoji) -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -578,7 +580,7 @@ private fun VerticalEmojiSections(
             ) {
                 Text(
                     text = section.category.sectionTitle(),
-                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f),
+                    color = fg.copy(alpha = 0.6f),
                     fontSize = 12.sp,
                     fontWeight = FontWeight.Medium,
                     modifier = Modifier.padding(start = 4.dp, top = 8.dp, bottom = 4.dp),

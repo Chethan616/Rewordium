@@ -31,10 +31,11 @@ import com.noxquill.rewordium.keyboard.ime.dictionary.FlorisUserDictionaryDataba
 import com.noxquill.rewordium.keyboard.ime.smartbar.quickaction.QuickActionArrangement
 import com.noxquill.rewordium.keyboard.lib.compose.FlorisConfirmDeleteDialog
 import com.noxquill.rewordium.keyboard.lib.compose.FlorisScreen
-import dev.patrickgold.jetpref.datastore.model.observeAsState
+import dev.patrickgold.jetpref.datastore.model.*
 import dev.patrickgold.jetpref.datastore.ui.Preference
 import dev.patrickgold.jetpref.datastore.ui.PreferenceGroup
 import dev.patrickgold.jetpref.datastore.ui.SwitchPreference
+import dev.patrickgold.jetpref.datastore.ui.DialogSliderPreference
 import org.florisboard.lib.android.AndroidSettings
 import kotlinx.coroutines.launch
 import org.florisboard.lib.android.AndroidVersion
@@ -145,6 +146,21 @@ fun DevtoolsScreen() = FlorisScreen {
                 prefs.devtools.experimentalRoundedSmartbar,
                 title = stringRes(R.string.devtools__experimental_rounded_smartbar__label),
                 summary = stringRes(R.string.devtools__experimental_rounded_smartbar__summary),
+            )
+            DialogSliderPreference(
+                pref = prefs.devtools.experimentalRoundedSmartbarRadius,
+                title = "Rounded smartbar radius",
+                valueLabel = { radiusVal -> "$radiusVal dp" },
+                min = 4,
+                max = 48,
+                stepIncrement = 1,
+                enabledIf = { prefs.devtools.experimentalRoundedSmartbar.get() },
+            )
+            Preference(
+                title = "Reset to default",
+                summary = "Restore default smartbar radius (28 dp)",
+                onClick = { scope.launch { prefs.devtools.experimentalRoundedSmartbarRadius.set(28) } },
+                enabledIf = { prefs.devtools.experimentalRoundedSmartbar.get() }
             )
         }
 

@@ -61,8 +61,8 @@ fun CustomChip(
     }
 
     // Curated soft background/foreground color values
-    val containerColor = if (selected) accent.copy(alpha = 0.18f) else fg.copy(alpha = 0.05f)
-    val textColor = if (selected) accent else fg.copy(alpha = 0.70f)
+    val containerColor = if (selected) accent.copy(alpha = 0.22f) else fg.copy(alpha = 0.05f)
+    val textColor = if (selected) fg else fg.copy(alpha = 0.55f)
 
     Box(
         modifier = modifier

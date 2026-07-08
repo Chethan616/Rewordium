@@ -220,6 +220,10 @@ abstract class FlorisPreferenceModel : PreferenceModel() {
             key = "devtools__experimental_rounded_smartbar",
             default = false,
         )
+        val experimentalRoundedSmartbarRadius = int(
+            key = "devtools__experimental_rounded_smartbar_radius",
+            default = 28,
+        )
     }
 
     val dictionary = Dictionary()

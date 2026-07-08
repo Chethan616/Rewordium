@@ -307,12 +307,26 @@ fun StickerEditorScreen(sourceUri: String?, gifMode: Boolean = false) = FlorisSc
         ActivityResultContracts.GetContent(),
     ) { uri ->
         if (uri != null) {
-            // Copy the transient content URI to a local cache file so the
-            // CropImageView can read it even after the picker closes.
             scope.launch {
+                val isSelectedGif = withContext(Dispatchers.IO) {
+                    try {
+                        val mimeType = context.contentResolver.getType(uri)
+                        var isGifFile = mimeType?.contains("gif") == true || uri.toString().lowercase().endsWith(".gif")
+                        if (!isGifFile) {
+                            context.contentResolver.openInputStream(uri)?.use { 
+                                val bytes = ByteArray(3)
+                                it.read(bytes)
+                                val header = String(bytes)
+                                if (header == "GIF") isGifFile = true
+                            }
+                        }
+                        isGifFile
+                    } catch (_: Exception) { false }
+                }
                 val cachedUri = withContext(Dispatchers.IO) {
                     try {
-                        val cache = File(context.cacheDir, "pick_cache_${System.nanoTime()}.png")
+                        val ext = if (gifMode || isSelectedGif) "gif" else "png"
+                        val cache = File(context.cacheDir, "pick_cache_${System.nanoTime()}.$ext")
                         context.contentResolver.openInputStream(uri)?.use { input ->
                             cache.outputStream().use { output -> input.copyTo(output) }
                         } ?: return@withContext null
@@ -320,8 +334,13 @@ fun StickerEditorScreen(sourceUri: String?, gifMode: Boolean = false) = FlorisSc
                     } catch (_: Exception) { null }
                 }
                 if (cachedUri != null) {
-                    pendingCropUri = cachedUri
-                    cropModeActive = true
+                    if (gifMode || isSelectedGif) {
+                        imageUri = cachedUri.toString()
+                        cropModeActive = false
+                    } else {
+                        pendingCropUri = cachedUri
+                        cropModeActive = true
+                    }
                 } else {
                     Toast.makeText(context, "Failed to read image", Toast.LENGTH_SHORT).show()
                 }
@@ -1291,11 +1310,11 @@ private enum class StickerTextStyle(val label: String) {
 }
 
 private val DECORATION_ITEMS = listOf(
-    "??" to "Cool", "??" to "Fire", "??" to "Crown", "??" to "100", "??" to "Speech",
-    "?" to "Star", "?" to "Sparkle", "??" to "Anger", "??" to "Sweat", "??" to "Sleep",
-    "??" to "Heart", "??" to "Broken", "??" to "Warning", "??" to "No", "?" to "Yes",
-    "??" to "Top Hat", "??" to "Cap", "??" to "Bow", "??" to "Balloon", "??" to "Gift",
-    "??" to "Party", "??" to "Celebrate", "??" to "Rainbow", "??" to "Sun", "??" to "Moon"
+    "😎" to "Cool", "🔥" to "Fire", "👑" to "Crown", "💯" to "100", "💬" to "Speech",
+    "⭐" to "Star", "✨" to "Sparkle", "💢" to "Anger", "💦" to "Sweat", "💤" to "Sleep",
+    "❤️" to "Heart", "💔" to "Broken", "⚠️" to "Warning", "❌" to "No", "✅" to "Yes",
+    "🎩" to "Top Hat", "🧢" to "Cap", "🎀" to "Bow", "🎈" to "Balloon", "🎁" to "Gift",
+    "🥳" to "Party", "🎉" to "Celebrate", "🌈" to "Rainbow", "☀️" to "Sun", "🌙" to "Moon"
 )
 
 private fun emojiToBitmap(emoji: String, size: Int): android.graphics.Bitmap {

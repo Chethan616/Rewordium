@@ -753,8 +753,9 @@ class FlorisImeService : LifecycleInputMethodService() {
                                 )
                             }
                             val roundedSmartbar by prefs.devtools.experimentalRoundedSmartbar.observeAsState()
+                            val roundedSmartbarRadius by prefs.devtools.experimentalRoundedSmartbarRadius.observeAsState()
                             val keyboardShape = if (roundedSmartbar) {
-                                RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp)
+                                RoundedCornerShape(topStart = roundedSmartbarRadius.dp, topEnd = roundedSmartbarRadius.dp)
                             } else null
                             Column(
                                 modifier = Modifier
@@ -805,11 +806,13 @@ class FlorisImeService : LifecycleInputMethodService() {
                 // in the SurfaceView for Android >=11, and in the Compose View Tree for Android <=10.
                 if (AndroidVersion.ATLEAST_API30_R && hasBackgroundImage) {
                     val roundedSmartbar by prefs.devtools.experimentalRoundedSmartbar.observeAsState()
+                    val roundedSmartbarRadius by prefs.devtools.experimentalRoundedSmartbarRadius.observeAsState()
                     SnyggSurfaceView(
                         elementName = FlorisImeUi.Window.elementName,
                         attributes = attributes,
                         modifier = Modifier.matchParentSize(),
                         clipToRoundedSmartbar = roundedSmartbar,
+                        roundedSmartbarRadius = roundedSmartbarRadius,
                     )
                 }
                 val configuration = LocalConfiguration.current

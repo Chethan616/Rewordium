@@ -318,11 +318,17 @@ private fun SmartbarMainRow(modifier: Modifier = Modifier) {
     }
 
     val roundedSmartbar by prefs.devtools.experimentalRoundedSmartbar.observeAsState()
+    val roundedSmartbarRadius by prefs.devtools.experimentalRoundedSmartbarRadius.observeAsState()
+    val horizontalPadding = if (roundedSmartbar) {
+        (roundedSmartbarRadius / 2 - 2).coerceAtLeast(0).dp
+    } else {
+        0.dp
+    }
     SnyggRow(
         modifier = modifier
             .fillMaxWidth()
             .height(FlorisImeSizing.smartbarHeight)
-            .then(if (roundedSmartbar) Modifier.padding(horizontal = 12.dp) else Modifier),
+            .then(if (horizontalPadding > 0.dp) Modifier.padding(horizontal = horizontalPadding) else Modifier),
     ) {
         when (smartbarLayout) {
             SmartbarLayout.SUGGESTIONS_ONLY -> {
@@ -389,6 +395,12 @@ private fun SmartbarSecondaryRow(modifier: Modifier = Modifier) {
     }
 
     val roundedSmartbar by prefs.devtools.experimentalRoundedSmartbar.observeAsState()
+    val roundedSmartbarRadius by prefs.devtools.experimentalRoundedSmartbarRadius.observeAsState()
+    val horizontalPadding = if (roundedSmartbar) {
+        (roundedSmartbarRadius / 2 - 2).coerceAtLeast(0).dp
+    } else {
+        0.dp
+    }
     AnimatedVisibility(
         visible = smartbarLayout == SmartbarLayout.SUGGESTIONS_ACTIONS_EXTENDED && extendedActionsExpanded,
         enter = VerticalEnterTransition,
@@ -400,7 +412,7 @@ private fun SmartbarSecondaryRow(modifier: Modifier = Modifier) {
                 .fillMaxWidth()
                 .height(FlorisImeSizing.smartbarHeight)
                 .background(background)
-                .then(if (roundedSmartbar) Modifier.padding(horizontal = 12.dp) else Modifier),
+                .then(if (horizontalPadding > 0.dp) Modifier.padding(horizontal = horizontalPadding) else Modifier),
         )
     }
 }
