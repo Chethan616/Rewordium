@@ -1,3 +1,5 @@
+import 'dart:ui';
+
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:animate_do/animate_do.dart';
@@ -36,7 +38,7 @@ class CustomAppBar extends StatelessWidget implements PreferredSizeWidget {
     final colorScheme = Theme.of(context).colorScheme;
     final textTheme = Theme.of(context).textTheme;
 
-    final shouldShowBack = showBackButton ?? Navigator.of(context).canPop();
+    final shouldShowBack = showBackButton ?? false;
 
     Widget? leading;
     if (shouldShowBack) {
@@ -72,17 +74,40 @@ class CustomAppBar extends StatelessWidget implements PreferredSizeWidget {
       );
     }
 
-    return AppBar(
-      backgroundColor: colorScheme.surface,
-      elevation: 0,
-      scrolledUnderElevation: 0,
-      leading: leading,
-      automaticallyImplyLeading: false,
-      title: FadeIn(
-        duration: const Duration(milliseconds: 300),
-        child: titleWidget,
+    return ConstrainedBox(
+      constraints: BoxConstraints(
+        maxHeight: kToolbarHeight + MediaQuery.of(context).padding.top,
       ),
-      actions: actions,
+      child: AppBar(
+        backgroundColor: colorScheme.surface.withValues(alpha: 0.42),
+        elevation: 0,
+        scrolledUnderElevation: 0,
+        surfaceTintColor: Colors.transparent,
+        flexibleSpace: ClipRect(
+          child: BackdropFilter(
+            filter: ImageFilter.blur(sigmaX: 18, sigmaY: 18),
+            child: DecoratedBox(
+              decoration: BoxDecoration(
+                color: colorScheme.surface.withValues(alpha: 0.20),
+                border: Border(
+                  bottom: BorderSide(
+                    color: colorScheme.outlineVariant.withValues(alpha: 0.22),
+                    width: 0.6,
+                  ),
+                ),
+              ),
+              child: const SizedBox.expand(),
+            ),
+          ),
+        ),
+        leading: leading,
+        automaticallyImplyLeading: false,
+        title: FadeIn(
+          duration: const Duration(milliseconds: 300),
+          child: titleWidget,
+        ),
+        actions: actions,
+      ),
     );
   }
 
@@ -120,16 +145,36 @@ class _BackChevronState extends State<_BackChevron> {
           curve: Curves.easeOut,
           width: 36,
           height: 36,
-          decoration: BoxDecoration(
-            color: _pressed
-                ? cs.onSurface.withValues(alpha: 0.10)
-                : cs.surfaceContainerHighest.withValues(alpha: 0.55),
-            shape: BoxShape.circle,
-          ),
-          child: Icon(
-            CupertinoIcons.chevron_back,
-            size: 18,
-            color: cs.onSurface,
+          child: ClipOval(
+            child: BackdropFilter(
+              filter: ImageFilter.blur(sigmaX: 16, sigmaY: 16),
+              child: AnimatedContainer(
+                duration: const Duration(milliseconds: 120),
+                curve: Curves.easeOut,
+                decoration: BoxDecoration(
+                  color: _pressed
+                      ? cs.onSurface.withValues(alpha: 0.11)
+                      : Colors.white.withValues(alpha: 0.38),
+                  shape: BoxShape.circle,
+                  border: Border.all(
+                    color: Colors.white.withValues(alpha: 0.48),
+                    width: 0.7,
+                  ),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withValues(alpha: 0.06),
+                      blurRadius: 10,
+                      offset: const Offset(0, 3),
+                    ),
+                  ],
+                ),
+                child: Icon(
+                  CupertinoIcons.chevron_back,
+                  size: 18,
+                  color: cs.onSurface,
+                ),
+              ),
+            ),
           ),
         ),
       ),
