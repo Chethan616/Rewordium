@@ -323,17 +323,17 @@ img { max-width: 100%; display: block; }
 /* ════════════════════════════════════════════════════════════════
    LOGO MARQUEE
    ════════════════════════════════════════════════════════════════ */
-.marquee-sec { padding: 30px 0 8px; }
+.marquee-sec { width: 100%; overflow: hidden; padding: 30px 0 12px; position: relative; }
 .marquee-label { display: flex; align-items: center; justify-content: center; gap: 9px; text-align: center; font-weight: 800; font-size: 13px; letter-spacing: .04em; color: var(--muted); margin-bottom: 22px; }
 .marquee-label b { color: var(--ink); }
 .marquee-label .dot-live { width: 8px; height: 8px; border-radius: 50%; background: var(--green-bright); box-shadow: 0 0 0 4px rgba(34,197,94,.20); animation: blink 1.6s ease infinite; }
-.marquee { display: flex; overflow: hidden; mask-image: linear-gradient(90deg, transparent, #000 90px, #000 calc(100% - 90px), transparent); -webkit-mask-image: linear-gradient(90deg, transparent, #000 90px, #000 calc(100% - 90px), transparent); padding: 7px 0; }
-.marquee-track { display: flex; gap: 18px; align-items: center; padding-right: 18px; width: max-content; }
-.marquee[data-dir="left"]  .marquee-track { animation: scroll-l 42s linear infinite; }
-.marquee[data-dir="right"] .marquee-track { animation: scroll-r 42s linear infinite; }
+.marquee { display: flex; width: 100%; overflow: hidden; mask-image: linear-gradient(90deg, transparent 0%, #000 60px, #000 calc(100% - 60px), transparent 100%); -webkit-mask-image: linear-gradient(90deg, transparent 0%, #000 60px, #000 calc(100% - 60px), transparent 100%); padding: 7px 0; }
+.marquee-track { display: flex; gap: 18px; align-items: center; padding-right: 18px; width: max-content; will-change: transform; }
+.marquee[data-dir="left"]  .marquee-track { animation: scroll-l 38s linear infinite; }
+.marquee[data-dir="right"] .marquee-track { animation: scroll-r 38s linear infinite; }
 .marquee:hover .marquee-track { animation-play-state: paused; }
-@keyframes scroll-l { to   { transform: translateX(calc(-50% - 9px)); } }
-@keyframes scroll-r { from { transform: translateX(calc(-50% - 9px)); } to { transform: translateX(0); } }
+@keyframes scroll-l { 0% { transform: translateX(0); } 100% { transform: translateX(-50%); } }
+@keyframes scroll-r { 0% { transform: translateX(-50%); } 100% { transform: translateX(0); } }
 .logo-pill {
   display: inline-flex; align-items: center; gap: 10px; white-space: nowrap;
   background: #fff; border: 1px solid var(--line); border-radius: 14px;
