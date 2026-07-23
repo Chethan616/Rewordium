@@ -11,29 +11,14 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: read
-  pages: write
-  id-token: write
-
-concurrency:
-  group: "pages"
-  cancel-in-progress: false
+  contents: write
 
 jobs:
   deploy:
-    environment:
-      name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
         uses: actions/checkout@v4
-
-      - name: Setup Pages
-        uses: actions/configure-pages@v5
-        continue-on-error: true
-        with:
-          enablement: true
 
       - name: Inject Firebase Configuration & Secrets
         env:
@@ -51,11 +36,9 @@ jobs:
           sed -i "s/__FIREBASE_AUTH_DOMAIN__/${FIREBASE_AUTH_DOMAIN}/g" website2.0/rewordium-landingpage/pages/delete-account.html
           sed -i "s/__FIREBASE_STORAGE_BUCKET__/${FIREBASE_STORAGE_BUCKET}/g" website2.0/rewordium-landingpage/pages/delete-account.html
 
-      - name: Upload artifact
-        uses: actions/upload-pages-artifact@v3
+      - name: Deploy to GitHub Pages (gh-pages)
+        uses: peaceiris/actions-gh-pages@v4
         with:
-          path: 'website2.0/rewordium-landingpage'
-
-      - name: Deploy to GitHub Pages
-        id: deployment
-        uses: actions/deploy-pages@v4
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: ./website2.0/rewordium-landingpage
+          publish_branch: gh-pages
