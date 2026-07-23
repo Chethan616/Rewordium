@@ -193,9 +193,10 @@ window.addEventListener('scroll', ()=>{
   lastY = y;
 }, { passive: true });
 
-/* ─── 5b. Seamless marquee — duplicate each row's content ─── */
+/* ─── 5b. Seamless marquee — quad-duplicate each row's content for 100% edge-to-edge coverage ─── */
 document.querySelectorAll('.marquee-track[data-row]').forEach(track=>{
-  track.innerHTML += track.innerHTML;
+  const single = track.innerHTML;
+  track.innerHTML = single + single + single + single;
 });
 
 /* ─── 6. Button press ripple-free pop ──────────────────────────── */
