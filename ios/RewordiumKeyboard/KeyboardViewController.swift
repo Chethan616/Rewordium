@@ -98,9 +98,10 @@ final class KeyboardViewController: KeyboardInputViewController {
         // Long-press space moves the cursor — matches the iOS system keyboard.
         state.keyboardContext.settings.spacebarLongPressBehavior = .moveInputCursor
 
-        // Show locale name in the spacebar's trailing menu when there are
-        // multiple locales (no-op for single-locale setups).
-        state.keyboardContext.settings.spacebarMenuTrailing = .locale
+        // Keep the spacebar visually stock. Locale suffixes such as
+        // "space (exp)" make the extension look unlike Apple's keyboard.
+        state.keyboardContext.settings.spacebarMenuLeading = nil
+        state.keyboardContext.settings.spacebarMenuTrailing = nil
 
         // Honor the haptics preference written by the Flutter host app.
         if !SharedSettings.hapticsEnabled {

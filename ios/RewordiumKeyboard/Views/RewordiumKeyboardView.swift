@@ -40,7 +40,7 @@ struct RewordiumKeyboardView: View {
             SuggestionStrip(controller: controller)
             keyboard
         }
-        .background(Color.clear)
+        .background(RewordiumKeyboardBackplate().ignoresSafeArea())
     }
 
     /// KeyboardKit's stock keyboard view with our overrides.
@@ -49,7 +49,20 @@ struct RewordiumKeyboardView: View {
     private var customLayout: KeyboardLayout {
         var layout = KeyboardLayout.standard(for: state.keyboardContext)
         layout.itemRows = layout.itemRows.map { row in
-            row.filter { $0.action != KeyboardAction.capsLock && $0.action != KeyboardAction.tab }
+            row
+                .filter { $0.action != KeyboardAction.capsLock && $0.action != KeyboardAction.tab }
+                .map { item in
+                    if case .primary = item.action {
+                        return KeyboardLayout.Item(
+                            action: .primary(preferredReturnKeyType(fallback: state.keyboardContext.returnKeyType)),
+                            secondaryAction: item.secondaryAction,
+                            size: item.size,
+                            alignment: item.alignment,
+                            edgeInsets: item.edgeInsets
+                        )
+                    }
+                    return item
+                }
         }
         return layout
     }
@@ -97,6 +110,8 @@ struct RewordiumKeyboardView: View {
                     Image(systemName: "delete.left")
                         .font(.body)
                         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .center)
+                case .primary(let type):
+                    RewordiumPrimaryKeyVisual(type: preferredReturnKeyType(fallback: type))
                 case .shift(let currentCase):
                     let isCaps = currentCase == .capsLocked
                     let isUpper = currentCase == .uppercased
@@ -117,6 +132,13 @@ struct RewordiumKeyboardView: View {
                     GlobeButtonView(defaultView: params.view, controller: controller)
                 case .backspace:
                     SmartBackspaceButton(controller: controller, defaultView: params.view)
+                case .primary(let type):
+                    params.view
+                        .opacity(0.015)
+                        .overlay(
+                            RewordiumPrimaryKeyVisual(type: preferredReturnKeyType(fallback: type))
+                                .allowsHitTesting(false)
+                        )
                 default:
                     params.view
                 }
@@ -137,5 +159,15 @@ struct RewordiumKeyboardView: View {
             },
             toolbar:       { _ in EmptyView() }
         )
+        .keyboardTheme(RewordiumKeyboardTheme.appleGlass)
+        .keyboardSpacebarMenuLeading(nil)
+        .keyboardSpacebarMenuTrailing(nil)
+    }
+
+    private func preferredReturnKeyType(fallback: Keyboard.ReturnKeyType) -> Keyboard.ReturnKeyType {
+        let proxyType = controller.textDocumentProxy.returnKeyType.keyboardType
+        if proxyType != .return { return proxyType }
+        if fallback != .return { return fallback }
+        return state.keyboardContext.returnKeyType
     }
 }

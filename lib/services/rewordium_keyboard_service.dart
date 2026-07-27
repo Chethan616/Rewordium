@@ -366,4 +366,50 @@ class RewordiumKeyboardService {
       print('❌ Error setting spacebar navigation: ${e.message}');
     }
   }
+
+  /// Get quick settings map
+  static Future<Map<String, dynamic>> getQuickSettings() async {
+    if (!_isAndroid) return {};
+    try {
+      final Map<dynamic, dynamic> result =
+          await _channel.invokeMethod('getQuickSettings');
+      return result.map((key, value) => MapEntry(key.toString(), value));
+    } on PlatformException catch (e) {
+      print('Error getting quick settings: ${e.message}');
+      return {};
+    }
+  }
+
+  /// Update a single quick setting
+  static Future<void> updateQuickSetting(String key, dynamic value) async {
+    if (!_isAndroid) return;
+    try {
+      await _channel.invokeMethod('updateQuickSetting', {
+        'key': key,
+        'value': value,
+      });
+    } on PlatformException catch (e) {
+      print('Error updating quick setting: ${e.message}');
+    }
+  }
+
+  /// Open native languages and layouts settings
+  static Future<void> openLanguagesSettings() async {
+    if (!_isAndroid) return;
+    try {
+      await _channel.invokeMethod('openLanguagesSettings');
+    } on PlatformException catch (e) {
+      print('Error opening languages settings: ${e.message}');
+    }
+  }
+
+  /// Open native Sticker Studio screen
+  static Future<void> openStickerStudio() async {
+    if (!_isAndroid) return;
+    try {
+      await _channel.invokeMethod('openStickerStudio');
+    } on PlatformException catch (e) {
+      print('Error opening Sticker Studio: ${e.message}');
+    }
+  }
 }

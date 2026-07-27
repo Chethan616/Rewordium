@@ -448,3 +448,6 @@
 # EmojiCompat runtime classes used by keyboard emoji panel
 -keep class androidx.emoji2.** { *; }
 -keep class androidx.emoji.text.** { *; }
+
+# Keep QuickSettingsHelper for Flutter Quick Settings
+-keep class com.noxquill.rewordium.keyboard.app.QuickSettingsHelper { *; }

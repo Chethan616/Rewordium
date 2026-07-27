@@ -141,29 +141,6 @@ fun DevtoolsScreen() = FlorisScreen {
             )
         }
 
-        PreferenceGroup(title = stringRes(R.string.devtools__experimental_view__title)) {
-            SwitchPreference(
-                prefs.devtools.experimentalRoundedSmartbar,
-                title = stringRes(R.string.devtools__experimental_rounded_smartbar__label),
-                summary = stringRes(R.string.devtools__experimental_rounded_smartbar__summary),
-            )
-            DialogSliderPreference(
-                pref = prefs.devtools.experimentalRoundedSmartbarRadius,
-                title = "Rounded smartbar radius",
-                valueLabel = { radiusVal -> "$radiusVal dp" },
-                min = 4,
-                max = 48,
-                stepIncrement = 1,
-                enabledIf = { prefs.devtools.experimentalRoundedSmartbar.get() },
-            )
-            Preference(
-                title = "Reset to default",
-                summary = "Restore default smartbar radius (28 dp)",
-                onClick = { scope.launch { prefs.devtools.experimentalRoundedSmartbarRadius.set(28) } },
-                enabledIf = { prefs.devtools.experimentalRoundedSmartbar.get() }
-            )
-        }
-
         PreferenceGroup(title = stringRes(R.string.devtools__group_android__title)) {
             Preference(
                 title = stringRes(R.string.devtools__android_settings_global__title),

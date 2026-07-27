@@ -10,7 +10,14 @@ import retrofit2.http.POST
 
 data class GroqRequest(
     val model: String,
-    val messages: List<Message>
+    val messages: List<Message>,
+    @com.google.gson.annotations.SerializedName("max_tokens")
+    val maxTokens: Int = 512,
+    val temperature: Double = 0.85,
+    @com.google.gson.annotations.SerializedName("top_p")
+    val topP: Double = 0.95,
+    @com.google.gson.annotations.SerializedName("reasoning_effort")
+    val reasoningEffort: String? = null,
 )
 
 data class Message(

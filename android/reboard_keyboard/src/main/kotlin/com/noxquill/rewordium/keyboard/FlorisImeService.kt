@@ -187,11 +187,12 @@ class FlorisImeService : LifecycleInputMethodService() {
         fun launchSettings() {
             val ims = FlorisImeServiceReference.get() ?: return
             ims.requestHideSelf(0)
-            ims.launchActivity(FlorisAppActivity::class) {
-                it.flags = Intent.FLAG_ACTIVITY_NEW_TASK or
+            val intent = Intent(Intent.ACTION_VIEW, android.net.Uri.parse("rewordium://keyboard_settings")).apply {
+                flags = Intent.FLAG_ACTIVITY_NEW_TASK or
                     Intent.FLAG_ACTIVITY_RESET_TASK_IF_NEEDED or
                     Intent.FLAG_ACTIVITY_CLEAR_TOP
             }
+            ims.startActivity(intent)
         }
 
         fun showUi() {
@@ -405,15 +406,7 @@ class FlorisImeService : LifecycleInputMethodService() {
         flogInfo { "restarting=$restarting info=${info?.debugSummarize()}" }
         super.onStartInputView(info, restarting)
         syncOnboardingKeyboardPreferences()
-        if (!prefs.spelling.contactsRequestedOnFirstRun.get()) {
-            lifecycleScope.launch { prefs.spelling.contactsRequestedOnFirstRun.set(true) }
-            if (!com.noxquill.rewordium.keyboard.ime.nlp.engine.ContactsLoader.hasPermission(this)) {
-                val intent = Intent(this, com.noxquill.rewordium.keyboard.app.ContactsPermissionActivity::class.java).apply {
-                    addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-                }
-                startActivity(intent)
-            }
-        }
+
         if (info == null) return
         val editorInfo = FlorisEditorInfo.wrap(info)
         if (!restarting) {
@@ -752,8 +745,8 @@ class FlorisImeService : LifecycleInputMethodService() {
                                         .weight(1f),
                                 )
                             }
-                            val roundedSmartbar by prefs.devtools.experimentalRoundedSmartbar.observeAsState()
-                            val roundedSmartbarRadius by prefs.devtools.experimentalRoundedSmartbarRadius.observeAsState()
+                            val roundedSmartbar by prefs.keyboard.experimentalRoundedSmartbar.observeAsState()
+                            val roundedSmartbarRadius by prefs.keyboard.experimentalRoundedSmartbarRadius.observeAsState()
                             val keyboardShape = if (roundedSmartbar) {
                                 RoundedCornerShape(topStart = roundedSmartbarRadius.dp, topEnd = roundedSmartbarRadius.dp)
                             } else null
@@ -805,8 +798,8 @@ class FlorisImeService : LifecycleInputMethodService() {
                 // available on Android >=11, and SurfaceView causes trouble on Android 8/9, thus we render the image
                 // in the SurfaceView for Android >=11, and in the Compose View Tree for Android <=10.
                 if (AndroidVersion.ATLEAST_API30_R && hasBackgroundImage) {
-                    val roundedSmartbar by prefs.devtools.experimentalRoundedSmartbar.observeAsState()
-                    val roundedSmartbarRadius by prefs.devtools.experimentalRoundedSmartbarRadius.observeAsState()
+                    val roundedSmartbar by prefs.keyboard.experimentalRoundedSmartbar.observeAsState()
+                    val roundedSmartbarRadius by prefs.keyboard.experimentalRoundedSmartbarRadius.observeAsState()
                     SnyggSurfaceView(
                         elementName = FlorisImeUi.Window.elementName,
                         attributes = attributes,

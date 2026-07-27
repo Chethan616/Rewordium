@@ -150,12 +150,24 @@ class FlorisApplication private constructor(context: Context) : ContextWrapper(c
     internal fun initInternal() {
         cacheDir?.deleteContentsRecursively()
         scope.launch {
-            val result = FlorisPreferenceStore.initAndroid(
-                context = this@FlorisApplication,
-                datastoreName = FlorisPreferenceModel.NAME,
-            )
-            Log.i("PREFS", result.toString())
-            preferenceStoreLoaded.value = true
+            try {
+                val result = FlorisPreferenceStore.initAndroid(
+                    context = this@FlorisApplication,
+                    datastoreName = FlorisPreferenceModel.NAME,
+                )
+                Log.i("PREFS", result.toString())
+            } catch (e: Exception) {
+                flogError { "Failed to init preference store: $e" }
+                runCatching {
+                    val datastoreFile = java.io.File(filesDir, "datastore/${FlorisPreferenceModel.NAME}.preferences_pb")
+                    if (datastoreFile.exists()) {
+                        datastoreFile.delete()
+                        flogError { "Deleted corrupted datastore file" }
+                    }
+                }
+            } finally {
+                preferenceStoreLoaded.value = true
+            }
         }
         extensionManager.value.init()
         clipboardManager.value.initializeForContext(this)

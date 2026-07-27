@@ -317,8 +317,8 @@ private fun SmartbarMainRow(modifier: Modifier = Modifier) {
         }
     }
 
-    val roundedSmartbar by prefs.devtools.experimentalRoundedSmartbar.observeAsState()
-    val roundedSmartbarRadius by prefs.devtools.experimentalRoundedSmartbarRadius.observeAsState()
+    val roundedSmartbar by prefs.keyboard.experimentalRoundedSmartbar.observeAsState()
+    val roundedSmartbarRadius by prefs.keyboard.experimentalRoundedSmartbarRadius.observeAsState()
     val horizontalPadding = if (roundedSmartbar) {
         (roundedSmartbarRadius / 2 - 2).coerceAtLeast(0).dp
     } else {
@@ -394,8 +394,8 @@ private fun SmartbarSecondaryRow(modifier: Modifier = Modifier) {
         }
     }
 
-    val roundedSmartbar by prefs.devtools.experimentalRoundedSmartbar.observeAsState()
-    val roundedSmartbarRadius by prefs.devtools.experimentalRoundedSmartbarRadius.observeAsState()
+    val roundedSmartbar by prefs.keyboard.experimentalRoundedSmartbar.observeAsState()
+    val roundedSmartbarRadius by prefs.keyboard.experimentalRoundedSmartbarRadius.observeAsState()
     val horizontalPadding = if (roundedSmartbar) {
         (roundedSmartbarRadius / 2 - 2).coerceAtLeast(0).dp
     } else {

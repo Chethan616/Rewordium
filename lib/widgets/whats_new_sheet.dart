@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import '../screens/keyboard_quick_settings_screen.dart';
 
 /// Data class representing a single "What's New" feature entry.
 class _WhatsNewItem {
@@ -9,12 +10,14 @@ class _WhatsNewItem {
   final Color color;
   final String title;
   final String description;
+  final void Function(BuildContext)? onTryIt;
 
   const _WhatsNewItem({
     required this.icon,
     required this.color,
     required this.title,
     required this.description,
+    this.onTryIt,
   });
 }
 
@@ -31,6 +34,41 @@ class WhatsNewSheet {
   // Add a new entry for each release. Older entries are kept for reference
   // but only the *current* version's items are displayed.
   static final Map<String, List<_WhatsNewItem>> _features = {
+    '3.0.0+120': [
+      _WhatsNewItem(
+        icon: CupertinoIcons.app_badge,
+        color: const Color(0xFF10B981),
+        title: 'Rounded Keyboard Smartbar',
+        description:
+            'A fresh new look! You can now apply an experimental rounded design to the keyboard smartbar.',
+        onTryIt: (context) {
+          Navigator.of(context).pop();
+          Navigator.push(context, MaterialPageRoute(builder: (_) => const KeyboardQuickSettingsScreen()));
+        },
+      ),
+      _WhatsNewItem(
+        icon: CupertinoIcons.arrow_up_down_square,
+        color: const Color(0xFF3B82F6),
+        title: 'Custom Keyboard Sizing',
+        description:
+            'Adjust keyboard height and width for both portrait and landscape modes to fit your hands perfectly.',
+        onTryIt: (context) {
+          Navigator.of(context).pop();
+          Navigator.push(context, MaterialPageRoute(builder: (_) => const KeyboardQuickSettingsScreen()));
+        },
+      ),
+      _WhatsNewItem(
+        icon: CupertinoIcons.scribble,
+        color: const Color(0xFFF59E0B),
+        title: 'Glide Typing Adjustments',
+        description:
+            'You can now control the width and appearance of the glide typing trail.',
+        onTryIt: (context) {
+          Navigator.of(context).pop();
+          Navigator.push(context, MaterialPageRoute(builder: (_) => const KeyboardQuickSettingsScreen()));
+        },
+      ),
+    ],
     '2.9.6+80': [
       const _WhatsNewItem(
         icon: CupertinoIcons.sparkles,
@@ -439,6 +477,24 @@ class _WhatsNewBottomSheet extends StatelessWidget {
                         color: cs.onSurfaceVariant,
                       ),
                 ),
+                if (item.onTryIt != null) ...[
+                  const SizedBox(height: 10),
+                  SizedBox(
+                    height: 32,
+                    child: OutlinedButton(
+                      onPressed: () => item.onTryIt!(context),
+                      style: OutlinedButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(horizontal: 16),
+                        side: BorderSide(color: cs.primary),
+                        foregroundColor: cs.primary,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                      ),
+                      child: const Text('Try it', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600)),
+                    ),
+                  ),
+                ],
               ],
             ),
           ),

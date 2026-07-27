@@ -190,7 +190,7 @@ class StickerImportActivity : ComponentActivity() {
                     val mime = if (removeBg && cutoutFile != null) "image/webp"
                     else contentResolver.getType(uri) ?: "image/webp"
 
-                    store.import(finalUri, mime, tags)
+                    store.import(finalUri, mime, null)
                     flogDebug { "StickerImportActivity: imported $finalUri (removeBg=$removeBg)" }
                 }
             } catch (e: Exception) {

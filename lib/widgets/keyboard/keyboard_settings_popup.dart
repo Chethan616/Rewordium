@@ -390,48 +390,93 @@ class _KeyboardSettingsPopupState extends State<KeyboardSettingsPopup>
                                 borderRadius: BorderRadius.circular(12),
                               ),
                               child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text(
-                                    'Sensitivity',
-                                    style: TextStyle(
-                                      fontSize: 14,
-                                      fontWeight: FontWeight.w500,
-                                      color: widget.isDarkMode
-                                          ? Colors.white
-                                          : Colors.black87,
-                                    ),
+                                CrossAxisAlignment: CrossAxisAlignment.start,
+                                Children: [
+                                  Row(
+                                    Children: [
+                                      Icon(
+                                        Icons.tune_rounded,
+                                        Size: 20,
+                                        Color: widget.isDarkMode
+                                            ? Colors.white70
+                                            : Colors.black54,
+                                      ),
+                                      Const SizedBox(width: 12),
+                                      Expanded(
+                                        Child: Text(
+                                          'Sensitivity',
+                                          Style: TextStyle(
+                                            FontSize: 14,
+                                            FontWeight: FontWeight.w500,
+                                            Color: widget.isDarkMode
+                                                ? Colors.white
+                                                : Colors.black87,
+                                          ),
+                                        ),
+                                      ),
+                                      Text(
+                                        '${(_swipeSensitivity * 100).round()}%',
+                                        Style: TextStyle(
+                                          FontSize: 12,
+                                          Color: widget.isDarkMode
+                                              ? Colors.white60
+                                              : Colors.black54,
+                                        ),
+                                      ),
+                                      Const SizedBox(width: 4),
+                                      IconButton(
+                                        Icon: Icon(
+                                          Icons.restart_alt_rounded,
+                                          Size: 18,
+                                          Color: _swipeSensitivity == 0.8
+                                              ? (widget.isDarkMode
+                                                  ? Colors.white24
+                                                  : Colors.black26)
+                                              : (widget.isDarkMode
+                                                  ? Colors.white70
+                                                  : Color(0xFF007AFF)),
+                                        ),
+                                        Tooltip: 'Reset to default',
+                                        VisualDensity: VisualDensity.compact,
+                                        OnPressed: _swipeSensitivity == 0.8
+                                            ? Null
+                                            : () => _updateSwipeSensitivity(0.8),
+                                      ),
+                                    ],
                                   ),
-                                  const SizedBox(height: 8),
+                                  Const SizedBox(height: 4),
                                   SliderTheme(
-                                    data: SliderTheme.of(context).copyWith(
-                                      trackHeight: 2,
-                                      thumbShape: const RoundSliderThumbShape(
-                                          enabledThumbRadius: 8),
-                                      overlayShape:
-                                          const RoundSliderOverlayShape(
-                                              overlayRadius: 16),
-                                      activeTrackColor: const Color(0xFF007AFF),
-                                      inactiveTrackColor: widget.isDarkMode
+                                    Data: SliderTheme.of(context).copyWith(
+                                      TrackHeight: 2,
+                                      ThumbShape: const RoundSliderThumbShape(
+                                          EnabledThumbRadius: 8),
+                                      OverlayShape:
+                                          Const RoundSliderOverlayShape(
+                                              OverlayRadius: 16),
+                                      ActiveTrackColor: const Color(0xFF007AFF),
+                                      InactiveTrackColor: widget.isDarkMode
                                           ? Colors.white.withOpacity(0.3)
                                           : Colors.black.withOpacity(0.2),
-                                      thumbColor: const Color(0xFF007AFF),
+                                      ThumbColor: const Color(0xFF007AFF),
                                     ),
-                                    child: Slider(
-                                      value: _swipeSensitivity,
-                                      min: 0.1,
-                                      max: 1.0,
-                                      divisions: 9,
-                                      onChanged: _updateSwipeSensitivity,
+                                    Child: Slider(
+                                      Value: _swipeSensitivity,
+                                      Min: 0.1,
+                                      Max: 1.0,
+                                      Divisions: 9,
+                                      OnChanged: _updateSwipeSensitivity,
                                     ),
                                   ),
-                                  Text(
-                                    '${(_swipeSensitivity * 100).round()}% - Higher = faster recognition',
-                                    style: TextStyle(
-                                      fontSize: 11,
-                                      color: widget.isDarkMode
-                                          ? Colors.white60
-                                          : Colors.black45,
+                                  Padding(
+                                    Padding: const EdgeInsets.only(left: 32),
+                                    Child: Text(
+                                      'Higher sensitivity = faster recognition',
+                                      Style: TextStyle(
+                                        FontSize: 11,
+                                        Color: widget.isDarkMode
+                                            ? Colors.white60
+                                            : Colors.black45,
+                                      ),
                                     ),
                                   ),
                                 ],

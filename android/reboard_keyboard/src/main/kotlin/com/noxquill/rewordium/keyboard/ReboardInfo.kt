@@ -25,9 +25,9 @@ import android.content.pm.PackageManager
  */
 object ReboardInfo {
     // Default values (will be overwritten at runtime if possible)
-    var VERSION_NAME: String = "0.5.0"
+    var VERSION_NAME: String = "3.0.0"
         private set
-    var VERSION_CODE: Int = 114
+    var VERSION_CODE: Int = 120
         private set
     var APPLICATION_ID: String = "com.noxquill.rewordium"
         private set

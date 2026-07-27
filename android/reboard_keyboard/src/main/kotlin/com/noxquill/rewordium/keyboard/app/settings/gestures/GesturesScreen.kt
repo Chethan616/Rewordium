@@ -62,6 +62,15 @@ fun GesturesScreen() = FlorisScreen {
                 stepIncrement = 10,
                 enabledIf = { prefs.glide.enabled isEqualTo true && prefs.glide.showTrail isEqualTo true },
             )
+            DialogSliderPreference(
+                prefs.glide.trailWidth,
+                title = stringRes(R.string.pref__glide__trail_width__label),
+                valueLabel = { radiusVal -> "$radiusVal dp" },
+                min = 2f,
+                max = 40f,
+                stepIncrement = 1f,
+                enabledIf = { prefs.glide.enabled isEqualTo true && prefs.glide.showTrail isEqualTo true },
+            )
             SwitchPreference(
                 prefs.glide.showPreview,
                 title = stringRes(R.string.pref__glide__show_preview),

@@ -815,58 +815,7 @@ private fun UserGrid(
         return
     }
 
-    var selectedTag by remember { mutableStateOf<String?>(null) }
-    val allTags = remember(entries) {
-        entries.flatMap { it.tags }
-            .map { it.trim() }
-            .filter { it.isNotEmpty() }
-            .distinctBy { it.lowercase() }
-            .sorted()
-    }
-
-    val filteredEntries = remember(entries, selectedTag) {
-        if (selectedTag == null) {
-            entries
-        } else {
-            entries.filter { entry ->
-                entry.tags.any { it.equals(selectedTag, ignoreCase = true) }
-            }
-        }
-    }
-
     Column(modifier = Modifier.fillMaxSize()) {
-        if (allTags.isNotEmpty()) {
-            LazyRow(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 8.dp, vertical = 4.dp),
-                horizontalArrangement = Arrangement.spacedBy(6.dp),
-            ) {
-                item {
-                    CustomChip(
-                        selected = selectedTag == null,
-                        onClick = { selectedTag = null },
-                        fg = fg,
-                        accent = accent,
-                    ) {
-                        Text("All")
-                    }
-                }
-                items(allTags) { tag ->
-                    CustomChip(
-                        selected = selectedTag?.equals(tag, ignoreCase = true) == true,
-                        onClick = {
-                            selectedTag = if (selectedTag?.equals(tag, ignoreCase = true) == true) null else tag
-                        },
-                        fg = fg,
-                        accent = accent,
-                    ) {
-                        Text(tag)
-                    }
-                }
-            }
-        }
-
         LazyVerticalGrid(
             columns = GridCells.Adaptive(88.dp),
             modifier = Modifier.weight(1f).padding(horizontal = 8.dp),
@@ -874,26 +823,24 @@ private fun UserGrid(
             horizontalArrangement = Arrangement.spacedBy(8.dp),
             contentPadding = PaddingValues(vertical = 8.dp),
         ) {
-            if (selectedTag == null) {
-                item {
-                    Box(
-                        modifier = Modifier
-                            .aspectRatio(1f)
-                            .clip(RoundedCornerShape(12.dp))
-                            .background(accent.copy(alpha = 0.20f))
-                            .clickable(onClick = onAddClick),
-                        contentAlignment = Alignment.Center,
-                    ) {
-                        Icon(
-                            imageVector = Icons.Outlined.Add,
-                            contentDescription = "Add sticker",
-                            tint = fg,
-                            modifier = Modifier.size(28.dp),
-                        )
-                    }
+            item {
+                Box(
+                    modifier = Modifier
+                        .aspectRatio(1f)
+                        .clip(RoundedCornerShape(12.dp))
+                        .background(accent.copy(alpha = 0.20f))
+                        .clickable(onClick = onAddClick),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Icon(
+                        imageVector = Icons.Outlined.Add,
+                        contentDescription = "Add sticker",
+                        tint = fg,
+                        modifier = Modifier.size(28.dp),
+                    )
                 }
             }
-            items(filteredEntries, key = { it.id }) { entry ->
+            items(entries, key = { it.id }) { entry ->
                 val store = remember { UserStickerStore.get(context) }
                 val file = store.fileFor(entry)
                 val refKey = StickerRef.User(entry.id).key

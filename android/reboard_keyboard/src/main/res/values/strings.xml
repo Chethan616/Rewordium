@@ -1200,4 +1200,10 @@
         <item quantity="other">{v} candidates</item>
     </plurals>
 
+
+    <!-- Appearance / Keyboard section additions -->
+    <string name="pref__keyboard__group_appearance__label">Appearance</string>
+    <string name="pref__keyboard__experimental_rounded_smartbar_radius__label">Rounded smartbar radius</string>
+    <string name="pref__glide__trail_width__label">Trail width</string>
+
 </resources>

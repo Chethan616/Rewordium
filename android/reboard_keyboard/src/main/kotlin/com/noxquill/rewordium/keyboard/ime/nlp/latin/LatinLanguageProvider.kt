@@ -298,6 +298,7 @@ class LatinLanguageProvider(context: Context) : SpellingProvider, SuggestionProv
                 flogDebug { "LatinLanguageProvider: native dict load threw: $e" }
             }
         }
+        _wordDataDirtyFlow.tryEmit(subtype)
         Unit
     }
 

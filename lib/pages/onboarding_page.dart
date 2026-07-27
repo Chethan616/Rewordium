@@ -170,6 +170,8 @@ class _OnboardingPageState extends State<OnboardingPage>
               _openReboardSettingsAfterFinish;
       _keyboardAiDefaultEnabled =
           prefs.getBool('paraphraser_enabled') ?? _keyboardAiDefaultEnabled;
+      _contactsSuggestionsEnabled =
+          prefs.getBool('keyboard_use_contacts') ?? _contactsSuggestionsEnabled;
     });
   }
 
@@ -493,16 +495,22 @@ class _OnboardingPageState extends State<OnboardingPage>
     if (_contactsSuggestionsEnabled) {
       final contactsGranted = await RewordiumKeyboardService.hasContactsPermission();
       if (!contactsGranted) {
-        final transitioningToContacts = _systemSetupStage != _SystemSetupStage.contacts;
-        _systemSetupStage = _SystemSetupStage.contacts;
-        if (mounted) {
-          setState(() => _isSaving = false);
-        }
-        _showMessage('Allow ReBoard to access your contacts for personalized suggestions.');
-        if (openSystemScreens && (!fromResume || transitioningToContacts)) {
+        if (openSystemScreens && !fromResume) {
+          // If the user presses Next and it's not a resume, prompt them.
+          _systemSetupStage = _SystemSetupStage.contacts;
+          if (mounted) {
+            setState(() => _isSaving = false);
+          }
+          _showMessage('Please allow contacts access for personalized suggestions.');
           await RewordiumKeyboardService.requestContactsPermission();
+          return;
+        } else {
+          // They came back from the prompt (or pressed next again after denying).
+          // Force it off so they can progress seamlessly.
+          if (mounted) {
+            setState(() => _contactsSuggestionsEnabled = false);
+          }
         }
-        return;
       }
     }
 
@@ -680,6 +688,10 @@ class _OnboardingPageState extends State<OnboardingPage>
     // preferences but skip the platform channel calls on iOS.
     if (_isAndroid) {
       await RewordiumKeyboardService.setHapticFeedback(_keyboardHapticsEnabled);
+      final vibrationModeStr = _keyboardHapticsMode == _KeyboardHapticsMode.alwaysVibrate 
+          ? 'USE_VIBRATOR_DIRECTLY' 
+          : 'USE_HAPTIC_FEEDBACK_INTERFACE';
+      await RewordiumKeyboardService.updateQuickSetting('hapticVibrationMode', vibrationModeStr);
       await RewordiumKeyboardService.setUseContactsForSuggestions(_contactsSuggestionsEnabled);
       final aiApplied =
           await _keyboardService.setAiSuggestions(_keyboardAiDefaultEnabled);

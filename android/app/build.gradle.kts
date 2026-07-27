@@ -98,8 +98,6 @@ android {
         // 16 KB page size support - ensure uncompressed native libraries with proper alignment
         jniLibs {
             useLegacyPackaging = false // Use uncompressed native libs for 16 KB support
-            // Exclude 32-bit and x86_64 architectures - only keep arm64-v8a for 16KB support
-            excludes += listOf("**/armeabi-v7a/*.so", "**/x86/*.so", "**/x86_64/*.so")
         }
     }
 
@@ -119,8 +117,6 @@ android {
         multiDexEnabled = true
 
         ndk {
-            // Only arm64-v8a for 16 KB page size support
-            abiFilters.addAll(listOf("arm64-v8a"))
             debugSymbolLevel = "SYMBOL_TABLE"
         }
 

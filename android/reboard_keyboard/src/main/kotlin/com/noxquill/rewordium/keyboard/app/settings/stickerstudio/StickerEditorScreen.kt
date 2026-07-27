@@ -58,6 +58,7 @@ import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.Redo
 import androidx.compose.material.icons.automirrored.outlined.Undo
+import androidx.compose.material3.*
 import androidx.compose.material.icons.outlined.AutoAwesome
 import androidx.compose.material.icons.outlined.Brush
 import androidx.compose.material.icons.outlined.Cancel
@@ -1222,64 +1223,57 @@ fun StickerEditorScreen(sourceUri: String?, gifMode: Boolean = false) = FlorisSc
                     val selectedPackName = if (savePackId == null) "None (Uncategorized)" else packs.find { it.id == savePackId }?.name ?: "None"
                     Text("Sticker Pack:", color = MaterialTheme.colorScheme.onSurfaceVariant, style = MaterialTheme.typography.labelMedium)
                     Spacer(modifier = Modifier.height(8.dp))
-                    Box {
-                        androidx.compose.material3.OutlinedTextField(
+                    @OptIn(ExperimentalMaterial3Api::class)
+                    ExposedDropdownMenuBox(
+                        expanded = expanded,
+                        onExpandedChange = { expanded = !expanded },
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        OutlinedTextField(
                             value = selectedPackName,
                             onValueChange = {},
                             readOnly = true,
                             trailingIcon = {
-                                IconButton(onClick = { expanded = true }) {
-                                    Icon(androidx.compose.material.icons.Icons.Default.ArrowDropDown, "Select pack")
-                                }
+                                ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded)
                             },
-                            modifier = Modifier.fillMaxWidth().clickable { expanded = true }
+                            modifier = Modifier
+                                .menuAnchor(MenuAnchorType.PrimaryEditable, enabled = true)
+                                .fillMaxWidth()
                         )
-                        androidx.compose.material3.DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
-                            androidx.compose.material3.DropdownMenuItem(
+                        ExposedDropdownMenu(
+                            expanded = expanded,
+                            onDismissRequest = { expanded = false }
+                        ) {
+                            DropdownMenuItem(
                                 text = { Text("None (Uncategorized)") },
                                 onClick = { savePackId = null; expanded = false }
                             )
                             packs.forEach { pack ->
-                                androidx.compose.material3.DropdownMenuItem(
+                                DropdownMenuItem(
                                     text = { Text(pack.name) },
                                     onClick = { savePackId = pack.id; expanded = false }
                                 )
                             }
                         }
                     }
-                    Spacer(modifier = Modifier.height(16.dp))
-                    Text(
-                        text = "Add tags to categorize this sticker (comma separated):",
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        style = MaterialTheme.typography.labelMedium
-                    )
-                    Spacer(modifier = Modifier.height(8.dp))
-                    androidx.compose.material3.OutlinedTextField(
-                        value = saveTagsText,
-                        onValueChange = { saveTagsText = it },
-                        label = { Text("Tags") },
-                        placeholder = { Text("e.g. John, Reaction, Funny") },
-                        singleLine = true,
-                        modifier = Modifier.fillMaxWidth()
-                    )
+
                 }
             },
             confirmButton = {
                 TextButton(
                     onClick = {
                         showSaveDialog = false
-                        val tagsList = saveTagsText.split(",").map { it.trim() }.filter { it.isNotEmpty() }
                         val editor = photoEditor ?: return@TextButton
                         val view = photoEditorView ?: return@TextButton
                         saving = true
                         scope.launch {
                             val ok = if (isGif) {
                                 exportAnimatedGif(
-                                    context, editor, view, store, tagsList, savePackId,
+                                    context, editor, view, store, savePackId,
                                     Uri.parse(imageUri!!), removeBgRequested, outlineRequested
                                 )
                             } else {
-                                exportAndImport(context, editor, view, store, tagsList, savePackId)
+                                exportAndImport(context, editor, view, store, savePackId)
                             }
                             saving = false
                             if (ok) {
@@ -1545,7 +1539,6 @@ private suspend fun exportAndImport(
     editor: PhotoEditor,
     view: PhotoEditorView,
     store: UserStickerStore,
-    tags: List<String> = emptyList(),
     packId: String? = null
 ): Boolean = withContext(Dispatchers.IO) {
     try {
@@ -1556,7 +1549,7 @@ private suspend fun exportAndImport(
             // WEBP_LOSSLESS preserves the transparent background that cutouts produce.
             normalized.compress(Bitmap.CompressFormat.WEBP_LOSSLESS, 100, it)
         }
-        val entry = store.import(Uri.fromFile(cacheFile), "image/webp", tags, packId)
+        val entry = store.import(Uri.fromFile(cacheFile), "image/webp", packId)
         cacheFile.delete()
         entry != null
     } catch (e: Exception) {
@@ -1700,7 +1693,6 @@ private suspend fun exportAnimatedGif(
     editor: PhotoEditor,
     view: PhotoEditorView,
     store: UserStickerStore,
-    tags: List<String> = emptyList(),
     packId: String? = null,
     sourceUri: Uri,
     removeBg: Boolean,
@@ -1783,7 +1775,7 @@ private suspend fun exportAnimatedGif(
         val cacheOut = File(context.cacheDir, "anim_out_.gif")
         FileOutputStream(cacheOut).use { it.write(outBytes.toByteArray()) }
 
-        val entry = store.import(Uri.fromFile(cacheOut), "image/gif", tags, packId)
+        val entry = store.import(Uri.fromFile(cacheOut), "image/gif", packId)
         cacheOut.delete()
         
         entry != null

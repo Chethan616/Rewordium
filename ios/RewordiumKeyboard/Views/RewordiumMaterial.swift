@@ -1,4 +1,5 @@
 import SwiftUI
+import KeyboardKit
 
 /// Visual tokens and material helpers for the keyboard extension.
 ///
@@ -17,6 +18,7 @@ enum RewordiumTokens {
     }
 
     enum Radius {
+        static let key: CGFloat = 7
         static let chip: CGFloat = 12
         static let pill: CGFloat = 18
         static let card: CGFloat = 16
@@ -32,6 +34,123 @@ enum RewordiumTokens {
         static let surface: Animation = .spring(response: 0.32, dampingFraction: 0.86)
         /// Slightly snappier for chip taps.
         static let tap: Animation = .spring(response: 0.22, dampingFraction: 0.78)
+    }
+}
+
+enum RewordiumKeyboardTheme {
+    static var appleGlass: KeyboardTheme? {
+        try? KeyboardTheme(
+            name: "Apple Glass",
+            collectionName: "Rewordium",
+            backgroundStyle: .color(Color(uiColor: .systemGray5).opacity(0.72)),
+            inputForegroundColor: .primary,
+            inputBackgroundColor: Color.white.opacity(0.88),
+            systemForegroundColor: .primary,
+            systemBackgroundColor: Color.white.opacity(0.76),
+            primaryForegroundColor: .white,
+            primaryBackgroundColor: Color.accentColor,
+            buttonCornerRadius: RewordiumTokens.Radius.key,
+            buttonBorderColor: Color.white.opacity(0.45),
+            buttonBorderSize: 0.5,
+            buttonPressedOverlayColor: Color.primary.opacity(0.08),
+            buttonShadowColor: Color.black.opacity(0.16),
+            buttonShadowSize: 0.5,
+            autocompleteForegroundColor: .primary,
+            autocorrectForegroundColor: .primary,
+            autocorrectBackgroundColor: Color.white.opacity(0.34),
+            autocorrectBackgroundCornerRadius: 10
+        )
+    }
+}
+
+struct RewordiumKeyboardBackplate: View {
+    var body: some View {
+        if #available(iOS 26.0, *) {
+            Rectangle()
+                .fill(Color(uiColor: .systemGray5).opacity(0.34))
+                .glassEffect(.regular.tint(Color.white.opacity(0.10)), in: .rect(cornerRadius: 0))
+        } else {
+            Rectangle()
+                .fill(.regularMaterial)
+                .overlay(Color(uiColor: .systemGray5).opacity(0.58))
+        }
+    }
+}
+
+struct RewordiumPrimaryKeyVisual: View {
+    let type: Keyboard.ReturnKeyType
+
+    private var isProminent: Bool {
+        switch type {
+        case .return, .newLine:
+            return false
+        default:
+            return true
+        }
+    }
+
+    var body: some View {
+        Group {
+            if #available(iOS 26.0, *) {
+                content
+                    .background(keyFill)
+                    .glassEffect(.regular.tint(isProminent ? Color.accentColor.opacity(0.42) : Color.white.opacity(0.18)).interactive(), in: .rect(cornerRadius: RewordiumTokens.Radius.key))
+            } else {
+                content
+                    .background(keyFill)
+            }
+        }
+        .clipShape(RoundedRectangle(cornerRadius: RewordiumTokens.Radius.key, style: .continuous))
+        .overlay(
+            RoundedRectangle(cornerRadius: RewordiumTokens.Radius.key, style: .continuous)
+                .strokeBorder(Color.white.opacity(isProminent ? 0.18 : 0.42), lineWidth: 0.5)
+        )
+        .shadow(color: Color.black.opacity(isProminent ? 0.14 : 0.10), radius: 0.6, x: 0, y: 0.6)
+    }
+
+    private var keyFill: some View {
+        RoundedRectangle(cornerRadius: RewordiumTokens.Radius.key, style: .continuous)
+            .fill(isProminent ? Color.accentColor : Color.white.opacity(0.86))
+    }
+
+    @ViewBuilder
+    private var content: some View {
+        switch type {
+        case .search:
+            Image(systemName: "magnifyingglass")
+                .font(.system(size: 20, weight: .medium))
+                .foregroundStyle(.white)
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+        case .return, .newLine:
+            Image(systemName: "return")
+                .font(.system(size: 21, weight: .regular))
+                .foregroundStyle(.primary)
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+        default:
+            Text(title)
+                .font(.system(size: 17, weight: .semibold))
+                .foregroundStyle(isProminent ? Color.white : Color.primary)
+                .lineLimit(1)
+                .minimumScaleFactor(0.74)
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+                .padding(.horizontal, 5)
+        }
+    }
+
+    private var title: String {
+        switch type {
+        case .continue: return "Continue"
+        case .done: return "Done"
+        case .emergencyCall: return "Emergency"
+        case .go: return "Go"
+        case .join: return "Join"
+        case .next: return "Next"
+        case .ok: return "OK"
+        case .route: return "Route"
+        case .send: return "Send"
+        case .custom(let title): return title
+        case .return, .newLine, .search: return ""
+        }
     }
 }
 
@@ -52,8 +171,14 @@ struct RewordiumSurface: ViewModifier {
 
     private struct GlassyBackground: View {
         var body: some View {
-            Rectangle()
-                .fill(.regularMaterial)
+            if #available(iOS 26.0, *) {
+                Rectangle()
+                    .fill(.clear)
+                    .glassEffect(.regular.tint(Color.white.opacity(0.08)), in: .rect(cornerRadius: 0))
+            } else {
+                Rectangle()
+                    .fill(.regularMaterial)
+            }
         }
     }
 }
@@ -141,6 +266,12 @@ extension View {
 
     @ViewBuilder
     func rewordiumGlassContainer() -> some View {
-        self
+        if #available(iOS 26.0, *) {
+            GlassEffectContainer(spacing: 14) {
+                self
+            }
+        } else {
+            self
+        }
     }
 }

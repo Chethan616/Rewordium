@@ -64,9 +64,13 @@ object DynamicRetrofitClient {
             AIConfigProvider.PROVIDER_OPENAI,
             AIConfigProvider.PROVIDER_CUSTOM -> {
                 // OpenAI-compatible API format
+                val effectiveModel = config.getEffectiveModel()
+                val isQwen3 = effectiveModel.startsWith("qwen/qwen3")
                 val request = GroqRequest(
-                    model = config.getEffectiveModel(),
-                    messages = listOf(Message("user", prompt))
+                    model = effectiveModel,
+                    messages = listOf(Message("user", prompt)),
+                    maxTokens = 512,
+                    reasoningEffort = if (isQwen3) "none" else null,
                 )
                 service.postCompletion(
                     url = config.getEndpointPath(),
@@ -78,7 +82,8 @@ object DynamicRetrofitClient {
                 // Claude uses a different format, but we'll adapt
                 val request = GroqRequest(
                     model = config.getEffectiveModel(),
-                    messages = listOf(Message("user", prompt))
+                    messages = listOf(Message("user", prompt)),
+                    maxTokens = 512,
                 )
                 service.postClaudeCompletion(
                     url = config.getEndpointPath(),
@@ -90,9 +95,13 @@ object DynamicRetrofitClient {
             }
             else -> {
                 // Default to OpenAI-compatible
+                val effectiveModel = config.getEffectiveModel()
+                val isQwen3 = effectiveModel.startsWith("qwen/qwen3")
                 val request = GroqRequest(
-                    model = config.getEffectiveModel(),
-                    messages = listOf(Message("user", prompt))
+                    model = effectiveModel,
+                    messages = listOf(Message("user", prompt)),
+                    maxTokens = 512,
+                    reasoningEffort = if (isQwen3) "none" else null,
                 )
                 service.postCompletion(
                     url = config.getEndpointPath(),

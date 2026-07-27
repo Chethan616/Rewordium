@@ -137,6 +137,7 @@ fun TextKeyboardLayout(
     val glideEnabled = glideEnabledInternal && evaluator.editorInfo.isRichInputEditor &&
         evaluator.state.keyVariation != KeyVariation.PASSWORD
     val glideShowTrail by prefs.glide.showTrail.observeAsState()
+    val glideTrailWidth by prefs.glide.trailWidth.observeAsState()
     val glideTrailStyle = rememberSnyggThemeQuery(FlorisImeUi.GlideTrail.elementName)
     val glideTrailColor = glideTrailStyle.foreground(default = Color.Green)
 
@@ -210,7 +211,7 @@ fun TextKeyboardLayout(
                 drawContent()
                 if (glideEnabled && glideShowTrail) {
                     val targetDist = 3.0f
-                    val radius = 20.0f
+                    val radius = glideTrailWidth.dp.toPx()
 
                     val radiusReductionFactor = 0.99f
                     if (controller.fadingGlideRadius > 0) {
@@ -381,6 +382,10 @@ private fun TextKeyButton(
                     SpaceBarMode.NOTHING -> return@let
                     SpaceBarMode.CURRENT_LANGUAGE -> {}
                     SpaceBarMode.SPACE_BAR_KEY -> customLabel = "␣"
+                    SpaceBarMode.CUSTOM_LABEL -> {
+                        val customText by prefs.keyboard.spaceBarCustomLabel.observeAsState()
+                        customLabel = customText
+                    }
                 }
             } else if (key.computedData.code == KeyCode.VIEW_SYMBOLS) {
                 customFontSize = 14.sp
@@ -460,8 +465,7 @@ private class TextKeyboardLayoutController(
         fadingGlideRadius = 0.0f
         isGliding = false
     }
-
-    val isGlideEnabled: Boolean get() = prefs.glide.enabled.get() && editorInstance.activeInfo.isRichInputEditor &&
+    val isGlideEnabled: Boolean get() = prefs.glide.enabled.get() &&
         keyboardManager.activeState.keyVariation != KeyVariation.PASSWORD
 
     fun onTouchEventInternal(event: MotionEvent) {

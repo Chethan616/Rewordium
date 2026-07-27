@@ -59,13 +59,13 @@ void main() async {
 
   // Initialize Firebase first - this is critical
   try {
-    await FirebaseService.initialize();
+    await FirebaseService.initialize().timeout(const Duration(seconds: 5));
     isFirebaseInitialized = true;
     AppLogger.init('Firebase');
 
     // Initialize Firebase Messaging after core Firebase is ready
     try {
-      await FirebaseMessagingService().initialize();
+      await FirebaseMessagingService().initialize().timeout(const Duration(seconds: 3));
       AppLogger.init('Firebase Messaging');
     } catch (e) {
       AppLogger.warning('Firebase Messaging initialization error: $e');
@@ -138,7 +138,7 @@ void main() async {
   // Initialize keyboard provider with minimal setup
   final keyboardProvider = KeyboardProvider();
   try {
-    await keyboardProvider.initializeFromPrefs();
+    await keyboardProvider.initializeFromPrefs().timeout(const Duration(seconds: 3));
   } catch (e) {
     AppLogger.warning('Error initializing keyboard provider: $e');
   }
@@ -413,6 +413,7 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin, Widg
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
       UsageAnalyticsService.touchUserActivity();
+      DeepLinkService.setNavigationReady();
     });
   }
 

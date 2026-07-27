@@ -27,6 +27,13 @@ import io.flutter.plugin.common.EventChannel
 import io.flutter.plugin.common.MethodChannel
 import android.accessibilityservice.AccessibilityServiceInfo
 import java.util.ArrayDeque
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import com.noxquill.rewordium.keyboard.app.QuickSettingsHelper
+import com.noxquill.rewordium.keyboard.app.FlorisPreferenceModel
+import com.noxquill.rewordium.keyboard.ime.keyboard.SpaceBarMode
+import com.noxquill.rewordium.keyboard.ime.input.HapticVibrationMode
 
 class MainActivity : FlutterActivity() {
     companion object {
@@ -51,6 +58,7 @@ class MainActivity : FlutterActivity() {
         private const val UPDATE_CHANNEL = "com.noxquill.rewordium/update"
         private const val KEYBOARD_EVENTS_CHANNEL = "com.noxquill.rewordium/keyboard_events"
     }
+
 
     private var deepLinkChannel: MethodChannel? = null
     private val pendingDeepLinks: ArrayDeque<String> = ArrayDeque()
@@ -134,8 +142,12 @@ class MainActivity : FlutterActivity() {
     }
 
     override fun onNewIntent(intent: Intent) {
-        super.onNewIntent(intent)
         handleDeepLink(intent)
+        // Clear the data so Flutter engine doesn't try to parse it natively
+        // and fall back to the '/' splash screen route, which obliterates
+        // our manual MethodChannel deep link route pushes.
+        intent.data = null
+        super.onNewIntent(intent)
     }
 
     private fun handleDeepLink(intent: Intent?) {
@@ -168,6 +180,7 @@ class MainActivity : FlutterActivity() {
             "ai_settings", "ai-settings", "aisettings", "ai", "jade_ai", "jade-ai", "jadeai" -> "ai_settings"
             "home" -> "home"
             "settings", "app_settings", "app-settings" -> "settings"
+            "keyboard_settings", "keyboard" -> "keyboard_settings"
             "paraphraser", "paraphrase", "rewrite" -> "paraphraser"
             "grammar", "grammar_check", "grammar-check" -> "grammar"
             "tools", "tool" -> "tools"
@@ -363,6 +376,9 @@ class MainActivity : FlutterActivity() {
                 "setHapticFeedback" -> {
                     val enabled = call.argument<Boolean>("enabled") ?: true
                     updateSetting(KeyboardConstants.KEY_HAPTIC_FEEDBACK, enabled)
+                    CoroutineScope(Dispatchers.Main).launch {
+                        QuickSettingsHelper.updateQuickSetting(this@MainActivity, "hapticEnabled", enabled)
+                    }
                     result.success(true)
                 }
                 "setAiSuggestions" -> {
@@ -378,16 +394,25 @@ class MainActivity : FlutterActivity() {
                 "setAutoCapitalize" -> {
                     val enabled = call.argument<Boolean>("enabled") ?: true
                     updateSetting(KeyboardConstants.KEY_AUTO_CAPITALIZE, enabled)
+                    CoroutineScope(Dispatchers.Main).launch {
+                        QuickSettingsHelper.updateQuickSetting(this@MainActivity, "autoCapitalization", enabled)
+                    }
                     result.success(true)
                 }
                 "setDoubleSpacePeriod" -> {
                     val enabled = call.argument<Boolean>("enabled") ?: true
                     updateSetting(KeyboardConstants.KEY_DOUBLE_SPACE_PERIOD, enabled)
+                    CoroutineScope(Dispatchers.Main).launch {
+                        QuickSettingsHelper.updateQuickSetting(this@MainActivity, "doubleSpacePeriod", enabled)
+                    }
                     result.success(true)
                 }
                 "setGlideTypingEnabled" -> {
                     val enabled = call.argument<Boolean>("enabled") ?: true
                     updateSetting(KeyboardConstants.KEY_GLIDE_TYPING_ENABLED, enabled)
+                    CoroutineScope(Dispatchers.Main).launch {
+                        QuickSettingsHelper.updateQuickSetting(this@MainActivity, "glideEnabled", enabled)
+                    }
                     result.success(true)
                 }
                 "setSpacebarNavigationEnabled" -> {
@@ -439,27 +464,52 @@ class MainActivity : FlutterActivity() {
                         result.success(false)
                     }
                 }
+                "getQuickSettings" -> {
+                    val settings = QuickSettingsHelper.getQuickSettings(this@MainActivity)
+                    result.success(settings)
+                }
+                "updateQuickSetting" -> {
+                    val key = call.argument<String>("key") ?: ""
+                    val value = call.argument<Any>("value")
+                    CoroutineScope(Dispatchers.Main).launch {
+                        QuickSettingsHelper.updateQuickSetting(this@MainActivity, key, value!!)
+                    }
+                    result.success(true)
+                }
+                "openLanguagesSettings" -> {
+                    val intent = Intent(Intent.ACTION_VIEW, android.net.Uri.parse("ui://ReBoard/settings/localization")).apply {
+                        setClass(this@MainActivity, com.noxquill.rewordium.keyboard.app.FlorisAppActivity::class.java)
+                        addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                    }
+                    startActivity(intent)
+                    result.success(true)
+                }
+                "openStickerStudio" -> {
+                    try {
+                        val intent = Intent(Intent.ACTION_VIEW, android.net.Uri.parse("ui://ReBoard/settings/sticker-studio")).apply {
+                            setClass(this@MainActivity, com.noxquill.rewordium.keyboard.app.FlorisAppActivity::class.java)
+                            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                        }
+                        startActivity(intent)
+                        result.success(true)
+                    } catch (e: Exception) {
+                        Log.e(TAG, "Failed to open Sticker Studio: ${e.message}")
+                        // Fallback: open the native settings root
+                        openReboardSettings()
+                        result.success(false)
+                    }
+                }
                 "getKeyboardSettings" -> {
                     val prefs = getSharedPreferences(KeyboardConstants.PREFS_NAME, Context.MODE_PRIVATE)
-                    
-                    // Ensure default values exist
-                    if (!prefs.contains(KeyboardConstants.KEY_HAPTIC_FEEDBACK)) {
-                        prefs.edit().putBoolean(KeyboardConstants.KEY_HAPTIC_FEEDBACK, true).apply()
-                    }
-                    if (!prefs.contains(KeyboardConstants.KEY_AUTO_CAPITALIZE)) {
-                        prefs.edit().putBoolean(KeyboardConstants.KEY_AUTO_CAPITALIZE, true).apply()
-                    }
-                    if (!prefs.contains(KeyboardConstants.KEY_DOUBLE_SPACE_PERIOD)) {
-                        prefs.edit().putBoolean(KeyboardConstants.KEY_DOUBLE_SPACE_PERIOD, true).apply()
-                    }
+                    val quickSettings = QuickSettingsHelper.getQuickSettings(this@MainActivity)
                     
                     val settings = mapOf(
                         "themeColor" to (prefs.getString(KeyboardConstants.KEY_THEME_COLOR, "#007AFF") ?: "#007AFF"),
                         "darkMode" to prefs.getBoolean(KeyboardConstants.KEY_DARK_MODE, false),
-                        "hapticFeedback" to prefs.getBoolean(KeyboardConstants.KEY_HAPTIC_FEEDBACK, true),
+                        "hapticFeedback" to (quickSettings["hapticEnabled"] as? Boolean ?: true),
                         "aiSuggestions" to prefs.getBoolean(KeyboardConstants.KEY_AI_SUGGESTIONS, true),
-                        "autoCapitalize" to prefs.getBoolean(KeyboardConstants.KEY_AUTO_CAPITALIZE, true),
-                        "doubleSpacePeriod" to prefs.getBoolean(KeyboardConstants.KEY_DOUBLE_SPACE_PERIOD, true)
+                        "autoCapitalize" to (quickSettings["autoCapitalization"] as? Boolean ?: true),
+                        "doubleSpacePeriod" to (quickSettings["doubleSpacePeriod"] as? Boolean ?: true)
                     )
                     
                     Log.d(TAG, "📝 Returning keyboard settings")

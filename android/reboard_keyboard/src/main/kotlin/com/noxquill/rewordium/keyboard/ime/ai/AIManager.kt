@@ -348,6 +348,7 @@ class AIManager(private val context: Context) {
                     return@withContext makeGeminiRequest(config, systemPrompt, userPrompt, overrideMaxTokens)
                 }
 
+                val isQwen3 = config.model.startsWith("qwen/qwen3")
                 val request = GroqRequest(
                     model = config.model,
                     messages = listOf(
@@ -357,7 +358,8 @@ class AIManager(private val context: Context) {
                     temperature = 0.9,
                     topP = 0.95,
                     presencePenalty = 0.3,
-                    maxTokens = overrideMaxTokens ?: config.maxTokens
+                    maxTokens = overrideMaxTokens ?: config.maxTokens,
+                    reasoningEffort = if (isQwen3) "none" else null,
                 )
                 val jsonBody = gson.toJson(request)
                 val requestBody = jsonBody.toRequestBody("application/json".toMediaType())
@@ -385,6 +387,8 @@ class AIManager(private val context: Context) {
                         401 -> "Invalid API key"
                         429 -> "Rate limit — try again later"
                         403 -> "API access forbidden"
+                        404 -> "AI model not found — try again"
+                        400 -> "Request error — try shorter text"
                         500, 502, 503, 504 -> "AI service unavailable"
                         else -> "Error $errorCode"
                     }
@@ -530,7 +534,7 @@ class AIManager(private val context: Context) {
         val systemPrompt = buildSystemPrompt(action)
         val userPrompt = buildUserPrompt(text, action)
 
-        return makeApiRequest(routedConfig, systemPrompt, userPrompt, overrideMaxTokens = 300)
+        return makeApiRequest(routedConfig, systemPrompt, userPrompt, overrideMaxTokens = 512)
     }
     
     /**
@@ -880,11 +884,11 @@ Rewrite USER_PROMPT into a stronger first-person prompt by adding specificity, r
         return if (BuildConfig.ENABLE_STREAMING_AI && !config.isGemini()) {
             val systemPrompt = buildSystemPrompt(action)
             val userPrompt = buildUserPrompt(text, action)
-            makeApiRequestStreaming(config, systemPrompt, userPrompt, overrideMaxTokens = 300)
+            makeApiRequestStreaming(config, systemPrompt, userPrompt, overrideMaxTokens = 512)
                 .onCompletion { cause -> if (cause == null) consumeCreditAfterSuccess(config) }
         } else {
             // Fallback: emit the full response as a single token
-            val result = makeApiRequest(config, buildSystemPrompt(action), buildUserPrompt(text, action), overrideMaxTokens = 300)
+            val result = makeApiRequest(config, buildSystemPrompt(action), buildUserPrompt(text, action), overrideMaxTokens = 512)
             channelFlow { send(result.getOrElse { throw it }) }
         }
     }
@@ -946,6 +950,7 @@ You are a text transformer embedded in a mobile keyboard. The user message conta
         overrideMaxTokens: Int? = null,
     ): Flow<String> = channelFlow {
         val ch = this // capture ProducerScope before switching dispatcher
+        val isQwen3Streaming = config.model.startsWith("qwen/qwen3")
         val request = GroqRequest(
             model = config.model,
             messages = listOf(
@@ -957,6 +962,7 @@ You are a text transformer embedded in a mobile keyboard. The user message conta
             presencePenalty = 0.3,
             maxTokens = overrideMaxTokens ?: config.maxTokens,
             stream = true,
+            reasoningEffort = if (isQwen3Streaming) "none" else null,
         )
         val jsonBody = gson.toJson(request)
         val requestBody = jsonBody.toRequestBody("application/json".toMediaType())
@@ -982,6 +988,8 @@ You are a text transformer embedded in a mobile keyboard. The user message conta
                     401 -> "Invalid API key"
                     429 -> "Rate limit — try again later"
                     403 -> "API access forbidden"
+                    404 -> "AI model not found — try again"
+                    400 -> "Request error — try shorter text"
                     500, 502, 503, 504 -> "AI service unavailable"
                     else -> "Streaming error $code"
                 }
@@ -1118,6 +1126,8 @@ data class GroqRequest(
     @SerializedName("max_tokens")
     val maxTokens: Int = 2048,
     val stream: Boolean = false,
+    @SerializedName("reasoning_effort")
+    val reasoningEffort: String? = null,
 )
 
 data class Message(

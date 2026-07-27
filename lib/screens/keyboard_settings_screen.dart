@@ -53,11 +53,6 @@ class _KeyboardSettingsScreenState extends State<KeyboardSettingsScreen> {
     });
 
     try {
-      // First ensure defaults are set
-      await RewordiumKeyboardService.setHapticFeedback(true);
-      await RewordiumKeyboardService.setAutoCapitalize(true);
-      await RewordiumKeyboardService.setDoubleSpacePeriod(true);
-
       // Check if keyboard is enabled
       final isEnabled = await RewordiumKeyboardService.isKeyboardEnabled();
 
@@ -70,15 +65,18 @@ class _KeyboardSettingsScreenState extends State<KeyboardSettingsScreen> {
       // Load glide typing settings
       await _loadGlideTypingSettings();
 
+      // Load quick settings for source of truth
+      final quickSettings = await RewordiumKeyboardService.getQuickSettings();
+
       if (!mounted) return;
 
       setState(() {
         _isKeyboardEnabled = isEnabled;
         _themeColor = settings['themeColor'] ?? '#007AFF';
         _isDarkMode = settings['darkMode'] ?? false;
-        _isHapticFeedbackEnabled = settings['hapticFeedback'] ?? true;
-        _isAutoCapitalizeEnabled = settings['autoCapitalize'] ?? true;
-        _isDoubleSpacePeriodEnabled = settings['doubleSpacePeriod'] ?? true;
+        _isHapticFeedbackEnabled = quickSettings['hapticEnabled'] == true;
+        _isAutoCapitalizeEnabled = quickSettings['autoCapitalization'] == true;
+        _isDoubleSpacePeriodEnabled = quickSettings['doubleSpacePeriod'] == true;
         _isAutocorrectEnabled = settings['autocorrect'] ?? true;
         _isLoading = false;
       });
@@ -384,8 +382,10 @@ class _KeyboardSettingsScreenState extends State<KeyboardSettingsScreen> {
   // Glide typing methods (advanced gesture recognition)
   Future<void> _loadGlideTypingSettings() async {
     try {
+      final quickSettings = await RewordiumKeyboardService.getQuickSettings();
+      _glideTypingEnabled = quickSettings['glideEnabled'] == true;
+      
       final prefs = await SharedPreferences.getInstance();
-      _glideTypingEnabled = prefs.getBool('glide_typing_enabled') ?? true;
       _spacebarNavigationEnabled =
           prefs.getBool('spacebar_navigation_enabled') ?? true;
     } catch (e) {
@@ -767,26 +767,59 @@ class _KeyboardSettingsScreenState extends State<KeyboardSettingsScreen> {
                 Card(
                   elevation: 2,
                   child: Padding(
-                    padding: const EdgeInsets.all(16.0),
+                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text(
-                          'Sensitivity',
-                          style: Theme.of(context).textTheme.titleMedium,
+                        Row(
+                          children: [
+                            Icon(Icons.tune_rounded,
+                                size: 22,
+                                color: Theme.of(context).colorScheme.onSurfaceVariant),
+                            const SizedBox(width: 16),
+                            Expanded(
+                              child: Text(
+                                'Sensitivity',
+                                style: Theme.of(context).textTheme.bodyLarge,
+                              ),
+                            ),
+                            Text(
+                              '${(_swipeSensitivity * 100).round()}%',
+                              style: Theme.of(context).textTheme.bodySmall,
+                            ),
+                            const SizedBox(width: 4),
+                            IconButton(
+                              icon: Icon(
+                                Icons.restart_alt_rounded,
+                                size: 18,
+                                color: _swipeSensitivity == 0.8
+                                    ? Theme.of(context).colorScheme.outlineVariant
+                                    : Theme.of(context).colorScheme.primary,
+                              ),
+                              tooltip: 'Reset to default',
+                              visualDensity: VisualDensity.compact,
+                              onPressed: _swipeSensitivity == 0.8
+                                  ? null
+                                  : () => _updateSwipeSensitivity(0.8),
+                            ),
+                          ],
                         ),
-                        const SizedBox(height: 8),
                         Slider(
                           value: _swipeSensitivity,
                           min: 0.1,
                           max: 1.0,
                           divisions: 9,
-                          label: '${(_swipeSensitivity * 100).round()}%',
                           onChanged: _updateSwipeSensitivity,
                         ),
-                        const Text(
-                          'Higher sensitivity = faster recognition',
-                          style: TextStyle(color: Colors.grey, fontSize: 12),
+                        Padding(
+                          padding: const EdgeInsets.only(left: 38),
+                          child: Text(
+                            'Higher sensitivity = faster recognition',
+                            style: TextStyle(
+                              color: Theme.of(context).colorScheme.onSurfaceVariant.withOpacity(0.7),
+                              fontSize: 12,
+                            ),
+                          ),
                         ),
                       ],
                     ),

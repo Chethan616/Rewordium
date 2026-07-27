@@ -101,7 +101,7 @@ abstract class FlorisPreferenceModel : PreferenceModel() {
         )
         val suggestionTimeout = int(
             key = "clipboard__suggestion_timeout",
-            default = 60,
+            default = 30,
         )
         val historyEnabled = boolean(
             key = "clipboard__history_enabled",
@@ -215,14 +215,6 @@ abstract class FlorisPreferenceModel : PreferenceModel() {
         val showDragAndDropHelpers = boolean(
             key = "devtools__show_drag_and_drop_helpers",
             default = false,
-        )
-        val experimentalRoundedSmartbar = boolean(
-            key = "devtools__experimental_rounded_smartbar",
-            default = false,
-        )
-        val experimentalRoundedSmartbarRadius = int(
-            key = "devtools__experimental_rounded_smartbar_radius",
-            default = 28,
         )
     }
 
@@ -378,6 +370,10 @@ abstract class FlorisPreferenceModel : PreferenceModel() {
             key = "glide__trail_fade_duration",
             default = 200,
         )
+        val trailWidth = float(
+            key = "glide__trail_width",
+            default = 5.5f,
+        )
         val showPreview = boolean(
             key = "glide__show_preview",
             default = true,
@@ -531,6 +527,10 @@ abstract class FlorisPreferenceModel : PreferenceModel() {
             key = "keyboard__space_bar_display_mode",
             default = SpaceBarMode.CURRENT_LANGUAGE,
         )
+        val spaceBarCustomLabel = string(
+            key = "keyboard__space_bar_custom_label",
+            default = "Reboard",
+        )
         val capitalizationBehavior = enum(
             key = "keyboard__capitalization_behavior",
             default = CapitalizationBehavior.CAPSLOCK_BY_DOUBLE_TAP,
@@ -602,6 +602,14 @@ abstract class FlorisPreferenceModel : PreferenceModel() {
         val incognitoDisplayMode = enum(
             key = "keyboard__incognito_indicator",
             default = IncognitoDisplayMode.DISPLAY_BEHIND_KEYBOARD,
+        )
+        val experimentalRoundedSmartbar = boolean(
+            key = "devtools__experimental_rounded_smartbar",
+            default = false,
+        )
+        val experimentalRoundedSmartbarRadius = int(
+            key = "devtools__experimental_rounded_smartbar_radius",
+            default = 28,
         )
 
         fun keyHintConfiguration(): KeyHintConfiguration {

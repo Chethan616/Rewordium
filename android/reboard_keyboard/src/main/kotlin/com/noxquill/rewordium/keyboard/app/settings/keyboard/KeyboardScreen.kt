@@ -17,6 +17,8 @@
 package com.noxquill.rewordium.keyboard.app.settings.keyboard
 
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.rememberCoroutineScope
+import kotlinx.coroutines.launch
 import com.noxquill.rewordium.keyboard.R
 import com.noxquill.rewordium.keyboard.app.LocalNavController
 import com.noxquill.rewordium.keyboard.app.Routes
@@ -44,6 +46,7 @@ fun KeyboardScreen() = FlorisScreen {
     previewFieldVisible = true
 
     val navController = LocalNavController.current
+    val scope = rememberCoroutineScope()
 
     content {
         SwitchPreference(
@@ -188,6 +191,29 @@ fun KeyboardScreen() = FlorisScreen {
                 prefs.keyboard.spaceBarSwitchesToCharacters,
                 title = stringRes(R.string.pref__keyboard__space_bar_switches_to_characters__label),
                 summary = stringRes(R.string.pref__keyboard__space_bar_switches_to_characters__summary),
+            )
+        }
+
+        PreferenceGroup(title = stringRes(R.string.pref__keyboard__group_appearance__label)) {
+            SwitchPreference(
+                prefs.keyboard.experimentalRoundedSmartbar,
+                title = stringRes(R.string.devtools__experimental_rounded_smartbar__label),
+                summary = stringRes(R.string.devtools__experimental_rounded_smartbar__summary),
+            )
+            DialogSliderPreference(
+                pref = prefs.keyboard.experimentalRoundedSmartbarRadius,
+                title = stringRes(R.string.pref__keyboard__experimental_rounded_smartbar_radius__label),
+                valueLabel = { radiusVal -> "$radiusVal dp" },
+                min = 4,
+                max = 48,
+                stepIncrement = 1,
+                enabledIf = { prefs.keyboard.experimentalRoundedSmartbar.get() },
+            )
+            Preference(
+                title = "Reset to default",
+                summary = "Restore default smartbar radius (28 dp)",
+                onClick = { scope.launch { prefs.keyboard.experimentalRoundedSmartbarRadius.set(28) } },
+                enabledIf = { prefs.keyboard.experimentalRoundedSmartbar.get() }
             )
         }
     }

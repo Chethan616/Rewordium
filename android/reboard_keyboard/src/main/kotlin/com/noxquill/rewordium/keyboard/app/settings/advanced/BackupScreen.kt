@@ -98,6 +98,8 @@ object Backup {
         var clipboardTextItems by mutableStateOf(false)
         var clipboardImageItems by mutableStateOf(false)
         var clipboardVideoItems by mutableStateOf(false)
+        var glideTypingLearnedWords by mutableStateOf(true)
+        var suggestionsData by mutableStateOf(true)
 
         private var _clipboardData: MutableState<ToggleableState> = mutableStateOf(ToggleableState.Off)
         val clipboardData: State<ToggleableState> = _clipboardData
@@ -122,7 +124,7 @@ object Backup {
         }
 
         fun atLeastOneSelected(): Boolean {
-            return jetprefDatastore || imeKeyboard || imeTheme || clipboardTextItems || clipboardImageItems || clipboardVideoItems
+            return jetprefDatastore || imeKeyboard || imeTheme || clipboardTextItems || clipboardImageItems || clipboardVideoItems || glideTypingLearnedWords || suggestionsData
         }
     }
 
@@ -192,6 +194,25 @@ fun BackupScreen() = FlorisScreen {
         if (backupFilesSelector.imeTheme) {
             context.filesDir.subDir(ExtensionManager.IME_THEME_PATH).let { dir ->
                 dir.copyRecursively(workspaceFilesDir.subDir(ExtensionManager.IME_THEME_PATH))
+            }
+        }
+        if (backupFilesSelector.glideTypingLearnedWords) {
+            context.filesDir.subFile("learned_words.json").let { file ->
+                if (file.exists()) {
+                    file.copyTo(workspaceFilesDir.subFile("learned_words.json"), overwrite = true)
+                }
+            }
+        }
+        if (backupFilesSelector.suggestionsData) {
+            context.filesDir.subFile("learned_bigrams.json").let { file ->
+                if (file.exists()) {
+                    file.copyTo(workspaceFilesDir.subFile("learned_bigrams.json"), overwrite = true)
+                }
+            }
+            context.filesDir.subFile("learned_emoji_associations.json").let { file ->
+                if (file.exists()) {
+                    file.copyTo(workspaceFilesDir.subFile("learned_emoji_associations.json"), overwrite = true)
+                }
             }
         }
 
@@ -336,6 +357,16 @@ internal fun BackupFilesSelector(
             onClick = { filesSelector.imeTheme = !filesSelector.imeTheme },
             checked = filesSelector.imeTheme,
             text = stringRes(R.string.backup_and_restore__back_up__files_ime_theme),
+        )
+        CheckboxListItem(
+            onClick = { filesSelector.glideTypingLearnedWords = !filesSelector.glideTypingLearnedWords },
+            checked = filesSelector.glideTypingLearnedWords,
+            text = "Glide Typing Data",
+        )
+        CheckboxListItem(
+            onClick = { filesSelector.suggestionsData = !filesSelector.suggestionsData },
+            checked = filesSelector.suggestionsData,
+            text = "Suggestions Data",
         )
 
         TriStateCheckboxListItem(

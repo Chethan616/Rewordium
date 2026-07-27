@@ -4,6 +4,7 @@ import 'package:flutter/services.dart';
 
 import '../main.dart';
 import '../screens/advanced_ai_settings_screen.dart';
+import '../screens/keyboard_quick_settings_screen.dart';
 import '../utils/app_logger.dart';
 
 class DeepLinkService {
@@ -59,12 +60,15 @@ class DeepLinkService {
       return null;
     });
 
-    WidgetsBinding.instance.addPostFrameCallback((_) {
+    _checkPendingDeepLink();
+  }
+
+  /// Mark navigation as ready and flush queued routes
+  static void setNavigationReady() {
+    if (!_isNavigationReady) {
       _isNavigationReady = true;
       _flushQueuedRoutes();
-    });
-
-    _checkPendingDeepLink();
+    }
   }
 
   /// Check pending deep links on startup
@@ -208,6 +212,10 @@ class DeepLinkService {
       case 'tool':
         return 'tools';
 
+      case 'keyboard_settings':
+      case 'keyboard':
+        return 'keyboard_settings';
+
       default:
         return null;
     }
@@ -272,6 +280,34 @@ class DeepLinkService {
       },
     );
   }
+
+  static void _openKeyboardQuickSettings() {
+    final navigator = navigatorKey.currentState;
+    final context = navigatorKey.currentContext;
+
+    if (navigator == null || context == null) {
+      _scheduleFlushRetry();
+      return;
+    }
+
+    // Anchor to the home settings tab to ensure the splash screen
+    // doesn't obliterate our pushed route.
+    _navigateToHomeTab(3);
+
+    Future<void>.delayed(
+      const Duration(milliseconds: 350),
+      () {
+        final nav = navigatorKey.currentState;
+        if (nav == null) return;
+        nav.push(
+          MaterialPageRoute(
+            builder: (_) => const KeyboardQuickSettingsScreen(),
+          ),
+        );
+      },
+    );
+  }
+
 
   /// Handle navigation
   static void _handleNavigation(String? route) {
@@ -338,6 +374,10 @@ class DeepLinkService {
 
       case 'tools':
         _navigateToHomeTab(0);
+        break;
+
+      case 'keyboard_settings':
+        _openKeyboardQuickSettings();
         break;
 
       default:

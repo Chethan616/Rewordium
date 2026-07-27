@@ -33,6 +33,7 @@ import '../screens/advanced_ai_settings_screen.dart';
 import '../providers/auth_provider.dart';
 import '../widgets/upgrade_dialog.dart';
 import 'admin_panel.dart';
+import 'keyboard_quick_settings_screen.dart';
 
 class SettingsScreen extends StatefulWidget {
   const SettingsScreen({super.key});
@@ -460,36 +461,6 @@ class _SettingsScreenState extends State<SettingsScreen>
     }
   }
 
-  /// Opens the native ReBoard keyboard settings activity
-  Future<void> _openReboardSettings() async {
-    if (defaultTargetPlatform != TargetPlatform.android) return;
-    if (_isOpeningReboardSettings) return;
-
-    final now = DateTime.now();
-    if (_lastReboardLaunchAt != null &&
-        now.difference(_lastReboardLaunchAt!) <
-            const Duration(milliseconds: 1200)) {
-      return;
-    }
-    _lastReboardLaunchAt = now;
-
-    _isOpeningReboardSettings = true;
-    try {
-      final opened = await RewordiumKeyboardService.openReboardSettings();
-      if (!opened && mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Unable to open ReBoard settings right now.'),
-            behavior: SnackBarBehavior.floating,
-          ),
-        );
-      }
-    } finally {
-      await Future<void>.delayed(const Duration(milliseconds: 450));
-      _isOpeningReboardSettings = false;
-    }
-  }
-
   void _showIOSStyleKeyboardActivationDialog(BuildContext context) {
     showDialog(
       context: context,
@@ -841,7 +812,14 @@ class _SettingsScreenState extends State<SettingsScreen>
                         subtitle: "Customize appearance and behavior",
                         trailing: const Icon(CupertinoIcons.chevron_right,
                             color: Colors.grey, size: 18),
-                        onTap: () => _openReboardSettings(),
+                        onTap: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) => const KeyboardQuickSettingsScreen(),
+                            ),
+                          );
+                        },
                       ),
                       const Divider(height: 1, indent: 72),
                     ],
@@ -922,6 +900,21 @@ class _SettingsScreenState extends State<SettingsScreen>
                             : const Icon(CupertinoIcons.chevron_right,
                                 color: Colors.grey, size: 18),
                         onTap: _resyncIosKeyboard,
+                      ),
+                      const Divider(height: 1, indent: 72),
+                    ],
+                    // Sticker Studio (Android only – opens native ReBoard screen)
+                    if (defaultTargetPlatform == TargetPlatform.android) ...[
+                      _buildSettingItem(
+                        icon: CupertinoIcons.smiley,
+                        iconColor: Colors.orange,
+                        title: 'Sticker Studio',
+                        subtitle:
+                            'Create, edit and manage your custom stickers for your keyboard',
+                        trailing: const Icon(CupertinoIcons.chevron_right,
+                            color: Colors.grey, size: 18),
+                        onTap: () =>
+                            RewordiumKeyboardService.openStickerStudio(),
                       ),
                       const Divider(height: 1, indent: 72),
                     ],

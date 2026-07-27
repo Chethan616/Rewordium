@@ -123,19 +123,7 @@ fun CandidatesRow(modifier: Modifier = Modifier) {
             Arrangement.Center
         },
     ) {
-        if (showContactsPrompt) {
-            ContactsPromptBanner(
-                onAllow = {
-                    context.startActivity(
-                        Intent(context, ContactsPermissionActivity::class.java)
-                            .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK),
-                    )
-                },
-                onDismiss = {
-                    scope.launch { prefs.spelling.contactsPromptDismissed.set(true) }
-                },
-            )
-        } else if (candidates.isNotEmpty()) {
+        if (candidates.isNotEmpty()) {
             val candidateModifier = if (candidates.size == 1) {
                 Modifier
                     .fillMaxHeight()

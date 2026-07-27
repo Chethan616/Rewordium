@@ -260,6 +260,18 @@ class UnifiedAIService {
         };
       }
 
+      // Check for 404 / model not found errors
+      if (errorString.contains('404') ||
+          errorString.contains('model not found') ||
+          errorString.contains('not found')) {
+        return {
+          'error': 'MODEL_NOT_FOUND',
+          'errorType': 'MODEL_NOT_FOUND',
+          'content':
+              '⚠️ AI model not found.\n\nThe model may be temporarily unavailable or the model name is incorrect. Please try again.',
+        };
+      }
+
       return {
         'error': e.toString(),
         'errorType': 'UNKNOWN',
@@ -374,6 +386,14 @@ class UnifiedAIService {
           model: model,
           maxTokens: maxTokens,
         );
+      } else if (response.statusCode == 404) {
+        if (kDebugMode) _logGroqFailure(response, 'model_not_found');
+        return {
+          'error': 'MODEL_NOT_FOUND',
+          'errorType': 'MODEL_NOT_FOUND',
+          'content':
+              '⚠️ AI model not found. Please try again or check your model settings.',
+        };
       } else {
         if (kDebugMode) _logGroqFailure(response, 'http_${response.statusCode}');
         throw Exception(

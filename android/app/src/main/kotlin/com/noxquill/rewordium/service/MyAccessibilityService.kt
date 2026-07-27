@@ -1247,6 +1247,8 @@ class MyAccessibilityService : AccessibilityService(), BubbleInteractionListener
                         401 -> "⚠️ Invalid API key"
                         429 -> "⏳ Rate limit - wait a moment"
                         403 -> "🚫 API access forbidden"
+                        404 -> "🔍 AI model not found - try again"
+                        400 -> "📝 Request error - try shorter text"
                         500, 502, 503, 504 -> "🔧 AI service unavailable"
                         else -> "❌ Error $errorCode"
                     }

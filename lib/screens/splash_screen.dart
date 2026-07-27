@@ -93,7 +93,10 @@ class _SplashScreenState extends State<SplashScreen>
     // Integrity passed — route based on auth state.
     final authProvider = Provider.of<AuthProvider>(context, listen: false);
     if (authProvider.isLoggedIn) {
-      final seenOnboarding = await OnboardingPage.hasCompleted();
+      final seenOnboarding = await OnboardingPage.hasCompleted().timeout(
+        const Duration(seconds: 3),
+        onTimeout: () => true, // Assume completed if it hangs, to not block the user
+      );
       if (!mounted) return;
       if (seenOnboarding) {
         Navigator.of(context).pushReplacementNamed('/home');

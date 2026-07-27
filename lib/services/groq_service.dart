@@ -183,7 +183,8 @@ class GroqService {
           'temperature': 0.3,
           'top_p': 0.95,
           'presence_penalty': 0.3,
-          'max_tokens': 300,
+          'max_tokens': 1024,
+          'reasoning_effort': 'none',
           'response_format': {'type': 'json_object'}
         }),
       )
@@ -222,6 +223,12 @@ class GroqService {
         print('Grammar check error: Access denied');
         throw Exception(
             'Access denied. Please check your API key permissions.');
+      } else if (response.statusCode == 404) {
+        print('Grammar check error: Model not found - ${response.body}');
+        throw Exception('AI model unavailable. Please try again.');
+      } else if (response.statusCode == 400) {
+        print('Grammar check error: Bad request - ${response.body}');
+        throw Exception('Could not process. Try with shorter text.');
       } else if (response.statusCode >= 500) {
         print('Grammar check error: Groq server error');
         throw Exception('Groq server error. Please try again later.');
@@ -299,7 +306,8 @@ class GroqService {
           'temperature': 0.9,
           'top_p': 0.95,
           'presence_penalty': 0.3,
-          'max_tokens': 300,
+          'max_tokens': 1024,
+          'reasoning_effort': 'none',
           'response_format': {'type': 'json_object'}
         }),
       )
@@ -399,7 +407,8 @@ class GroqService {
           'temperature': 0.9,
           'top_p': 0.95,
           'presence_penalty': 0.3,
-          'max_tokens': 300,
+          'max_tokens': 1024,
+          'reasoning_effort': 'none',
           'response_format': {'type': 'json_object'}
         }),
       );
@@ -454,7 +463,8 @@ class GroqService {
           'temperature': 0.9,
           'top_p': 0.95,
           'presence_penalty': 0.3,
-          'max_tokens': 300,
+          'max_tokens': 1024,
+          'reasoning_effort': 'none',
           'response_format': {'type': 'json_object'}
         }),
       );
@@ -563,7 +573,8 @@ class GroqService {
           'temperature': 0.3,
           'top_p': 0.95,
           'presence_penalty': 0.3,
-          'max_tokens': 300,
+          'max_tokens': 1024,
+          'reasoning_effort': 'none',
           'response_format': {'type': 'json_object'}
         }),
       );
@@ -671,7 +682,8 @@ class GroqService {
           'temperature': 0.9,
           'top_p': 0.95,
           'presence_penalty': 0.3,
-          'max_tokens': 300,
+          'max_tokens': 1024,
+          'reasoning_effort': 'none',
           'response_format': {'type': 'json_object'}
         }),
       );

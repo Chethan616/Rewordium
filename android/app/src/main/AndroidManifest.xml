@@ -123,6 +123,7 @@
                 <data android:scheme="rewordium" android:host="ai_settings"/>
                 <data android:scheme="rewordium" android:host="home"/>
                 <data android:scheme="rewordium" android:host="settings"/>
+                <data android:scheme="rewordium" android:host="keyboard_settings"/>
                 <data android:scheme="rewordium" android:host="paraphraser"/>
                 <data android:scheme="rewordium" android:host="grammar"/>
                 <data android:scheme="rewordium" android:host="tools"/>

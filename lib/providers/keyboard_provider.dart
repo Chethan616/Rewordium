@@ -274,7 +274,12 @@ class KeyboardProvider extends ChangeNotifier {
       _layout = KeyboardLayout.values[layoutIndex];
     }
 
-    _soundOn = prefs.getBool('keyboard_sound') ?? false;
+    try {
+      final quickSettings = await RewordiumKeyboardService.getQuickSettings();
+      _soundOn = quickSettings['hapticEnabled'] == true;
+    } catch (e) {
+      _soundOn = prefs.getBool('keyboard_sound') ?? false;
+    }
 
     // Load custom personas and active persona
     await _loadPersonas();
@@ -368,6 +373,12 @@ class KeyboardProvider extends ChangeNotifier {
         // Save to preferences
         final prefs = await SharedPreferences.getInstance();
         await prefs.setBool('system_keyboard_enabled', true);
+
+        // Sync haptic setting from native so we don't overwrite it with stale state
+        try {
+          final quickSettings = await RewordiumKeyboardService.getQuickSettings();
+          _soundOn = quickSettings['hapticEnabled'] == true;
+        } catch (_) {}
 
         // Apply all settings
         await applyAllKeyboardSettings();

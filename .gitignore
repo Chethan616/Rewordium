@@ -46,9 +46,10 @@ android/*.keystore
 key.properties
 upload-keystore.jks
 
-# Firebase options — committed intentionally (no private keys, only project config)
-# lib/firebase_options.dart
-# android/app/google-services.json
+# Firebase options — ignored per user request to not push secrets
+lib/firebase_options.dart
+android/app/google-services.json
+google-services.json
 # Secret files that must be supplied via CI environment variables:
 ios/Runner/GoogleService-Info.plist
 ios/firebase_app_id_file.json
@@ -100,6 +101,7 @@ desktop.ini
 # Android
 # ===========================================================
 /android/.gradle/
+/android/.kotlin/
 /android/app/build/
 /android/build/
 /android/captures/
@@ -207,3 +209,13 @@ payment_portal/
 *.dart.bak
 *.dart.bak2
 *.orig
+
+# Scratch scripts
+check*.py
+debug_*.py
+edit_*.py
+fix_*.py
+update_*.py
+TestLog.kt
+Dockerfile
+

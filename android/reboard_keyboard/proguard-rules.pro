@@ -232,3 +232,6 @@
 # EmojiCompat safety for emoji panel runtime
 -keep class androidx.emoji2.** { *; }
 -keep class androidx.emoji.text.** { *; }
+
+# Keep QuickSettingsHelper
+-keep class com.noxquill.rewordium.keyboard.app.QuickSettingsHelper { *; }

@@ -179,6 +179,35 @@ fun RestoreScreen() = FlorisScreen {
                 srcDir.copyRecursively(dstDir, overwrite = true)
             }
         }
+        if (restoreFilesSelector.glideTypingLearnedWords) {
+            val srcFile = workspaceFilesDir.subFile("learned_words.json")
+            val dstFile = context.filesDir.subFile("learned_words.json")
+            if (shouldReset) {
+                dstFile.delete()
+            }
+            if (srcFile.exists()) {
+                srcFile.copyTo(dstFile, overwrite = true)
+            }
+        }
+        if (restoreFilesSelector.suggestionsData) {
+            val srcFile = workspaceFilesDir.subFile("learned_bigrams.json")
+            val dstFile = context.filesDir.subFile("learned_bigrams.json")
+            if (shouldReset) {
+                dstFile.delete()
+            }
+            if (srcFile.exists()) {
+                srcFile.copyTo(dstFile, overwrite = true)
+            }
+            
+            val srcEmojiFile = workspaceFilesDir.subFile("learned_emoji_associations.json")
+            val dstEmojiFile = context.filesDir.subFile("learned_emoji_associations.json")
+            if (shouldReset) {
+                dstEmojiFile.delete()
+            }
+            if (srcEmojiFile.exists()) {
+                srcEmojiFile.copyTo(dstEmojiFile, overwrite = true)
+            }
+        }
         val clipboardManager = context.clipboardManager().value
         if (shouldReset) {
             clipboardManager.clearFullHistory()

@@ -19,5 +19,6 @@ package com.noxquill.rewordium.keyboard.ime.keyboard
 enum class SpaceBarMode {
     NOTHING,
     CURRENT_LANGUAGE,
-    SPACE_BAR_KEY;
+    SPACE_BAR_KEY,
+    CUSTOM_LABEL;
 }
