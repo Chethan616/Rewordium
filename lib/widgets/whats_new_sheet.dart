@@ -34,6 +34,15 @@ class WhatsNewSheet {
   // Add a new entry for each release. Older entries are kept for reference
   // but only the *current* version's items are displayed.
   static final Map<String, List<_WhatsNewItem>> _features = {
+    '3.0.1+121': [
+      const _WhatsNewItem(
+        icon: CupertinoIcons.sparkles,
+        color: Color(0xFF10B981),
+        title: 'Enhanced AI Reliability',
+        description:
+            'Fixed model response limits, resolved 404 errors, and improved AI generation consistency across keyboard and accessibility features.',
+      ),
+    ],
     '3.0.0+120': [
       _WhatsNewItem(
         icon: CupertinoIcons.app_badge,
