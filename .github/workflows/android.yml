@@ -25,12 +25,26 @@ jobs:
       - name: Grant execute permission for gradlew
         run: chmod +x android/gradlew
 
-      - name: Create missing assets
+      - name: Create missing assets & inject environment secrets
+        env:
+          GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
+          FIREBASE_API_KEY: ${{ secrets.FIREBASE_API_KEY || 'AIzaSyBoG1w3GaQVy2O6kjp-ZQw09TZgbUWjrTg' }}
         run: |
           mkdir -p assets/config assets/templates
           touch assets/config/.gitkeep
           touch assets/templates/.gitkeep
-          touch .env
+          
+          # Populate .env file for Flutter dotenv
+          cat > .env <<EOF
+          GROQ_API_KEY=${GROQ_API_KEY}
+          EOF
+
+          # Inject real Firebase API key into google-services.json and firebase_options.dart
+          sed -i "s/FIREBASE_API_KEY_REDACTED/${FIREBASE_API_KEY}/g" android/app/google-services.json
+          sed -i "s/FIREBASE_API_KEY_REDACTED/${FIREBASE_API_KEY}/g" lib/firebase_options.dart
+          sed -i "s/FIREBASE_WEB_API_KEY_REDACTED/${FIREBASE_API_KEY}/g" lib/firebase_options.dart
+          sed -i "s/FIREBASE_IOS_API_KEY_REDACTED/${FIREBASE_API_KEY}/g" lib/firebase_options.dart
+          sed -i "s/FIREBASE_MACOS_API_KEY_REDACTED/${FIREBASE_API_KEY}/g" lib/firebase_options.dart
 
       - name: Decode Keystore
         run: |
