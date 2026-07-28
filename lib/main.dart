@@ -7,14 +7,11 @@ import 'package:m3e_collection/m3e_collection.dart';
 import 'package:dynamic_color/dynamic_color.dart';
 import 'dart:async';
 
+import 'package:flutter_dotenv/flutter_dotenv.dart';
+
 import 'screens/home_screen.dart';
 import 'screens/paraphraser_page.dart';
 import 'screens/grammar_page.dart';
-import 'screens/translator_page.dart';
-import 'screens/ai_detector_page.dart';
-import 'screens/summarizer_page.dart';
-import 'screens/tone_editor_page.dart';
-import 'screens/jade_chat_screen.dart';
 import 'screens/settings_screen.dart';
 import 'screens/splash_screen.dart';
 import 'screens/auth/login_screen.dart';
@@ -38,7 +35,6 @@ import 'services/ios_keyboard_bridge.dart';
 import 'services/billing_service.dart';
 import 'services/deep_link_service.dart';
 import 'services/usage_analytics_service.dart';
-import 'widgets/tool_popup.dart';
 import 'widgets/tools_fab.dart';
 import 'widgets/whats_new_sheet.dart';
 
@@ -56,6 +52,13 @@ void main() async {
 
   // Optimize frame scheduling for better performance
   binding.deferFirstFrame();
+
+  // Load environment variables (.env) if present
+  try {
+    await dotenv.load(fileName: '.env');
+  } catch (e) {
+    AppLogger.warning('Could not load .env file: $e');
+  }
 
   // Initialize Firebase first - this is critical
   try {

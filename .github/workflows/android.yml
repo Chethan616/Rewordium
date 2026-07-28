@@ -28,19 +28,33 @@ jobs:
       - name: Create missing assets & inject environment secrets
         env:
           GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
-          FIREBASE_API_KEY: ${{ secrets.FIREBASE_API_KEY || 'AIzaSyBoG1w3GaQVy2O6kjp-ZQw09TZgbUWjrTg' }}
+          # FIREBASE_API_KEY must be set in GitHub Secrets → Settings → Secrets → Actions
+          # This is the Android API key from Firebase Console → Project Settings → Your apps → Android app
+          # Do NOT use a key from a different Firebase project (e.g. yc-startup-yc)
+          FIREBASE_API_KEY: ${{ secrets.FIREBASE_API_KEY }}
         run: |
           mkdir -p assets/config assets/templates
           touch assets/config/.gitkeep
           touch assets/templates/.gitkeep
+
+          # Validate required secret is set
+          if [ -z "${FIREBASE_API_KEY}" ]; then
+            echo "ERROR: FIREBASE_API_KEY secret is not set in GitHub repository secrets!"
+            echo "Go to: GitHub repo → Settings → Secrets and variables → Actions → New repository secret"
+            echo "Name: FIREBASE_API_KEY"
+            echo "Value: Your Android Firebase API key from Firebase Console → Project Settings → Your apps → Android app → apiKey"
+            exit 1
+          fi
           
           # Populate .env file for Flutter dotenv
           cat > .env <<EOF
           GROQ_API_KEY=${GROQ_API_KEY}
           EOF
 
-          # Inject real Firebase API key into google-services.json and firebase_options.dart
+          # Inject real Firebase Android API key into google-services.json
           sed -i "s/FIREBASE_API_KEY_REDACTED/${FIREBASE_API_KEY}/g" android/app/google-services.json
+
+          # Inject real Firebase API key into firebase_options.dart for all platforms
           sed -i "s/FIREBASE_API_KEY_REDACTED/${FIREBASE_API_KEY}/g" lib/firebase_options.dart
           sed -i "s/FIREBASE_WEB_API_KEY_REDACTED/${FIREBASE_API_KEY}/g" lib/firebase_options.dart
           sed -i "s/FIREBASE_IOS_API_KEY_REDACTED/${FIREBASE_API_KEY}/g" lib/firebase_options.dart

@@ -10,6 +10,37 @@
 -dontwarn io.flutter.embedding.**
 
 # ==============================================================================
+# FIREBASE AUTH & GOOGLE SIGN-IN — CRITICAL FOR RELEASE BUILDS
+# Without these rules, minification breaks auth in release APKs.
+# ==============================================================================
+
+# Firebase Auth — keep all internals to prevent "API key not valid" errors
+-keep class com.google.firebase.** { *; }
+-keep class com.google.android.gms.** { *; }
+-keep interface com.google.firebase.** { *; }
+-keep interface com.google.android.gms.** { *; }
+-dontwarn com.google.firebase.**
+-dontwarn com.google.android.gms.**
+
+# Firebase Auth specific
+-keep class com.google.firebase.auth.** { *; }
+-keep class com.google.firebase.internal.** { *; }
+
+# Google Sign-In — keep token handling classes
+-keep class com.google.android.gms.auth.** { *; }
+-keep class com.google.android.gms.common.** { *; }
+-keep class com.google.android.gms.tasks.** { *; }
+-keep class com.google.android.gms.signin.** { *; }
+
+# Prevent stripping of Google Play Services metadata
+-keep class com.google.android.gms.common.api.GoogleApiClient { *; }
+-keep class com.google.android.gms.common.api.GoogleApiClient$* { *; }
+
+# SafetyNet / Integrity (used by Firebase)
+-keep class com.google.android.gms.safetynet.** { *; }
+
+
+# ==============================================================================
 # KEEP SYSTEM COMPONENTS
 # ==============================================================================
 

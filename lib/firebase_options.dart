@@ -5,18 +5,30 @@
 import 'package:firebase_core/firebase_core.dart' show FirebaseOptions;
 import 'package:flutter/foundation.dart'
     show defaultTargetPlatform, kIsWeb, TargetPlatform;
+import 'package:flutter_dotenv/flutter_dotenv.dart';
 
 /// Default [FirebaseOptions] for use with your Firebase apps.
-///
-/// Example:
-/// ```dart
-/// import 'firebase_options.dart';
-/// // ...
-/// await Firebase.initializeApp(
-///   options: DefaultFirebaseOptions.currentPlatform,
-/// );
-/// ```
 class DefaultFirebaseOptions {
+  static String _getApiKey(String defaultKey) {
+    if (defaultKey != 'FIREBASE_API_KEY_REDACTED' &&
+        defaultKey != 'FIREBASE_WEB_API_KEY_REDACTED' &&
+        defaultKey != 'FIREBASE_IOS_API_KEY_REDACTED' &&
+        defaultKey != 'FIREBASE_MACOS_API_KEY_REDACTED') {
+      return defaultKey;
+    }
+    const envKey = String.fromEnvironment('FIREBASE_API_KEY');
+    if (envKey.isNotEmpty) return envKey;
+    try {
+      if (dotenv.isInitialized) {
+        final key = dotenv.maybeGet('FIREBASE_API_KEY');
+        if (key != null && key.isNotEmpty) return key;
+      }
+      final envMapKey = dotenv.env['FIREBASE_API_KEY'];
+      if (envMapKey != null && envMapKey.isNotEmpty) return envMapKey;
+    } catch (_) {}
+    return defaultKey;
+  }
+
   static FirebaseOptions get currentPlatform {
     if (kIsWeb) {
       return web;
@@ -42,8 +54,8 @@ class DefaultFirebaseOptions {
     }
   }
 
-  static const FirebaseOptions web = FirebaseOptions(
-    apiKey: 'FIREBASE_WEB_API_KEY_REDACTED',
+  static FirebaseOptions get web => FirebaseOptions(
+    apiKey: _getApiKey('FIREBASE_WEB_API_KEY_REDACTED'),
     appId: '1:764897323980:web:7d6b2467c9053de4784b69',
     messagingSenderId: '764897323980',
     projectId: 'yc-startup-yc',
@@ -52,16 +64,16 @@ class DefaultFirebaseOptions {
     measurementId: 'G-W0HBDG5QEY',
   );
 
-  static const FirebaseOptions android = FirebaseOptions(
-    apiKey: 'FIREBASE_API_KEY_REDACTED',
+  static FirebaseOptions get android => FirebaseOptions(
+    apiKey: _getApiKey('FIREBASE_API_KEY_REDACTED'),
     appId: '1:1046215732414:android:a97ddde5e4953c46ab02ef',
     messagingSenderId: '1046215732414',
     projectId: 'rewordium',
     storageBucket: 'rewordium.firebasestorage.app',
   );
 
-  static const FirebaseOptions ios = FirebaseOptions(
-    apiKey: 'FIREBASE_IOS_API_KEY_REDACTED',
+  static FirebaseOptions get ios => FirebaseOptions(
+    apiKey: _getApiKey('FIREBASE_IOS_API_KEY_REDACTED'),
     appId: '1:1046215732414:ios:4aec838aaf3ddae4ab02ef',
     messagingSenderId: '1046215732414',
     projectId: 'rewordium',
@@ -71,8 +83,8 @@ class DefaultFirebaseOptions {
     iosBundleId: 'com.example.ycStartup',
   );
 
-  static const FirebaseOptions macos = FirebaseOptions(
-    apiKey: 'FIREBASE_MACOS_API_KEY_REDACTED',
+  static FirebaseOptions get macos => FirebaseOptions(
+    apiKey: _getApiKey('FIREBASE_MACOS_API_KEY_REDACTED'),
     appId: '1:764897323980:ios:ceae35d06a44ccb8784b69',
     messagingSenderId: '764897323980',
     projectId: 'yc-startup-yc',
@@ -84,8 +96,8 @@ class DefaultFirebaseOptions {
     iosBundleId: 'com.example.ycStartup',
   );
 
-  static const FirebaseOptions windows = FirebaseOptions(
-    apiKey: 'FIREBASE_WEB_API_KEY_REDACTED',
+  static FirebaseOptions get windows => FirebaseOptions(
+    apiKey: _getApiKey('FIREBASE_WEB_API_KEY_REDACTED'),
     appId: '1:764897323980:web:a9dcb62add54673f784b69',
     messagingSenderId: '764897323980',
     projectId: 'yc-startup-yc',

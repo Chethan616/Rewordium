@@ -5,9 +5,12 @@ import 'package:google_sign_in/google_sign_in.dart';
 import 'dart:async';
 
 import '../firebase_options.dart';
+import '../utils/app_logger.dart';
 import 'usage_analytics_service.dart';
 
 class FirebaseService {
+  static const String _webClientId =
+      '1046215732414-7hll1v7gjfou2d2s16hgvb6ht62pm2k2.apps.googleusercontent.com';
   static final FirebaseAuth _auth = FirebaseAuth.instance;
   static final GoogleSignIn _googleSignIn = GoogleSignIn.instance;
   static final FirebaseFirestore _firestore = FirebaseFirestore.instance;
@@ -34,7 +37,7 @@ class FirebaseService {
     _initCompleter = Completer<void>();
     try {
       if (Firebase.apps.isNotEmpty) {
-        await _googleSignIn.initialize();
+        await _googleSignIn.initialize(serverClientId: _webClientId);
         _isInitialized = true;
         _initCompleter!.complete();
         return;
@@ -42,7 +45,7 @@ class FirebaseService {
       await Firebase.initializeApp(
         options: DefaultFirebaseOptions.currentPlatform,
       );
-      await _googleSignIn.initialize();
+      await _googleSignIn.initialize(serverClientId: _webClientId);
       _isInitialized = true;
       _initCompleter!.complete();
     } catch (e) {
@@ -333,12 +336,17 @@ class FirebaseService {
         // Continue with sign-in even if logout fails
       }
 
-      final GoogleSignInAccount googleUser = await _googleSignIn.authenticate();
+      final GoogleSignInAccount? googleUser = await _googleSignIn.authenticate();
+      if (googleUser == null) {
+        AppLogger.warning('Google sign in returned null or was cancelled by user');
+        return null;
+      }
 
       final GoogleSignInAuthentication googleAuth = googleUser.authentication;
 
       if (googleAuth.idToken == null) {
-        throw Exception('Failed to get Google authentication tokens');
+        AppLogger.error('Google Sign In failed: idToken is null. Ensure SHA-1 fingerprint is added in Firebase console.', Exception('idToken is null'));
+        throw Exception('Failed to get Google authentication tokens (idToken is null)');
       }
 
       final OAuthCredential credential = GoogleAuthProvider.credential(
@@ -360,8 +368,9 @@ class FirebaseService {
       }
 
       return userCredential.user;
-    } catch (e) {
-      return null;
+    } catch (e, stackTrace) {
+      AppLogger.error('Google Sign In Error', e, stackTrace);
+      rethrow;
     }
   }
 

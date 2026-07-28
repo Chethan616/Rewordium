@@ -32,6 +32,26 @@ fun getProperty(key: String): String {
     return localProperties.getProperty(key) ?: ""
 }
 
+// Function to get FIREBASE_API_KEY from multiple sources
+fun getFirebaseApiKey(): String {
+    val localValue = localProperties.getProperty("FIREBASE_API_KEY")
+    if (!localValue.isNullOrBlank()) return localValue
+    
+    val envFile = rootProject.file("../.env")
+    if (envFile.exists()) {
+        envFile.readLines().forEach { line ->
+            if (line.startsWith("FIREBASE_API_KEY=")) {
+                return line.substringAfter("=").trim()
+            }
+        }
+    }
+    
+    val envVar = System.getenv("FIREBASE_API_KEY")
+    if (!envVar.isNullOrBlank()) return envVar
+    
+    return ""
+}
+
 // Function to get GROQ_API_KEY from multiple sources (matching keyboard module logic)
 fun getGroqApiKey(): String {
     // Try local.properties first
@@ -56,6 +76,18 @@ fun getGroqApiKey(): String {
     return ""
 }
 // --- END OF CORRECTION ---
+
+// Auto-inject local .env FIREBASE_API_KEY into google-services.json at build time if redacted
+val localFirebaseKey = getFirebaseApiKey()
+if (localFirebaseKey.isNotBlank()) {
+    val gsFile = file("google-services.json")
+    if (gsFile.exists()) {
+        val gsText = gsFile.readText()
+        if (gsText.contains("FIREBASE_API_KEY_REDACTED")) {
+            gsFile.writeText(gsText.replace("FIREBASE_API_KEY_REDACTED", localFirebaseKey))
+        }
+    }
+}
 
 android {
     namespace = "com.noxquill.rewordium"

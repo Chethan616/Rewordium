@@ -54,12 +54,16 @@ class _AdminPanelState extends State<AdminPanel> {
 
   Future<void> _signInWithGoogle() async {
     try {
+      await _googleSignIn.initialize(
+        serverClientId: '1046215732414-7hll1v7gjfou2d2s16hgvb6ht62pm2k2.apps.googleusercontent.com',
+      );
       // Sign out first to ensure a clean state
       await _googleSignIn.signOut();
       await _auth.signOut();
 
       // Start the sign in flow
-      final GoogleSignInAccount googleUser = await _googleSignIn.authenticate();
+      final GoogleSignInAccount? googleUser = await _googleSignIn.authenticate();
+      if (googleUser == null) return;
 
       // Obtain the auth details from the request
       final GoogleSignInAuthentication googleAuth = googleUser.authentication;
