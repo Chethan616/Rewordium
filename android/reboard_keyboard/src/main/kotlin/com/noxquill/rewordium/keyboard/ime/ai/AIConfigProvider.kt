@@ -1,4 +1,4 @@
-﻿/*
+/*
  * Copyright (C) 2024-2025 The ReBoard Contributors
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -47,7 +47,7 @@ object AIConfigProvider {
     const val PROVIDER_CUSTOM = "custom"
     
     // Default values
-    private const val DEFAULT_MODEL = "qwen/qwen3-32b"
+    private const val DEFAULT_MODEL = "openai/gpt-oss-120b"
     private const val DEFAULT_MAX_TOKENS = 2048
     
     data class AIConfig(

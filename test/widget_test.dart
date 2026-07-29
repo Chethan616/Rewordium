@@ -65,7 +65,7 @@ void main() {
 
     await tester.pumpAndSettle();
     expect(find.text('Welcome'), findsOneWidget);
-    expect(find.text('Set up Rewordium your way in under a minute.'),
+    expect(find.text('A short setup. About a minute.'),
         findsOneWidget);
   }, variant: androidOnly);
 }

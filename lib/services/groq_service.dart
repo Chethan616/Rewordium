@@ -171,7 +171,7 @@ class GroqService {
           'Authorization': 'Bearer $apiKey',
         },
         body: jsonEncode({
-          'model': 'qwen/qwen3-32b',
+          'model': 'openai/gpt-oss-120b',
           'messages': [
             {
               'role': 'system',
@@ -184,7 +184,6 @@ class GroqService {
           'top_p': 0.95,
           'presence_penalty': 0.3,
           'max_tokens': 1024,
-          'reasoning_effort': 'none',
           'response_format': {'type': 'json_object'}
         }),
       )
@@ -294,7 +293,7 @@ class GroqService {
           'Authorization': 'Bearer $apiKey',
         },
         body: jsonEncode({
-          'model': 'qwen/qwen3-32b',
+          'model': 'openai/gpt-oss-120b',
           'messages': [
             {
               'role': 'system',
@@ -307,7 +306,6 @@ class GroqService {
           'top_p': 0.95,
           'presence_penalty': 0.3,
           'max_tokens': 1024,
-          'reasoning_effort': 'none',
           'response_format': {'type': 'json_object'}
         }),
       )
@@ -395,7 +393,7 @@ class GroqService {
           'Authorization': 'Bearer $apiKey',
         },
         body: jsonEncode({
-          'model': 'qwen/qwen3-32b',
+          'model': 'openai/gpt-oss-120b',
           'messages': [
             {
               'role': 'system',
@@ -408,7 +406,6 @@ class GroqService {
           'top_p': 0.95,
           'presence_penalty': 0.3,
           'max_tokens': 1024,
-          'reasoning_effort': 'none',
           'response_format': {'type': 'json_object'}
         }),
       );
@@ -451,7 +448,7 @@ class GroqService {
           'Authorization': 'Bearer $apiKey',
         },
         body: jsonEncode({
-          'model': 'qwen/qwen3-32b',
+          'model': 'openai/gpt-oss-120b',
           'messages': [
             {
               'role': 'system',
@@ -464,7 +461,6 @@ class GroqService {
           'top_p': 0.95,
           'presence_penalty': 0.3,
           'max_tokens': 1024,
-          'reasoning_effort': 'none',
           'response_format': {'type': 'json_object'}
         }),
       );
@@ -506,7 +502,7 @@ class GroqService {
           'Authorization': 'Bearer $apiKey',
         },
         body: jsonEncode({
-          'model': 'qwen/qwen3-32b',
+          'model': 'openai/gpt-oss-120b',
           'messages': [
             {
               'role': 'system',
@@ -561,7 +557,7 @@ class GroqService {
           'Authorization': 'Bearer $apiKey',
         },
         body: jsonEncode({
-          'model': 'qwen/qwen3-32b',
+          'model': 'openai/gpt-oss-120b',
           'messages': [
             {
               'role': 'system',
@@ -574,7 +570,6 @@ class GroqService {
           'top_p': 0.95,
           'presence_penalty': 0.3,
           'max_tokens': 1024,
-          'reasoning_effort': 'none',
           'response_format': {'type': 'json_object'}
         }),
       );
@@ -617,7 +612,7 @@ class GroqService {
           'Authorization': 'Bearer $apiKey',
         },
         body: jsonEncode({
-          'model': 'qwen/qwen3-32b',
+          'model': 'openai/gpt-oss-120b',
           'messages': [
             {
               'role': 'system',
@@ -670,7 +665,7 @@ class GroqService {
           'Authorization': 'Bearer $apiKey',
         },
         body: jsonEncode({
-          'model': 'qwen/qwen3-32b',
+          'model': 'openai/gpt-oss-120b',
           'messages': [
             {
               'role': 'system',
@@ -683,7 +678,6 @@ class GroqService {
           'top_p': 0.95,
           'presence_penalty': 0.3,
           'max_tokens': 1024,
-          'reasoning_effort': 'none',
           'response_format': {'type': 'json_object'}
         }),
       );

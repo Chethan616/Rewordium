@@ -195,7 +195,6 @@ enum GroqClient {
         stream: Bool
     ) throws -> URLRequest {
         let model = SharedSettings.groqModel
-        let isQwen3 = model.hasPrefix("qwen/qwen3")
 
         var body: [String: Any] = [
             "model": model,
@@ -209,9 +208,6 @@ enum GroqClient {
             "max_tokens": maxTokens,
             "stream": stream
         ]
-        if isQwen3 {
-            body["reasoning_effort"] = "none"
-        }
 
         var request = URLRequest(url: endpoint)
         request.httpMethod = "POST"

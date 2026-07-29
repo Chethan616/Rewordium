@@ -155,7 +155,7 @@ Rules:
                 val userPrompt = "Conversation:\n${contextText.takeLast(500)}"
 
                 val request = SmartReplyRequest(
-                    model = "qwen/qwen3-32b",
+                    model = "openai/gpt-oss-120b",
                     messages = listOf(
                         SmartReplyMessage("system", systemPrompt),
                         SmartReplyMessage("user", userPrompt),

@@ -297,7 +297,7 @@ class UnifiedAIService {
     required String userMessage,
     required double temperature,
     required bool requireJson,
-    String model = 'qwen/qwen3-32b',
+    String model = 'openai/gpt-oss-120b',
     int? maxTokens,
   }) async {
     try {
@@ -309,18 +309,10 @@ class UnifiedAIService {
       }
 
       final sanitizedUser = _sanitizeUserText(userMessage);
-      final isQwen3 = model.startsWith('qwen/qwen3');
-      // Belt-and-suspenders: API-level + model-level disable of thinking.
-      final effectiveSystemPrompt = isQwen3
-          ? (requireJson
-              ? '$systemPrompt\n\nReturn ONLY valid JSON. /no_think'
-              : '$systemPrompt\n\n/no_think')
-          : systemPrompt;
-
       final body = <String, dynamic>{
         'model': model,
         'messages': [
-          {'role': 'system', 'content': effectiveSystemPrompt},
+          {'role': 'system', 'content': systemPrompt},
           {'role': 'user', 'content': sanitizedUser},
         ],
         'temperature': temperature,
@@ -328,7 +320,6 @@ class UnifiedAIService {
         'presence_penalty': 0.3,
         'max_tokens': maxTokens ?? 1024,
         if (requireJson) 'response_format': {'type': 'json_object'},
-        if (isQwen3) 'reasoning_effort': 'none',
       };
 
       final response = await http
@@ -663,7 +654,7 @@ class UnifiedAIService {
             userMessage: text,
             temperature: 0.9,
             requireJson: true,
-            model: 'qwen/qwen3-32b',
+            model: 'openai/gpt-oss-120b',
             maxTokens: 1024,
           )
         : await makeRequest(
@@ -704,7 +695,7 @@ class UnifiedAIService {
             userMessage: text,
             temperature: 0.3,
             requireJson: true,
-            model: 'qwen/qwen3-32b',
+            model: 'openai/gpt-oss-120b',
             maxTokens: 1024,
           )
         : await makeRequest(
@@ -758,7 +749,7 @@ class UnifiedAIService {
             userMessage: text,
             temperature: 0.3,
             requireJson: true,
-            model: 'qwen/qwen3-32b',
+            model: 'openai/gpt-oss-120b',
             maxTokens: 1024,
           )
         : await makeRequest(
@@ -875,7 +866,7 @@ class UnifiedAIService {
             userMessage: text,
             temperature: 0.9,
             requireJson: true,
-            model: 'qwen/qwen3-32b',
+            model: 'openai/gpt-oss-120b',
             maxTokens: 1024,
           )
         : await makeRequest(
@@ -920,7 +911,7 @@ class UnifiedAIService {
             userMessage: text,
             temperature: 0.9,
             requireJson: true,
-            model: 'qwen/qwen3-32b',
+            model: 'openai/gpt-oss-120b',
             maxTokens: 1024,
           )
         : await makeRequest(

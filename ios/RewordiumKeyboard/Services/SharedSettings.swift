@@ -59,7 +59,7 @@ enum SharedSettings {
     }
 
     static var groqModel: String {
-        store.string(forKey: Keys.groqModel) ?? "qwen/qwen3-32b"
+        store.string(forKey: Keys.groqModel) ?? "openai/gpt-oss-120b"
     }
 
     static var hapticsEnabled: Bool {

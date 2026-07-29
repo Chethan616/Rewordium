@@ -1,4 +1,4 @@
-﻿import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'dart:convert';
 
@@ -73,7 +73,7 @@ class AdvancedAISettings {
       case AIProvider.anthropic:
         return 'claude-3-opus-20240229';
       case AIProvider.groq:
-        return 'qwen/qwen3-32b';
+        return 'openai/gpt-oss-120b';
       case AIProvider.custom:
         return '';
     }
@@ -125,7 +125,7 @@ enum AIProvider {
   String get displayName {
     switch (this) {
       case AIProvider.groq:
-        return 'Groq (Qwen - Default)';
+        return 'Groq (GPT-OSS - Default)';
       case AIProvider.gemini:
         return 'Google Gemini';
       case AIProvider.openai:
@@ -237,7 +237,7 @@ class AdvancedAISettingsService {
       await _storage.write(key: _settingsKey, value: jsonString);
       _cachedSettings = settings;
       print(
-          '✅ Advanced AI settings saved securely (API key never leaves device)');
+          '? Advanced AI settings saved securely (API key never leaves device)');
     } catch (e) {
       print('Error saving advanced AI settings: $e');
     }
@@ -283,7 +283,7 @@ class AdvancedAISettingsService {
       return {
         'provider': 'groq',
         'apiKey': '', // Will use default from .env
-        'model': 'qwen/qwen3-32b',
+        'model': 'openai/gpt-oss-120b',
         'maxTokens': 8192,
         'isAdvancedEnabled': false,
         'usesExternalApi': false,

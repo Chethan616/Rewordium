@@ -65,12 +65,11 @@ object DynamicRetrofitClient {
             AIConfigProvider.PROVIDER_CUSTOM -> {
                 // OpenAI-compatible API format
                 val effectiveModel = config.getEffectiveModel()
-                val isQwen3 = effectiveModel.startsWith("qwen/qwen3")
                 val request = GroqRequest(
                     model = effectiveModel,
                     messages = listOf(Message("user", prompt)),
                     maxTokens = 512,
-                    reasoningEffort = if (isQwen3) "none" else null,
+                    reasoningEffort = null,
                 )
                 service.postCompletion(
                     url = config.getEndpointPath(),
@@ -96,12 +95,11 @@ object DynamicRetrofitClient {
             else -> {
                 // Default to OpenAI-compatible
                 val effectiveModel = config.getEffectiveModel()
-                val isQwen3 = effectiveModel.startsWith("qwen/qwen3")
                 val request = GroqRequest(
                     model = effectiveModel,
                     messages = listOf(Message("user", prompt)),
                     maxTokens = 512,
-                    reasoningEffort = if (isQwen3) "none" else null,
+                    reasoningEffort = null,
                 )
                 service.postCompletion(
                     url = config.getEndpointPath(),

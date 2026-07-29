@@ -35,7 +35,7 @@ void main() {
   Future<void> goToAssistantModeStep(WidgetTester tester) async {
     await tester.tap(find.widgetWithText(FilledButton, 'Continue'));
     await tester.pumpAndSettle();
-    expect(find.text('Assistant Mode'), findsOneWidget);
+    expect(find.text('Assistant mode'), findsOneWidget);
   }
 
   setUp(() {
@@ -94,7 +94,7 @@ void main() {
   ) async {
     await pumpOnboarding(tester);
 
-    expect(find.text('Set up Rewordium your way in under a minute.'),
+    expect(find.text('A short setup. About a minute.'),
         findsOneWidget);
   }, variant: androidOnly);
 
@@ -106,14 +106,14 @@ void main() {
     await pumpOnboarding(tester);
     await goToAssistantModeStep(tester);
 
-    await tester.tap(find.text('Accessibility Overlay'));
+    await tester.tap(find.text('Accessibility overlay'));
     await tester.pumpAndSettle();
 
     await tester.tap(find.widgetWithText(FilledButton, 'Continue'));
     await tester.pumpAndSettle();
 
     expect(
-      find.text('Enable Accessibility Service for Rewordium'),
+      find.text('Accessibility Permission'),
       findsOneWidget,
     );
 
@@ -121,7 +121,10 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(accessibilitySettingsOpenCount, 1);
-    expect(find.text('Assistant Mode'), findsOneWidget);
+    expect(find.text('Assistant mode'), findsOneWidget);
+
+    // Drain toast timer
+    await tester.pump(const Duration(seconds: 4));
   }, variant: androidOnly);
 
   testWidgets('declining disclosure falls back to keyboard mode and advances', (
@@ -130,7 +133,7 @@ void main() {
     await pumpOnboarding(tester);
     await goToAssistantModeStep(tester);
 
-    await tester.tap(find.text('Accessibility Overlay'));
+    await tester.tap(find.text('Accessibility overlay'));
     await tester.pumpAndSettle();
 
     await tester.tap(find.widgetWithText(FilledButton, 'Continue'));
@@ -140,7 +143,10 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(accessibilitySettingsOpenCount, 0);
-    expect(find.text('Theme Preference'), findsOneWidget);
+    expect(find.text('Theme'), findsOneWidget);
+
+    // Drain toast timer
+    await tester.pump(const Duration(seconds: 4));
   }, variant: androidOnly);
 
   testWidgets(
@@ -153,13 +159,13 @@ void main() {
     await pumpOnboarding(tester);
     await goToAssistantModeStep(tester);
 
-    await tester.tap(find.text('Accessibility Overlay'));
+    await tester.tap(find.text('Accessibility overlay'));
     await tester.pumpAndSettle();
 
     await tester.tap(find.widgetWithText(FilledButton, 'Continue'));
     await tester.pumpAndSettle();
 
     expect(accessibilitySettingsOpenCount, 0);
-    expect(find.text('Theme Preference'), findsOneWidget);
+    expect(find.text('Theme'), findsOneWidget);
   }, variant: androidOnly);
 }

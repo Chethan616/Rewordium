@@ -657,7 +657,7 @@ class MainActivity : FlutterActivity() {
                         val enabled = call.argument<Boolean>("enabled") ?: false
                         val provider = call.argument<String>("provider") ?: "groq"
                         val apiKey = call.argument<String>("apiKey") ?: ""
-                        val model = call.argument<String>("model") ?: "qwen/qwen3-32b"
+                        val model = call.argument<String>("model") ?: "openai/gpt-oss-120b"
                         val maxTokens = call.argument<Int>("maxTokens") ?: 8192
                         val customEndpoint = call.argument<String>("customEndpoint") ?: ""
                         
@@ -694,7 +694,7 @@ class MainActivity : FlutterActivity() {
                             "enabled" to prefs.getBoolean("advanced_ai_enabled", false),
                             "provider" to (prefs.getString("ai_provider", "groq") ?: "groq"),
                             "apiKey" to (prefs.getString("ai_api_key", "") ?: ""),
-                            "model" to (prefs.getString("ai_model", "qwen/qwen3-32b") ?: "qwen/qwen3-32b"),
+                            "model" to (prefs.getString("ai_model", "openai/gpt-oss-120b") ?: "openai/gpt-oss-120b"),
                             "maxTokens" to prefs.getInt("ai_max_tokens", 8192),
                             "customEndpoint" to (prefs.getString("ai_custom_endpoint", "") ?: "")
                         )

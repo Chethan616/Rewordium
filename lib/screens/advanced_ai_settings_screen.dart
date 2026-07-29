@@ -249,7 +249,7 @@ class _AdvancedAISettingsScreenState extends State<AdvancedAISettingsScreen> {
         subtitle: Text(
           _settings.enabled
               ? 'Using your own API key'
-              : 'Using default Groq + Qwen',
+              : 'Using default Groq + GPT-OSS',
           style: Theme.of(context).textTheme.bodySmall!,
         ),
         activeColor: Theme.of(context).colorScheme.primary,
@@ -528,7 +528,7 @@ class _AdvancedAISettingsScreenState extends State<AdvancedAISettingsScreen> {
             ),
             const SizedBox(height: 16),
             Text(
-              'Using Default Groq + Qwen',
+              'Using Default Groq + GPT-OSS',
               style: Theme.of(context).textTheme.titleLarge!,
               textAlign: TextAlign.center,
             ),
@@ -679,7 +679,7 @@ class _AdvancedAISettingsScreenState extends State<AdvancedAISettingsScreen> {
       builder: (context) => AlertDialog(
         title: const Text('Reset to Default?'),
         content: const Text(
-          'This will clear all your advanced AI settings and revert to the default Groq + Qwen. Your API keys will be permanently deleted from this device.',
+          'This will clear all your advanced AI settings and revert to the default Groq + GPT-OSS. Your API keys will be permanently deleted from this device.',
         ),
         actions: [
           TextButton(
@@ -695,7 +695,7 @@ class _AdvancedAISettingsScreenState extends State<AdvancedAISettingsScreen> {
               if (mounted) {
                 ScaffoldMessenger.of(context).showSnackBar(
                   const SnackBar(
-                    content: Text('Reset to default Groq + Qwen'),
+                    content: Text('Reset to default Groq + GPT-OSS'),
                     backgroundColor: Colors.green,
                   ),
                 );

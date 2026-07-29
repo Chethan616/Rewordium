@@ -1,4 +1,4 @@
-﻿import 'package:flutter/foundation.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import '../models/advanced_ai_settings.dart';
 
@@ -21,7 +21,7 @@ class AISettingsBridge {
           'enabled': false,
           'provider': 'groq',
           'apiKey': '', // Android will use BuildConfig.GROQ_API_KEY
-          'model': 'qwen/qwen3-32b',
+          'model': 'openai/gpt-oss-120b',
           'maxTokens': 8192,
           'customEndpoint': '',
         });
@@ -60,7 +60,7 @@ class AISettingsBridge {
       return {
         'provider': 'groq',
         'apiKey': '', // Android will use BuildConfig.GROQ_API_KEY
-        'model': 'qwen/qwen3-32b',
+        'model': 'openai/gpt-oss-120b',
         'maxTokens': 8192,
       };
     }

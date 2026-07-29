@@ -51,8 +51,29 @@ class AIManager(private val context: Context) {
          * Returns null if the response should be suppressed.
          */
         private fun filterUnwantedResponses(response: String): String? {
-            // Strip chain-of-thought <think>...</think> blocks first
-            val cleaned = response.replace(Regex("<think>[\\s\\S]*?(?:</think>|$)", RegexOption.IGNORE_CASE), "").trim()
+            // Step 1: Strip only properly-closed <think>...</think> blocks.
+            // Do NOT use `|$` as a fallback — that silently erases everything after an
+            // unclosed <think> tag, which causes "No usable content in response" for
+            // short inputs when the model forgets to close its thinking block.
+            val closedThinkRegex = Regex("<think>[\\s\\S]*?</think>", RegexOption.IGNORE_CASE)
+            var cleaned = response.replace(closedThinkRegex, "").trim()
+
+            // Step 2: If still blank, check for an unclosed <think> tag and try to recover
+            // text that appears *after* it (some models write: <think>\n...\n</think>\nActual answer)
+            if (cleaned.isBlank()) {
+                val unclosedThinkIdx = response.indexOf("<think>", ignoreCase = true)
+                if (unclosedThinkIdx >= 0) {
+                    // Try text before the <think> tag first
+                    val before = response.substring(0, unclosedThinkIdx).trim()
+                    if (before.isNotBlank()) {
+                        cleaned = before
+                    } else {
+                        // Nothing useful; return original trimmed as last resort
+                        cleaned = response.trim()
+                    }
+                }
+            }
+
             val lower = cleaned.lowercase()
             val identityPatterns = listOf(
                 "i am an ai", "as an ai", "i am a language model", "i am artificial intelligence",
@@ -112,7 +133,7 @@ class AIManager(private val context: Context) {
                 isAdvancedEnabled = false,
                 provider = AIConfigProvider.PROVIDER_GROQ,
                 apiKey = overrideApiKey!!,
-                model = "qwen/qwen3-32b",
+                model = "openai/gpt-oss-120b",
                 maxTokens = 2048,
                 customEndpoint = ""
             )
@@ -348,7 +369,6 @@ class AIManager(private val context: Context) {
                     return@withContext makeGeminiRequest(config, systemPrompt, userPrompt, overrideMaxTokens)
                 }
 
-                val isQwen3 = config.model.startsWith("qwen/qwen3")
                 val request = GroqRequest(
                     model = config.model,
                     messages = listOf(
@@ -359,7 +379,7 @@ class AIManager(private val context: Context) {
                     topP = 0.95,
                     presencePenalty = 0.3,
                     maxTokens = overrideMaxTokens ?: config.maxTokens,
-                    reasoningEffort = if (isQwen3) "none" else null,
+                    reasoningEffort = null,
                 )
                 val jsonBody = gson.toJson(request)
                 val requestBody = jsonBody.toRequestBody("application/json".toMediaType())
@@ -516,9 +536,9 @@ class AIManager(private val context: Context) {
         // Route to fast model for quick actions, standard model for full rewrites
         val routedConfig = if (!config.isAdvancedEnabled) {
             val routedModel = when (action) {
-                AIAction.FIX_GRAMMAR -> "qwen/qwen3-32b"
-                AIAction.REWRITE, AIAction.MAKE_FORMAL, AIAction.MAKE_CASUAL -> "qwen/qwen3-32b"
-                else -> "qwen/qwen3-32b"
+                AIAction.FIX_GRAMMAR -> "openai/gpt-oss-120b"
+                AIAction.REWRITE, AIAction.MAKE_FORMAL, AIAction.MAKE_CASUAL -> "openai/gpt-oss-120b"
+                else -> "openai/gpt-oss-120b"
             }
             config.copy(model = routedModel)
         } else config
@@ -950,7 +970,6 @@ You are a text transformer embedded in a mobile keyboard. The user message conta
         overrideMaxTokens: Int? = null,
     ): Flow<String> = channelFlow {
         val ch = this // capture ProducerScope before switching dispatcher
-        val isQwen3Streaming = config.model.startsWith("qwen/qwen3")
         val request = GroqRequest(
             model = config.model,
             messages = listOf(
@@ -962,7 +981,7 @@ You are a text transformer embedded in a mobile keyboard. The user message conta
             presencePenalty = 0.3,
             maxTokens = overrideMaxTokens ?: config.maxTokens,
             stream = true,
-            reasoningEffort = if (isQwen3Streaming) "none" else null,
+            reasoningEffort = null,
         )
         val jsonBody = gson.toJson(request)
         val requestBody = jsonBody.toRequestBody("application/json".toMediaType())

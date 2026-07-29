@@ -14,40 +14,44 @@ void main() {
     );
 
     expect(
-      find.text('Accessibility Permission Required'),
+      find.text('Accessibility Permission'),
+      findsOneWidget,
+    );
+    expect(
+      find.text('Accessibility Required'),
       findsOneWidget,
     );
     expect(
       find.text(
-        'Rewordium uses the Android Accessibility Service to read and modify text across apps in real time.',
+        'Needed to read and update text across apps in real time.',
       ),
       findsOneWidget,
     );
     expect(
-      find.text('Why this is required:'),
+      find.text('Why this is required'),
       findsOneWidget,
     );
     expect(
       find.text(
-        'Android does not provide any other API for cross-app text reading and writing. This permission is essential for core features like AI rewriting, grammar correction, and inserting improved text into input fields across apps.',
+        'Android does not provide any other API for cross-app text reading and writing. This permission is essential for AI rewriting, grammar correction, and inserting improved text into input fields across apps.',
       ),
       findsOneWidget,
     );
     expect(
-      find.text('Data Access:'),
+      find.text('Data access'),
       findsOneWidget,
     );
     expect(
-      find.text('• Reads on-screen text only when you actively use features'),
+      find.text('Reads on-screen text only when you actively use features.'),
       findsOneWidget,
     );
     expect(
       find.text(
-          '• Does NOT access passwords, payment data, or sensitive fields'),
+          'Does not access passwords, payment data, or sensitive fields.'),
       findsOneWidget,
     );
     expect(
-      find.text('• Does NOT collect, store, or share any personal data'),
+      find.text('Does not collect, store, or share personal data.'),
       findsOneWidget,
     );
     expect(
