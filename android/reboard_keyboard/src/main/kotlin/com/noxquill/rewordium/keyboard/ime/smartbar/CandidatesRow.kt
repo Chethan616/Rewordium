@@ -17,9 +17,6 @@
 package com.noxquill.rewordium.keyboard.ime.smartbar
 
 import android.content.Intent
-import androidx.compose.animation.core.Animatable
-import androidx.compose.animation.core.FastOutSlowInEasing
-import androidx.compose.animation.core.tween
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.awaitEachGesture
 import androidx.compose.foundation.gestures.awaitFirstDown
@@ -29,6 +26,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -41,21 +39,19 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.PointerEventTimeoutCancellationException
 import androidx.compose.ui.input.pointer.PointerInputChange
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.noxquill.rewordium.keyboard.app.ContactsPermissionActivity
@@ -70,8 +66,8 @@ import com.noxquill.rewordium.keyboard.keyboardManager
 import com.noxquill.rewordium.keyboard.nlpManager
 import com.noxquill.rewordium.keyboard.subtypeManager
 import dev.patrickgold.jetpref.datastore.model.observeAsState
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withTimeout
 import org.florisboard.lib.compose.conditional
 import org.florisboard.lib.compose.florisHorizontalScroll
 import org.florisboard.lib.snygg.SnyggSelector
@@ -82,8 +78,6 @@ import org.florisboard.lib.snygg.ui.SnyggRow
 import org.florisboard.lib.snygg.ui.SnyggSpacer
 import org.florisboard.lib.snygg.ui.SnyggText
 import org.florisboard.lib.snygg.ui.rememberSnyggThemeQuery
-
-import androidx.compose.runtime.rememberUpdatedState
 
 val CandidatesRowScrollbarHeight = 2.dp
 
@@ -100,9 +94,6 @@ fun CandidatesRow(modifier: Modifier = Modifier) {
     val displayMode by prefs.suggestion.displayMode.observeAsState()
     val candidates by nlpManager.activeCandidatesFlow.collectAsState()
 
-    // Show contacts prompt in the smartbar when: contacts pref is on, permission
-    // not yet granted, prompt not dismissed, and no active suggestion candidates
-    // (so it doesn't crowd out results while the user is typing).
     val useContacts by prefs.spelling.useContacts.observeAsState()
     val contactsPromptDismissed by prefs.spelling.contactsPromptDismissed.observeAsState()
     val showContactsPrompt = useContacts &&
@@ -110,116 +101,124 @@ fun CandidatesRow(modifier: Modifier = Modifier) {
         !ContactsLoader.hasPermission(context) &&
         candidates.isEmpty()
 
+    val displayedCandidates = when (displayMode) {
+        CandidatesDisplayMode.CLASSIC -> classicCandidates(candidates)
+        else -> candidates
+    }
+
     SnyggRow(
         elementName = FlorisImeUi.SmartbarCandidatesRow.elementName,
         modifier = modifier
             .fillMaxSize()
-            .conditional(displayMode == CandidatesDisplayMode.DYNAMIC_SCROLLABLE && candidates.size > 1) {
+            .conditional(
+                displayMode == CandidatesDisplayMode.DYNAMIC_SCROLLABLE &&
+                    displayedCandidates.size > 1,
+            ) {
                 florisHorizontalScroll(scrollbarHeight = CandidatesRowScrollbarHeight)
             },
-        horizontalArrangement = if (candidates.size > 1) {
+        horizontalArrangement = if (displayedCandidates.size > 1) {
             Arrangement.Start
         } else {
             Arrangement.Center
         },
     ) {
-        if (candidates.isNotEmpty()) {
-            val candidateModifier = if (candidates.size == 1) {
-                Modifier
-                    .fillMaxHeight()
-                    .weight(1f, fill = false)
-            } else {
-                Modifier
-                    .fillMaxHeight()
-                    .conditional(displayMode == CandidatesDisplayMode.CLASSIC) {
-                        weight(1f)
+        when {
+            displayedCandidates.isNotEmpty() -> {
+                for ((index, candidate) in displayedCandidates.withIndex()) {
+                    if (index > 0) {
+                        SnyggSpacer(
+                            elementName = FlorisImeUi.SmartbarCandidateSpacer.elementName,
+                            modifier = Modifier
+                                .width(1.dp)
+                                .fillMaxHeight(0.56f)
+                                .align(Alignment.CenterVertically),
+                        )
                     }
-                    .conditional(displayMode != CandidatesDisplayMode.CLASSIC) {
-                        wrapContentWidth().widthIn(max = 160.dp)
-                    }
-            }
-            val list = when (displayMode) {
-                CandidatesDisplayMode.CLASSIC -> {
-                    // Gboard layout: in the fixed 3-slot strip, always reserve
-                    // the rightmost slot for an emoji candidate when present
-                    // (the EmojiSuggestionProvider already caps to 1). Without
-                    // this split, the trailing emoji is dropped whenever the
-                    // text provider fills the first 3 slots.
-                    val emoji = candidates.firstOrNull { it is EmojiSuggestionCandidate }
-                    val text = candidates.filter { it !is EmojiSuggestionCandidate }
-                    if (emoji != null) {
-                        text.take(2) + emoji
-                    } else {
-                        text.take(3)
-                    }
-                }
-                else -> candidates
-            }
-            for ((n, candidate) in list.withIndex()) {
-                // ── Stagger entrance animation ───────────────────────────────────
-                // Each chip animates in with a 30 ms delay per item so they
-                // cascade in rather than all appearing at once. The alpha +
-                // translateY combination follows Emil's philosophy: elements
-                // should not pop into existence; they should emerge.
-                val staggerAlpha = remember(candidates) { Animatable(0f) }
-                val staggerTranslate = remember(candidates) { Animatable(8f) } // dp, converted below
-                val density = LocalDensity.current
-                LaunchedEffect(candidates) {
-                    delay(n * 35L) // 35 ms stagger between items
-                    staggerAlpha.animateTo(
-                        targetValue = 1f,
-                        animationSpec = tween(180, easing = FastOutSlowInEasing),
-                    )
-                }
-                LaunchedEffect(candidates) {
-                    delay(n * 35L)
-                    staggerTranslate.animateTo(
-                        targetValue = 0f,
-                        animationSpec = tween(180, easing = FastOutSlowInEasing),
-                    )
-                }
-                // ── End stagger setup ───────────────────────────────────────────
-                if (n > 0) {
-                    SnyggSpacer(
-                        elementName = FlorisImeUi.SmartbarCandidateSpacer.elementName,
-                        modifier = Modifier
-                            .width(1.dp)
-                            .fillMaxHeight(0.6f)
-                            .align(Alignment.CenterVertically),
-                    )
-                }
-                CandidateItem(
-                    modifier = candidateModifier.graphicsLayer {
-                        alpha = staggerAlpha.value
-                        translationY = with(density) { staggerTranslate.value.dp.toPx() }
-                    },
-                    candidate = candidate,
-                    displayMode = displayMode,
-                    onClick = {
-                        inputFeedbackController.keyPress()
-                        // Use `candidate` from the displayed `list` — NOT
-                        // `candidates[n]`. After the CLASSIC slot-reservation
-                        // for emoji, the displayed list is reordered
-                        // (e.g. [text1, text2, emoji] from underlying
-                        // [text1, text2, text3, emoji]), so indexing back
-                        // into `candidates` by the displayed slot number
-                        // commits the wrong item — tapping the emoji slot
-                        // committed "text3" (e.g. lol → lollipop bug).
-                        keyboardManager.commitCandidate(candidate)
-                    },
-                    onLongPress = {
-                        if (candidate.isEligibleForUserRemoval) {
-                            inputFeedbackController.keyLongPress()
-                            nlpManager.removeSuggestion(subtypeManager.activeSubtype, candidate)
-                        } else {
-                            false
+
+                    val candidateModifier = when {
+                        displayedCandidates.size == 1 -> {
+                            Modifier
+                                .fillMaxHeight()
+                                .weight(1f, fill = false)
                         }
+
+                        displayMode == CandidatesDisplayMode.CLASSIC -> {
+                            Modifier
+                                .fillMaxHeight()
+                                .weight(classicSlotWeight(displayedCandidates.size, index))
+                        }
+
+                        else -> {
+                            Modifier
+                                .fillMaxHeight()
+                                .wrapContentWidth()
+                                .widthIn(max = 160.dp)
+                        }
+                    }
+
+                    CandidateItem(
+                        modifier = candidateModifier,
+                        candidate = candidate,
+                        displayMode = displayMode,
+                        onClick = {
+                            inputFeedbackController.keyPress()
+                            // Commit the displayed candidate itself. Classic mode
+                            // intentionally moves the best candidate to the
+                            // center, so source-list indexing would be wrong.
+                            keyboardManager.commitCandidate(candidate)
+                        },
+                        onLongPress = {
+                            if (candidate.isEligibleForUserRemoval) {
+                                inputFeedbackController.keyLongPress()
+                                nlpManager.removeSuggestion(subtypeManager.activeSubtype, candidate)
+                            } else {
+                                false
+                            }
+                        },
+                        longPressDelay = prefs.keyboard.longPressDelay.get().toLong(),
+                    )
+                }
+            }
+
+            showContactsPrompt -> {
+                ContactsPromptBanner(
+                    onAllow = {
+                        context.startActivity(Intent(context, ContactsPermissionActivity::class.java))
                     },
-                    longPressDelay = prefs.keyboard.longPressDelay.get().toLong(),
+                    onDismiss = {
+                        scope.launch { prefs.spelling.contactsPromptDismissed.set(true) }
+                    },
                 )
             }
-        } // end else if (candidates.isNotEmpty())
+        }
     }
+}
+
+/**
+ * Keeps the highest-confidence text candidate in the visual center, where it
+ * gets the most room and is easiest to reach. Emojis remain in the trailing
+ * slot so they never displace the primary word candidate.
+ */
+private fun classicCandidates(candidates: List<SuggestionCandidate>): List<SuggestionCandidate> {
+    val emoji = candidates.firstOrNull { it is EmojiSuggestionCandidate }
+    val text = candidates.filterNot { it is EmojiSuggestionCandidate }
+    val textSlots = text.take(if (emoji != null) 2 else 3)
+    val primary = textSlots.firstOrNull()
+    val alternatives = textSlots.drop(1)
+
+    val orderedText = when {
+        primary == null -> emptyList()
+        alternatives.size >= 2 -> listOf(alternatives[0], primary, alternatives[1])
+        alternatives.size == 1 -> listOf(alternatives[0], primary)
+        else -> listOf(primary)
+    }
+
+    return orderedText + listOfNotNull(emoji)
+}
+
+private fun classicSlotWeight(candidateCount: Int, index: Int): Float {
+    if (candidateCount != 3) return 1f
+    return if (index == 1) 1.35f else 0.825f
 }
 
 @Composable
@@ -271,7 +270,7 @@ private fun CandidateItem(
     onClick: () -> Unit = { },
     onLongPress: () -> Boolean = { false },
     longPressDelay: Long,
-) = with(LocalDensity.current) {
+) {
     var isPressed by remember { mutableStateOf(false) }
     val currentOnClick by rememberUpdatedState(onClick)
     val currentOnLongPress by rememberUpdatedState(onLongPress)
@@ -325,7 +324,13 @@ private fun CandidateItem(
             }
         }
         SnyggColumn(
-            modifier = if (displayMode == CandidatesDisplayMode.CLASSIC) Modifier.weight(1f) else Modifier,
+            modifier = if (displayMode == CandidatesDisplayMode.CLASSIC) {
+                Modifier
+                    .weight(1f)
+                    .fillMaxWidth()
+            } else {
+                Modifier
+            },
             verticalArrangement = Arrangement.Center,
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {

@@ -314,9 +314,9 @@
   "smartbar-candidate-word": {
     "background": "transparent",
     "foreground": "var(--key-fg)",
-    "font-size": "14sp",
-    "margin": "4dp",
-    "padding": "8dp 0dp",
+    "font-size": "15sp",
+    "margin": "2dp",
+    "padding": "8dp 4dp",
     "shape": "rectangle()",
     "text-max-lines": "1",
     "text-overflow": "ellipsis"
@@ -332,9 +332,9 @@
   "smartbar-candidate-clip": {
     "background": "transparent",
     "foreground": "var(--key-fg)",
-    "font-size": "14sp",
-    "margin": "4dp",
-    "padding": "8dp 0dp",
+    "font-size": "15sp",
+    "margin": "2dp",
+    "padding": "8dp 4dp",
     "shape": "rounded-corner(8%, 8%, 8%, 8%)",
     "text-max-lines": "1",
     "text-overflow": "ellipsis"

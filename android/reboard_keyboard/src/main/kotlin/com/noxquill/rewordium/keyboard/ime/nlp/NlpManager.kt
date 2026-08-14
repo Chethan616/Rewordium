@@ -28,6 +28,7 @@ import com.noxquill.rewordium.keyboard.ime.clipboard.provider.ItemType
 import com.noxquill.rewordium.keyboard.ime.core.Subtype
 import com.noxquill.rewordium.keyboard.ime.editor.EditorContent
 import com.noxquill.rewordium.keyboard.ime.editor.EditorRange
+import com.noxquill.rewordium.keyboard.ime.media.emoji.EmojiSuggestionCandidate
 import com.noxquill.rewordium.keyboard.ime.media.emoji.EmojiSuggestionProvider
 import com.noxquill.rewordium.keyboard.ime.nlp.han.HanShapeBasedLanguageProvider
 import com.noxquill.rewordium.keyboard.ime.nlp.latin.LatinLanguageProvider
@@ -47,14 +48,18 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
+import kotlinx.coroutines.Job
 import org.florisboard.lib.kotlin.collectLatestIn
 import org.florisboard.lib.kotlin.guardedByLock
+import java.util.Locale
 import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.atomic.AtomicInteger
-import kotlinx.coroutines.Job
 import kotlin.properties.Delegates
 
 private const val BLANK_STR_PATTERN = "^\\s*$"
+private const val MAX_CURATED_CANDIDATES = 8
+private const val MAX_CURATED_TEXT_CANDIDATES = 6
+private const val MAX_CURATED_EMOJI_CANDIDATES = 2
 
 class NlpManager(context: Context) {
     private val blankStrRegex = Regex(BLANK_STR_PATTERN)
@@ -337,7 +342,7 @@ class NlpManager(context: Context) {
                     getSuggestionProvider(subtype).suggest(
                         subtype = subtype,
                         content = content,
-                        maxCandidateCount = 8,
+                        maxCandidateCount = MAX_CURATED_CANDIDATES,
                         allowPossiblyOffensive = !prefs.suggestion.blockPossiblyOffensive.get(),
                         isPrivateSession = keyboardManager.activeState.isIncognitoMode,
                     )
@@ -345,10 +350,10 @@ class NlpManager(context: Context) {
             }
             internalSuggestionsGuard.withLock {
                 if (internalSuggestions.first < reqTime) {
-                    internalSuggestions = reqTime to buildList {
+                    internalSuggestions = reqTime to curateCandidates(buildList {
                         addAll(suggestions)        // text predictions first (Gboard behavior)
                         addAll(emojiSuggestions)    // emojis at end of strip
-                    }
+                    })
                 }
             }
         }
@@ -357,7 +362,9 @@ class NlpManager(context: Context) {
     fun suggestDirectly(suggestions: List<SuggestionCandidate>) {
         val reqTime = SystemClock.uptimeMillis()
         scope.launch {
-            internalSuggestions = reqTime to suggestions
+            // Glide typing already returns candidates in confidence order. Curate
+            // without re-sorting so its best result remains the first result.
+            internalSuggestions = reqTime to curateCandidates(suggestions, sortByConfidence = false)
         }
     }
 
@@ -403,12 +410,12 @@ class NlpManager(context: Context) {
     }
 
     private suspend fun assembleCandidates() {
-        val candidates = when {
+        val rawCandidates = when {
             isSuggestionOn() -> {
                 clipboardSuggestionProvider.suggest(
                     subtype = Subtype.DEFAULT,
                     content = editorInstance.activeContent,
-                    maxCandidateCount = 8,
+                    maxCandidateCount = MAX_CURATED_CANDIDATES,
                     allowPossiblyOffensive = !prefs.suggestion.blockPossiblyOffensive.get(),
                     isPrivateSession = keyboardManager.activeState.isIncognitoMode,
                 ).ifEmpty {
@@ -421,8 +428,54 @@ class NlpManager(context: Context) {
             }
             else -> emptyList()
         }
+        val candidates = curateCandidates(rawCandidates)
         activeCandidates = candidates
         autoExpandCollapseSmartbarActions(candidates, NlpInlineAutofill.suggestions.value)
+    }
+
+    /**
+     * Normalizes the final candidate stream before it reaches the smartbar.
+     * Providers can overlap (for example, a learned word can also be present
+     * in the system dictionary), so the UI should not spend a slot showing the
+     * same word twice. Text candidates stay ahead of emoji, while confidence
+     * determines priority within each group.
+     */
+    private fun curateCandidates(
+        candidates: List<SuggestionCandidate>,
+        sortByConfidence: Boolean = true,
+    ): List<SuggestionCandidate> {
+        if (candidates.isEmpty()) return emptyList()
+
+        val seen = HashSet<String>()
+        val unique = candidates.filter { candidate ->
+            val key = candidate.text.toString().trim().lowercase(Locale.ROOT)
+            key.isNotEmpty() && seen.add(key)
+        }
+
+        val textCandidates = unique
+            .filterNot { it is EmojiSuggestionCandidate }
+            .let { values ->
+                if (!sortByConfidence) {
+                    values
+                } else {
+                    values.withIndex()
+                        .sortedWith(
+                            compareByDescending<IndexedValue<SuggestionCandidate>> {
+                                it.value.isEligibleForAutoCommit
+                            }
+                                .thenByDescending { it.value.confidence }
+                                .thenBy { it.index },
+                        )
+                        .map { it.value }
+                }
+            }
+            .take(MAX_CURATED_TEXT_CANDIDATES)
+
+        val emojiCandidates = unique
+            .filterIsInstance<EmojiSuggestionCandidate>()
+            .take(MAX_CURATED_EMOJI_CANDIDATES)
+
+        return (textCandidates + emojiCandidates).take(MAX_CURATED_CANDIDATES)
     }
 
     fun autoExpandCollapseSmartbarActions(list1: List<*>?, list2: List<*>?) {
