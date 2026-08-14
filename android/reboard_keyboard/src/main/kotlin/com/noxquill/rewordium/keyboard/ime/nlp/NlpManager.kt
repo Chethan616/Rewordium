@@ -28,7 +28,6 @@ import com.noxquill.rewordium.keyboard.ime.clipboard.provider.ItemType
 import com.noxquill.rewordium.keyboard.ime.core.Subtype
 import com.noxquill.rewordium.keyboard.ime.editor.EditorContent
 import com.noxquill.rewordium.keyboard.ime.editor.EditorRange
-import com.noxquill.rewordium.keyboard.ime.media.emoji.EmojiSuggestionCandidate
 import com.noxquill.rewordium.keyboard.ime.media.emoji.EmojiSuggestionProvider
 import com.noxquill.rewordium.keyboard.ime.nlp.han.HanShapeBasedLanguageProvider
 import com.noxquill.rewordium.keyboard.ime.nlp.latin.LatinLanguageProvider
