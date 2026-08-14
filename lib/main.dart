@@ -35,6 +35,8 @@ import 'services/ios_keyboard_bridge.dart';
 import 'services/billing_service.dart';
 import 'services/deep_link_service.dart';
 import 'services/usage_analytics_service.dart';
+import 'services/notification_service.dart';
+import 'services/in_app_messaging_service.dart';
 import 'widgets/tools_fab.dart';
 import 'widgets/whats_new_sheet.dart';
 
@@ -77,6 +79,22 @@ void main() async {
     // Initialize AdminService for Cloud Functions
     AdminService.init();
     AppLogger.init('AdminService');
+
+    // Initialize Local Notifications
+    try {
+      await NotificationService().initialize().timeout(const Duration(seconds: 3));
+      AppLogger.init('NotificationService');
+    } catch (e) {
+      AppLogger.warning('NotificationService initialization error: $e');
+    }
+
+    // Initialize In-App Messaging Service
+    try {
+      await InAppMessagingService().initialize(navigatorKey).timeout(const Duration(seconds: 3));
+      AppLogger.init('InAppMessagingService');
+    } catch (e) {
+      AppLogger.warning('InAppMessagingService initialization error: $e');
+    }
   } catch (e) {
     AppLogger.error('Error initializing Firebase', e);
     // Continue with app launch but some features may be limited

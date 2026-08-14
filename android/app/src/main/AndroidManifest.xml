@@ -152,6 +152,16 @@
         <meta-data
             android:name="io.flutter.embedding.android.EnableImpeller"
             android:value="true"/>
+        <!-- Remove orientation restrictions for document scanner activities (Android 16+ large screen compliance) -->
+        <activity
+            android:name="biz.cunning.cunning_document_scanner.fallback.DocumentScannerActivity"
+            android:screenOrientation="unspecified"
+            tools:replace="android:screenOrientation" />
+        <activity
+            android:name="com.google.mlkit.vision.documentscanner.internal.GmsDocumentScanningDelegateActivity"
+            android:screenOrientation="unspecified"
+            tools:replace="android:screenOrientation" />
+
         <!-- =================================================================== -->
         <!-- START OF SERVICE DECLARATIONS -->
         <!-- =================================================================== -->

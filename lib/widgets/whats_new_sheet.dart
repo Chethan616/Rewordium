@@ -34,6 +34,24 @@ class WhatsNewSheet {
   // Add a new entry for each release. Older entries are kept for reference
   // but only the *current* version's items are displayed.
   static final Map<String, List<_WhatsNewItem>> _features = {
+    '3.0.3+123': [
+      const _WhatsNewItem(
+        icon: CupertinoIcons.sparkles,
+        color: Color(0xFF10B981),
+        title: 'In-App Messaging & Store Upgrades',
+        description:
+            'Added real-time In-App Messaging cards, announcements, and Google Play Store compliance improvements.',
+      ),
+    ],
+    '3.0.2+122': [
+      const _WhatsNewItem(
+        icon: CupertinoIcons.creditcard_fill,
+        color: Color(0xFF10B981),
+        title: 'Google Play Billing Upgrades',
+        description:
+            'Updated in-app purchasing engine to Google Play Billing Library v8+ for enhanced security and compliance.',
+      ),
+    ],
     '3.0.1+121': [
       const _WhatsNewItem(
         icon: CupertinoIcons.sparkles,
@@ -108,7 +126,7 @@ class WhatsNewSheet {
             'Explore a large sticker community powered by Klipy. (Beta)',
       ),
     ],
-    '2.9.6+80': [
+    '2.9.5+79': [
       const _WhatsNewItem(
         icon: CupertinoIcons.search_circle_fill,
         color: Color(0xFF8B5CF6),

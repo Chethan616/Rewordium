@@ -16,7 +16,7 @@ publish_to: 'none' # Remove this line if you wish to publish to pub.dev
 # https://developer.apple.com/library/archive/documentation/General/Reference/InfoPlistKeyReference/Articles/CoreFoundationKeys.html
 # In Windows, build-name is used as the major, minor, and patch parts
 # of the product and file versions while build-number is used as the build suffix.
-version: 3.0.1+121
+version: 3.0.3+123
 
 environment:
   # 3.12+ floor: required by flutter_quill 11.5.1+ (which itself needs the
@@ -57,6 +57,7 @@ dependencies:
   firebase_core: ^4.5.0
   firebase_auth: ^6.2.0
   firebase_messaging: ^16.1.2
+  firebase_in_app_messaging: ^0.9.0
   google_sign_in: ^7.2.0
   # Cloud Firestore — pinned to the floor of the 6.3.x range.
   #
@@ -92,7 +93,7 @@ dependencies:
   
   # Google Play In-App Purchases
   in_app_purchase: ^3.2.3
-  in_app_purchase_android: ^0.4.0+11
+  in_app_purchase_android: ^0.5.2
   
   # File handling and sharing
   path_provider: ^2.1.2
@@ -121,6 +122,7 @@ dependencies:
 
   # Material 3 Expressive Design System (via pub.dev)
   m3e_collection: ^0.3.7
+  material_3_expressive: ^1.0.5
   expressive_refresh: ^0.1.2
   dynamic_color: ^1.8.1
   flutter_quill: ^11.5.1

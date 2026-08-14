@@ -8,6 +8,16 @@ import 'package:permission_handler/permission_handler.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 
+import 'package:firebase_core/firebase_core.dart';
+
+@pragma('vm:entry-point')
+Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
+  await Firebase.initializeApp();
+  if (kDebugMode) {
+    print('[FirebaseMessaging] Handling background message: ${message.messageId}');
+  }
+}
+
 class FirebaseMessagingService {
   static final FirebaseMessagingService _instance =
       FirebaseMessagingService._internal();
@@ -31,6 +41,8 @@ class FirebaseMessagingService {
 
   Future<void> initialize() async {
     try {
+      // Register background message handler
+      FirebaseMessaging.onBackgroundMessage(_firebaseMessagingBackgroundHandler);
       // Request notification permissions
       await _requestPermissions();
 
@@ -69,6 +81,9 @@ class FirebaseMessagingService {
 
       // Configure Firebase messaging
       await _configureFirebaseMessaging();
+
+      // Listen for real-time Firestore broadcast notifications
+      _listenToFirestoreBroadcasts();
     } catch (e) {
       debugPrint('Error initializing Firebase Messaging: $e');
     }
@@ -258,5 +273,65 @@ class FirebaseMessagingService {
       print('Error getting FCM token for user $userId: $e');
     }
     return null;
+  }
+
+  // Listen to Firestore broadcast notifications in real-time
+  void _listenToFirestoreBroadcasts() {
+    try {
+      final DateTime sessionStart = DateTime.now();
+      FirebaseFirestore.instance
+          .collection('notifications')
+          .where('sentAt', isGreaterThan: Timestamp.fromDate(sessionStart))
+          .snapshots()
+          .listen((snapshot) {
+        for (var change in snapshot.docChanges) {
+          if (change.type == DocumentChangeType.added) {
+            final data = change.doc.data();
+            if (data != null) {
+              final title = data['title'] as String? ?? 'Notification';
+              final body = data['body'] as String? ?? '';
+              _showLocalNotificationFromDoc(
+                id: change.doc.id.hashCode,
+                title: title,
+                body: body,
+              );
+            }
+          }
+        }
+      });
+    } catch (e) {
+      debugPrint('[FirebaseMessagingService] Firestore broadcast listener error: $e');
+    }
+  }
+
+  Future<void> _showLocalNotificationFromDoc({
+    required int id,
+    required String title,
+    required String body,
+  }) async {
+    const androidDetails = AndroidNotificationDetails(
+      'rewordium_channel',
+      'Rewordium Notifications',
+      channelDescription: 'Channel for Rewordium notifications',
+      importance: Importance.high,
+      priority: Priority.high,
+      icon: '@mipmap/ic_launcher',
+    );
+
+    const notificationDetails = NotificationDetails(
+      android: androidDetails,
+      iOS: DarwinNotificationDetails(
+        presentAlert: true,
+        presentBadge: true,
+        presentSound: true,
+      ),
+    );
+
+    await _flutterLocalNotificationsPlugin.show(
+      id: id,
+      title: title,
+      body: body,
+      notificationDetails: notificationDetails,
+    );
   }
 }

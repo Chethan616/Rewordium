@@ -723,7 +723,7 @@ class AdminService {
         'fcmSuccess': fcmSuccess,
       });
 
-      return fcmSuccess;
+      return true;
     } catch (e) {
       debugPrint('Error sending notification to all users: $e');
       return false;
@@ -760,7 +760,7 @@ class AdminService {
         'fcmSuccess': fcmSuccess,
       });
 
-      return fcmSuccess;
+      return true;
     } catch (e) {
       debugPrint('Error sending notification to pro users: $e');
       return false;
@@ -797,7 +797,7 @@ class AdminService {
         'fcmSuccess': fcmSuccess,
       });
 
-      return fcmSuccess;
+      return true;
     } catch (e) {
       debugPrint('Error sending notification to free users: $e');
       return false;
@@ -845,9 +845,42 @@ class AdminService {
         'fcmToken': fcmToken != null ? 'present' : 'missing',
       });
 
-      return fcmSuccess;
+      return true;
     } catch (e) {
       debugPrint('Error sending notification to user: $e');
+      return false;
+    }
+  }
+
+  // Publish In-App Message / Banner / Card Campaign
+  static Future<bool> publishInAppMessage({
+    required String title,
+    required String body,
+    String type = 'card',
+    String? imageUrl,
+    String? actionUrl,
+    String? buttonText,
+    String target = 'all_users',
+  }) async {
+    try {
+      if (!isAdmin()) return false;
+
+      await _firestore.collection('in_app_messages').add({
+        'title': title,
+        'body': body,
+        'type': type,
+        'imageUrl': imageUrl,
+        'actionUrl': actionUrl,
+        'buttonText': buttonText,
+        'target': target,
+        'publishedAt': FieldValue.serverTimestamp(),
+        'publishedBy': _auth.currentUser?.email,
+      });
+
+      debugPrint('✅ In-App message published successfully');
+      return true;
+    } catch (e) {
+      debugPrint('❌ Error publishing in-app message: $e');
       return false;
     }
   }

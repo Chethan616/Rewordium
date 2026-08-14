@@ -24,8 +24,8 @@ const auth = getAuth();
 const db = getFirestore();
 const messaging = getMessaging();
 
-// Admin email - only this user can access admin functions
-const ADMIN_EMAIL = "chethankrishna2022@gmail.com";
+// Admin emails - users with access to admin functions
+const ADMIN_EMAILS = ["chethankrishna2022@gmail.com", "rupakbabu1994@gmail.com"];
 
 const GOOGLE_PLAY_PACKAGE_NAME =
   process.env.GOOGLE_PLAY_PACKAGE_NAME || "com.noxquill.rewordium";
@@ -295,7 +295,7 @@ async function verifyAdmin(context: any): Promise<boolean> {
 
   try {
     const userRecord = await auth.getUser(context.auth.uid);
-    return userRecord.email === ADMIN_EMAIL;
+    return userRecord.email ? ADMIN_EMAILS.includes(userRecord.email) : false;
   } catch (error) {
     console.error("Error verifying admin:", error);
     return false;

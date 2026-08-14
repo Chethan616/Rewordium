@@ -14,11 +14,7 @@
 # Without these rules, minification breaks auth in release APKs.
 # ==============================================================================
 
-# Firebase Auth — keep all internals to prevent "API key not valid" errors
--keep class com.google.firebase.** { *; }
--keep class com.google.android.gms.** { *; }
--keep interface com.google.firebase.** { *; }
--keep interface com.google.android.gms.** { *; }
+# Firebase & Google Play Services — selective keep rules for R8 shrinking & obfuscation
 -dontwarn com.google.firebase.**
 -dontwarn com.google.android.gms.**
 

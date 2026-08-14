@@ -16,6 +16,11 @@ class _AdminPanelState extends State<AdminPanel> with TickerProviderStateMixin {
   final TextEditingController _titleController = TextEditingController();
   final TextEditingController _bodyController = TextEditingController();
   final TextEditingController _searchController = TextEditingController();
+  final TextEditingController _imageUrlController = TextEditingController();
+  final TextEditingController _buttonTextController = TextEditingController();
+  final TextEditingController _actionUrlController = TextEditingController();
+
+  String _selectedNotificationType = 'push'; // 'push', 'card', 'modal', 'banner', 'both'
 
   bool _isAuthenticated = false;
   bool _isLoading = false;
@@ -40,6 +45,9 @@ class _AdminPanelState extends State<AdminPanel> with TickerProviderStateMixin {
     _titleController.dispose();
     _bodyController.dispose();
     _searchController.dispose();
+    _imageUrlController.dispose();
+    _buttonTextController.dispose();
+    _actionUrlController.dispose();
     super.dispose();
   }
 
@@ -118,8 +126,10 @@ class _AdminPanelState extends State<AdminPanel> with TickerProviderStateMixin {
   }
 
   Future<void> _sendNotification(String target, {String? userId}) async {
-    if (_titleController.text.trim().isEmpty ||
-        _bodyController.text.trim().isEmpty) {
+    final title = _titleController.text.trim();
+    final body = _bodyController.text.trim();
+
+    if (title.isEmpty || body.isEmpty) {
       _showStatus('Please enter both title and message', isError: true);
       return;
     }
@@ -127,44 +137,52 @@ class _AdminPanelState extends State<AdminPanel> with TickerProviderStateMixin {
     setState(() => _isLoading = true);
 
     try {
-      bool success = false;
+      bool pushSuccess = true;
+      bool inAppSuccess = true;
 
-      switch (target) {
-        case 'all':
-          success = await AdminService.sendNotificationToAllUsers(
-            title: _titleController.text.trim(),
-            body: _bodyController.text.trim(),
-          );
-          break;
-        case 'pro':
-          success = await AdminService.sendNotificationToProUsers(
-            title: _titleController.text.trim(),
-            body: _bodyController.text.trim(),
-          );
-          break;
-        case 'free':
-          success = await AdminService.sendNotificationToFreeUsers(
-            title: _titleController.text.trim(),
-            body: _bodyController.text.trim(),
-          );
-          break;
-        case 'individual':
-          if (userId != null) {
-            success = await AdminService.sendNotificationToUser(
-              userId: userId,
-              title: _titleController.text.trim(),
-              body: _bodyController.text.trim(),
-            );
-          }
-          break;
+      // Handle Push Notifications
+      if (_selectedNotificationType == 'push' || _selectedNotificationType == 'both') {
+        switch (target) {
+          case 'all':
+            pushSuccess = await AdminService.sendNotificationToAllUsers(title: title, body: body);
+            break;
+          case 'pro':
+            pushSuccess = await AdminService.sendNotificationToProUsers(title: title, body: body);
+            break;
+          case 'free':
+            pushSuccess = await AdminService.sendNotificationToFreeUsers(title: title, body: body);
+            break;
+          case 'individual':
+            if (userId != null) {
+              pushSuccess = await AdminService.sendNotificationToUser(userId: userId, title: title, body: body);
+            }
+            break;
+        }
       }
 
-      if (success) {
-        _showStatus('Notification sent successfully!');
+      // Handle In-App Messages / Banners / Cards
+      if (_selectedNotificationType != 'push') {
+        final cardType = _selectedNotificationType == 'both' ? 'card' : _selectedNotificationType;
+        inAppSuccess = await AdminService.publishInAppMessage(
+          title: title,
+          body: body,
+          type: cardType,
+          imageUrl: _imageUrlController.text.trim().isEmpty ? null : _imageUrlController.text.trim(),
+          buttonText: _buttonTextController.text.trim().isEmpty ? null : _buttonTextController.text.trim(),
+          actionUrl: _actionUrlController.text.trim().isEmpty ? null : _actionUrlController.text.trim(),
+          target: target == 'all' ? 'all_users' : (target == 'pro' ? 'pro_users' : (target == 'free' ? 'free_users' : (userId ?? 'all_users'))),
+        );
+      }
+
+      if (pushSuccess && inAppSuccess) {
+        _showStatus('Notification dispatched successfully!');
         _titleController.clear();
         _bodyController.clear();
+        _imageUrlController.clear();
+        _buttonTextController.clear();
+        _actionUrlController.clear();
       } else {
-        _showStatus('Failed to send notification', isError: true);
+        _showStatus('Partial or failed notification delivery', isError: true);
       }
     } catch (e) {
       _showStatus('Error: $e', isError: true);
@@ -531,6 +549,55 @@ class _AdminPanelState extends State<AdminPanel> with TickerProviderStateMixin {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
+                  Text(
+                    'Delivery Mode:',
+                    style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                          fontWeight: FontWeight.bold,
+                        ),
+                  ),
+                  const SizedBox(height: 8),
+                  Wrap(
+                    spacing: 8,
+                    runSpacing: 8,
+                    children: [
+                      ChoiceChip(
+                        label: const Text('🔔 System Push'),
+                        selected: _selectedNotificationType == 'push',
+                        onSelected: (val) {
+                          if (val) setState(() => _selectedNotificationType = 'push');
+                        },
+                      ),
+                      ChoiceChip(
+                        label: const Text('🃏 In-App Card'),
+                        selected: _selectedNotificationType == 'card',
+                        onSelected: (val) {
+                          if (val) setState(() => _selectedNotificationType = 'card');
+                        },
+                      ),
+                      ChoiceChip(
+                        label: const Text('📱 Modal Popup'),
+                        selected: _selectedNotificationType == 'modal',
+                        onSelected: (val) {
+                          if (val) setState(() => _selectedNotificationType = 'modal');
+                        },
+                      ),
+                      ChoiceChip(
+                        label: const Text('📢 Top Banner'),
+                        selected: _selectedNotificationType == 'banner',
+                        onSelected: (val) {
+                          if (val) setState(() => _selectedNotificationType = 'banner');
+                        },
+                      ),
+                      ChoiceChip(
+                        label: const Text('⚡ Push + In-App'),
+                        selected: _selectedNotificationType == 'both',
+                        onSelected: (val) {
+                          if (val) setState(() => _selectedNotificationType = 'both');
+                        },
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 16),
                   TextField(
                     controller: _titleController,
                     decoration: const InputDecoration(
@@ -540,7 +607,7 @@ class _AdminPanelState extends State<AdminPanel> with TickerProviderStateMixin {
                     ),
                     maxLength: 100,
                   ),
-                  const SizedBox(height: 16),
+                  const SizedBox(height: 12),
                   TextField(
                     controller: _bodyController,
                     decoration: const InputDecoration(
@@ -548,12 +615,49 @@ class _AdminPanelState extends State<AdminPanel> with TickerProviderStateMixin {
                       border: OutlineInputBorder(),
                       prefixIcon: Icon(Icons.message),
                     ),
-                    maxLines: 4,
+                    maxLines: 3,
                     maxLength: 500,
                   ),
+                  if (_selectedNotificationType != 'push') ...[
+                    const SizedBox(height: 12),
+                    TextField(
+                      controller: _imageUrlController,
+                      decoration: const InputDecoration(
+                        labelText: 'Header Image URL (Optional)',
+                        border: OutlineInputBorder(),
+                        prefixIcon: Icon(Icons.image),
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: TextField(
+                            controller: _buttonTextController,
+                            decoration: const InputDecoration(
+                              labelText: 'Button Label (e.g. Try Now)',
+                              border: OutlineInputBorder(),
+                              prefixIcon: Icon(Icons.smart_button),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: TextField(
+                            controller: _actionUrlController,
+                            decoration: const InputDecoration(
+                              labelText: 'Action URL (e.g. rewordium://pro)',
+                              border: OutlineInputBorder(),
+                              prefixIcon: Icon(Icons.link),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
                   const SizedBox(height: 24),
                   Text(
-                    'Send to:',
+                    'Send to Target Audience:',
                     style: Theme.of(context).textTheme.titleMedium?.copyWith(
                           fontWeight: FontWeight.bold,
                         ),

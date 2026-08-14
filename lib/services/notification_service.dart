@@ -1,12 +1,14 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:permission_handler/permission_handler.dart';
-import 'package:firebase_messaging/firebase_messaging.dart';
 
 class NotificationService {
   static final NotificationService _instance = NotificationService._internal();
   final FlutterLocalNotificationsPlugin _flutterLocalNotificationsPlugin =
       FlutterLocalNotificationsPlugin();
+
+  bool _isInitialized = false;
+  bool get isInitialized => _isInitialized;
 
   factory NotificationService() {
     return _instance;
@@ -14,11 +16,14 @@ class NotificationService {
 
   NotificationService._internal();
 
+  /// Initialize local notification service
   Future<void> initialize() async {
+    if (_isInitialized) return;
+
     // Request notification permissions
     await _requestPermissions();
 
-    // Initialize local notifications
+    // Initialize local notifications settings
     const AndroidInitializationSettings initializationSettingsAndroid =
         AndroidInitializationSettings('@mipmap/ic_launcher');
 
@@ -29,7 +34,7 @@ class NotificationService {
       requestSoundPermission: true,
     );
 
-    final InitializationSettings initializationSettings =
+    const InitializationSettings initializationSettings =
         InitializationSettings(
       android: initializationSettingsAndroid,
       iOS: initializationSettingsIOS,
@@ -38,9 +43,13 @@ class NotificationService {
     await _flutterLocalNotificationsPlugin.initialize(
       settings: initializationSettings,
       onDidReceiveNotificationResponse: (NotificationResponse response) {
-        // Handle notification tap
+        if (kDebugMode) {
+          print('[NotificationService] Notification tapped: ${response.payload}');
+        }
       },
     );
+
+    _isInitialized = true;
   }
 
   Future<bool> _requestPermissions() async {
@@ -63,11 +72,19 @@ class NotificationService {
     await _requestPermissions();
   }
 
+  /// Display an immediate local notification
   Future<void> showNotification({
+    int? id,
     required String title,
     required String body,
     String? payload,
   }) async {
+    if (!_isInitialized) {
+      await initialize();
+    }
+
+    final int notificationId = id ?? DateTime.now().millisecondsSinceEpoch ~/ 1000;
+
     const AndroidNotificationDetails androidPlatformChannelSpecifics =
         AndroidNotificationDetails(
       'rewordium_channel',
@@ -91,11 +108,21 @@ class NotificationService {
     );
 
     await _flutterLocalNotificationsPlugin.show(
-      id: 0,
+      id: notificationId,
       title: title,
       body: body,
       notificationDetails: platformChannelSpecifics,
       payload: payload,
     );
+  }
+
+  /// Cancel a specific notification by ID
+  Future<void> cancelNotification(int id) async {
+    await _flutterLocalNotificationsPlugin.cancel(id: id);
+  }
+
+  /// Cancel all active notifications
+  Future<void> cancelAllNotifications() async {
+    await _flutterLocalNotificationsPlugin.cancelAll();
   }
 }
