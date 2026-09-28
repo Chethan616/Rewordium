@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2022-2025 The ReBoard Contributors
+ * Copyright (C) 2022-2026 The ReBoard Contributors
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -18,14 +18,9 @@ package com.noxquill.rewordium.keyboard.ime.nlp.latin
 
 import android.content.Context
 import android.content.SharedPreferences
+import com.noxquill.rewordium.keyboard.BuildConfig
 import com.noxquill.rewordium.keyboard.app.FlorisPreferenceStore
 import com.noxquill.rewordium.keyboard.appContext
-import java.io.BufferedInputStream
-import java.io.BufferedOutputStream
-import java.io.DataInputStream
-import java.io.DataOutputStream
-import java.io.File
-import java.util.concurrent.atomic.AtomicInteger
 import com.noxquill.rewordium.keyboard.ime.core.Subtype
 import com.noxquill.rewordium.keyboard.ime.dictionary.DictionaryManager
 import com.noxquill.rewordium.keyboard.ime.dictionary.LearnedBigramsStore
@@ -35,459 +30,514 @@ import com.noxquill.rewordium.keyboard.ime.nlp.SpellingProvider
 import com.noxquill.rewordium.keyboard.ime.nlp.SpellingResult
 import com.noxquill.rewordium.keyboard.ime.nlp.SuggestionCandidate
 import com.noxquill.rewordium.keyboard.ime.nlp.SuggestionProvider
+import com.noxquill.rewordium.keyboard.ime.nlp.TypedWordSuggestionCandidate
 import com.noxquill.rewordium.keyboard.ime.nlp.WordSuggestionCandidate
 import com.noxquill.rewordium.keyboard.ime.nlp.engine.ContactsLoader
 import com.noxquill.rewordium.keyboard.ime.nlp.engine.NativeDictionary
-import com.noxquill.rewordium.keyboard.BuildConfig
+import com.noxquill.rewordium.keyboard.ime.nlp.engine.TypingProximity
+import com.noxquill.rewordium.keyboard.ime.nlp.engine.TypingSuggestion
 import com.noxquill.rewordium.keyboard.lib.FlorisLocale
 import com.noxquill.rewordium.keyboard.lib.devtools.flogDebug
+import java.io.BufferedInputStream
+import java.io.BufferedOutputStream
+import java.io.DataInputStream
+import java.io.DataOutputStream
+import java.io.File
+import java.util.Collections
+import java.util.concurrent.ConcurrentHashMap
+import java.util.concurrent.atomic.AtomicInteger
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.withContext
+import kotlinx.serialization.builtins.ListSerializer
 import kotlinx.serialization.builtins.MapSerializer
 import kotlinx.serialization.builtins.serializer
 import kotlinx.serialization.json.Json
 import org.florisboard.lib.android.readText
-import org.florisboard.lib.kotlin.guardedByLock
+import kotlin.math.abs
+import kotlin.math.max
+import kotlin.math.min
 
+/**
+ * English (Latin-script) suggestion + spelling provider.
+ *
+ * Vocabulary model
+ * ----------------
+ *  * [baseWords] — the shipped dictionary (`ime/dict/data.json`), ~170k
+ *    words in dictionary casing ("I", "London", "iPhone", "don't") with
+ *    AOSP-style log-scale frequencies (0..255, each step a factor of 1.15).
+ *    Immutable after load.
+ *  * [personalWords] — the user's own vocabulary: words typed repeatedly,
+ *    accepted after an autocorrect undo, User Dictionary entries and contact
+ *    names. Kept separate so personal learning can never corrupt (or
+ *    "unlearn") dictionary words.
+ *
+ * Suggestions and autocorrect run through the AOSP LatinIME typing decoder
+ * ([NativeDictionary.suggestForTyping]) fed with real tap coordinates from
+ * [TypingProximity]. The Kotlin prefix/edit-distance path remains as a
+ * fallback for devices where the native library is unavailable.
+ */
 class LatinLanguageProvider(context: Context) : SpellingProvider, SuggestionProvider {
     companion object {
         const val ProviderId = "org.florisboard.nlp.providers.latin"
         private const val LEARNED_BIGRAMS_PREFS = "reboard_learned_bigrams"
-        private const val BIGRAM_BOOST_FACTOR = 2.0
-        private const val RECENCY_BOOST = 30
         private const val MAX_RECENCY_WORDS = 20
-        // Multiplicative boost applied to recently-learned words in the
-        // glide-classifier's frequency map. Breaks ties between graduated
-        // personal words (cap = 1.0) and shape-similar dict words also at
-        // cap. 1.15 is small enough that it never lets a low-freq word beat
-        // a much higher-freq one, but large enough to consistently win
-        // against equally-frequent stale candidates.
+        // Multiplicative boost applied to recently-used words in the glide
+        // classifier's frequency view.
         private const val GLIDE_RECENCY_BOOST = 1.15
 
-        // Binary cache magic header — bump when format changes.
-        private const val CACHE_MAGIC = 0x52420002.toInt() // 'RB' + version 2
-        private const val WORD_CACHE_NAME = "dict_words.bin"
-        private const val BIGRAM_CACHE_NAME = "dict_bigrams.bin"
+        // Binary cache magic header — bump when the cached format or the
+        // meaning of the frequencies changes.
+        private const val CACHE_MAGIC = 0x52420003.toInt() // 'RB' + version 3 (AOSP scale)
+        private const val WORD_CACHE_NAME = "dict_words_v3.bin"
 
-        // Adaptive learned swipe typing thresholds.
-        // Gboard-balanced cadence: rebuild the glide-classifier Pruner after
-        // every 3 newly learned words so a freshly-typed name surfaces in
-        // glide candidates within seconds rather than after dozens of commits.
+        private const val WORDLIST_ASSET = "ime/dict/data.json"
+        private const val BIGRAMS_ASSET = "ime/dict/bigrams.json"
+        private const val OFFENSIVE_ASSET = "ime/dict/offensive.json"
+
+        // Rebuild the glide classifier's index after this many newly
+        // graduated personal words (not on every commit — rebuilding walks
+        // the whole vocabulary).
         private const val LEARNED_REFRESH_THRESHOLD = 3
-        // First-time-seen personal words bootstrap to MAX frequency so they
-        // can decisively win shape-based glide ranking against any dict word.
-        //
-        // Earlier we tried 30 (lost to most dict words) and then 120 (still
-        // lost to top-tier vocabulary like "chatham" / "tropical" for shape-
-        // similar personal names like "chethan" / "rupak"). The product call
-        // is: when a user types a personal word, they almost certainly want
-        // it back — so we tie on frequency with the top vocabulary and let
-        // the geometric shape + length-match bonus decide. Mistyped one-offs
-        // are demoted via notifySuggestionReverted (-3 per revert).
-        private const val NEW_WORD_BOOTSTRAP_FREQ = 255
+
+        // Personal-vocabulary frequencies on the AOSP scale. A personal word
+        // becomes a real (suggestable, never-autocorrected) word after it has
+        // been committed twice; its frequency then grows slowly with use but
+        // stays below the very common function words ("the" = 222).
+        private const val PERSONAL_GRADUATION_COUNT = 2
+        private const val PERSONAL_BASE_FREQ = 120
+        private const val PERSONAL_MAX_FREQ = 160
+        // Explicitly accepted words (autocorrect undone, verbatim suggestion
+        // picked, User Dictionary) are trusted immediately.
+        private const val ACCEPTED_WORD_COUNT = 12
+        // Contact names: known words, a bit rarer than words the user types.
+        private const val CONTACT_NAME_FREQ = 130
+        // Dictionary words get a small usage-based boost (at most +15 steps).
+        private const val MAX_USAGE_BOOST = 15
+
         private const val LEARN_WORD_MIN_LEN = 2
         private const val LEARN_WORD_MAX_LEN = 40
-        // Contact name tokens get a probability between common-word range
-        // (low 100s) and the bootstrap freq for words the user has actually
-        // typed (255). 220 keeps them competitive without overriding the
-        // user's actual typing history.
-        private const val CONTACT_NAME_PROBABILITY = 220
         // Letters + apostrophe only — exclude URLs, numbers, symbols.
-        private val LEARN_WORD_PATTERN = Regex("^[A-Za-z']+$")
+        private val LEARN_WORD_PATTERN = Regex("^[\\p{L}'’]+$")
+
+        // AOSP LatinIME auto-correction thresholds (config-auto-correction-thresholds.xml).
+        const val AUTOCORRECT_THRESHOLD_MODEST = 0.185f
+        const val AUTOCORRECT_THRESHOLD_AGGRESSIVE = 0.067f
+
+        // Abbreviations at least this common may replace their lowercase
+        // spelling ("usa" -> "USA"); rarer ones never do ("nad" -> "NAD").
+        private const val COMMON_ABBREVIATION_FREQ = 130
+
+        /** Letters directly after these belong to a token, not to prose ("B.Sc", "site.com", "#tbt"). */
+        private val ATTACHING_CHARS = setOf('.', '@', '#', '/', '\\', '_', ':', '=', '&', '+', '~', '$', '%')
+
+        // Spelling fallback: only common words are targets, and only for
+        // longer inputs (short words are too easy to mangle).
+        private const val SPELL_FALLBACK_MIN_FREQ = 100
+        private const val SPELL_FALLBACK_MIN_FREQ_TWO_EDITS = 110
+        private const val SPELL_FALLBACK_MIN_LENGTH = 6
+        // Near-equal decoder candidates: prefer one at least this much more
+        // common (10 steps on the AOSP scale is ~4x).
+        private const val TIE_BREAK_SCORE_RATIO = 0.88f
+        private const val TIE_BREAK_MIN_FREQ_GAIN = 10
+
+        private const val NATIVE_MAX_RESULTS = 12
+        private const val DISPLAY_MAX_RESULTS = 8
+
+        private const val NLP_STATE_PREFS = "reboard_nlp_state"
+        private const val LEGACY_VOCAB_CLEANED_KEY = "legacy_personal_vocab_cleaned_v1"
     }
 
     override val providerId = ProviderId
 
     private val appContext by context.appContext()
-    private val wordData = guardedByLock { mutableMapOf<String, Int>() }
-    private val wordDataSerializer = MapSerializer(String.serializer(), Int.serializer())
+    private val prefs by FlorisPreferenceStore
 
-    // Bigram data: previousWord -> (nextWord -> score)
-    private val bigramData = guardedByLock { mutableMapOf<String, Map<String, Int>>() }
-    private val bigramDataSerializer = MapSerializer(
-        String.serializer(),
-        MapSerializer(String.serializer(), Int.serializer())
-    )
+    private val wordMapSerializer = MapSerializer(String.serializer(), Int.serializer())
+    private val bigramSerializer = MapSerializer(String.serializer(), MapSerializer(String.serializer(), Int.serializer()))
+    private val json = Json { ignoreUnknownKeys = true }
 
-    // User-learned bigrams: persisted per-locale via [LearnedBigramsStore]
-    // (atomic JSON file at filesDir/learned_bigrams.json). Replaces the
-    // older SharedPreferences-backed scheme — we still open the legacy prefs
-    // once at preload time so existing users get migrated, then we clear it.
+    /** Shipped dictionary, dictionary casing -> frequency. Immutable after load. */
+    @Volatile private var baseWords: Map<String, Int> = emptyMap()
+    /** lowercase -> dictionary casing, for words whose canonical form has capitals. */
+    @Volatile private var lowerIndex: Map<String, String> = emptyMap()
+    @Volatile private var offensiveWords: Set<String> = emptySet()
+    /** Common lowercase dictionary words by first letter, for the spelling fallback. */
+    @Volatile private var spellIndex: Map<Char, List<String>> = emptyMap()
+    /** Static bigrams, dictionary casing: previous word -> (next word -> score). */
+    @Volatile private var bigramData: Map<String, Map<String, Int>> = emptyMap()
+
+    /** Personal vocabulary that is "real" (graduated / accepted / contacts / user dict) -> frequency. */
+    private val personalWords = ConcurrentHashMap<String, Int>()
+    /** Words the user undid an autocorrection for during this session. */
+    private val sessionAccepted = Collections.newSetFromMap(ConcurrentHashMap<String, Boolean>())
+
+    // User-learned bigrams: persisted per-locale via [LearnedBigramsStore].
     private val learnedBigramsStore = LearnedBigramsStore(context)
     private var legacyLearnedBigramsPrefs: SharedPreferences? = null
+    @Volatile private var lastCommittedWord: String? = null
 
-    // Track the last committed word for bigram learning
-    private var lastCommittedWord: String? = null
-
-    // Recently typed words for recency boost (LRU-style)
-    private val recentWords = ArrayDeque<String>(MAX_RECENCY_WORDS + 5)
-
-    // ── Adaptive learned swipe typing (Section B of the plan) ────────────────
-    // Per-user vocabulary persisted across IME process restarts. Loaded on
-    // preload() and merged into wordData so glide ranking automatically
-    // boosts personal words. Bumped on every word commit via learnWord().
+    // Per-user usage counts persisted across restarts (lowercase keys).
     private val learnedStore = LearnedWordsStore(context)
     private val learnedSinceLastRefresh = AtomicInteger(0)
 
-    // Phase 4: native AOSP-backed dictionary. Loaded asynchronously during
-    // preload() when ENABLE_NATIVE_SUGGESTER is on. While [nativeDictionary
-    // .isLoaded] is false, suggest()/spell() fall through to the existing
-    // Kotlin path so a slow first-load doesn't break the keyboard. Once
-    // loaded, phase 4d will route the active path to native.
+    /** Set by NlpManager per editor: false in URL / e-mail / password / filter fields. */
+    @Volatile var autocorrectAllowedForField: Boolean = true
+
+    /** AOSP typing decoder dictionary. */
     internal val nativeDictionary = NativeDictionary()
-    private val _wordDataDirtyFlow = MutableSharedFlow<Subtype>(
-        replay = 0,
-        extraBufferCapacity = 1,
-    )
-    /** Emitted when learned-word additions warrant a glide-classifier rebuild. */
+
+    private val _wordDataDirtyFlow = MutableSharedFlow<Subtype>(replay = 0, extraBufferCapacity = 1)
+    /** Emitted when vocabulary changes warrant a glide-classifier rebuild. */
     val wordDataDirtyFlow: SharedFlow<Subtype> = _wordDataDirtyFlow.asSharedFlow()
-    private val prefs by FlorisPreferenceStore
 
     override suspend fun create() {
         // No-op
     }
 
+    // ── Loading ──────────────────────────────────────────────────────────────
+
     override suspend fun preload(subtype: Subtype) = withContext(Dispatchers.IO) {
-        wordData.withLock { data ->
-            if (data.isEmpty()) {
-                val loaded = loadWordCache(appContext) ?: run {
-                    // Cache miss: parse JSON and write cache for next time.
-                    val rawData = appContext.assets.readText("ime/dict/data.json")
-                    val parsed = Json.decodeFromString(wordDataSerializer, rawData)
-                    saveWordCache(appContext, parsed)
-                    parsed
-                }
-                data.putAll(loaded)
+        if (baseWords.isEmpty()) {
+            // Caches written by versions before the AOSP-scale dictionary.
+            File(cacheDir(appContext), "dict_words.bin").delete()
+            File(cacheDir(appContext), "dict_bigrams.bin").delete()
+            val loaded = loadWordCache(appContext) ?: run {
+                val parsed = json.decodeFromString(wordMapSerializer, appContext.assets.readText(WORDLIST_ASSET))
+                saveWordCache(appContext, parsed)
+                parsed
             }
-        }
-        // Load bigram dictionary
-        bigramData.withLock { data ->
-            if (data.isEmpty()) {
-                try {
-                    val loaded = loadBigramCache(appContext) ?: run {
-                        val rawBigrams = appContext.assets.readText("ime/dict/bigrams.json")
-                        val parsed = Json.decodeFromString(bigramDataSerializer, rawBigrams)
-                        saveBigramCache(appContext, parsed)
-                        parsed
-                    }
-                    data.putAll(loaded)
-                } catch (e: Exception) {
-                    flogDebug { "Failed to load bigrams: ${e.message}" }
+            val index = HashMap<String, String>()
+            for ((word, freq) in loaded) {
+                if (word.any { it.isUpperCase() }) {
+                    val lower = word.lowercase()
+                    if (lower in loaded) continue
+                    val existing = index[lower]
+                    if (existing == null || (loaded[existing] ?: 0) < freq) index[lower] = word
                 }
             }
+            lowerIndex = index
+            baseWords = loaded
+            spellIndex = buildSpellIndex(loaded)
+            offensiveWords = runCatching {
+                json.decodeFromString(ListSerializer(String.serializer()), appContext.assets.readText(OFFENSIVE_ASSET)).toHashSet()
+            }.getOrElse { emptySet() }
+            bigramData = runCatching {
+                json.decodeFromString(bigramSerializer, appContext.assets.readText(BIGRAMS_ASSET))
+            }.getOrElse { e ->
+                flogDebug { "Failed to load bigrams: ${e.message}" }
+                emptyMap()
+            }
         }
-        // Load user-learned bigrams from the persistent JSON store. On the
-        // very first call after upgrade, [ensureLoaded] also reads the
-        // legacy SharedPreferences file and folds those entries in before
-        // clearing the prefs, so existing users keep their bigram history.
+
         if (legacyLearnedBigramsPrefs == null) {
-            legacyLearnedBigramsPrefs = appContext.getSharedPreferences(
-                LEARNED_BIGRAMS_PREFS,
-                Context.MODE_PRIVATE,
-            )
+            legacyLearnedBigramsPrefs = appContext.getSharedPreferences(LEARNED_BIGRAMS_PREFS, Context.MODE_PRIVATE)
         }
         learnedBigramsStore.ensureLoaded(legacyLearnedBigramsPrefs)
-
-        // Merge persisted personal vocabulary into wordData so the glide
-        // decoder sees user-learned words on the very first suggestion call
-        // after process restart (the snapshot taken by setWordData reflects
-        // this merged state).
         learnedStore.ensureLoaded()
-        val learned = learnedStore.snapshot(subtype.primaryLocale)
-        if (learned.isNotEmpty()) {
-            wordData.withLock { data ->
-                for ((word, entry) in learned) {
-                    val current = data[word] ?: 0
-                    // maxOf so we don't clobber high-frequency dictionary
-                    // entries with low-freq learned counterparts.
-                    data[word] = maxOf(current, entry.f.coerceIn(0, 255))
-                }
-            }
-        }
 
-        // Merge manually-added User Dictionary entries (Room DB) so the glide
-        // shape matcher recognizes them. Without this, words the user types
-        // into Settings → User Dictionary are invisible to swipe input.
-        // queryAll() returns ALL entries regardless of locale so we ignore
-        // locale here — global vocab feeds glide for every active subtype.
-        runCatching {
-            val dao = DictionaryManager.default().florisUserDictionaryDao() ?: return@runCatching
-            val entries = dao.queryAll()
-            if (entries.isEmpty()) return@runCatching
-            wordData.withLock { data ->
-                for (entry in entries) {
-                    val word = entry.word.trim().lowercase()
-                    if (!LEARN_WORD_PATTERN.matches(word)) continue
-                    val current = data[word] ?: 0
-                    // 64 floor mirrors Gboard's bias toward user-added entries:
-                    // they should outrank random low-freq dictionary noise but
-                    // can still be overridden by truly common dictionary words.
-                    data[word] = maxOf(current, entry.freq.coerceIn(64, 255))
-                }
-            }
-        }.onFailure { e -> flogDebug { "Failed to merge user dictionary: ${e.message}" } }
+        rebuildPersonalWords(subtype)
 
-        // Seed contact display-name tokens. Contact names get a
-        // high probability (220) so they win over common-word
-        // shape collisions but stay just below the absolute-top
-        // bootstrap (255) reserved for words the user has
-        // explicitly typed at least once. No-op when the
-        // useContacts pref is off or READ_CONTACTS isn't granted.
-        var contactTokens: Set<String>? = null
-        var contactBigrams: List<Pair<String, String>>? = null
-        if (prefs.spelling.useContacts.get()) {
-            contactTokens = ContactsLoader.loadNameTokens(appContext)
-            if (contactTokens.isNotEmpty()) {
-                wordData.withLock { data ->
-                    for (token in contactTokens) {
-                        val current = data[token] ?: 0
-                        data[token] = maxOf(current, CONTACT_NAME_PROBABILITY)
-                    }
-                }
-            }
-            contactBigrams = ContactsLoader.loadNameBigrams(appContext)
-            if (contactBigrams.isNotEmpty()) {
-                bigramData.withLock { data ->
-                    for ((prev, next) in contactBigrams) {
-                        val inner = (data[prev] as? MutableMap<String, Int>) ?: data[prev]?.toMutableMap() ?: mutableMapOf()
-                        val current = inner[next] ?: 0
-                        inner[next] = maxOf(current, CONTACT_NAME_PROBABILITY)
-                        data[prev] = inner
-                    }
-                }
-            }
-        }
-
-        // Phase 4b: kick off native AOSP dict population. This runs on the
-        // same IO context as the Kotlin path above so by the time preload()
-        // returns, the native dict is ready. ~100-300ms cost on first call;
-        // subsequent preload() calls are no-ops (NativeDictionary guards
-        // with its own load mutex). Gated behind ENABLE_NATIVE_SUGGESTER —
-        // when off, the native dict never opens and downstream phase 4d
-        // routing decisions evaluate to "use Kotlin path".
-        //
-        // Phase 6: after the base dict loads, also merge in this locale's
-        // LearnedWordsStore entries so personal vocab (chethan, rupak, …)
-        // is in the SAME native dict from the very first suggest / glide
-        // call after process start. This avoids the second-BinaryDictionary
-        // + DictionaryFacilitator dance — the in-memory v4 dict is
-        // mutable, so we just push entries into it.
         if (BuildConfig.ENABLE_NATIVE_SUGGESTER) {
             runCatching {
-                val ok = nativeDictionary.loadFromAssets(appContext)
-                flogDebug { "LatinLanguageProvider: native dict load = $ok" }
-                if (ok && nativeDictionary.isLoaded) {
-                    var merged = 0
-                    wordData.withLock { data ->
-                        for ((word, freq) in data) {
-                            if (nativeDictionary.addLearnedWord(word, freq)) merged++
-                        }
+                if (!nativeDictionary.isLoaded) {
+                    val words = HashMap<String, Int>(baseWords.size + personalWords.size)
+                    words.putAll(baseWords)
+                    for ((word, freq) in personalWords) {
+                        words[word] = max(words[word] ?: 0, freq)
                     }
-                    flogDebug { "LatinLanguageProvider: merged $merged personal/contact words into native dict" }
-
-                    if (contactBigrams != null) {
-                        for ((_, next) in contactBigrams) {
-                            nativeDictionary.addLearnedWord(next, CONTACT_NAME_PROBABILITY)
-                        }
-                    }
+                    applyUsageBoosts(subtype, words)
+                    val ok = nativeDictionary.load(words, offensiveWords, mergedBigramsForNative(subtype))
+                    flogDebug { "LatinLanguageProvider: native dict load = $ok" }
+                } else {
+                    for ((word, freq) in personalWords) nativeDictionary.addLearnedWord(word, freq)
                 }
-            }.onFailure { e ->
-                flogDebug { "LatinLanguageProvider: native dict load threw: $e" }
-            }
+                cleanLegacyPersonalVocabulary(subtype)
+            }.onFailure { e -> flogDebug { "LatinLanguageProvider: native dict load threw: $e" } }
         }
         _wordDataDirtyFlow.tryEmit(subtype)
         Unit
     }
 
+    private fun buildSpellIndex(words: Map<String, Int>): Map<Char, List<String>> {
+        val index = HashMap<Char, ArrayList<String>>()
+        for ((word, freq) in words) {
+            if (freq < SPELL_FALLBACK_MIN_FREQ || word.length < 4) continue
+            if (!word.all { it.isLowerCase() || it == '\'' }) continue
+            index.getOrPut(word[0]) { ArrayList() }.add(word)
+        }
+        return index
+    }
+
+    /** Rebuilds [personalWords] from the learned store, User Dictionary and contacts. */
+    private suspend fun rebuildPersonalWords(subtype: Subtype) {
+        for ((word, entry) in learnedStore.snapshot(subtype.primaryLocale)) {
+            if (canonicalDictionaryForm(word) != null) continue
+            personalFreqForCount(entry.f)?.let { personalWords[word] = it }
+        }
+        runCatching {
+            val dao = DictionaryManager.default().florisUserDictionaryDao() ?: return@runCatching
+            for (entry in dao.queryAll()) {
+                val word = entry.word.trim()
+                if (word.isEmpty() || !LEARN_WORD_PATTERN.matches(word)) continue
+                if (canonicalDictionaryForm(word) == word) continue
+                personalWords[word] = max(personalWords[word] ?: 0, PERSONAL_MAX_FREQ)
+            }
+        }.onFailure { e -> flogDebug { "Failed to merge user dictionary: ${e.message}" } }
+        if (prefs.spelling.useContacts.get()) {
+            for (token in ContactsLoader.loadNameTokens(appContext)) {
+                if (canonicalDictionaryForm(token) != null) continue
+                personalWords[token] = max(personalWords[token] ?: 0, CONTACT_NAME_FREQ)
+            }
+        }
+    }
+
     /**
-     * Hot-reload contact name tokens into an already-loaded native dict after
-     * the user grants READ_CONTACTS at runtime (via the smartbar prompt or the
-     * native app). Does not require an IME restart.
-     *
-     * Adds individual name tokens at [CONTACT_NAME_PROBABILITY] and also seeds
-     * adjacent-name bigrams (e.g. "john"→"smith") so the suggester can predict
-     * last names after the user types a contact's first name. Triggers a glide
-     * classifier rebuild so swipe input benefits immediately.
+     * One-time migration. Before autocorrect existed, every typo typed twice
+     * ("dont", "teh", "becuase") graduated into the personal vocabulary and
+     * would now be treated as a deliberate word — so existing users would
+     * never see those corrected. Drop learned non-dictionary words that the
+     * decoder confidently corrects; genuine personal words (names, slang)
+     * have no confident correction and are kept.
+     */
+    private fun cleanLegacyPersonalVocabulary(subtype: Subtype) {
+        if (!nativeDictionary.isLoaded) return
+        val state = appContext.getSharedPreferences(NLP_STATE_PREFS, Context.MODE_PRIVATE)
+        if (state.getBoolean(LEGACY_VOCAB_CLEANED_KEY, false)) return
+        var removed = 0
+        for ((word, entry) in learnedStore.snapshot(subtype.primaryLocale)) {
+            if (entry.f < PERSONAL_GRADUATION_COUNT || canonicalDictionaryForm(word) != null) continue
+            val ctx = TypingContext(word, null, atSentenceStart = false)
+            val results = decodeTyping(ctx, NATIVE_MAX_RESULTS) ?: return
+            val correction = decideAutocorrect(
+                ctx = ctx,
+                typedKnown = false,
+                results = results,
+                threshold = AUTOCORRECT_THRESHOLD_MODEST,
+                respectPersonal = false,
+            )
+            if (correction != null && !correction.equals(word, ignoreCase = true)) {
+                learnedStore.set(subtype.primaryLocale, word, 0)
+                personalWords.remove(word)
+                nativeDictionary.removeLearnedWord(word)
+                removed++
+            }
+        }
+        state.edit().putBoolean(LEGACY_VOCAB_CLEANED_KEY, true).apply()
+        flogDebug { "LatinLanguageProvider: removed $removed legacy typos from personal vocabulary" }
+    }
+
+    /** Small, bounded boost for dictionary words the user types often. */
+    private fun applyUsageBoosts(subtype: Subtype, words: MutableMap<String, Int>) {
+        for ((word, entry) in learnedStore.snapshot(subtype.primaryLocale)) {
+            val canonical = canonicalDictionaryForm(word) ?: continue
+            val base = baseWords[canonical] ?: continue
+            val boost = min(MAX_USAGE_BOOST, entry.f / 4)
+            if (boost > 0) words[canonical] = min(255, base + boost)
+        }
+    }
+
+    private fun mergedBigramsForNative(subtype: Subtype): Map<String, Map<String, Int>> {
+        val merged = HashMap<String, MutableMap<String, Int>>()
+        for ((prev, next) in bigramData) merged[prev] = HashMap(next)
+        for ((prev, next) in learnedBigramsStore.snapshot(subtype.primaryLocale)) { // once per load
+            val cPrev = canonicalForm(prev) ?: continue
+            val inner = merged.getOrPut(cPrev) { HashMap() }
+            for ((word, score) in next) {
+                val cWord = canonicalForm(word) ?: continue
+                // Learned transitions are strong evidence of the user's phrasing.
+                inner[cWord] = max(inner[cWord] ?: 0, (150 + score).coerceAtMost(240))
+            }
+        }
+        return merged
+    }
+
+    private fun personalFreqForCount(count: Int): Int? {
+        if (count < PERSONAL_GRADUATION_COUNT) return null
+        return (PERSONAL_BASE_FREQ + (count - PERSONAL_GRADUATION_COUNT) * 2).coerceAtMost(PERSONAL_MAX_FREQ)
+    }
+
+    // ── Vocabulary lookups ───────────────────────────────────────────────────
+
+    /** Dictionary casing of [word] if it is a dictionary word (case-insensitively), else null. */
+    private fun canonicalDictionaryForm(word: String): String? {
+        val base = baseWords
+        if (word in base) return word
+        val lower = word.lowercase()
+        if (lower in base) return lower
+        return lowerIndex[lower]
+    }
+
+    /** Canonical casing of [word] in the full vocabulary (dictionary or personal), else null. */
+    private fun canonicalForm(word: String): String? {
+        canonicalDictionaryForm(word)?.let { return it }
+        if (personalWords.containsKey(word)) return word
+        val lower = word.lowercase()
+        return if (personalWords.containsKey(lower)) lower else null
+    }
+
+    /**
+     * True when [typed] is a word the user legitimately means as typed, so it
+     * must never be autocorrected: an exact dictionary word, a dictionary
+     * word capitalised at the start of a sentence ("Hello"), a personal word,
+     * a contact or a word the user explicitly kept this session. Note that a
+     * lowercase proper noun ("london") is *not* valid — correcting it to
+     * "London" is exactly what Gboard does.
+     */
+    fun isKnownWord(typed: String): Boolean {
+        if (typed.isEmpty()) return false
+        val base = baseWords
+        if (typed in base) return true
+        val lower = typed.lowercase()
+        if (typed.length > 1 && typed[0].isUpperCase() && typed.substring(1) == typed.substring(1).lowercase()) {
+            if (lower in base) return true
+        }
+        if (personalWords.containsKey(typed) || personalWords.containsKey(lower)) return true
+        return lower in sessionAccepted
+    }
+
+    private fun frequencyOf(word: String): Int {
+        return personalWords[word] ?: baseWords[word] ?: 0
+    }
+
+    // ── Personal learning ────────────────────────────────────────────────────
+
+    /**
+     * Adaptive learning entry point. Called from EditorInstance.commitChar
+     * (on space/punctuation) and KeyboardManager.commitGesture (on glide
+     * commit) via NlpManager.learnWord. Hot path — map updates only.
+     */
+    suspend fun learnWord(subtype: Subtype, rawWord: String) {
+        if (!prefs.dictionary.learnPersonalWords.get()) return
+        val word = rawWord.trim()
+        if (word.length < LEARN_WORD_MIN_LEN || word.length > LEARN_WORD_MAX_LEN) return
+        if (!LEARN_WORD_PATTERN.matches(word)) return
+        val key = word.lowercase()
+        learnedStore.bump(subtype.primaryLocale, key, freqDelta = 1)
+        if (canonicalDictionaryForm(word) != null) return
+        val count = learnedStore.countOf(subtype.primaryLocale, key)
+        val freq = personalFreqForCount(count) ?: return
+        val graduated = !personalWords.containsKey(key)
+        personalWords[key] = freq
+        if (BuildConfig.ENABLE_NATIVE_SUGGESTER && nativeDictionary.isLoaded) {
+            nativeDictionary.addLearnedWord(key, freq)
+        }
+        if (graduated || learnedSinceLastRefresh.incrementAndGet() >= LEARNED_REFRESH_THRESHOLD) {
+            learnedSinceLastRefresh.set(0)
+            _wordDataDirtyFlow.tryEmit(subtype)
+        }
+    }
+
+    /**
+     * Called when the user immediately deletes a word they just committed.
+     * Undoes the usage bump of that commit. Dictionary words are never
+     * demoted — backspacing to fix punctuation must not make the keyboard
+     * forget "hello".
+     */
+    suspend fun unlearnWord(subtype: Subtype, rawWord: String) {
+        val word = rawWord.trim()
+        if (word.length < LEARN_WORD_MIN_LEN || word.length > LEARN_WORD_MAX_LEN) return
+        if (!LEARN_WORD_PATTERN.matches(word)) return
+        val key = word.lowercase()
+        learnedStore.bump(subtype.primaryLocale, key, freqDelta = -1)
+        if (canonicalDictionaryForm(word) != null) return
+        val count = learnedStore.countOf(subtype.primaryLocale, key)
+        if (personalFreqForCount(count) == null && personalWords.remove(key) != null) {
+            if (BuildConfig.ENABLE_NATIVE_SUGGESTER && nativeDictionary.isLoaded) {
+                nativeDictionary.removeLearnedWord(key)
+            }
+            _wordDataDirtyFlow.tryEmit(subtype)
+        }
+    }
+
+    /**
+     * The user explicitly kept [rawWord] as typed — undid an autocorrection
+     * or picked the verbatim suggestion. Trust it immediately (and for all
+     * future sessions) so it is never autocorrected again.
+     */
+    suspend fun acceptTypedWord(subtype: Subtype, rawWord: String, persist: Boolean = true) {
+        val word = rawWord.trim()
+        if (word.isEmpty() || word.length > LEARN_WORD_MAX_LEN) return
+        val key = word.lowercase()
+        sessionAccepted.add(key)
+        // Incognito: respect the choice for this session only, store nothing.
+        if (!persist) return
+        if (!LEARN_WORD_PATTERN.matches(word) || canonicalDictionaryForm(word) != null) return
+        if (!prefs.dictionary.learnPersonalWords.get()) return
+        learnedStore.set(subtype.primaryLocale, key, ACCEPTED_WORD_COUNT)
+        val freq = personalFreqForCount(ACCEPTED_WORD_COUNT) ?: PERSONAL_BASE_FREQ
+        personalWords[key] = freq
+        if (BuildConfig.ENABLE_NATIVE_SUGGESTER && nativeDictionary.isLoaded) {
+            nativeDictionary.addLearnedWord(key, freq)
+        }
+        _wordDataDirtyFlow.tryEmit(subtype)
+    }
+
+    /**
+     * Hot-reload contact name tokens after READ_CONTACTS is granted at
+     * runtime. Does not require an IME restart.
      */
     suspend fun reloadContacts(subtype: Subtype) = withContext(Dispatchers.IO) {
         if (!prefs.spelling.useContacts.get()) return@withContext
         val tokens = ContactsLoader.loadNameTokens(appContext)
         if (tokens.isEmpty()) return@withContext
-
-        // Push into the Kotlin word-frequency table (Kotlin suggestion path).
-        wordData.withLock { data ->
-            for (token in tokens) {
-                val current = data[token] ?: 0
-                data[token] = maxOf(current, CONTACT_NAME_PROBABILITY)
+        var added = 0
+        for (token in tokens) {
+            if (canonicalDictionaryForm(token) != null) continue
+            personalWords[token] = max(personalWords[token] ?: 0, CONTACT_NAME_FREQ)
+            if (BuildConfig.ENABLE_NATIVE_SUGGESTER && nativeDictionary.isLoaded &&
+                nativeDictionary.addLearnedWord(token, CONTACT_NAME_FREQ)
+            ) {
+                added++
             }
         }
-
-        // Push into native dict (native suggestion/glide path).
-        if (BuildConfig.ENABLE_NATIVE_SUGGESTER && nativeDictionary.isLoaded) {
-            var added = 0
-            for (token in tokens) {
-                if (nativeDictionary.addLearnedWord(token, CONTACT_NAME_PROBABILITY)) added++
-            }
-            // Seed first→last name bigrams for sequence prediction.
-            val bigrams = ContactsLoader.loadNameBigrams(appContext)
-            for ((prev, next) in bigrams) {
-                nativeDictionary.addLearnedWord(next, CONTACT_NAME_PROBABILITY)
-            }
-            flogDebug { "LatinLanguageProvider: reloadContacts added $added tokens, ${bigrams.size} bigram pairs" }
-        }
-
-        // Rebuild glide classifier so swipe picks up the new vocab.
+        flogDebug { "LatinLanguageProvider: reloadContacts added $added tokens" }
         _wordDataDirtyFlow.tryEmit(subtype)
     }
 
     /**
-     * Live import a single User Dictionary entry into [wordData] and trigger
-     * a glide-classifier rebuild. Called from UserDictionaryScreen after the
-     * Room insert succeeds so the user sees the new word in glide without
-     * waiting for the next IME process restart.
+     * Live import of a single User Dictionary entry (Settings → User
+     * Dictionary) so it works for typing and glide without an IME restart.
      */
     suspend fun importUserDictionaryEntry(subtype: Subtype, rawWord: String, freq: Int) {
-        val word = rawWord.trim().lowercase()
+        val word = rawWord.trim()
         if (word.length < LEARN_WORD_MIN_LEN || word.length > LEARN_WORD_MAX_LEN) return
         if (!LEARN_WORD_PATTERN.matches(word)) return
-        
-        val clampedFreq = freq.coerceIn(64, 255)
-        wordData.withLock { data ->
-            val current = data[word] ?: 0
-            data[word] = maxOf(current, clampedFreq)
-        }
-        
+        if (canonicalDictionaryForm(word) == word) return
+        val target = (PERSONAL_BASE_FREQ + freq / 8).coerceIn(PERSONAL_BASE_FREQ, PERSONAL_MAX_FREQ)
+        personalWords[word] = max(personalWords[word] ?: 0, target)
         if (BuildConfig.ENABLE_NATIVE_SUGGESTER && nativeDictionary.isLoaded) {
-            nativeDictionary.addLearnedWord(word, clampedFreq)
+            nativeDictionary.addLearnedWord(word, target)
         }
-
-        // Rebuild glide Pruner immediately — unlike learnWord(), there's no
-        // need to debounce a single explicit user-add action.
         _wordDataDirtyFlow.tryEmit(subtype)
     }
 
-    /**
-     * Adaptive learning entry point. Called from EditorInstance.commitChar
-     * (on space/punctuation) and KeyboardManager.commitGesture (on glide
-     * commit) via NlpManager.learnWord facade.
-     *
-     * Validates the word, bumps frequency in [wordData], persists via
-     * [learnedStore], and emits a dirty signal when enough new words have
-     * accumulated to warrant a glide-classifier rebuild.
-     *
-     * Hot path — runs once per word commit. All work is microseconds: one
-     * regex check, one map mutation, one channel offer. Pruner rebuild
-     * (the expensive part) is debounced via [LEARNED_REFRESH_THRESHOLD].
-     */
-    suspend fun learnWord(subtype: Subtype, rawWord: String) {
-        if (!prefs.dictionary.learnPersonalWords.get()) return
-        val word = rawWord.trim().lowercase()
-        if (word.length < LEARN_WORD_MIN_LEN || word.length > LEARN_WORD_MAX_LEN) return
-        if (!LEARN_WORD_PATTERN.matches(word)) return
-
-        // First-time-seen words (NOT in built-in dict, NOT previously learned)
-        // get bootstrapped to NEW_WORD_BOOTSTRAP_FREQ so they immediately
-        // compete with the top dict tier on next swipe — see the constant
-        // docstring for the rationale on tying with max frequency.
-        val isFirstTime: Boolean
-        val isGraduating: Boolean
-        wordData.withLock { data ->
-            val current = data[word] ?: 0
-            isFirstTime = current == 0
-            isGraduating = current == 1
-            val next = if (current == 0) {
-                1
-            } else if (current == 1) {
-                NEW_WORD_BOOTSTRAP_FREQ
-            } else {
-                (current + 1).coerceAtMost(255)
-            }
-            data[word] = next
-        }
-        // Persist using a larger delta on graduation so the learned-store
-        // row reflects the bootstrap.
-        learnedStore.bump(
-            subtype.primaryLocale,
-            word,
-            freqDelta = if (isGraduating) NEW_WORD_BOOTSTRAP_FREQ else 1,
-        )
-        if (learnedSinceLastRefresh.incrementAndGet() >= LEARNED_REFRESH_THRESHOLD) {
-            learnedSinceLastRefresh.set(0)
-            _wordDataDirtyFlow.tryEmit(subtype)
-        }
-
-        // Phase 6 incremental update: push the same word into the native
-        // dict so the AOSP-backed suggest (Phase 4) + glide (Phase 5) paths
-        // see it on the very next call.
-        if (BuildConfig.ENABLE_NATIVE_SUGGESTER && nativeDictionary.isLoaded) {
-            if (!isFirstTime) {
-                // If it's the second time (graduating) or later, boost it to 255.
-                // We skip the first time to avoid demoting existing high-freq system words to 1.
-                nativeDictionary.addLearnedWord(word, 255)
-            }
-        }
-
-        // Graduating personal words (typed 2 times) deserve an immediate Pruner rebuild
-        // so the user sees the effect on their next swipe. For repeat reinforcement, still
-        // debounce via the threshold to avoid rebuilding for every keystroke.
-        // We DO NOT rebuild on `isFirstTime` because that triggers for every normal dictionary word typed!
-        if (isGraduating) {
-            learnedSinceLastRefresh.set(0)
-            _wordDataDirtyFlow.tryEmit(subtype)
-        }
-    }
-
-    suspend fun unlearnWord(subtype: Subtype, rawWord: String) {
-        val word = rawWord.trim().lowercase()
-        if (word.length < LEARN_WORD_MIN_LEN || word.length > LEARN_WORD_MAX_LEN) return
-        if (!LEARN_WORD_PATTERN.matches(word)) return
-
-        // We explicitly ALLOW unlearning built-in system words (like "wasn't") by forcing
-        // their frequency to 1. This prevents the glide classifier from constantly 
-        // suggesting them over valid alternatives (like "want").
-
-        // Symmetric purge across all three suggestion sources so the rejected
-        // word stops surfacing IMMEDIATELY (Kotlin suggest path, native
-        // suggest path, and glide classifier) — not just after the next
-        // IME process restart.
-        wordData.withLock { data -> data[word] = 1 }
-
-        if (BuildConfig.ENABLE_NATIVE_SUGGESTER && nativeDictionary.isLoaded) {
-            // Use addLearnedWord with freq 1 to OVERRIDE the system dictionary's frequency!
-            // Do NOT use removeLearnedWord, because that simply removes our override and 
-            // reverts back to the system dictionary's default high frequency.
-            nativeDictionary.addLearnedWord(word, 1)
-        }
-
-        // Persist the demotion so it survives process restarts.
-        // It will be reloaded into wordData and pushed to the NativeDictionary with freq 1 on boot.
-        learnedStore.set(subtype.primaryLocale, word, 1)
-
-        // Force a glide-classifier rebuild so swipe input drops the word too.
-        _wordDataDirtyFlow.tryEmit(subtype)
-    }
-
-    // ── Binary dictionary cache helpers ─────────────────────────────────────
+    // ── Binary dictionary cache ──────────────────────────────────────────────
 
     private fun cacheDir(ctx: Context): File = ctx.cacheDir.also { it.mkdirs() }
 
+    /**
+     * Identifies the installed APK. The version code alone is not enough:
+     * builds that share one (test builds before a release) can ship a
+     * different dictionary, and a stale cache would silently keep the old one.
+     */
     @Suppress("DEPRECATION")
-    private fun appVersionCode(ctx: Context): Long = try {
+    private fun dictionaryCacheStamp(ctx: Context): Long = try {
         val info = ctx.packageManager.getPackageInfo(ctx.packageName, 0)
-        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.P) {
+        val versionCode = if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.P) {
             info.longVersionCode
         } else {
             info.versionCode.toLong()
         }
+        (versionCode shl 42) xor info.lastUpdateTime
     } catch (_: Exception) { 0L }
 
     /**
-     * Try loading word frequencies from the binary cache.
-     * Returns null on cache miss, version mismatch, corrupt data, or I/O failure.
-     * Format: magic(Int) + appVersionCode(Long) + count(Int) + [word(UTF) + score(Int)]*
+     * Loads word frequencies from the binary cache. Returns null on cache
+     * miss, version mismatch, corrupt data, or I/O failure.
+     * Format: magic(Int) + dictionaryCacheStamp(Long) + count(Int) + [word(UTF) + score(Int)]*
      */
     private fun loadWordCache(ctx: Context): Map<String, Int>? {
         val file = File(cacheDir(ctx), WORD_CACHE_NAME)
@@ -495,61 +545,12 @@ class LatinLanguageProvider(context: Context) : SpellingProvider, SuggestionProv
         return try {
             DataInputStream(BufferedInputStream(file.inputStream(), 65_536)).use { dis ->
                 if (dis.readInt() != CACHE_MAGIC) return null
-                if (dis.readLong() != appVersionCode(ctx)) return null // stale — will rebuild
+                if (dis.readLong() != dictionaryCacheStamp(ctx)) return null
                 val count = dis.readInt()
                 val map = HashMap<String, Int>(count * 2)
                 repeat(count) {
                     val word = dis.readUTF()
-                    val score = dis.readInt()
-                    map[word] = score
-                }
-                map
-            }
-        } catch (_: Exception) {
-            file.delete() // corrupt cache — recreate next time
-            null
-        }
-    }
-
-    private fun saveWordCache(ctx: Context, data: Map<String, Int>) {
-        try {
-            val file = File(cacheDir(ctx), WORD_CACHE_NAME)
-            DataOutputStream(BufferedOutputStream(file.outputStream(), 65_536)).use { dos ->
-                dos.writeInt(CACHE_MAGIC)
-                dos.writeLong(appVersionCode(ctx))
-                dos.writeInt(data.size)
-                for ((word, score) in data) {
-                    dos.writeUTF(word)
-                    dos.writeInt(score)
-                }
-            }
-        } catch (_: Exception) { /* non-fatal — next start will retry */ }
-    }
-
-    /**
-     * Try loading bigram frequencies from the binary cache.
-     * Format: magic(Int) + appVersionCode(Long) + outerCount(Int) +
-     *         [prevWord(UTF) + innerCount(Int) + [nextWord(UTF) + score(Int)]*]*
-     */
-    private fun loadBigramCache(ctx: Context): Map<String, Map<String, Int>>? {
-        val file = File(cacheDir(ctx), BIGRAM_CACHE_NAME)
-        if (!file.exists()) return null
-        return try {
-            DataInputStream(BufferedInputStream(file.inputStream(), 65_536)).use { dis ->
-                if (dis.readInt() != CACHE_MAGIC) return null
-                if (dis.readLong() != appVersionCode(ctx)) return null
-                val outerCount = dis.readInt()
-                val map = HashMap<String, Map<String, Int>>(outerCount * 2)
-                repeat(outerCount) {
-                    val prev = dis.readUTF()
-                    val innerCount = dis.readInt()
-                    val inner = HashMap<String, Int>(innerCount * 2)
-                    repeat(innerCount) {
-                        val next = dis.readUTF()
-                        val score = dis.readInt()
-                        inner[next] = score
-                    }
-                    map[prev] = inner
+                    map[word] = dis.readInt()
                 }
                 map
             }
@@ -559,45 +560,401 @@ class LatinLanguageProvider(context: Context) : SpellingProvider, SuggestionProv
         }
     }
 
-    private fun saveBigramCache(ctx: Context, data: Map<String, Map<String, Int>>) {
+    private fun saveWordCache(ctx: Context, data: Map<String, Int>) {
         try {
-            val file = File(cacheDir(ctx), BIGRAM_CACHE_NAME)
+            val file = File(cacheDir(ctx), WORD_CACHE_NAME)
             DataOutputStream(BufferedOutputStream(file.outputStream(), 65_536)).use { dos ->
                 dos.writeInt(CACHE_MAGIC)
-                dos.writeLong(appVersionCode(ctx))
+                dos.writeLong(dictionaryCacheStamp(ctx))
                 dos.writeInt(data.size)
-                for ((prev, inner) in data) {
-                    dos.writeUTF(prev)
-                    dos.writeInt(inner.size)
-                    for ((next, score) in inner) {
-                        dos.writeUTF(next)
-                        dos.writeInt(score)
-                    }
+                for ((word, score) in data) {
+                    dos.writeUTF(word)
+                    dos.writeInt(score)
                 }
             }
-        } catch (_: Exception) { /* non-fatal */ }
+        } catch (_: Exception) { /* non-fatal — next start will retry */ }
     }
 
-    /**
-     * Persist a `prevWord → nextWord` transition for [locale]. Delegates to
-     * [LearnedBigramsStore.bump]; that path is non-blocking and debounces
-     * disk writes by 2s under the hood.
-     */
-    private fun saveLearnedBigram(locale: FlorisLocale, prevWord: String, nextWord: String) {
-        learnedBigramsStore.bump(locale, prevWord, nextWord)
-    }
+    // ── Context helpers ──────────────────────────────────────────────────────
 
-    /**
-     * Extract the previous word from text before the cursor.
-     * Handles edge cases like multiple spaces, punctuation, etc.
-     */
+    /** Last word of [textBeforeCursor] with surrounding punctuation stripped, case preserved. */
     private fun extractPreviousWord(textBeforeCursor: CharSequence): String? {
         val text = textBeforeCursor.toString().trimEnd()
         if (text.isBlank()) return null
         val lastSpace = text.lastIndexOf(' ')
         val word = if (lastSpace >= 0) text.substring(lastSpace + 1) else text
-        val cleaned = word.lowercase().trim { !it.isLetter() && it != '\'' }
-        return cleaned.takeIf { it.length >= 1 }
+        val cleaned = word.trim { !it.isLetter() && it != '\'' && it != '’' }
+        return cleaned.takeIf { it.isNotEmpty() }
+    }
+
+    private fun isSentenceStart(textBeforeWord: CharSequence): Boolean {
+        val trimmed = textBeforeWord.toString().trimEnd()
+        if (trimmed.isEmpty()) return true
+        val last = trimmed.last()
+        return last == '.' || last == '!' || last == '?' || last == '\n'
+    }
+
+    private class TypingContext(
+        val typed: String,
+        val previousWord: String?,
+        val atSentenceStart: Boolean,
+        /** Attached to the text before it ("B.Tech", "e.g", "site.com", "#tag", "@name"). */
+        val attachedToPrevious: Boolean = false,
+    )
+
+    private fun typingContextOf(content: EditorContent): TypingContext? {
+        val typed = content.composingText.ifBlank { content.currentWordText }.trim()
+        if (typed.isEmpty()) return null
+        val before = content.textBeforeSelection
+        val beforeWord = if (before.endsWith(typed)) before.substring(0, before.length - typed.length) else before
+        // A previous word only counts as context within the same sentence.
+        val sentenceStart = isSentenceStart(beforeWord)
+        val previous = if (sentenceStart) null else extractPreviousWord(beforeWord)
+        val attached = beforeWord.isNotEmpty() && beforeWord.last().let { it.isDigit() || it in ATTACHING_CHARS }
+        return TypingContext(typed, previous, sentenceStart, attached)
+    }
+
+    /**
+     * Whether the word being composed may be autocorrected when [separator]
+     * is typed after it. A single letter before a period is an initial or
+     * part of an abbreviation ("B. Edward", "B.Tech", "i.e.", "e.g."), so it
+     * is kept exactly as typed - including "i", which is otherwise "I".
+     */
+    fun allowsAutocorrectBefore(content: EditorContent, separator: String): Boolean {
+        if (separator != ".") return true
+        val typed = content.composingText.ifBlank { content.currentWordText }.trim()
+        return typed.length != 1
+    }
+
+    // ── Autocorrect ──────────────────────────────────────────────────────────
+
+    private fun autocorrectThreshold(): Float? {
+        if (!prefs.correction.autoCorrect.get() || !autocorrectAllowedForField) return null
+        return when (prefs.correction.autoCorrectLevel.get()) {
+            AutoCorrectLevel.MODEST -> AUTOCORRECT_THRESHOLD_MODEST
+            AutoCorrectLevel.AGGRESSIVE -> AUTOCORRECT_THRESHOLD_AGGRESSIVE
+        }
+    }
+
+    /** Applies the typed word's leading capital to [word] ("Teh" -> "The"). */
+    private fun applyTypedCase(typed: String, word: String): String {
+        if (typed.isEmpty() || word.isEmpty()) return word
+        if (typed[0].isUpperCase() && word[0].isLowerCase()) {
+            return word.replaceFirstChar { it.titlecase() }
+        }
+        return word
+    }
+
+    private fun isCorrectableInput(typed: String): Boolean {
+        if (typed.length > 32) return false
+        if (typed.any { it.isDigit() }) return false
+        if (!typed.all { it.isLetter() || it == '\'' || it == '’' || it == '-' }) return false
+        // Mostly-caps words ("NASA", "OMG") are deliberate.
+        if (typed.length > 1 && typed.count { it.isUpperCase() } * 2 > typed.length) return false
+        return true
+    }
+
+    /**
+     * AOSP LatinIME's auto-correction decision, extended with explicit rules
+     * and a "clear winner" rule for long, badly mangled words. Returns the
+     * replacement text (already cased like the input) or null to keep the
+     * word as typed.
+     */
+    private fun decideAutocorrect(
+        ctx: TypingContext,
+        typedKnown: Boolean,
+        results: List<TypingSuggestion>,
+        threshold: Float?,
+        respectPersonal: Boolean = true,
+    ): String? {
+        if (threshold == null) return null
+        val typed = ctx.typed
+        if (!isCorrectableInput(typed) || ctx.attachedToPrevious) return null
+        val lower = typed.lowercase()
+        if (respectPersonal && (lower in sessionAccepted || personalWords.containsKey(typed) || personalWords.containsKey(lower))) {
+            return null
+        }
+        AutocorrectRules.replacementFor(lower, ctx.previousWord?.lowercase() ?: "", ctx.atSentenceStart)?.let {
+            return applyTypedCase(typed, it)
+        }
+        if (typedKnown) return null
+        // Single letters are initials, list markers or shorthand ("B", "u",
+        // "r") - like Gboard, never turn them into a word ("B" -> "By").
+        if (typed.length == 1) return null
+        val top = pickCorrectionTarget(typed, results)
+            ?: return spellingFallback(typed)?.let { applyTypedCase(typed, it) }
+        if (!top.isAppropriateForAutoCorrection) return null
+        // Completing a word on space is fine when one letter is missing
+        // ("becaus" -> "because"); longer extensions turn names and new
+        // words into something else ("srinivas" -> "srinivasan").
+        if (top.word.lowercase().startsWith(lower) && top.word.length - typed.length >= 2) return null
+        if (top.normalizedScore >= threshold) return applyTypedCase(typed, top.word)
+        // Clear winner: a long word whose best correction is a single word two
+        // edits away and far ahead of every alternative ("tommorow").
+        if (typed.length >= 6 && ' ' !in top.word && top.normalizedScore >= 0.10f &&
+            top.word[0].equals(typed[0], ignoreCase = true) &&
+            damerauLevenshtein(lower, top.word.lowercase()) <= 2
+        ) {
+            val runnerUp = results.firstOrNull {
+                it !== top && it.word != typed && !it.word.equals(top.word, ignoreCase = true)
+            }
+            if (runnerUp == null || top.normalizedScore >= 4f * runnerUp.normalizedScore) {
+                return applyTypedCase(typed, top.word)
+            }
+        }
+        if (top.normalizedScore < 0.10f) {
+            return spellingFallback(typed)?.let { applyTypedCase(typed, it) }
+        }
+        return null
+    }
+
+    /**
+     * AOSP's typing decoder only explores substitutions between neighbouring
+     * keys, so phonetic misspellings ("calander", "desicion", "expierence")
+     * are invisible to it. For longer words it found nothing confident for,
+     * look for a common dictionary word with the same first letter one edit
+     * away (two for 8+ letters) and accept only a unique, clearly more
+     * frequent winner.
+     */
+    private fun spellingFallback(typed: String): String? {
+        val lower = typed.lowercase()
+        val n = lower.length
+        if (n < SPELL_FALLBACK_MIN_LENGTH) return null
+        val maxDistance = if (n >= 8) 2 else 1
+        val bucket = spellIndex[lower[0]] ?: return null
+        var best: String? = null
+        var bestDistance = Int.MAX_VALUE
+        var bestFreq = -1
+        var secondFreq = -1
+        for (word in bucket) {
+            if (abs(word.length - n) > maxDistance) continue
+            val distance = damerauLevenshtein(lower, word)
+            if (distance > maxDistance) continue
+            val freq = baseWords[word] ?: continue
+            if (distance == 2 && freq < SPELL_FALLBACK_MIN_FREQ_TWO_EDITS) continue
+            if (distance < bestDistance) {
+                secondFreq = -1
+                bestDistance = distance
+                best = word
+                bestFreq = freq
+            } else if (distance == bestDistance) {
+                if (freq > bestFreq) {
+                    secondFreq = bestFreq
+                    best = word
+                    bestFreq = freq
+                } else if (freq > secondFreq) {
+                    secondFreq = freq
+                }
+            }
+        }
+        // A unique, clear winner only: nothing else at the same distance within ~4x.
+        if (secondFreq >= 0 && bestFreq - secondFreq < TIE_BREAK_MIN_FREQ_GAIN) return null
+        return best
+    }
+
+    private fun isAllCaps(word: String): Boolean {
+        return word.length >= 2 && word.any { it.isLetter() } && word.all { !it.isLetter() || it.isUpperCase() }
+    }
+
+    /**
+     * Chooses which decoder result a typo may be replaced with. AOSP ranks
+     * purely by score; on top of that:
+     *  * an ALL-CAPS abbreviation is only a target when it is just the
+     *    capitalisation of the input and a common one ("usa" -> "USA",
+     *    "tv" -> "TV"), never for "nad" -> "NAD" when "and" was meant;
+     *  * a lowercase word beats its capitalised twin at a near-equal score
+     *    ("parliment" -> "parliament", not "Parliament");
+     *  * a plain plural beats a possessive at a comparable score
+     *    ("potatos" -> "potatoes", not "potato's");
+     *  * among near-equal candidates a much more common word wins
+     *    ("suer" -> "sure", not "sued").
+     */
+    private fun pickCorrectionTarget(typed: String, results: List<TypingSuggestion>): TypingSuggestion? {
+        val candidates = results.filter { it.word != typed }
+        fun acceptable(candidate: TypingSuggestion): Boolean {
+            val word = candidate.word
+            if (!isAllCaps(word) || isAllCaps(typed)) return true
+            return word.equals(typed, ignoreCase = true) && frequencyOf(word) >= COMMON_ABBREVIATION_FREQ
+        }
+        var top = candidates.firstOrNull { acceptable(it) } ?: return null
+        if (typed[0].isLowerCase() && top.word[0].isUpperCase() && !isAllCaps(top.word)) {
+            val lowerTwin = top.word.lowercase()
+            candidates.firstOrNull {
+                it.word == lowerTwin && it.normalizedScore >= 0.9f * top.normalizedScore
+            }?.let { top = it }
+        }
+        if (top.word.endsWith("'s") && typed.none { it == '\'' || it == '’' }) {
+            candidates.firstOrNull {
+                it !== top && it.word.none { c -> c == '\'' || c == ' ' } && acceptable(it) &&
+                    it.normalizedScore >= 0.75f * top.normalizedScore
+            }?.let { top = it }
+        }
+        var preferred = top
+        var preferredFreq = frequencyOf(top.word)
+        for (candidate in candidates) {
+            if (candidate === top || ' ' in candidate.word) continue
+            if (candidate.normalizedScore < TIE_BREAK_SCORE_RATIO * top.normalizedScore) continue
+            if (!acceptable(candidate) || !candidate.isAppropriateForAutoCorrection) continue
+            val freq = frequencyOf(candidate.word)
+            if (freq >= preferredFreq + TIE_BREAK_MIN_FREQ_GAIN) {
+                preferred = candidate
+                preferredFreq = freq
+            }
+        }
+        // The winner inherits the leader's confidence for the threshold check.
+        if (preferred !== top) {
+            top = preferred.copy(normalizedScore = max(preferred.normalizedScore, top.normalizedScore))
+        }
+        return top
+    }
+
+    private fun decodeTyping(ctx: TypingContext, maxResults: Int): List<TypingSuggestion>? {
+        if (!BuildConfig.ENABLE_NATIVE_SUGGESTER || !nativeDictionary.isLoaded) return null
+        val prev = ctx.previousWord?.let { canonicalForm(it) ?: it } ?: ""
+        val blockOffensive = prefs.suggestion.blockPossiblyOffensive.get()
+        return TypingProximity.withCoordinates(ctx.typed) { handle, xs, ys ->
+            nativeDictionary.suggestForTyping(handle, ctx.typed, xs, ys, prev, blockOffensive, maxResults)
+        }
+    }
+
+    /**
+     * Synchronous autocorrect decision for exactly the current composing word.
+     * Used by NlpManager when the space/punctuation key arrives before the
+     * debounced suggestion pass for the latest letter has finished — without
+     * this, fast typists would get the correction computed for the *previous*
+     * prefix ("thi" → "this" applied to "thin").
+     */
+    fun autocorrectFor(content: EditorContent): SuggestionCandidate? {
+        val threshold = autocorrectThreshold() ?: return null
+        val ctx = typingContextOf(content) ?: return null
+        val results = decodeTyping(ctx, NATIVE_MAX_RESULTS) ?: emptyList()
+        val typedKnown = isKnownWord(ctx.typed)
+        val correction = decideAutocorrect(ctx, typedKnown, results, threshold) ?: return null
+        if (correction == ctx.typed) return null
+        return WordSuggestionCandidate(
+            text = correction,
+            confidence = 1.0,
+            isEligibleForAutoCommit = true,
+            sourceProvider = this,
+        )
+    }
+
+    // ── SuggestionProvider / SpellingProvider ────────────────────────────────
+
+    override suspend fun suggest(
+        subtype: Subtype,
+        content: EditorContent,
+        maxCandidateCount: Int,
+        allowPossiblyOffensive: Boolean,
+        isPrivateSession: Boolean,
+    ): List<SuggestionCandidate> {
+        val ctx = typingContextOf(content)
+        if (ctx == null || content.composingText.isBlank() && content.currentWordText.isBlank()) {
+            return nextWordPredictions(subtype, content.textBeforeSelection, maxCandidateCount)
+        }
+        val results = decodeTyping(ctx, NATIVE_MAX_RESULTS)
+        if (results == null) {
+            return kotlinSuggestions(subtype, ctx, maxCandidateCount)
+        }
+        val typed = ctx.typed
+        val typedKnown = isKnownWord(typed)
+        val correction = decideAutocorrect(ctx, typedKnown, results, autocorrectThreshold())
+            ?.takeIf { it != typed }
+
+        val out = ArrayList<SuggestionCandidate>(DISPLAY_MAX_RESULTS)
+        val seen = HashSet<String>()
+        fun add(candidate: SuggestionCandidate) {
+            if (out.size < DISPLAY_MAX_RESULTS && seen.add(candidate.text.toString())) out.add(candidate)
+        }
+        if (correction != null) {
+            // Gboard layout: bold correction in the centre, the literal input
+            // on the left so one tap keeps what was typed.
+            add(WordSuggestionCandidate(correction, confidence = 1.0, isEligibleForAutoCommit = true, sourceProvider = this))
+            add(TypedWordSuggestionCandidate(typed, confidence = 0.99, sourceProvider = this))
+        } else if (typedKnown) {
+            add(WordSuggestionCandidate(typed, confidence = 1.0, sourceProvider = this))
+        }
+        var rank = 0
+        for (result in results) {
+            if (result.word == typed && typedKnown) continue
+            val shown = applyTypedCase(typed, result.word)
+            if (shown == typed && !typedKnown) continue
+            val confidence = (0.9 - rank * 0.05).coerceAtLeast(0.1)
+            add(WordSuggestionCandidate(shown, confidence = confidence, sourceProvider = this))
+            rank++
+        }
+        if (out.size < 3) {
+            // Thin decoder output (e.g. first letter only): pad with prefix
+            // completions ranked by the n-gram model.
+            val prev = ctx.previousWord?.let { canonicalForm(it) ?: it } ?: ""
+            for (word in nativeDictionary.getCompletions(typed.lowercase(), prev, maxCandidateCount)) {
+                add(WordSuggestionCandidate(applyTypedCase(typed, word), confidence = 0.3, sourceProvider = this))
+            }
+        }
+        return out
+    }
+
+    /** Next-word predictions after a space, from static + learned bigrams. */
+    private suspend fun nextWordPredictions(
+        subtype: Subtype,
+        textBeforeCursor: CharSequence,
+        maxCandidateCount: Int,
+    ): List<SuggestionCandidate> {
+        if (isSentenceStart(textBeforeCursor)) return emptyList()
+        val previous = extractPreviousWord(textBeforeCursor) ?: return emptyList()
+        val bigrams = getBigramSuggestions(subtype.primaryLocale, previous, "")
+        if (bigrams.isEmpty()) return emptyList()
+        return bigrams.entries
+            .sortedByDescending { it.value }
+            .take(maxCandidateCount)
+            .map { (word, score) ->
+                WordSuggestionCandidate(
+                    text = word,
+                    confidence = (score / 255.0).coerceIn(0.0, 1.0),
+                    sourceProvider = this,
+                )
+            }
+    }
+
+    /**
+     * Fallback when the native decoder is unavailable (32-bit devices, native
+     * load failure): prefix completions plus single-edit fuzzy matches. Never
+     * auto-commits — without the spatial model we are not confident enough.
+     */
+    private suspend fun kotlinSuggestions(
+        subtype: Subtype,
+        ctx: TypingContext,
+        maxCandidateCount: Int,
+    ): List<SuggestionCandidate> {
+        val typed = ctx.typed
+        val lower = typed.lowercase()
+        val bigrams = ctx.previousWord?.let { getBigramSuggestions(subtype.primaryLocale, it, lower) } ?: emptyMap()
+        val results = HashMap<String, Int>()
+        val known = isKnownWord(typed)
+        if (known) results[typed] = 1000
+        fun consider(word: String, freq: Int) {
+            if (freq <= 0) return
+            val wl = word.lowercase()
+            if (wl.startsWith(lower) && wl != lower) {
+                results[word] = max(results[word] ?: 0, freq + (bigrams[word] ?: 0))
+            } else if (lower.length >= 3 && wl.length in (lower.length - 1)..(lower.length + 1) &&
+                wl != lower && isEditDistance1(lower, wl)
+            ) {
+                results[word] = max(results[word] ?: 0, (freq * 0.8).toInt() + (bigrams[word] ?: 0) / 2)
+            }
+        }
+        for ((word, freq) in baseWords) consider(word, freq)
+        for ((word, freq) in personalWords) consider(word, freq)
+        return results.entries
+            .sortedByDescending { it.value }
+            .take(maxCandidateCount)
+            .mapIndexed { index, (word, _) ->
+                WordSuggestionCandidate(
+                    text = applyTypedCase(typed, word),
+                    confidence = (1.0 - index * 0.1).coerceAtLeast(0.1),
+                    sourceProvider = this,
+                )
+            }
     }
 
     override suspend fun spell(
@@ -609,230 +966,49 @@ class LatinLanguageProvider(context: Context) : SpellingProvider, SuggestionProv
         allowPossiblyOffensive: Boolean,
         isPrivateSession: Boolean,
     ): SpellingResult {
-        val query = word.trim().lowercase()
+        val query = word.trim()
         if (query.isBlank()) return SpellingResult.unspecified()
+        if (isKnownWord(query) || !isCorrectableInput(query)) return SpellingResult.validWord()
 
-        val isKnown = wordData.withLock { it.containsKey(query) }
-        if (isKnown) return SpellingResult.validWord()
-
-        // Phase 1: fast prefix + edit-distance 1 candidates.
-        val editCandidates = wordData.withLock { data ->
-            data.asSequence()
-                .filter { (candidate, _) ->
-                    candidate != query &&
-                    (candidate.startsWith(query.take(2)) || isEditDistance1(query, candidate))
-                }
-                .sortedByDescending { (_, score) -> score }
-                .map { it.key }
+        val ctx = TypingContext(query, precedingWords.lastOrNull(), precedingWords.isEmpty())
+        val native = decodeTyping(ctx, maxSuggestionCount.coerceAtLeast(3) + 2)
+        if (native != null) {
+            val suggestions = native.asSequence()
+                .map { applyTypedCase(query, it.word) }
+                .filter { it != query }
+                .distinct()
                 .take(maxSuggestionCount)
                 .toList()
+            return SpellingResult.typo(suggestions.toTypedArray())
         }
 
-        if (editCandidates.isNotEmpty()) {
-            return SpellingResult.typo(editCandidates.toTypedArray())
-        }
-
-        // Phase 2: phonetic (Soundex) fallback — catches phonetically plausible misspellings
-        // that differ by more than 1 edit (e.g. "freind" → "friend", "nite" → "night").
-        val querySoundex = soundex(query)
-        val phoneticCandidates = wordData.withLock { data ->
-            data.asSequence()
-                .filter { (candidate, _) ->
-                    candidate != query && soundex(candidate) == querySoundex
-                }
-                .sortedByDescending { (_, score) -> score }
-                .map { it.key }
-                .take(maxSuggestionCount)
-                .toList()
-        }
-
-        return if (phoneticCandidates.isNotEmpty()) {
-            SpellingResult.typo(phoneticCandidates.toTypedArray())
-        } else {
-            SpellingResult.typo(emptyArray())
-        }
+        val lower = query.lowercase()
+        val candidates = baseWords.asSequence()
+            .filter { (candidate, freq) ->
+                freq > 0 && candidate.length in (lower.length - 1)..(lower.length + 1) &&
+                    isEditDistance1(lower, candidate.lowercase())
+            }
+            .sortedByDescending { (_, freq) -> freq }
+            .map { applyTypedCase(query, it.key) }
+            .take(maxSuggestionCount)
+            .toList()
+        return SpellingResult.typo(candidates.toTypedArray())
     }
 
     /**
-     * Soundex phonetic encoding. Returns a 4-character code (letter + 3 digits) that groups
-     * words with similar consonant patterns, enabling phonetic spell correction.
-     * Example: "color" and "colour" both encode to "C460".
-     */
-    private fun soundex(word: String): String {
-        if (word.isEmpty()) return "0000"
-        val table = mapOf(
-            'b' to '1', 'f' to '1', 'p' to '1', 'v' to '1',
-            'c' to '2', 'g' to '2', 'j' to '2', 'k' to '2',
-            'q' to '2', 's' to '2', 'x' to '2', 'z' to '2',
-            'd' to '3', 't' to '3',
-            'l' to '4',
-            'm' to '5', 'n' to '5',
-            'r' to '6',
-        )
-        val upper = word.lowercase()
-        val code = StringBuilder()
-        code.append(upper[0].uppercaseChar())
-        var prev = table[upper[0]] ?: '0'
-        for (i in 1 until upper.length) {
-            val curr = table[upper[i]] ?: '0'
-            if (curr != '0' && curr != prev) {
-                code.append(curr)
-                if (code.length == 4) break
-            }
-            prev = curr
-        }
-        while (code.length < 4) code.append('0')
-        return code.toString()
-    }
-
-    override suspend fun suggest(
-        subtype: Subtype,
-        content: EditorContent,
-        maxCandidateCount: Int,
-        allowPossiblyOffensive: Boolean,
-        isPrivateSession: Boolean,
-    ): List<SuggestionCandidate> {
-        val composingWord = content.composingText.ifBlank { content.currentWordText }.trim().lowercase()
-
-        // Extract previous word for bigram context
-        val textBeforeCursor = content.textBeforeSelection
-        val previousWord = extractPreviousWord(
-            if (composingWord.isNotBlank() && textBeforeCursor.endsWith(composingWord, ignoreCase = true)) {
-                textBeforeCursor.substring(0, (textBeforeCursor.length - composingWord.length).coerceAtLeast(0))
-            } else {
-                textBeforeCursor
-            }
-        )
-
-        // Phase 4d: native suggest path. Active only when the feature flag
-        // is on AND the dict actually loaded AND the user has typed
-        // something. With a BLANK composing word we'd otherwise call native
-        // with an empty prefix → native returns the top-K unigrams by raw
-        // frequency (the/of/and/to/…) every time → "too generic, same
-        // suggestions at start" bug. For blank composing we instead fall
-        // through to the existing bigram-only prediction path below.
-        if (BuildConfig.ENABLE_NATIVE_SUGGESTER && nativeDictionary.isLoaded
-                && composingWord.isNotBlank()) {
-            val nativeResults = nativeDictionary.getCompletions(
-                prefix = composingWord,
-                prevWord = previousWord ?: "",
-                maxResults = maxCandidateCount,
-            )
-            if (nativeResults.isNotEmpty()) {
-                // Confidence falls off linearly across the top-K so the
-                // smartbar's "best guess" highlight lands on the right
-                // candidate. Native results are already AOSP-probability-
-                // ranked, so position-based confidence preserves that order.
-                return nativeResults.mapIndexed { index, word ->
-                    val confidence = 1.0 - (index.toDouble() / maxCandidateCount.coerceAtLeast(1))
-                    WordSuggestionCandidate(
-                        text = word,
-                        confidence = confidence.coerceIn(0.0, 1.0),
-                        isEligibleForAutoCommit = false,
-                        sourceProvider = this,
-                    )
-                }
-            }
-            // else fall through to Kotlin path
-        }
-
-        // Get bigram suggestions for the previous word
-        val bigramSuggestions = if (previousWord != null) {
-            getBigramSuggestions(subtype.primaryLocale, previousWord, composingWord)
-        } else {
-            emptyMap()
-        }
-
-        // If composing word is blank, return pure next-word predictions
-        if (composingWord.isBlank()) {
-            if (previousWord == null || bigramSuggestions.isEmpty()) return emptyList()
-            return bigramSuggestions.entries
-                .sortedByDescending { it.value }
-                .take(maxCandidateCount)
-                .map { (word, score) ->
-                    WordSuggestionCandidate(
-                        text = word,
-                        confidence = (score / 255.0).coerceIn(0.0, 1.0),
-                        isEligibleForAutoCommit = false,
-                        sourceProvider = this,
-                    )
-                }
-        }
-
-        // Composing word is non-blank: blend prefix matches with bigram + recency boosts
-        return wordData.withLock { data ->
-            val results = mutableListOf<Pair<String, Int>>()
-
-            // 1. Exact match always first (auto-complete the current word)
-            val exactScore = data[composingWord]
-            if (exactScore != null) {
-                val bigramScore = bigramSuggestions[composingWord] ?: 0
-                results.add(composingWord to (exactScore + bigramScore + 100).coerceAtMost(600))
-            }
-
-            // 2. Prefix matches
-            data.asSequence()
-                .filter { (candidate, _) -> candidate.startsWith(composingWord) && candidate != composingWord }
-                .forEach { (candidate, score) ->
-                    val bigramScore = bigramSuggestions[candidate] ?: 0
-                    val recencyBoost = if (candidate in recentWords) RECENCY_BOOST else 0
-                    val boostedScore = if (bigramScore > 0) {
-                        (score + (bigramScore * BIGRAM_BOOST_FACTOR).toInt() + recencyBoost).coerceAtMost(600)
-                    } else {
-                        (score + recencyBoost).coerceAtMost(600)
-                    }
-                    results.add(candidate to boostedScore)
-                }
-
-            // 3. Fuzzy matches (edit distance 1) if we have fewer than maxCandidateCount
-            if (results.size < maxCandidateCount && composingWord.length >= 3) {
-                val existingWords = results.map { it.first }.toSet()
-                data.asSequence()
-                    .filter { (candidate, _) ->
-                        candidate !in existingWords &&
-                        candidate.length in (composingWord.length - 1)..(composingWord.length + 1) &&
-                        isEditDistance1(composingWord, candidate)
-                    }
-                    .take(maxCandidateCount - results.size)
-                    .forEach { (candidate, score) ->
-                        val bigramScore = bigramSuggestions[candidate] ?: 0
-                        // Fuzzy matches get a slight penalty
-                        val penalizedScore = ((score * 0.8).toInt() + (bigramScore * BIGRAM_BOOST_FACTOR * 0.5).toInt()).coerceAtMost(400)
-                        results.add(candidate to penalizedScore)
-                    }
-            }
-
-            results
-                .sortedByDescending { (_, score) -> score }
-                .take(maxCandidateCount)
-                .map { (candidate, score) ->
-                    WordSuggestionCandidate(
-                        text = candidate,
-                        confidence = (score / 600.0).coerceIn(0.0, 1.0),
-                        isEligibleForAutoCommit = false,
-                        sourceProvider = this,
-                    )
-                }
-        }
-    }
-
-    /**
-     * Check if two words have edit distance of exactly 1
-     * (one substitution, insertion, or deletion apart).
-     * Optimized: avoids full DP matrix, bails early.
+     * True when [a] and [b] are exactly one substitution, insertion or
+     * deletion apart.
      */
     private fun isEditDistance1(a: String, b: String): Boolean {
         val lenDiff = a.length - b.length
         if (lenDiff < -1 || lenDiff > 1) return false
         if (a.length == b.length) {
-            // Substitution: exactly one char differs
             var diffs = 0
             for (i in a.indices) {
                 if (a[i] != b[i]) { diffs++; if (diffs > 1) return false }
             }
             return diffs == 1
         }
-        // Insertion or deletion
         val longer = if (a.length > b.length) a else b
         val shorter = if (a.length > b.length) b else a
         var i = 0; var j = 0; var diffs = 0
@@ -843,146 +1019,169 @@ class LatinLanguageProvider(context: Context) : SpellingProvider, SuggestionProv
         return true
     }
 
+    /** Optimal string alignment distance (adjacent transpositions count as one edit). */
+    private fun damerauLevenshtein(a: String, b: String): Int {
+        val n = a.length
+        val m = b.length
+        if (n == 0) return m
+        if (m == 0) return n
+        val d = Array(n + 1) { IntArray(m + 1) }
+        for (i in 0..n) d[i][0] = i
+        for (j in 0..m) d[0][j] = j
+        for (i in 1..n) {
+            for (j in 1..m) {
+                val cost = if (a[i - 1] == b[j - 1]) 0 else 1
+                d[i][j] = minOf(d[i - 1][j] + 1, d[i][j - 1] + 1, d[i - 1][j - 1] + cost)
+                if (i > 1 && j > 1 && a[i - 1] == b[j - 2] && a[i - 2] == b[j - 1]) {
+                    d[i][j] = min(d[i][j], d[i - 2][j - 2] + 1)
+                }
+            }
+        }
+        return d[n][m]
+    }
+
     /**
-     * Get combined bigram suggestions from both static and learned bigrams.
-     * If composingWord is non-blank, only returns bigrams that start with it.
+     * Combined static + learned bigram continuations of [previousWord], in
+     * dictionary casing. If [composingWord] is non-blank, only continuations
+     * starting with it (case-insensitively) are returned.
      */
     private suspend fun getBigramSuggestions(
         locale: FlorisLocale,
         previousWord: String,
         composingWord: String,
     ): Map<String, Int> {
-        val prev = previousWord.lowercase()
-        val result = mutableMapOf<String, Int>()
-
-        // Static bigrams
-        bigramData.withLock { data ->
-            data[prev]?.forEach { (word, score) ->
-                if (composingWord.isBlank() || word.startsWith(composingWord)) {
-                    result[word] = (result.getOrDefault(word, 0) + score).coerceAtMost(255)
-                }
+        val result = HashMap<String, Int>()
+        val prefix = composingWord.lowercase()
+        val canonicalPrev = canonicalForm(previousWord) ?: previousWord
+        bigramData[canonicalPrev]?.forEach { (word, score) ->
+            if (prefix.isEmpty() || word.lowercase().startsWith(prefix)) {
+                result[word] = (result.getOrDefault(word, 0) + score).coerceAtMost(255)
             }
         }
-
-        // Learned bigrams from the persistent JSON store. Higher weight than
-        // static bigrams because the user's own typing history is a stronger
-        // signal than corpus frequencies.
-        learnedBigramsStore.snapshot(locale)[prev]?.forEach { (word, score) ->
-            if (composingWord.isBlank() || word.startsWith(composingWord)) {
-                val learnedBoost = (score * 1.2).toInt()
-                result[word] = (result.getOrDefault(word, 0) + learnedBoost).coerceAtMost(255)
+        // The user's own phrasing is a stronger signal than corpus statistics.
+        learnedBigramsStore.continuationsOf(locale, previousWord.lowercase()).forEach { (word, score) ->
+            if (prefix.isEmpty() || word.startsWith(prefix)) {
+                val shown = canonicalForm(word) ?: word
+                result[shown] = (result.getOrDefault(shown, 0) + (score * 1.2).toInt()).coerceAtMost(255)
             }
         }
+        return result
+    }
 
+    /**
+     * Language-model evidence for words following [previousWord], used by the
+     * glide decoder: word (dictionary casing and lowercase) -> log-probability
+     * bonus in nats (0..2.5). Static corpus bigrams and the user's own learned
+     * transitions are combined; empty when there is no evidence.
+     */
+    fun bigramBonuses(locale: FlorisLocale, previousWord: String): Map<String, Double> {
+        val result = HashMap<String, Double>()
+        val canonicalPrev = canonicalForm(previousWord) ?: previousWord
+        bigramData[canonicalPrev]?.forEach { (word, score) ->
+            val bonus = score / 255.0 * 2.5
+            result[word] = max(result[word] ?: 0.0, bonus)
+            result[word.lowercase()] = max(result[word.lowercase()] ?: 0.0, bonus)
+        }
+        learnedBigramsStore.continuationsOf(locale, previousWord.lowercase()).forEach { (word, score) ->
+            // Each learned occurrence adds 5 to the score (see LearnedBigramsStore.bump).
+            val bonus = (score * 12).coerceAtMost(255) / 255.0 * 2.5
+            result[word] = max(result[word] ?: 0.0, bonus)
+            canonicalForm(word)?.let { result[it] = max(result[it] ?: 0.0, bonus) }
+        }
         return result
     }
 
     override suspend fun notifySuggestionAccepted(subtype: Subtype, candidate: SuggestionCandidate) {
         flogDebug { candidate.toString() }
-        val accepted = candidate.text.toString().trim().lowercase()
+        val accepted = candidate.text.toString().trim()
         if (accepted.isBlank()) return
-
-        // Boost the accepted word's frequency
-        wordData.withLock { data ->
-            val current = data.getOrDefault(accepted, 0)
-            data[accepted] = (current + 2).coerceAtMost(255)
-        }
-
-        // Also persist for adaptive learned swipe typing — accepted
-        // suggestions are stronger signal than manual commits (+2 vs +1).
-        // The persistence layer is internally guarded by the same pref +
-        // validation regex as [learnWord].
-        if (prefs.dictionary.learnPersonalWords.get() &&
+        if (candidate is TypedWordSuggestionCandidate) {
+            acceptTypedWord(subtype, accepted)
+        } else if (prefs.dictionary.learnPersonalWords.get() &&
             accepted.length in LEARN_WORD_MIN_LEN..LEARN_WORD_MAX_LEN &&
             LEARN_WORD_PATTERN.matches(accepted)
         ) {
-            learnedStore.bump(subtype.primaryLocale, accepted, freqDelta = 2)
-            if (learnedSinceLastRefresh.incrementAndGet() >= LEARNED_REFRESH_THRESHOLD) {
-                learnedSinceLastRefresh.set(0)
-                _wordDataDirtyFlow.tryEmit(subtype)
-            }
+            // Accepted suggestions are stronger usage signal than manual commits.
+            learnedStore.bump(subtype.primaryLocale, accepted.lowercase(), freqDelta = 2)
         }
-
-        // Track recency
-        recentWords.remove(accepted)
-        recentWords.addFirst(accepted)
-        if (recentWords.size > MAX_RECENCY_WORDS) recentWords.removeLast()
-
-        // Learn bigram: if we have a previous word, save the pair
         lastCommittedWord?.let { prev ->
-            if (prev.isNotBlank() && prev != accepted) {
-                saveLearnedBigram(subtype.primaryLocale, prev, accepted)
+            if (prev.isNotBlank() && !prev.equals(accepted, ignoreCase = true)) {
+                learnedBigramsStore.bump(subtype.primaryLocale, prev.lowercase(), accepted.lowercase())
             }
         }
-
-        // Update last committed word
         lastCommittedWord = accepted
     }
 
     override suspend fun notifySuggestionReverted(subtype: Subtype, candidate: SuggestionCandidate) {
         flogDebug { candidate.toString() }
-        // When the user reverts a previously-accepted suggestion (typically
-        // an autocorrect that produced the wrong word), we treat it as a
-        // strong negative signal against that word — they explicitly said
-        // "no, not this one". Decrement its frequency so the keyboard
-        // stops aggressively pushing it. Same path as removeSuggestion but
-        // softer: we don't delete the entry, just down-weight it.
-        val reverted = candidate.text.toString().trim().lowercase()
-        if (reverted.isBlank()) return
-        if (!LEARN_WORD_PATTERN.matches(reverted)) return
-
-        wordData.withLock { data ->
-            val current = data[reverted] ?: return@withLock
-            // Drop by 3 — strong enough that two reverts in a row will pull
-            // the word out of the top suggestions, but not enough to nuke
-            // a high-frequency dict word from a single accident.
-            val next = (current - 3).coerceAtLeast(0)
-            if (next == 0) data.remove(reverted) else data[reverted] = next
-        }
-        // Also reflect the demotion in the persisted learned store so it
-        // survives IME restart.
+        // The user undid an accepted suggestion; don't let that commit count
+        // as usage of the word.
+        val reverted = candidate.text.toString().trim()
+        if (reverted.isBlank() || !LEARN_WORD_PATTERN.matches(reverted)) return
         if (prefs.dictionary.learnPersonalWords.get()) {
-            learnedStore.bump(subtype.primaryLocale, reverted, freqDelta = -3)
+            learnedStore.bump(subtype.primaryLocale, reverted.lowercase(), freqDelta = -2)
         }
     }
 
     override suspend fun removeSuggestion(subtype: Subtype, candidate: SuggestionCandidate): Boolean {
         flogDebug { candidate.toString() }
-        val key = candidate.text.toString().trim().lowercase()
-        return wordData.withLock { data -> data.remove(key) != null }
+        val word = candidate.text.toString().trim()
+        val key = word.lowercase()
+        val removed = personalWords.remove(word) != null || personalWords.remove(key) != null
+        if (removed) {
+            learnedStore.set(subtype.primaryLocale, key, 0)
+            if (BuildConfig.ENABLE_NATIVE_SUGGESTER && nativeDictionary.isLoaded) {
+                nativeDictionary.removeLearnedWord(word)
+                nativeDictionary.removeLearnedWord(key)
+            }
+            _wordDataDirtyFlow.tryEmit(subtype)
+        }
+        return removed
     }
 
     override suspend fun getListOfWords(subtype: Subtype): List<String> {
-        return wordData.withLock { it.keys.toList() }
+        val base = baseWords
+        val list = ArrayList<String>(base.size + personalWords.size)
+        for ((word, freq) in base) {
+            // Profanity and "valid but never suggest" entries stay out of glide.
+            if (freq > 0 && word !in offensiveWords) list.add(word)
+        }
+        for (word in personalWords.keys) {
+            if (word !in base) list.add(word)
+        }
+        return list
     }
 
     override suspend fun getFrequencyForWord(subtype: Subtype, word: String): Double {
-        return wordData.withLock { it.getOrDefault(word.lowercase(), 0) / 255.0 }
+        return frequencyOf(canonicalForm(word) ?: word) / 255.0
     }
 
+    /**
+     * Read-only frequency view (0..1 of the AOSP log scale) for the glide
+     * classifier, without copying the ~170k-entry vocabulary. Recently used
+     * words get a small boost so they win ties against shape-similar
+     * dictionary words.
+     */
     override suspend fun getFrequencyMap(subtype: Subtype): Map<String, Double> {
-        // Recency boost: words the user has typed most recently get a small
-        // multiplier so they reliably outrank shape-similar dict words at
-        // the same nominal frequency. Without this, after a context reset
-        // (Send / clear), a graduated personal word at freq=255 ties with
-        // top-tier dict entries also at freq=255 — shape decides — and the
-        // user's word often loses by a hair. With the boost, "okays" stays
-        // ahead of "okra" / "okay" / "owners" until the user actually starts
-        // typing other words.
-        //
-        // Recency lives in [learnedStore], so this boost is persistent
-        // across IME process restarts — not just within a session.
-        //
-        // This map is consumed exclusively by the glide classifier
-        // ([StatisticalGlideTypingClassifier.setWordData]); returning values
-        // marginally above 1.0 is intentional and fits the classifier's
-        // multiplicative scoring at line 384.
         val recent = learnedStore.mostRecent(subtype.primaryLocale, MAX_RECENCY_WORDS)
-        return wordData.withLock { data ->
-            data.mapValues { (word, freq) ->
-                val base = freq / 255.0
-                if (word in recent) base * GLIDE_RECENCY_BOOST else base
+        val base = baseWords
+        return object : AbstractMap<String, Double>() {
+            override val entries: Set<Map.Entry<String, Double>>
+                get() = (base.keys + personalWords.keys).mapTo(HashSet()) { word ->
+                    java.util.AbstractMap.SimpleImmutableEntry(word, valueOf(word))
+                }
+
+            private fun valueOf(word: String): Double {
+                val value = frequencyOf(word) / 255.0
+                return if (word.lowercase() in recent) value * GLIDE_RECENCY_BOOST else value
             }
+
+            override fun get(key: String): Double? {
+                if (key !in base && !personalWords.containsKey(key)) return null
+                return valueOf(key)
+            }
+
+            override fun containsKey(key: String): Boolean = key in base || personalWords.containsKey(key)
         }
     }
 

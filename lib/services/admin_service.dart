@@ -174,7 +174,10 @@ class AdminService {
 
       if (!isAdmin()) {
         debugPrint('Access denied: User is not admin');
-        return {'total': 0, 'pro': 0, 'free': 0, 'activeNow': 0, 'dau': 0};
+        return {
+          'total': 0, 'pro': 0, 'free': 0, 'activeNow': 0, 'dau': 0,
+          'mau': 0, 'installs': 0, 'activeInstalls30d': 0,
+        };
       }
 
       // Get all users count
@@ -212,6 +215,20 @@ class AdminService {
       final activeNow = activeNowSnapshot.count ?? 0;
       final dau = dauSnapshot.count ?? 0;
 
+      final thirtyDaysAgo = Timestamp.fromDate(
+        now.subtract(const Duration(days: 30)),
+      );
+      final mau = await _safeCount(_firestore
+          .collection('users')
+          .where('lastActiveAt', isGreaterThanOrEqualTo: thirtyDaysAgo));
+
+      // Devices (signed in or not) — the number comparable to Google Play.
+      // Tracking starts with the release that introduced app_installs.
+      final installs = await _safeCount(_firestore.collection('app_installs'));
+      final activeInstalls30d = await _safeCount(_firestore
+          .collection('app_installs')
+          .where('lastSeenAt', isGreaterThanOrEqualTo: thirtyDaysAgo));
+
       debugPrint(
           'User statistics: Total: $totalUsers, Pro: $proUsers, Free: $freeUsers, ActiveNow: $activeNow, DAU: $dau');
 
@@ -221,10 +238,28 @@ class AdminService {
         'free': freeUsers,
         'activeNow': activeNow,
         'dau': dau,
+        'mau': mau,
+        'installs': installs,
+        'activeInstalls30d': activeInstalls30d,
       };
     } catch (e) {
       debugPrint('Error getting user stats: $e');
-      return {'total': 0, 'pro': 0, 'free': 0, 'activeNow': 0, 'dau': 0};
+      return {
+        'total': 0, 'pro': 0, 'free': 0, 'activeNow': 0, 'dau': 0,
+        'mau': 0, 'installs': 0, 'activeInstalls30d': 0,
+      };
+    }
+  }
+
+  /// count() aggregation that never throws (e.g. a missing index or a
+  /// collection the rules don't expose yet) — returns 0 instead.
+  static Future<int> _safeCount(Query query) async {
+    try {
+      final snapshot = await query.count().get();
+      return snapshot.count ?? 0;
+    } catch (e) {
+      debugPrint('Admin count failed: $e');
+      return 0;
     }
   }
 

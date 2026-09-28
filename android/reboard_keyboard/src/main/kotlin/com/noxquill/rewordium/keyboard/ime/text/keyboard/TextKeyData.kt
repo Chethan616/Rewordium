@@ -132,6 +132,7 @@ data class TextKeyData(
                 VIEW_NUMERIC_ADVANCED,
                 IME_UI_MODE_TEXT,
                 IME_UI_MODE_MEDIA,
+                IME_UI_MODE_GIF,
                 IME_UI_MODE_CLIPBOARD,
                 SYSTEM_INPUT_METHOD_PICKER,
                 SYSTEM_PREV_INPUT_METHOD,
@@ -149,6 +150,7 @@ data class TextKeyData(
                 TOGGLE_ACTIONS_EDITOR,
                 TOGGLE_INCOGNITO_MODE,
                 TOGGLE_AUTOCORRECT,
+                KEYBOARD_RESIZE,
                 AI_REWRITE,
                 AI_PANEL_TOGGLE,
             )
@@ -408,6 +410,12 @@ data class TextKeyData(
             code = KeyCode.IME_UI_MODE_MEDIA,
             label = "ime_ui_mode_media",
         )
+        /** Predefined key data for [KeyCode.IME_UI_MODE_GIF] */
+        val IME_UI_MODE_GIF = TextKeyData(
+            type = KeyType.SYSTEM_GUI,
+            code = KeyCode.IME_UI_MODE_GIF,
+            label = "ime_ui_mode_gif",
+        )
         /** Predefined key data for [KeyCode.IME_UI_MODE_CLIPBOARD] */
         val IME_UI_MODE_CLIPBOARD = TextKeyData(
             type = KeyType.SYSTEM_GUI,
@@ -520,6 +528,12 @@ data class TextKeyData(
             type = KeyType.FUNCTION,
             code = KeyCode.TOGGLE_AUTOCORRECT,
             label = "toggle_autocorrect",
+        )
+        /** Predefined key data for [KeyCode.KEYBOARD_RESIZE] */
+        val KEYBOARD_RESIZE = TextKeyData(
+            type = KeyType.FUNCTION,
+            code = KeyCode.KEYBOARD_RESIZE,
+            label = "keyboard_resize",
         )
         /** Predefined key data for [KeyCode.AI_REWRITE] */
         val AI_REWRITE = TextKeyData(

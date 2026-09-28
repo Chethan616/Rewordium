@@ -11,24 +11,83 @@ service cloud.firestore {
 
     // Admin function - check if user is admin
     function isAdmin() {
-      return isSignedIn() && 
+      return isSignedIn() &&
              (request.auth.token.email == 'chethankrishna2022@gmail.com' ||
               request.auth.token.email == 'rupakbabu1994@gmail.com');
     }
-    
+
+    // Free accounts may hold at most this many credits unless an admin grants more.
+    function maxSelfCredits() {
+      return 20;
+    }
+
+    // A client may only turn Pro on together with a Google Play purchase token
+    // (set by the in-app purchase flow). Admin-granted Pro keeps working because
+    // this only applies when isPro changes from false to true.
+    function proChangeAllowed(before, after) {
+      return after.get('isPro', false) != true
+        || before.get('isPro', false) == true
+        || (after.get('subscription', {}).get('purchaseToken', '') is string
+            && after.get('subscription', {}).get('purchaseToken', '').size() > 20);
+    }
+
+    // Credits may go down freely (usage) or be reset to the free amount;
+    // only admins can raise them above that.
+    function creditsChangeAllowed(before, after) {
+      return !('credits' in after)
+        || after.credits == before.get('credits', 0)
+        || after.credits <= before.get('credits', 0)
+        || after.credits <= maxSelfCredits();
+    }
+
     // App configuration - allow anyone to read version info for updates
     match /app_config/{document} {
       allow read: if true;  // Anyone can read app config (for update checking)
       allow write: if isAdmin(); // Only admin can write
     }
-    
-    // Users collection - allow authenticated users + admin full access
+
+    // Users collection
     match /users/{userId} {
       // Admin has full access to all user data
       allow read, write: if isAdmin();
-      
-      // Users can read/write their own data when authenticated
-      allow read, write: if isSelf(userId);
+
+      // Users can read their own data
+      allow read: if isSelf(userId);
+
+      // New accounts start as free users with at most the free credits.
+      allow create: if isSelf(userId)
+        && request.resource.data.get('isPro', false) == false
+        && request.resource.data.get('credits', 0) <= maxSelfCredits();
+
+      // Users can update their own data, but can't self-grant Pro or credits.
+      allow update: if isSelf(userId)
+        && proChangeAllowed(resource.data, request.resource.data)
+        && creditsChangeAllowed(resource.data, request.resource.data);
+
+      allow delete: if isSelf(userId);
+    }
+
+    // Device installs (signed in or not) for the admin dashboard.
+    // Write-only for clients and restricted to exactly these fields.
+    function validInstall(data) {
+      return data.keys().hasOnly(['platform', 'appVersion', 'buildNumber', 'lastSeenAt', 'firstSeenAt', 'uid'])
+        && data.platform in ['android', 'ios', 'web', 'other']
+        && data.appVersion is string && data.appVersion.size() <= 32
+        && data.buildNumber is string && data.buildNumber.size() <= 16
+        && data.lastSeenAt == request.time
+        && (!('firstSeenAt' in data) || data.firstSeenAt is timestamp);
+    }
+
+    match /app_installs/{installId} {
+      allow read, delete: if isAdmin();
+      allow create: if installId.matches('^[a-z0-9]{16,64}$')
+        && validInstall(request.resource.data)
+        && (!('uid' in request.resource.data)
+            || (isSignedIn() && request.resource.data.uid == request.auth.uid));
+      allow update: if validInstall(request.resource.data)
+        && (!('uid' in request.resource.data)
+            || (isSignedIn() && request.resource.data.uid == request.auth.uid)
+            || request.resource.data.uid == resource.data.get('uid', ''));
     }
 
     // Usage analytics - allow clients to record their own usage
@@ -55,25 +114,25 @@ service cloud.firestore {
       allow read: if isAdmin();
       allow write: if isSignedIn();
     }
-    
+
     // Notifications collection - admin can read/write, users can read
     match /notifications/{notificationId} {
       allow read, write: if isAdmin();
       allow read: if isSignedIn();
     }
-    
+
     // Payments collection - authenticated users can create/read their own records
     match /payments/{paymentId} {
       allow create: if isSignedIn() && request.resource.data.userId == request.auth.uid;
       allow read: if isAdmin() || (isSignedIn() && resource.data.userId == request.auth.uid);
       allow write: if isAdmin();
     }
-    
+
     // Admin panel collections - only admin access
     match /admin/{document} {
       allow read, write: if isAdmin();
     }
-    
+
     // Test collection for debugging
     match /_test/{document} {
       allow read, write: if isAdmin();

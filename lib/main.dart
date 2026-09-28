@@ -35,6 +35,7 @@ import 'services/ios_keyboard_bridge.dart';
 import 'services/billing_service.dart';
 import 'services/deep_link_service.dart';
 import 'services/usage_analytics_service.dart';
+import 'services/install_tracking_service.dart';
 import 'services/notification_service.dart';
 import 'services/in_app_messaging_service.dart';
 import 'widgets/tools_fab.dart';
@@ -67,6 +68,10 @@ void main() async {
     await FirebaseService.initialize().timeout(const Duration(seconds: 5));
     isFirebaseInitialized = true;
     AppLogger.init('Firebase');
+
+    // Count this device (signed in or not) for the admin dashboard.
+    // Fire-and-forget: never delays startup.
+    InstallTrackingService.recordAppOpen();
 
     // Initialize Firebase Messaging after core Firebase is ready
     try {
@@ -175,6 +180,7 @@ void main() async {
     String? purchaseToken,
     DateTime? purchaseDate,
     bool isRestored,
+    bool autoRenewing,
   ) {
     if (purchaseToken == null || purchaseToken.isEmpty) {
       AppLogger.warning(
@@ -201,9 +207,21 @@ void main() async {
         productId: productId,
         purchaseDate: purchaseDate,
         isRestored: isRestored,
+        autoRenewing: autoRenewing,
       ),
     );
   };
+
+  // A subscription found before sign-in can't be attached to an account;
+  // re-check Google Play whenever someone signs in.
+  String? lastSyncedUid;
+  authProvider.addListener(() {
+    final uid = authProvider.user?.uid;
+    if (uid != null && uid != lastSyncedUid) {
+      lastSyncedUid = uid;
+      unawaited(billingService.syncActivePurchases());
+    }
+  });
 
   // Allow frame to be drawn now that critical initialization is complete
   binding.allowFirstFrame();
@@ -434,6 +452,8 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin, Widg
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
       UsageAnalyticsService.touchUserActivity();
+      // Links this installation to the signed-in account.
+      InstallTrackingService.recordAppOpen();
       DeepLinkService.setNavigationReady();
     });
   }

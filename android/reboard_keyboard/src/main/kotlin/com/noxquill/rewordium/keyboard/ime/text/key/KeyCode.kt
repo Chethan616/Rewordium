@@ -88,6 +88,7 @@ object KeyCode {
     const val IME_UI_MODE_TEXT =            -211
     const val IME_UI_MODE_MEDIA =           -212
     const val IME_UI_MODE_CLIPBOARD =       -213
+    const val IME_UI_MODE_GIF =             -214
 
     const val SYSTEM_INPUT_METHOD_PICKER =  -221
     const val SYSTEM_PREV_INPUT_METHOD =    -222
@@ -107,6 +108,7 @@ object KeyCode {
     const val TOGGLE_ACTIONS_EDITOR =       -243
     const val TOGGLE_INCOGNITO_MODE =       -244
     const val TOGGLE_AUTOCORRECT =          -245
+    const val KEYBOARD_RESIZE =             -246
 
     const val AI_REWRITE =                  -251
     const val AI_PANEL_TOGGLE =             -252

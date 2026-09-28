@@ -116,6 +116,24 @@ data class WordSuggestionCandidate(
 }
 
 /**
+ * The word exactly as the user typed it, offered next to a pending
+ * autocorrection (Gboard's left-hand chip). Picking it keeps the input and
+ * teaches the keyboard not to correct that word again.
+ *
+ * @see SuggestionCandidate
+ */
+data class TypedWordSuggestionCandidate(
+    override val text: CharSequence,
+    override val confidence: Double = 0.0,
+    override val sourceProvider: SuggestionProvider? = null,
+) : SuggestionCandidate {
+    override val secondaryText: CharSequence? = null
+    override val isEligibleForAutoCommit: Boolean = false
+    override val isEligibleForUserRemoval: Boolean = false
+    override val icon: ImageVector? = null
+}
+
+/**
  * Default implementation for a clipboard candidate. Should generally not be used by a suggestion provider, except by
  * the clipboard suggestion provider.
  *

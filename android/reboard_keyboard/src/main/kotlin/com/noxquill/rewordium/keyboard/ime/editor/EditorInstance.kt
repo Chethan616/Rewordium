@@ -77,6 +77,21 @@ class EditorInstance(context: Context) : AbstractEditorInstance(context) {
     private var lastGestureCommitLength: Int = 0
     private var lastCommittedNovelWord: String? = null
 
+    /**
+     * The autocorrection applied by the most recent word separator, so an
+     * immediate Backspace can undo it (Gboard behaviour). Cleared by any
+     * other edit or cursor movement.
+     */
+    private class AutoCorrectionRecord(
+        val original: String,
+        val corrected: String,
+        /** Everything committed after [corrected]: the separator plus any auto-space. */
+        val tail: String,
+        val cursorAfter: Int,
+    )
+
+    @Volatile private var autoCorrectionRecord: AutoCorrectionRecord? = null
+
     private fun currentInputConnection() = FlorisImeService.currentInputConnection()
 
     override fun handleStartInputView(editorInfo: FlorisEditorInfo, isRestart: Boolean) {
@@ -152,6 +167,16 @@ class EditorInstance(context: Context) : AbstractEditorInstance(context) {
         if (oldSelection != newSelection && !phantomSpace.isGestureTriggered) {
             lastGestureCommitLength = 0
         }
+        autoCorrectionRecord?.let { record ->
+            // The editor reports each step of the correction separately (the
+            // replaced word, then the separator), and those updates arrive
+            // after the record was made. Only a cursor that leaves the
+            // corrected text means the user moved on.
+            val spanStart = record.cursorAfter - record.corrected.length - record.tail.length
+            if (!newSelection.isCursorMode || newSelection.end > record.cursorAfter || newSelection.end < spanStart) {
+                autoCorrectionRecord = null
+            }
+        }
         if (massSelection.isActive) {
             super.handleMassSelectionUpdate(newSelection, composing)
         } else {
@@ -185,6 +210,7 @@ class EditorInstance(context: Context) : AbstractEditorInstance(context) {
         // Cursor move — the just-committed gesture word is no longer the
         // tail of the editor's text, so the fallback word-delete is unsafe.
         lastGestureCommitLength = 0
+        autoCorrectionRecord = null
         lastCommittedNovelWord = null
         autoSpace.setInactive()
         phantomSpace.setInactive()
@@ -243,6 +269,7 @@ class EditorInstance(context: Context) : AbstractEditorInstance(context) {
         // Any manual char commit means the user has moved past the gesture —
         // we no longer want the next backspace to wipe the swiped word.
         lastGestureCommitLength = 0
+        autoCorrectionRecord = null
         ghostTextManager.cancelGhostText(clearComposing = true)
         // Smart Quotes: transform straight quotes to curly quotes
         val effectiveChar = if (prefs.correction.smartQuotes.get()) transformSmartQuote(char) else char
@@ -301,6 +328,7 @@ class EditorInstance(context: Context) : AbstractEditorInstance(context) {
         // Non-gesture text commit (autocorrect pick, paste, emoji, etc.)
         // moves us past the gesture — invalidate the word-delete fallback.
         lastGestureCommitLength = 0
+        autoCorrectionRecord = null
         
         // Adaptive learned swipe typing: capture the in-progress composing
         // word BEFORE the commit if this is a word terminator (like space).
@@ -341,6 +369,7 @@ class EditorInstance(context: Context) : AbstractEditorInstance(context) {
      * @return True on success, false if an error occurred or the input connection is invalid.
      */
     fun commitCompletion(candidate: SuggestionCandidate): Boolean {
+        autoCorrectionRecord = null
         val text = candidate.text.toString()
         if (text.isEmpty() || activeInfo.isRawInputEditor) return false
         val content = activeContent
@@ -381,6 +410,7 @@ class EditorInstance(context: Context) : AbstractEditorInstance(context) {
      */
     fun commitGesture(text: String): Boolean {
         lastCommittedNovelWord = null
+        autoCorrectionRecord = null
         if (text.isEmpty() || activeInfo.isRawInputEditor) return false
         val isPhantomSpaceActive = phantomSpace.determine(text, forceActive = true)
         phantomSpace.setActive(
@@ -545,8 +575,60 @@ class EditorInstance(context: Context) : AbstractEditorInstance(context) {
      *
      * @return True on success, false if an error occurred or the input connection is invalid.
      */
+    /**
+     * Remembers that [original] was just autocorrected to [corrected] and
+     * followed by [separator], so an immediate Backspace can undo it. Call
+     * right after the separator has been committed.
+     */
+    fun markAutoCorrection(original: String, corrected: String, separator: String) {
+        val content = activeContent
+        val selection = content.selection
+        val before = content.textBeforeSelection
+        // Auto-space after punctuation may have followed the separator.
+        val tail = when {
+            before.endsWith(corrected + separator) -> separator
+            before.endsWith("$corrected$separator ") -> "$separator "
+            else -> null
+        }
+        autoCorrectionRecord = if (tail != null && selection.isValid && selection.isCursorMode && original != corrected) {
+            AutoCorrectionRecord(original, corrected, tail, selection.end)
+        } else {
+            null
+        }
+        // The corrected word is what got committed — never unlearn/learn the typo.
+        lastCommittedNovelWord = null
+    }
+
+    /**
+     * Undoes the autocorrection recorded by [markAutoCorrection] if the cursor
+     * is still right after it: "the |" -> "teh|". Returns true when the text
+     * was restored (the Backspace is then fully consumed).
+     */
+    fun tryRevertAutoCorrection(onReverted: (original: String, corrected: String) -> Unit): Boolean {
+        val record = autoCorrectionRecord ?: return false
+        autoCorrectionRecord = null
+        val content = activeContent
+        val selection = content.selection
+        if (!selection.isValid || !selection.isCursorMode || selection.end != record.cursorAfter) return false
+        val tail = record.corrected + record.tail
+        if (!content.textBeforeSelection.endsWith(tail)) return false
+        autoSpace.setInactive()
+        phantomSpace.setInactive()
+        lastGestureCommitLength = 0
+        lastCommittedNovelWord = null
+        // Like AOSP's revertCommit: a space separator is dropped (the user is
+        // back inside the word), punctuation is kept ("the." -> "teh.").
+        val restored = if (record.tail == " ") record.original else record.original + record.tail
+        if (!replaceTextBeforeCursor(tail.length, restored)) return false
+        onReverted(record.original, record.corrected)
+        return true
+    }
+
     fun deleteBackwards(unit: OperationUnit): Boolean {
+        autoCorrectionRecord = null
         if (lastCommittedNovelWord != null) {
+            // Immediate backspace after committing a word: don't count that
+            // commit as usage (the provider never demotes dictionary words).
             nlpManager.unlearnWord(subtypeManager.activeSubtype, lastCommittedNovelWord!!)
             lastCommittedNovelWord = null
         }
@@ -607,6 +689,7 @@ class EditorInstance(context: Context) : AbstractEditorInstance(context) {
      */
     fun deleteForwards(unit: OperationUnit): Boolean {
         lastCommittedNovelWord = null
+        autoCorrectionRecord = null
         val content = activeContent
         autoSpace.setInactive()
         phantomSpace.setInactive()
@@ -796,6 +879,7 @@ class EditorInstance(context: Context) : AbstractEditorInstance(context) {
     override fun reset() {
         super.reset()
         lastCommittedNovelWord = null
+        autoCorrectionRecord = null
         autoSpace.setInactive()
         phantomSpace.setInactive()
         massSelection.reset()

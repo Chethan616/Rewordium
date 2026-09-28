@@ -381,6 +381,7 @@ fun GboardEmojiPanel(
                     inputFeedbackController.keyPress(TextKeyData.UNSPECIFIED)
                     panelMode = it
                     keyboardManager.activeState.activeMediaMode = it.name
+                    keyboardManager.rememberMediaPanelTab(it.name)
                 },
                 onAbcClick = {
                     inputFeedbackController.keyPress(TextKeyData.UNSPECIFIED)

@@ -569,6 +569,7 @@ class FlorisImeService : LifecycleInputMethodService() {
             flogInfo(LogTopic.IMS_EVENTS)
         }
         isWindowShown = false
+        keyboardManager.setResizeMode(false)
         activeState.batchEdit {
             if (!shouldPreserveMediaUiModeOnce) {
                 activeState.imeUiMode = ImeUiMode.TEXT
@@ -929,11 +930,19 @@ class FlorisImeService : LifecycleInputMethodService() {
                                 ) {
                                     com.noxquill.rewordium.keyboard.ime.media.MediaSearchOverlay()
                                 }
-                                when (effectiveImeMode) {
-                                    ImeUiMode.TEXT -> TextInputLayout()
-                                    ImeUiMode.MEDIA -> MediaInputLayout()
-                                    ImeUiMode.CLIPBOARD -> ClipboardInputLayout()
-                                    ImeUiMode.AI -> com.noxquill.rewordium.keyboard.ime.ai.AiInputLayout()
+                                val isResizeMode by keyboardManager.isResizeMode.collectAsState()
+                                Box {
+                                    when (effectiveImeMode) {
+                                        ImeUiMode.TEXT -> TextInputLayout()
+                                        ImeUiMode.MEDIA -> MediaInputLayout()
+                                        ImeUiMode.CLIPBOARD -> ClipboardInputLayout()
+                                        ImeUiMode.AI -> com.noxquill.rewordium.keyboard.ime.ai.AiInputLayout()
+                                    }
+                                    if (isResizeMode && effectiveImeMode == ImeUiMode.TEXT) {
+                                        com.noxquill.rewordium.keyboard.ime.keyboard.KeyboardResizeOverlay(
+                                            modifier = Modifier.matchParentSize(),
+                                        )
+                                    }
                                 }
                             }
                         }

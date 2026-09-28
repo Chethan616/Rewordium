@@ -188,6 +188,7 @@ class AuthProvider extends ChangeNotifier {
     required String productId,
     DateTime? purchaseDate,
     bool isRestored = false,
+    bool autoRenewing = true,
   }) async {
     if (_user == null) return;
 
@@ -202,34 +203,45 @@ class AuthProvider extends ChangeNotifier {
           ? const Duration(days: 365)
           : const Duration(days: 30);
 
-      final purchaseMoment = (purchaseDate ?? DateTime.now()).toUtc();
-      var resolvedExpiryDate = purchaseMoment.add(entitlementDuration);
+      final now = DateTime.now().toUtc();
+      final purchaseMoment = (purchaseDate ?? now).toUtc();
+
+      // Google Play only reports subscriptions that are active right now,
+      // but for auto-renewing subscriptions `purchaseTime` stays the ORIGINAL
+      // purchase time across renewals. Deriving the expiry from it (as before)
+      // made every renewing subscriber look expired after the first period,
+      // so they lost Pro while still paying. Derive it from "now" instead:
+      //  * new purchase: one full period;
+      //  * active & auto-renewing: valid for at least another period —
+      //    re-validated against Play on every launch;
+      //  * cancelled but still in its paid period: a short rolling window,
+      //    so access ends within days of Play no longer reporting it.
+      DateTime resolvedExpiryDate;
+      if (!isRestored) {
+        resolvedExpiryDate = purchaseMoment.add(entitlementDuration);
+        if (resolvedExpiryDate.isBefore(now)) {
+          resolvedExpiryDate = now.add(entitlementDuration);
+        }
+      } else if (autoRenewing) {
+        resolvedExpiryDate = now.add(entitlementDuration);
+      } else {
+        resolvedExpiryDate = now.add(const Duration(days: 3));
+      }
 
       final userRef = _firestore.collection('users').doc(_user!.uid);
       final existingDoc = await userRef.get();
       final existingData = existingDoc.data();
       final existingSub = existingData?['subscription'];
 
-      if (existingSub is Map<String, dynamic>) {
+      if (existingSub is Map<String, dynamic> && autoRenewing) {
         final existingToken =
             (existingSub['purchaseToken']?.toString() ?? '').trim();
         final existingExpiry = _parseSubscriptionExpiry(existingSub['expiryDate']);
-
-        // Prevent accidental extension during repeated restores by preserving
-        // persisted entitlement when it is already later for the same purchase token.
-        if (existingToken == purchaseToken && existingExpiry != null) {
-          if (isRestored &&
-              purchaseDate == null &&
-              existingExpiry.isAfter(DateTime.now().toUtc())) {
-            resolvedExpiryDate = existingExpiry;
-          }
-
-          if (isRestored && existingExpiry.isAfter(resolvedExpiryDate)) {
-            resolvedExpiryDate = existingExpiry;
-          } else if (existingExpiry.isAfter(DateTime.now().toUtc()) &&
-              existingExpiry.isAfter(resolvedExpiryDate)) {
-            resolvedExpiryDate = existingExpiry;
-          }
+        // Never shorten a renewing subscription's already-granted period.
+        if (existingToken == purchaseToken &&
+            existingExpiry != null &&
+            existingExpiry.isAfter(resolvedExpiryDate)) {
+          resolvedExpiryDate = existingExpiry;
         }
       }
 
@@ -241,7 +253,8 @@ class AuthProvider extends ChangeNotifier {
         'lastPurchaseAt': FieldValue.serverTimestamp(),
         'subscription': {
           'planType': normalizedPlanType,
-          'status': 'active',
+          'status': autoRenewing ? 'active' : 'cancelled_active',
+          'autoRenewing': autoRenewing,
           'platform': 'google_play',
           'productId': productId,
           'purchaseToken': purchaseToken,

@@ -447,6 +447,41 @@ abstract class AbstractEditorInstance(context: Context) {
         return true
     }
 
+    /**
+     * Replaces the [length] characters right before the cursor with [text] in
+     * a single batch edit, keeping the expected-content bookkeeping in sync.
+     * Used to undo an autocorrection ("the " -> "teh"). Returns false (and
+     * changes nothing) in raw editors, with an active selection, or when the
+     * known text before the cursor is shorter than [length].
+     */
+    protected fun replaceTextBeforeCursor(length: Int, text: String): Boolean {
+        val ic = currentInputConnection() ?: return false
+        val content = activeContent
+        val selection = content.selection
+        if (activeInfo.isRawInputEditor || selection.isNotValid || selection.isSelectionMode) return false
+        if (length <= 0 || content.textBeforeSelection.length < length) return false
+        ic.beginBatchEdit()
+        runBlocking {
+            val newSelection = EditorRange.cursor(selection.start - length + text.length)
+            val newContent = content.generateCopy(
+                selection = newSelection,
+                textBeforeSelection = buildString {
+                    append(content.textBeforeSelection.dropLast(length))
+                    append(text)
+                },
+                selectedText = "",
+            )
+            expectedContentQueue.push(newContent)
+            ic.finishComposingText()
+            ic.deleteSurroundingText(length, 0)
+            ic.commitText(text, 1)
+            ic.setComposingRegion(newContent.composing)
+        }
+        ic.endBatchEdit()
+        deleteMoveLastCommitPosition()
+        return true
+    }
+
     protected suspend fun deleteAroundCursor(unit: OperationUnit, scope: OperationScope, n: Int = 0): Boolean {
         val ic = currentInputConnection()
         if (ic == null || n < 1) return false

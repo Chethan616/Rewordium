@@ -43,6 +43,7 @@ import com.noxquill.rewordium.keyboard.ime.text.gestures.SwipeAction
 import com.noxquill.rewordium.keyboard.ime.text.key.KeyHintMode
 import com.noxquill.rewordium.keyboard.ime.text.key.UtilityKeyAction
 import com.noxquill.rewordium.keyboard.ime.text.gestures.GlideTypingEngine
+import com.noxquill.rewordium.keyboard.ime.nlp.latin.AutoCorrectLevel
 import com.noxquill.rewordium.keyboard.ime.theme.ThemeMode
 import dev.patrickgold.jetpref.datastore.ui.ListPreferenceEntry
 import dev.patrickgold.jetpref.datastore.ui.listPrefEntries
@@ -136,19 +137,16 @@ private val ENUM_DISPLAY_ENTRIES = mapOf<Pair<KClass<*>, String>, @Composable ()
                 key = ColorRepresentation.HEX,
                 label = stringRes(R.string.enum__color_representation__hex),
                 description = stringRes(R.string.general__example_given).curlyFormat("example" to "#4caf50ff"),
-                showDescriptionOnlyIfSelected = true,
             )
             entry(
                 key = ColorRepresentation.RGB,
                 label = stringRes(R.string.enum__color_representation__rgb),
                 description = stringRes(R.string.general__example_given).curlyFormat("example" to "rgba(76, 175, 80, 1.0)"),
-                showDescriptionOnlyIfSelected = true,
             )
             entry(
                 key = ColorRepresentation.HSV,
                 label = stringRes(R.string.enum__color_representation__hsv),
                 description = stringRes(R.string.general__example_given).curlyFormat("example" to "hsva(122, 56, 68, 1.0)"),
-                showDescriptionOnlyIfSelected = true,
             )
         }
     },
@@ -158,19 +156,16 @@ private val ENUM_DISPLAY_ENTRIES = mapOf<Pair<KClass<*>, String>, @Composable ()
                 key = DisplayKbdAfterDialogs.ALWAYS,
                 label = stringRes(R.string.enum__display_kbd_after_dialogs__always),
                 description = stringRes(R.string.enum__display_kbd_after_dialogs__always__description),
-                showDescriptionOnlyIfSelected = true,
             )
             entry(
                 key = DisplayKbdAfterDialogs.NEVER,
                 label = stringRes(R.string.enum__display_kbd_after_dialogs__never),
                 description = stringRes(R.string.enum__display_kbd_after_dialogs__never__description),
-                showDescriptionOnlyIfSelected = true,
             )
             entry(
                 key = DisplayKbdAfterDialogs.REMEMBER,
                 label = stringRes(R.string.enum__display_kbd_after_dialogs__remember),
                 description = stringRes(R.string.enum__display_kbd_after_dialogs__remember__description),
-                showDescriptionOnlyIfSelected = true,
             )
         }
     },
@@ -180,13 +175,11 @@ private val ENUM_DISPLAY_ENTRIES = mapOf<Pair<KClass<*>, String>, @Composable ()
                 key = DisplayLanguageNamesIn.SYSTEM_LOCALE,
                 label = stringRes(R.string.enum__display_language_names_in__system_locale),
                 description = stringRes(R.string.enum__display_language_names_in__system_locale__description),
-                showDescriptionOnlyIfSelected = true,
             )
             entry(
                 key = DisplayLanguageNamesIn.NATIVE_LOCALE,
                 label = stringRes(R.string.enum__display_language_names_in__native_locale),
                 description = stringRes(R.string.enum__display_language_names_in__native_locale__description),
-                showDescriptionOnlyIfSelected = true,
             )
         }
     },
@@ -280,19 +273,16 @@ private val ENUM_DISPLAY_ENTRIES = mapOf<Pair<KClass<*>, String>, @Composable ()
                 key = ExtendedActionsPlacement.ABOVE_CANDIDATES,
                 label = stringRes(R.string.enum__extended_actions_placement__above_candidates),
                 description = stringRes(R.string.enum__extended_actions_placement__above_candidates__description),
-                showDescriptionOnlyIfSelected = true,
             )
             entry(
                 key = ExtendedActionsPlacement.BELOW_CANDIDATES,
                 label = stringRes(R.string.enum__extended_actions_placement__below_candidates),
                 description = stringRes(R.string.enum__extended_actions_placement__below_candidates__description),
-                showDescriptionOnlyIfSelected = true,
             )
             entry(
                 key = ExtendedActionsPlacement.OVERLAY_APP_UI,
                 label = stringRes(R.string.enum__extended_actions_placement__overlay_app_ui),
                 description = stringRes(R.string.enum__extended_actions_placement__overlay_app_ui__description),
-                showDescriptionOnlyIfSelected = true,
             )
         }
     },
@@ -302,13 +292,11 @@ private val ENUM_DISPLAY_ENTRIES = mapOf<Pair<KClass<*>, String>, @Composable ()
                 key = HapticVibrationMode.USE_VIBRATOR_DIRECTLY,
                 label = stringRes(R.string.enum__haptic_vibration_mode__use_vibrator_directly),
                 description = stringRes(R.string.enum__haptic_vibration_mode__use_vibrator_directly__description),
-                showDescriptionOnlyIfSelected = true,
             )
             entry(
                 key = HapticVibrationMode.USE_HAPTIC_FEEDBACK_INTERFACE,
                 label = stringRes(R.string.enum__haptic_vibration_mode__use_haptic_feedback_interface),
                 description = stringRes(R.string.enum__haptic_vibration_mode__use_haptic_feedback_interface__description),
-                showDescriptionOnlyIfSelected = true,
             )
         }
     },
@@ -318,19 +306,16 @@ private val ENUM_DISPLAY_ENTRIES = mapOf<Pair<KClass<*>, String>, @Composable ()
                 key = KeyHintMode.ACCENT_PRIORITY,
                 label = stringRes(R.string.enum__key_hint_mode__accent_priority),
                 description = stringRes(R.string.enum__key_hint_mode__accent_priority__description),
-                showDescriptionOnlyIfSelected = true,
             )
             entry(
                 key = KeyHintMode.HINT_PRIORITY,
                 label = stringRes(R.string.enum__key_hint_mode__hint_priority),
                 description = stringRes(R.string.enum__key_hint_mode__hint_priority__description),
-                showDescriptionOnlyIfSelected = true,
             )
             entry(
                 key = KeyHintMode.SMART_PRIORITY,
                 label = stringRes(R.string.enum__key_hint_mode__smart_priority),
                 description = stringRes(R.string.enum__key_hint_mode__smart_priority__description),
-                showDescriptionOnlyIfSelected = true,
             )
         }
     },
@@ -352,19 +337,16 @@ private val ENUM_DISPLAY_ENTRIES = mapOf<Pair<KClass<*>, String>, @Composable ()
                 key = IncognitoMode.FORCE_OFF,
                 label = stringRes(R.string.enum__incognito_mode__force_off),
                 description = stringRes(R.string.enum__incognito_mode__force_off__description),
-                showDescriptionOnlyIfSelected = true,
             )
             entry(
                 key = IncognitoMode.DYNAMIC_ON_OFF,
                 label = stringRes(R.string.enum__incognito_mode__dynamic_on_off),
                 description = stringRes(R.string.enum__incognito_mode__dynamic_on_off__description),
-                showDescriptionOnlyIfSelected = true,
             )
             entry(
                 key = IncognitoMode.FORCE_ON,
                 label = stringRes(R.string.enum__incognito_mode__force_on),
                 description = stringRes(R.string.enum__incognito_mode__force_on__description),
-                showDescriptionOnlyIfSelected = true,
             )
         }
     },
@@ -502,19 +484,16 @@ private val ENUM_DISPLAY_ENTRIES = mapOf<Pair<KClass<*>, String>, @Composable ()
                 key = SnyggLevel.BASIC,
                 label = stringRes(R.string.enum__snygg_level__basic),
                 description = stringRes(R.string.enum__snygg_level__basic__description),
-                showDescriptionOnlyIfSelected = true,
             )
             entry(
                 key = SnyggLevel.ADVANCED,
                 label = stringRes(R.string.enum__snygg_level__advanced),
                 description = stringRes(R.string.enum__snygg_level__advanced__description),
-                showDescriptionOnlyIfSelected = true,
             )
             entry(
                 key = SnyggLevel.DEVELOPER,
                 label = stringRes(R.string.enum__snygg_level__developer),
                 description = stringRes(R.string.enum__snygg_level__developer__description),
-                showDescriptionOnlyIfSelected = true,
             )
         }
     },
@@ -731,6 +710,40 @@ private val ENUM_DISPLAY_ENTRIES = mapOf<Pair<KClass<*>, String>, @Composable ()
             entry(
                 key = UtilityKeyAction.DYNAMIC_SWITCH_LANGUAGE_EMOJIS,
                 label = stringRes(R.string.enum__utility_key_action__dynamic_switch_language_emojis),
+            )
+        }
+    },
+    com.noxquill.rewordium.keyboard.ime.media.MediaPanelTab::class to DEFAULT to {
+        listPrefEntries {
+            entry(
+                key = com.noxquill.rewordium.keyboard.ime.media.MediaPanelTab.LAST_USED,
+                label = stringRes(R.string.enum__media_panel_tab__last_used),
+            )
+            entry(
+                key = com.noxquill.rewordium.keyboard.ime.media.MediaPanelTab.EMOJI,
+                label = stringRes(R.string.enum__media_panel_tab__emoji),
+            )
+            entry(
+                key = com.noxquill.rewordium.keyboard.ime.media.MediaPanelTab.GIF,
+                label = stringRes(R.string.enum__media_panel_tab__gif),
+            )
+            entry(
+                key = com.noxquill.rewordium.keyboard.ime.media.MediaPanelTab.STICKER,
+                label = stringRes(R.string.enum__media_panel_tab__sticker),
+            )
+        }
+    },
+    AutoCorrectLevel::class to DEFAULT to {
+        listPrefEntries {
+            entry(
+                key = AutoCorrectLevel.MODEST,
+                label = stringRes(R.string.enum__auto_correct_level__modest),
+                description = stringRes(R.string.enum__auto_correct_level__modest__description),
+            )
+            entry(
+                key = AutoCorrectLevel.AGGRESSIVE,
+                label = stringRes(R.string.enum__auto_correct_level__aggressive),
+                description = stringRes(R.string.enum__auto_correct_level__aggressive__description),
             )
         }
     },

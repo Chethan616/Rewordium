@@ -34,6 +34,7 @@
 #include <jni.h>
 #include <algorithm>
 #include <memory>
+#include <mutex>
 #include <string>
 #include <vector>
 
@@ -54,9 +55,19 @@
 #include "suggest/core/suggest_options.h"
 #include "suggest/policyimpl/gesture/gesture_suggest_policy_factory.h"
 #include "suggest/policyimpl/typing/typing_suggest_policy_factory.h"
+#include "utils/autocorrection_threshold_utils.h"
 #include "utils/int_array_view.h"
 
 namespace {
+
+// AOSP's Dictionary / ProximityInfo are not thread-safe: the trie is mutated
+// by addUnigramEntry (personal-word learning runs on background coroutines)
+// while suggestion traversals read it from other threads. AOSP's own Java
+// layer serializes every native call with `synchronized`; we do the same
+// here with one process-wide lock. Suggest calls are single-digit ms, so
+// contention is negligible. Recursive so helpers may re-enter safely.
+std::recursive_mutex gNativeLock;
+using NativeLockGuard = std::lock_guard<std::recursive_mutex>;
 
 using ::latinime::CodePointArrayView;
 using ::latinime::DicTraverseSession;
@@ -143,6 +154,30 @@ ProximityInfo* ProximityInfoFromHandle(jlong handle) {
     return reinterpret_cast<ProximityInfo*>(handle);
 }
 
+// Persistent traversal session for the typing decoder. AOSP keeps one
+// DicTraverseSession alive per dictionary so consecutive keystrokes can reuse
+// the DicNode cache ("continuous suggestion") instead of re-walking the trie
+// from the root on every letter. Guarded by gNativeLock; reset whenever the
+// owning dictionary is closed.
+struct TypingSessionHolder {
+    Dictionary* dict = nullptr;
+    std::unique_ptr<DicTraverseSession> session;
+};
+TypingSessionHolder gTypingSession;
+
+DicTraverseSession* TypingSessionFor(JNIEnv* env, Dictionary* dict) {
+    if (gTypingSession.dict != dict || !gTypingSession.session) {
+        jstring emptyLocale = env->NewStringUTF("");
+        // Large cache: our merged English dictionary is ~170k words, well past
+        // AOSP's DICTIONARY_SIZE_THRESHOLD_TO_USE_LARGE_CACHE_FOR_SUGGESTION.
+        gTypingSession.session.reset(
+                new DicTraverseSession(env, emptyLocale, /* usesLargeCache */ true));
+        env->DeleteLocalRef(emptyLocale);
+        gTypingSession.dict = dict;
+    }
+    return gTypingSession.session.get();
+}
+
 }  // namespace
 
 extern "C" {
@@ -170,7 +205,7 @@ Java_com_noxquill_rewordium_keyboard_ime_nlp_engine_LatinImeNative_nativeAbiVers
     // changed signatures). The Kotlin side asserts against an expected value
     // at load time so we fail fast on a stale .so / .kt mismatch rather than
     // crashing later inside a real call.
-    return 6;
+    return 7;
 }
 
 // ─── ProximityInfo lifecycle (Phase 5d.1) ─────────────────────────────────
@@ -201,6 +236,7 @@ Java_com_noxquill_rewordium_keyboard_ime_nlp_engine_LatinImeNative_nativeOpenPro
         jfloatArray sweetSpotCenterXs, jfloatArray sweetSpotCenterYs,
         jfloatArray sweetSpotRadii) {
     if (keyboardWidth <= 0 || keyboardHeight <= 0 || keyCount <= 0) return 0;
+    NativeLockGuard lock(gNativeLock);
     ProximityInfo* pInfo = new ProximityInfo(env, keyboardWidth, keyboardHeight,
             gridWidth, gridHeight, mostCommonKeyWidth, mostCommonKeyHeight,
             proximityChars, keyCount, keyXCoordinates, keyYCoordinates,
@@ -212,6 +248,7 @@ Java_com_noxquill_rewordium_keyboard_ime_nlp_engine_LatinImeNative_nativeOpenPro
 JNIEXPORT void JNICALL
 Java_com_noxquill_rewordium_keyboard_ime_nlp_engine_LatinImeNative_nativeCloseProximityInfo(
         JNIEnv* /* env */, jobject /* this */, jlong handle) {
+    NativeLockGuard lock(gNativeLock);
     ProximityInfo* pInfo = ProximityInfoFromHandle(handle);
     delete pInfo;
 }
@@ -232,6 +269,7 @@ Java_com_noxquill_rewordium_keyboard_ime_nlp_engine_LatinImeNative_nativeClosePr
 JNIEXPORT jlong JNICALL
 Java_com_noxquill_rewordium_keyboard_ime_nlp_engine_LatinImeNative_nativeOpenInMemoryDict(
         JNIEnv* env, jobject /* this */) {
+    NativeLockGuard lock(gNativeLock);
     const std::vector<int> locale;  // unused for our purposes
     DictionaryHeaderStructurePolicy::AttributeMap attributeMap;
     // Public non-template dispatcher: takes a plain int formatVersion, picks
@@ -249,23 +287,32 @@ Java_com_noxquill_rewordium_keyboard_ime_nlp_engine_LatinImeNative_nativeOpenInM
 JNIEXPORT void JNICALL
 Java_com_noxquill_rewordium_keyboard_ime_nlp_engine_LatinImeNative_nativeCloseDict(
         JNIEnv* /* env */, jobject /* this */, jlong handle) {
+    NativeLockGuard lock(gNativeLock);
     Dictionary* dict = DictFromHandle(handle);
+    if (dict != nullptr && gTypingSession.dict == dict) {
+        gTypingSession.session.reset();
+        gTypingSession.dict = nullptr;
+    }
     delete dict;  // virtual dtor → unique_ptr drops policy → proper cleanup
 }
 
 JNIEXPORT jboolean JNICALL
 Java_com_noxquill_rewordium_keyboard_ime_nlp_engine_LatinImeNative_nativeAddUnigram(
-        JNIEnv* env, jobject /* this */, jlong handle, jstring word, jint probability) {
+        JNIEnv* env, jobject /* this */, jlong handle, jstring word, jint probability,
+        jboolean isPossiblyOffensive) {
+    NativeLockGuard lock(gNativeLock);
     Dictionary* dict = DictFromHandle(handle);
     if (dict == nullptr) return JNI_FALSE;
     const std::vector<int> codePoints = JStringToCodePoints(env, word);
-    if (codePoints.empty()) return JNI_FALSE;
-    // representsBeginningOfSentence=false, isNotAWord=false, isPossiblyOffensive=false,
-    // plus an empty HistoricalInfo since this is a static dict, no learning timestamps.
+    if (codePoints.empty() || codePoints.size() >= MAX_WORD_LENGTH) return JNI_FALSE;
+    // representsBeginningOfSentence=false, isNotAWord=false, plus an empty
+    // HistoricalInfo since this is a static dict, no learning timestamps.
+    // Offensive entries stay valid (typing them exactly is never "corrected")
+    // but AOSP's BLOCK_OFFENSIVE_WORDS option keeps them out of corrections.
     const UnigramProperty unigramProperty(
             /* representsBeginningOfSentence */ false,
             /* isNotAWord */ false,
-            /* isPossiblyOffensive */ false,
+            /* isPossiblyOffensive */ isPossiblyOffensive == JNI_TRUE,
             /* probability */ probability,
             HistoricalInfo());
     const CodePointArrayView view(codePoints.data(), codePoints.size());
@@ -275,6 +322,7 @@ Java_com_noxquill_rewordium_keyboard_ime_nlp_engine_LatinImeNative_nativeAddUnig
 JNIEXPORT jboolean JNICALL
 Java_com_noxquill_rewordium_keyboard_ime_nlp_engine_LatinImeNative_nativeRemoveUnigram(
         JNIEnv* env, jobject /* this */, jlong handle, jstring word) {
+    NativeLockGuard lock(gNativeLock);
     Dictionary* dict = DictFromHandle(handle);
     if (dict == nullptr) return JNI_FALSE;
     const std::vector<int> codePoints = JStringToCodePoints(env, word);
@@ -287,6 +335,7 @@ JNIEXPORT jboolean JNICALL
 Java_com_noxquill_rewordium_keyboard_ime_nlp_engine_LatinImeNative_nativeAddBigram(
         JNIEnv* env, jobject /* this */, jlong handle,
         jstring prevWord, jstring word, jint probability) {
+    NativeLockGuard lock(gNativeLock);
     Dictionary* dict = DictFromHandle(handle);
     if (dict == nullptr) return JNI_FALSE;
     const std::vector<int> prevCp = JStringToCodePoints(env, prevWord);
@@ -309,6 +358,7 @@ Java_com_noxquill_rewordium_keyboard_ime_nlp_engine_LatinImeNative_nativeAddBigr
 JNIEXPORT jboolean JNICALL
 Java_com_noxquill_rewordium_keyboard_ime_nlp_engine_LatinImeNative_nativeIsValidWord(
         JNIEnv* env, jobject /* this */, jlong handle, jstring word) {
+    NativeLockGuard lock(gNativeLock);
     DictionaryStructureWithBufferPolicy* policy = PolicyFromHandle(handle);
     if (policy == nullptr) return JNI_FALSE;
     const std::vector<int> codePoints = JStringToCodePoints(env, word);
@@ -324,6 +374,7 @@ Java_com_noxquill_rewordium_keyboard_ime_nlp_engine_LatinImeNative_nativeIsValid
 JNIEXPORT jint JNICALL
 Java_com_noxquill_rewordium_keyboard_ime_nlp_engine_LatinImeNative_nativeGetUnigramProbability(
         JNIEnv* env, jobject /* this */, jlong handle, jstring word) {
+    NativeLockGuard lock(gNativeLock);
     DictionaryStructureWithBufferPolicy* policy = PolicyFromHandle(handle);
     if (policy == nullptr) return -1;
     const std::vector<int> codePoints = JStringToCodePoints(env, word);
@@ -379,6 +430,72 @@ jstring CodePointsToJString(JNIEnv* env, const std::vector<int>& codePoints) {
     return env->NewString(utf16.data(), static_cast<jsize>(utf16.size()));
 }
 
+// One ranked entry drained out of an AOSP SuggestionResults heap.
+struct DrainedSuggestion {
+    std::vector<int> codePoints;
+    int score;
+    int type;
+};
+
+// Drains [results] through AOSP's outputSuggestions() protocol and returns
+// the entries sorted best-first. SuggestionResults is a min-heap (its top is
+// the WORST entry — see addSuggestion's eviction check), so the raw output
+// order is ascending by score; AOSP's Java layer re-sorts, and so must we.
+std::vector<DrainedSuggestion> DrainSuggestionResults(
+        JNIEnv* env, SuggestionResults* results, const int capacity) {
+    std::vector<DrainedSuggestion> out;
+    jintArray outCount = env->NewIntArray(1);
+    jintArray outCodePoints = env->NewIntArray(capacity * MAX_WORD_LENGTH);
+    jintArray outScores = env->NewIntArray(capacity);
+    jintArray outSpaceIndices = env->NewIntArray(capacity);
+    jintArray outTypes = env->NewIntArray(capacity);
+    jintArray outConfidence = env->NewIntArray(1);
+    jfloatArray outWeight = env->NewFloatArray(1);
+    results->outputSuggestions(env, outCount, outCodePoints, outScores,
+            outSpaceIndices, outTypes, outConfidence, outWeight);
+
+    int count = 0;
+    env->GetIntArrayRegion(outCount, 0, 1, &count);
+    count = std::max(0, std::min(count, capacity));
+
+    std::vector<int> codePointsAll(capacity * MAX_WORD_LENGTH);
+    std::vector<int> scores(capacity);
+    std::vector<int> types(capacity);
+    env->GetIntArrayRegion(outCodePoints, 0, capacity * MAX_WORD_LENGTH, codePointsAll.data());
+    env->GetIntArrayRegion(outScores, 0, capacity, scores.data());
+    env->GetIntArrayRegion(outTypes, 0, capacity, types.data());
+
+    out.reserve(count);
+    for (int i = 0; i < count; ++i) {
+        DrainedSuggestion entry;
+        entry.codePoints.reserve(MAX_WORD_LENGTH);
+        const int base = i * MAX_WORD_LENGTH;
+        for (int j = 0; j < MAX_WORD_LENGTH; ++j) {
+            const int cp = codePointsAll[base + j];
+            if (cp == 0) break;  // 0 = end-of-word terminator
+            entry.codePoints.push_back(cp);
+        }
+        if (entry.codePoints.empty()) continue;
+        entry.score = scores[i];
+        entry.type = types[i];
+        out.push_back(std::move(entry));
+    }
+
+    env->DeleteLocalRef(outCount);
+    env->DeleteLocalRef(outCodePoints);
+    env->DeleteLocalRef(outScores);
+    env->DeleteLocalRef(outSpaceIndices);
+    env->DeleteLocalRef(outTypes);
+    env->DeleteLocalRef(outConfidence);
+    env->DeleteLocalRef(outWeight);
+
+    std::stable_sort(out.begin(), out.end(),
+            [](const DrainedSuggestion& a, const DrainedSuggestion& b) {
+                return a.score > b.score;
+            });
+    return out;
+}
+
 // True iff [word] starts with [prefix] in code-point order (case-sensitive;
 // the Kotlin caller is responsible for lowering case if needed).
 bool HasPrefix(const std::vector<int>& word, const std::vector<int>& prefix) {
@@ -398,6 +515,7 @@ Java_com_noxquill_rewordium_keyboard_ime_nlp_engine_LatinImeNative_nativeGetComp
         JNIEnv* env, jobject /* this */, jlong handle,
         jstring prefix, jstring prevWord, jint maxResults) {
     jclass stringClass = env->FindClass("java/lang/String");
+    NativeLockGuard lock(gNativeLock);
     DictionaryStructureWithBufferPolicy* policy = PolicyFromHandle(handle);
     if (policy == nullptr || maxResults <= 0) {
         return env->NewObjectArray(0, stringClass, nullptr);
@@ -498,6 +616,7 @@ Java_com_noxquill_rewordium_keyboard_ime_nlp_engine_LatinImeNative_nativeSuggest
         jintArray jxs, jintArray jys, jintArray jts,
         jstring prevWord, jint maxResults) {
     jclass stringClass = env->FindClass("java/lang/String");
+    NativeLockGuard lock(gNativeLock);
     Dictionary* dict = DictFromHandle(dictHandle);
     ProximityInfo* pInfo = ProximityInfoFromHandle(proxHandle);
     if (dict == nullptr || pInfo == nullptr || maxResults <= 0) {
@@ -574,50 +693,141 @@ Java_com_noxquill_rewordium_keyboard_ime_nlp_engine_LatinImeNative_nativeSuggest
             /* weightOfLangModelVsSpatialModel */ -1.0f,
             &results);
 
-    // Drain via the AOSP outputSuggestions protocol (8 output arrays —
-    // we only need count + code-points; the rest are sized-and-discarded).
-    jintArray outCount = env->NewIntArray(1);
-    jintArray outCodePoints = env->NewIntArray(maxResults * MAX_WORD_LENGTH);
-    jintArray outScores = env->NewIntArray(maxResults);
-    jintArray outSpaceIndices = env->NewIntArray(maxResults);
-    jintArray outTypes = env->NewIntArray(maxResults);
-    jintArray outConfidence = env->NewIntArray(1);
-    jfloatArray outWeight = env->NewFloatArray(1);
-    results.outputSuggestions(env, outCount, outCodePoints, outScores,
-            outSpaceIndices, outTypes, outConfidence, outWeight);
-
-    int count = 0;
-    env->GetIntArrayRegion(outCount, 0, 1, &count);
-    if (count < 0) count = 0;
-    if (count > maxResults) count = maxResults;
-
-    std::vector<int> codePointsAll(maxResults * MAX_WORD_LENGTH);
-    env->GetIntArrayRegion(outCodePoints, 0,
-            maxResults * MAX_WORD_LENGTH, codePointsAll.data());
-
+    const std::vector<DrainedSuggestion> drained =
+            DrainSuggestionResults(env, &results, maxResults);
+    const int count = static_cast<int>(drained.size());
     jobjectArray result = env->NewObjectArray(count, stringClass, nullptr);
     for (int i = 0; i < count; ++i) {
-        std::vector<int> word;
-        word.reserve(MAX_WORD_LENGTH);
-        const int base = i * MAX_WORD_LENGTH;
-        for (int j = 0; j < MAX_WORD_LENGTH; ++j) {
-            const int cp = codePointsAll[base + j];
-            if (cp == 0) break;  // 0 = end-of-word terminator
-            word.push_back(cp);
-        }
-        jstring s = CodePointsToJString(env, word);
-        env->SetObjectArrayElement(result, i, s);
-        env->DeleteLocalRef(s);
+        jstring str = CodePointsToJString(env, drained[i].codePoints);
+        env->SetObjectArrayElement(result, i, str);
+        env->DeleteLocalRef(str);
     }
 
-    env->DeleteLocalRef(outCount);
-    env->DeleteLocalRef(outCodePoints);
-    env->DeleteLocalRef(outScores);
-    env->DeleteLocalRef(outSpaceIndices);
-    env->DeleteLocalRef(outTypes);
-    env->DeleteLocalRef(outConfidence);
-    env->DeleteLocalRef(outWeight);
+    return result;
+}
 
+}  // extern "C"
+
+extern "C" {
+
+// ─── Typing suggest / autocorrect ─────────────────────────────────────────
+//
+// Runs AOSP's typing Suggest pipeline (TypingSuggestPolicy: spatial proximity
+// model + substitution / omission / insertion / transposition corrections +
+// completion + n-gram language model) for one composing word. This is the
+// same decoder AOSP LatinIME uses for tap typing — fully open source, unlike
+// the gesture policy.
+//
+// Inputs:
+//   * codePoints — the typed word, one code point per tap, in typed case
+//   * xs / ys    — tap coordinates in the ProximityInfo's pixel space, one per
+//                  code point. NOT_A_COORDINATE (-1) when unknown; callers
+//                  should pass key centres rather than -1 whenever possible.
+//   * prevWord   — previous word in dictionary casing ("" = no context)
+//
+// Outputs (arrays sized >= maxResults by the caller):
+//   * returned String[] — candidates, best first
+//   * outScores  — AOSP output scores (SUGGEST_INTERFACE_OUTPUT_SCALE based)
+//   * outTypes   — Dictionary::KIND_* | KIND_FLAG_* bit fields
+//   * outNormalizedScores — AutocorrectionThresholdUtils::calcNormalizedScore
+//                  of (typed → candidate); AOSP's Java layer compares this
+//                  against the auto-correction threshold (0.185 = "modest").
+
+JNIEXPORT jobjectArray JNICALL
+Java_com_noxquill_rewordium_keyboard_ime_nlp_engine_LatinImeNative_nativeSuggestForTyping(
+        JNIEnv* env, jobject /* this */,
+        jlong dictHandle, jlong proxHandle,
+        jintArray jCodePoints, jintArray jxs, jintArray jys,
+        jstring prevWord, jboolean blockOffensive, jint maxResults,
+        jintArray outScoresArray, jintArray outTypesArray,
+        jfloatArray outNormalizedScoresArray) {
+    jclass stringClass = env->FindClass("java/lang/String");
+    NativeLockGuard lock(gNativeLock);
+    Dictionary* dict = DictFromHandle(dictHandle);
+    ProximityInfo* pInfo = ProximityInfoFromHandle(proxHandle);
+    if (dict == nullptr || pInfo == nullptr || maxResults <= 0 || jCodePoints == nullptr
+            || jxs == nullptr || jys == nullptr) {
+        return env->NewObjectArray(0, stringClass, nullptr);
+    }
+    const jsize inputSize = env->GetArrayLength(jCodePoints);
+    // AOSP asserts inputSize < MAX_WORD_LENGTH for non-geometric input.
+    if (inputSize <= 0 || inputSize >= MAX_WORD_LENGTH
+            || env->GetArrayLength(jxs) < inputSize || env->GetArrayLength(jys) < inputSize) {
+        return env->NewObjectArray(0, stringClass, nullptr);
+    }
+
+    std::vector<int> codePoints(inputSize);
+    std::vector<int> xs(inputSize);
+    std::vector<int> ys(inputSize);
+    std::vector<int> times(inputSize);
+    std::vector<int> pointerIds(inputSize, 0);
+    env->GetIntArrayRegion(jCodePoints, 0, inputSize, codePoints.data());
+    env->GetIntArrayRegion(jxs, 0, inputSize, xs.data());
+    env->GetIntArrayRegion(jys, 0, inputSize, ys.data());
+    // Times are only consulted for geometric (gesture) input; keep them
+    // monotonic anyway so no code path ever sees a zero-length interval.
+    for (jsize i = 0; i < inputSize; ++i) times[i] = static_cast<int>(i) * 100;
+
+    std::vector<int> prevCp;
+    if (prevWord != nullptr) {
+        prevCp = JStringToCodePoints(env, prevWord);
+    }
+    const NgramContext ngramCtx = prevCp.empty()
+            ? NgramContext()
+            : NgramContext(prevCp.data(), static_cast<int>(prevCp.size()),
+                    /* isBeginningOfSentence */ false);
+
+    // Mirrors com.android.inputmethod.latin.NativeSuggestOptions:
+    //   [0] IS_GESTURE, [1] USE_FULL_EDIT_DISTANCE, [2] BLOCK_OFFENSIVE_WORDS,
+    //   [3] SPACE_AWARE_GESTURE_ENABLED, [4] WEIGHT_FOR_LOCALE_IN_THOUSANDS.
+    // A locale weight of 1.0 enables AOSP's full-size DicNode cache plus the
+    // space omission / substitution corrections ("thisis" -> "this is").
+    int suggestOptionFlags[16] = { 0 };
+    suggestOptionFlags[2] = (blockOffensive == JNI_TRUE) ? 1 : 0;
+    suggestOptionFlags[4] = 1000;
+    SuggestOptions suggestOpts(suggestOptionFlags, 16);
+
+    DicTraverseSession* session = TypingSessionFor(env, dict);
+    SuggestionResults results(MAX_RESULTS);
+    dict->getSuggestions(pInfo, session,
+            xs.data(), ys.data(), times.data(), pointerIds.data(),
+            codePoints.data(), inputSize,
+            &ngramCtx, &suggestOpts,
+            /* weightOfLangModelVsSpatialModel */ -1.0f,
+            &results);
+
+    const std::vector<DrainedSuggestion> drained =
+            DrainSuggestionResults(env, &results, MAX_RESULTS);
+    int count = std::min<int>(maxResults, static_cast<int>(drained.size()));
+    if (outScoresArray != nullptr) count = std::min<int>(count, env->GetArrayLength(outScoresArray));
+    if (outTypesArray != nullptr) count = std::min<int>(count, env->GetArrayLength(outTypesArray));
+    if (outNormalizedScoresArray != nullptr) {
+        count = std::min<int>(count, env->GetArrayLength(outNormalizedScoresArray));
+    }
+
+    jobjectArray result = env->NewObjectArray(count, stringClass, nullptr);
+    std::vector<int> scores(count);
+    std::vector<int> types(count);
+    std::vector<float> normalized(count);
+    for (int i = 0; i < count; ++i) {
+        const DrainedSuggestion& entry = drained[i];
+        scores[i] = entry.score;
+        types[i] = entry.type;
+        normalized[i] = ::latinime::AutocorrectionThresholdUtils::calcNormalizedScore(
+                codePoints.data(), inputSize,
+                entry.codePoints.data(), static_cast<int>(entry.codePoints.size()),
+                entry.score);
+        jstring str = CodePointsToJString(env, entry.codePoints);
+        env->SetObjectArrayElement(result, i, str);
+        env->DeleteLocalRef(str);
+    }
+    if (count > 0) {
+        if (outScoresArray != nullptr) env->SetIntArrayRegion(outScoresArray, 0, count, scores.data());
+        if (outTypesArray != nullptr) env->SetIntArrayRegion(outTypesArray, 0, count, types.data());
+        if (outNormalizedScoresArray != nullptr) {
+            env->SetFloatArrayRegion(outNormalizedScoresArray, 0, count, normalized.data());
+        }
+    }
     return result;
 }
 

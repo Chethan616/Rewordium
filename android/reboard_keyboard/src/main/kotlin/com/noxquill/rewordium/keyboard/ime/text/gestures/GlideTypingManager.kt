@@ -20,7 +20,6 @@ import android.content.Context
 import com.noxquill.rewordium.keyboard.BuildConfig
 import com.noxquill.rewordium.keyboard.app.FlorisPreferenceStore
 import com.noxquill.rewordium.keyboard.ime.nlp.WordSuggestionCandidate
-import com.noxquill.rewordium.keyboard.ime.nlp.engine.LatinImeNative
 import com.noxquill.rewordium.keyboard.ime.text.keyboard.TextKey
 import com.noxquill.rewordium.keyboard.keyboardManager
 import com.noxquill.rewordium.keyboard.nlpManager
@@ -50,16 +49,13 @@ class GlideTypingManager(private val context: Context) : GlideTypingGesture.List
     private val subtypeManager by context.subtypeManager()
 
     private val scope = CoroutineScope(Dispatchers.Default + SupervisorJob())
-    private var glideTypingClassifier: GlideTypingClassifier = createClassifier(prefs.glide.engine.get())
+    // Always the statistical decoder: it is the only production-quality
+    // engine. The "native" engine runs AOSP's open-source gesture policy, which
+    // is an unregistered stub (typing policy fallback → garbage results), and
+    // the "neural" engine has no model behind it. Users who picked either in
+    // an older version are migrated here transparently.
+    private val glideTypingClassifier: GlideTypingClassifier = StatisticalGlideTypingClassifier(context)
     private var lastTime = System.currentTimeMillis()
-
-    private fun createClassifier(engine: GlideTypingEngine): GlideTypingClassifier {
-        return when (engine) {
-            GlideTypingEngine.NEURAL -> NeuralGlideTypingClassifier(context)
-            GlideTypingEngine.NATIVE -> if (LatinImeNative.ensureLoaded()) NativeGlideTypingClassifier(context) else StatisticalGlideTypingClassifier(context)
-            GlideTypingEngine.STATISTICAL -> StatisticalGlideTypingClassifier(context)
-        }
-    }
 
     init {
         // Adaptive learned swipe typing: listen for "vocabulary changed
@@ -73,14 +69,8 @@ class GlideTypingManager(private val context: Context) : GlideTypingGesture.List
         }
         
         scope.launch {
-            prefs.glide.engine.asFlow().collect { engine ->
-                val newClassifier = createClassifier(engine)
-                val activeSubtype = subtypeManager.activeSubtype
-                if (activeSubtype != null) {
-                    newClassifier.setWordData(activeSubtype, force = true)
-                }
-                glideTypingClassifier.clear()
-                glideTypingClassifier = newClassifier
+            if (prefs.glide.engine.get() != GlideTypingEngine.STATISTICAL) {
+                prefs.glide.engine.set(GlideTypingEngine.STATISTICAL)
             }
         }
     }

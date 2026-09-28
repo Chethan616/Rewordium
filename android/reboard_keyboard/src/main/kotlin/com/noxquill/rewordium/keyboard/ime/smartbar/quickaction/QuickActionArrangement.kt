@@ -74,9 +74,11 @@ data class QuickActionArrangement(
                 // clipboard sits right after so paste workflows are one tap
                 // away. Settings / incognito and the rest follow.
                 QuickAction.InsertKey(TextKeyData.AI_REWRITE),
+                QuickAction.InsertKey(TextKeyData.IME_UI_MODE_GIF),
                 QuickAction.InsertKey(TextKeyData.UNDO),
                 QuickAction.InsertKey(TextKeyData.REDO),
                 QuickAction.InsertKey(TextKeyData.IME_UI_MODE_CLIPBOARD),
+                QuickAction.InsertKey(TextKeyData.KEYBOARD_RESIZE),
                 QuickAction.InsertKey(TextKeyData.SETTINGS),
                 QuickAction.InsertKey(TextKeyData.TOGGLE_INCOGNITO_MODE),
                 QuickAction.InsertKey(TextKeyData.IME_UI_MODE_MEDIA),
@@ -98,6 +100,17 @@ data class QuickActionArrangement(
             hiddenActions = listOf(
             ),
         )
+    }
+
+    /**
+     * Returns this arrangement with [action] inserted at [index] of the dynamic
+     * actions, unless the user already has it somewhere (including hidden).
+     */
+    fun withActionAdded(action: QuickAction, index: Int): QuickActionArrangement {
+        if (contains(action)) return this
+        val dynamic = dynamicActions.toMutableList()
+        dynamic.add(index.coerceIn(0, dynamic.size), action)
+        return copy(dynamicActions = dynamic)
     }
 
     object Serializer : PreferenceSerializer<QuickActionArrangement> {

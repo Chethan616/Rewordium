@@ -48,7 +48,8 @@ class _ProUpgradeScreenState extends State<ProUpgradeScreen> {
             state == PurchaseState.billingUnavailable) {
           return _buildErrorScreen(context, billingService);
         }
-        if (state == PurchaseState.processing) {
+        if (state == PurchaseState.processing ||
+            state == PurchaseState.pending) {
           return _buildProcessingScreen(context, billingService);
         }
 
@@ -765,11 +766,14 @@ class _ProUpgradeScreenState extends State<ProUpgradeScreen> {
   }
 
 
-  /// Processing screen - blocks navigation
+  /// Processing screen - blocks navigation while Google Play's purchase sheet
+  /// is in flight. A *pending* payment (UPI etc.) can take minutes, so that
+  /// variant lets the user leave; Pro unlocks when Play confirms it.
   Widget _buildProcessingScreen(
       BuildContext context, BillingService billingService) {
+    final isPending = billingService.purchaseState == PurchaseState.pending;
     return PopScope(
-      canPop: false,
+      canPop: isPending,
       onPopInvokedWithResult: (didPop, result) {
         if (!didPop) {
           _showExitWarningDialog(context);
@@ -816,6 +820,13 @@ class _ProUpgradeScreenState extends State<ProUpgradeScreen> {
                         ),
                     textAlign: TextAlign.center,
                   ),
+                  if (isPending) ...[
+                    const SizedBox(height: 24),
+                    FilledButton(
+                      onPressed: () => Navigator.of(context).maybePop(),
+                      child: const Text('Close'),
+                    ),
+                  ],
                   const SizedBox(height: 32),
                   Icon(
                     Icons.lock_outline,

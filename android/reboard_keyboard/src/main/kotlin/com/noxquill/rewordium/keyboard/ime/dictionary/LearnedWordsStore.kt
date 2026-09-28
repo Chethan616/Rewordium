@@ -134,6 +134,11 @@ class LearnedWordsStore(private val context: Context) {
         return HashMap(sub) // defensive copy
     }
 
+    /** Current count/frequency of [word] under [locale], 0 when unknown. O(1), no copy. */
+    fun countOf(locale: FlorisLocale, word: String): Int {
+        return perLocale[locale.languageTag()]?.get(word)?.f ?: 0
+    }
+
     /**
      * Returns the [n] most-recently-typed words for [locale] (highest `t`).
      * Used by the glide classifier to break ties between top-tier candidates

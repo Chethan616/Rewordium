@@ -59,6 +59,11 @@ fun MediaScreen() = FlorisScreen {
 
     content {
         ListPreference(
+            prefs.emoji.panelOpensTo,
+            title = stringRes(R.string.prefs__media__panel_opens_to),
+            entries = enumDisplayEntriesOf(com.noxquill.rewordium.keyboard.ime.media.MediaPanelTab::class),
+        )
+        ListPreference(
             prefs.emoji.preferredSkinTone,
             title = stringRes(R.string.prefs__media__emoji_preferred_skin_tone),
             entries = enumDisplayEntriesOf(EmojiSkinTone::class),

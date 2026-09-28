@@ -38,7 +38,9 @@ import com.noxquill.rewordium.keyboard.ime.media.emoji.EmojiHairStyle
 import com.noxquill.rewordium.keyboard.ime.media.emoji.EmojiHistory
 import com.noxquill.rewordium.keyboard.ime.media.emoji.EmojiSkinTone
 import com.noxquill.rewordium.keyboard.ime.media.emoji.EmojiSuggestionType
+import com.noxquill.rewordium.keyboard.ime.media.MediaPanelTab
 import com.noxquill.rewordium.keyboard.ime.nlp.SpellingLanguageMode
+import com.noxquill.rewordium.keyboard.ime.nlp.latin.AutoCorrectLevel
 import com.noxquill.rewordium.keyboard.ime.onehanded.OneHandedMode
 import com.noxquill.rewordium.keyboard.ime.smartbar.CandidatesDisplayMode
 import com.noxquill.rewordium.keyboard.ime.smartbar.ExtendedActionsPlacement
@@ -164,6 +166,14 @@ abstract class FlorisPreferenceModel : PreferenceModel() {
 
     val correction = Correction()
     inner class Correction {
+        val autoCorrect = boolean(
+            key = "correction__auto_correct",
+            default = true,
+        )
+        val autoCorrectLevel = enum(
+            key = "correction__auto_correct_level",
+            default = AutoCorrectLevel.MODEST,
+        )
         val autoCapitalization = boolean(
             key = "correction__auto_capitalization",
             default = true,
@@ -239,6 +249,15 @@ abstract class FlorisPreferenceModel : PreferenceModel() {
 
     val emoji = Emoji()
     inner class Emoji {
+        val panelOpensTo = enum(
+            key = "emoji__panel_opens_to",
+            default = MediaPanelTab.LAST_USED,
+        )
+        // Internal: tab the media panel was last left on.
+        val lastPanelTab = string(
+            key = "emoji__last_panel_tab",
+            default = "EMOJI",
+        )
         val preferredSkinTone = enum(
             key = "emoji__preferred_skin_tone",
             default = EmojiSkinTone.DEFAULT,
@@ -490,6 +509,11 @@ abstract class FlorisPreferenceModel : PreferenceModel() {
         val notificationPermissionState = enum(
             key = "internal__notification_permission_state",
             default = NotificationPermissionState.NOT_SET,
+        )
+        // Bumped when new smartbar actions must be offered to existing users.
+        val smartbarActionsMigration = int(
+            key = "internal__smartbar_actions_migration",
+            default = 0,
         )
     }
 

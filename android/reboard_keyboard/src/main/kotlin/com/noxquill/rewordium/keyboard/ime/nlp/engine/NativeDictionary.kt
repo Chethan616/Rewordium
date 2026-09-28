@@ -16,18 +16,30 @@
 
 package com.noxquill.rewordium.keyboard.ime.nlp.engine
 
-import android.content.Context
 import com.noxquill.rewordium.keyboard.lib.devtools.flogDebug
 import com.noxquill.rewordium.keyboard.lib.devtools.flogError
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
-import kotlinx.serialization.json.Json
-import kotlinx.serialization.json.JsonObject
-import kotlinx.serialization.json.intOrNull
-import kotlinx.serialization.json.jsonObject
-import kotlinx.serialization.json.jsonPrimitive
-import org.florisboard.lib.android.readText
 import java.util.concurrent.atomic.AtomicLong
+
+/**
+ * One ranked candidate from the AOSP typing decoder.
+ *
+ * @property normalizedScore AOSP's `calcNormalizedScore(typed, word, score)`,
+ *   the value AOSP compares against its auto-correction threshold.
+ */
+data class TypingSuggestion(
+    val word: String,
+    val score: Int,
+    val type: Int,
+    val normalizedScore: Float,
+) {
+    val isAppropriateForAutoCorrection: Boolean
+        get() = (type and LatinImeNative.KIND_FLAG_APPROPRIATE_FOR_AUTOCORRECTION) != 0
+
+    val isExactMatch: Boolean
+        get() = (type and LatinImeNative.KIND_FLAG_EXACT_MATCH) != 0
+}
 
 /**
  * High-level Kotlin owner for an in-memory AOSP v4 dictionary. Wraps a single
@@ -64,15 +76,21 @@ class NativeDictionary {
     val handle: Long get() = if (loaded) handleRef else LatinImeNative.INVALID_HANDLE
 
     /**
-     * Open the native dict and populate it from `ime/dict/data.json` +
-     * `ime/dict/bigrams.json`. Idempotent — subsequent calls return
-     * immediately if a previous call already finished. On any failure (JSON
-     * parse, native rejection, library not loaded) the dictionary is left
-     * unloaded and the next caller will retry.
+     * Open the native dict and populate it from the already-parsed word list
+     * ([words], dictionary casing -> 0..255 log-scale frequency) and bigram
+     * table. The caller (LatinLanguageProvider) owns parsing/caching of the
+     * JSON assets, so the multi-megabyte wordlist is decoded only once.
+     * Idempotent — subsequent calls return immediately if a previous call
+     * already finished. On any failure (native rejection, library not loaded)
+     * the dictionary is left unloaded and the next caller will retry.
      *
      * @return true if the dict ended up populated; false otherwise.
      */
-    suspend fun loadFromAssets(context: Context): Boolean = loadMutex.withLock {
+    suspend fun load(
+        words: Map<String, Int>,
+        offensiveWords: Set<String>,
+        bigrams: Map<String, Map<String, Int>>,
+    ): Boolean = loadMutex.withLock {
         if (loaded) return@withLock true
         if (!LatinImeNative.ensureLoaded()) {
             flogError { "NativeDictionary: rewordium_latinime not loaded — skipping native dict" }
@@ -84,9 +102,9 @@ class NativeDictionary {
             return@withLock false
         }
         val ok = try {
-            populateFromAssets(context, h)
+            populate(h, words, offensiveWords, bigrams)
         } catch (t: Throwable) {
-            flogError { "NativeDictionary: populateFromAssets failed: $t" }
+            flogError { "NativeDictionary: populate failed: $t" }
             false
         }
         if (!ok) {
@@ -152,6 +170,50 @@ class NativeDictionary {
     }
 
     /**
+     * Runs the AOSP typing decoder for [typed] with per-letter tap
+     * coordinates ([xs]/[ys], ProximityInfo pixel space) against the layout
+     * behind [proximityHandle]. Returns an empty list when either handle is
+     * missing, the word is too long, or anything goes wrong natively — the
+     * caller treats that as "no native opinion" and falls back.
+     */
+    fun suggestForTyping(
+        proximityHandle: Long,
+        typed: String,
+        xs: IntArray,
+        ys: IntArray,
+        prevWord: String,
+        blockOffensive: Boolean,
+        maxResults: Int,
+    ): List<TypingSuggestion> {
+        if (!loaded || proximityHandle == LatinImeNative.INVALID_HANDLE || maxResults <= 0) return emptyList()
+        val codePoints = typed.codePoints().toArray()
+        if (codePoints.isEmpty() || codePoints.size >= LatinImeNative.MAX_WORD_LENGTH) return emptyList()
+        if (xs.size < codePoints.size || ys.size < codePoints.size) return emptyList()
+        val scores = IntArray(maxResults)
+        val types = IntArray(maxResults)
+        val normalized = FloatArray(maxResults)
+        val words = try {
+            LatinImeNative.nativeSuggestForTyping(
+                dictHandle = handleRef,
+                proxHandle = proximityHandle,
+                codePoints = codePoints,
+                xs = xs,
+                ys = ys,
+                prevWord = prevWord,
+                blockOffensive = blockOffensive,
+                maxResults = maxResults,
+                outScores = scores,
+                outTypes = types,
+                outNormalizedScores = normalized,
+            )
+        } catch (t: Throwable) {
+            flogError { "NativeDictionary: nativeSuggestForTyping failed: $t" }
+            return emptyList()
+        }
+        return List(words.size) { i -> TypingSuggestion(words[i], scores[i], types[i], normalized[i]) }
+    }
+
+    /**
      * Phase 6: push a personal-vocab word into the native dict so both
      * suggest (Phase 4) and glide (Phase 5) can surface it. Idempotent —
      * adding the same word twice updates its frequency (AOSP's writer
@@ -171,7 +233,7 @@ class NativeDictionary {
     fun addLearnedWord(word: String, probability: Int): Boolean {
         if (!loaded || word.isEmpty()) return false
         val clamped = probability.coerceIn(0, 255)
-        return LatinImeNative.nativeAddUnigram(handleRef, word, clamped)
+        return LatinImeNative.nativeAddUnigram(handleRef, word, clamped, false)
     }
 
     /**
@@ -193,19 +255,19 @@ class NativeDictionary {
         return LatinImeNative.nativeRemoveUnigram(handleRef, word)
     }
 
-    private fun populateFromAssets(context: Context, h: Long): Boolean {
-        val json = Json { ignoreUnknownKeys = true }
-        // Unigrams: { "word": 0..255, ... }
-        val wordlistText = context.assets.readText(WORDLIST_ASSET_PATH)
-        val wordlistObj = json.parseToJsonElement(wordlistText).jsonObject
+    private fun populate(
+        h: Long,
+        words: Map<String, Int>,
+        offensiveWords: Set<String>,
+        bigrams: Map<String, Map<String, Int>>,
+    ): Boolean {
         var unigrams = 0L
-        for ((word, freqEl) in wordlistObj) {
+        for ((word, freq) in words) {
             if (word.isEmpty()) continue
-            val freq = freqEl.jsonPrimitive.intOrNull?.coerceIn(0, 255) ?: continue
             // We intentionally swallow individual add failures — at scale a
             // handful of words can fail validation (e.g. AOSP rejects empty
             // code-point arrays) and the rest of the dict should still come up.
-            if (LatinImeNative.nativeAddUnigram(h, word, freq)) {
+            if (LatinImeNative.nativeAddUnigram(h, word, freq.coerceIn(0, 255), word in offensiveWords)) {
                 unigrams++
             }
         }
@@ -214,34 +276,17 @@ class NativeDictionary {
             flogError { "NativeDictionary: zero unigrams added — refusing to expose empty dict" }
             return false
         }
-
-        // Bigrams: { "prev_word": { "next_word": 0..255, ... }, ... }
-        var bigrams = 0L
-        runCatching {
-            val bigramText = context.assets.readText(BIGRAMS_ASSET_PATH)
-            val bigramObj = json.parseToJsonElement(bigramText).jsonObject
-            for ((prev, nextEl) in bigramObj) {
-                val nextObj = nextEl as? JsonObject ?: continue
-                if (prev.isEmpty()) continue
-                for ((next, freqEl) in nextObj) {
-                    if (next.isEmpty()) continue
-                    val freq = freqEl.jsonPrimitive.intOrNull?.coerceIn(0, 255) ?: continue
-                    if (LatinImeNative.nativeAddBigram(h, prev, next, freq)) {
-                        bigrams++
-                    }
+        var bigramsAdded = 0L
+        for ((prev, nextMap) in bigrams) {
+            if (prev.isEmpty()) continue
+            for ((next, freq) in nextMap) {
+                if (next.isEmpty()) continue
+                if (LatinImeNative.nativeAddBigram(h, prev, next, freq.coerceIn(0, 255))) {
+                    bigramsAdded++
                 }
             }
-        }.onFailure { e ->
-            // Bigrams are optional; we still consider the dict loaded with
-            // unigrams alone. flogDebug so it doesn't shout in release logs.
-            flogDebug { "NativeDictionary: bigram load skipped/partial: $e" }
         }
-        bigramCount.set(bigrams)
+        bigramCount.set(bigramsAdded)
         return true
-    }
-
-    private companion object {
-        const val WORDLIST_ASSET_PATH = "ime/dict/data.json"
-        const val BIGRAMS_ASSET_PATH = "ime/dict/bigrams.json"
     }
 }

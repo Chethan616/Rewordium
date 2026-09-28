@@ -34,6 +34,43 @@ class WhatsNewSheet {
   // Add a new entry for each release. Older entries are kept for reference
   // but only the *current* version's items are displayed.
   static final Map<String, List<_WhatsNewItem>> _features = {
+    '3.1.0+124': [
+      const _WhatsNewItem(
+        icon: CupertinoIcons.wand_stars,
+        color: Color(0xFF6366F1),
+        title: 'Real Autocorrect',
+        description:
+            'Typos are fixed as you type, using where you actually tapped — built for big thumbs. Names, slang and Hinglish are left alone. Press Backspace right after a correction to undo it.',
+      ),
+      const _WhatsNewItem(
+        icon: CupertinoIcons.hand_draw,
+        color: Color(0xFF10B981),
+        title: 'Smarter Glide Typing',
+        description:
+            'A rebuilt swipe decoder with a 170,000-word dictionary picks the right word far more often and understands sentence context.',
+      ),
+      const _WhatsNewItem(
+        icon: CupertinoIcons.arrow_up_down_square,
+        color: Color(0xFFF59E0B),
+        title: 'Resize Your Keyboard',
+        description:
+            'Tap Resize in the toolbar and drag to make the keys taller or shorter — right inside the keyboard.',
+      ),
+      const _WhatsNewItem(
+        icon: CupertinoIcons.play_rectangle_fill,
+        color: Color(0xFFEC4899),
+        title: 'One-Tap GIFs',
+        description:
+            'A new GIF button in the toolbar opens GIF search directly, and the emoji key now reopens your last used tab (change it in Settings → Media).',
+      ),
+      const _WhatsNewItem(
+        icon: CupertinoIcons.creditcard_fill,
+        color: Color(0xFF0EA5E9),
+        title: 'Reliable Pro Subscriptions',
+        description:
+            'Renewing subscriptions stay active, UPI payments that take a while no longer block the screen, and purchases restore instantly.',
+      ),
+    ],
     '3.0.3+123': [
       const _WhatsNewItem(
         icon: CupertinoIcons.sparkles,

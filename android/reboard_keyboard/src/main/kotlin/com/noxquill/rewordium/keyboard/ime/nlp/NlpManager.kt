@@ -28,9 +28,11 @@ import com.noxquill.rewordium.keyboard.ime.clipboard.provider.ItemType
 import com.noxquill.rewordium.keyboard.ime.core.Subtype
 import com.noxquill.rewordium.keyboard.ime.editor.EditorContent
 import com.noxquill.rewordium.keyboard.ime.editor.EditorRange
+import com.noxquill.rewordium.keyboard.ime.editor.InputAttributes
 import com.noxquill.rewordium.keyboard.ime.media.emoji.EmojiSuggestionProvider
 import com.noxquill.rewordium.keyboard.ime.nlp.han.HanShapeBasedLanguageProvider
 import com.noxquill.rewordium.keyboard.ime.nlp.latin.LatinLanguageProvider
+import com.noxquill.rewordium.keyboard.ime.text.key.KeyVariation
 import com.noxquill.rewordium.keyboard.keyboardManager
 import com.noxquill.rewordium.keyboard.lib.util.NetworkUtils
 import com.noxquill.rewordium.keyboard.subtypeManager
@@ -102,6 +104,14 @@ class NlpManager(context: Context) {
     // implementing "latest-wins" cancellation and avoiding wasted CPU on superseded requests.
     private var suggestJob: Job? = null
 
+    /**
+     * The composing word the latest suggestion pass was computed for, paired
+     * with that pass's auto-commit (autocorrect) candidate. The space key
+     * only trusts it when it matches the word currently on screen; see
+     * [getAutoCommitCandidate].
+     */
+    @Volatile private var autoCommitState: Pair<String, SuggestionCandidate?> = "" to null
+
     init {
         clipboardManager.primaryClipFlow.collectLatestIn(scope) {
             assembleCandidates()
@@ -165,6 +175,30 @@ class NlpManager(context: Context) {
             if (provider is LatinLanguageProvider) {
                 provider.unlearnWord(subtype, word)
             }
+        }
+    }
+
+    /**
+     * The user undid an autocorrection with Backspace: keep [original] from
+     * now on and don't count the correction as usage of [corrected].
+     */
+    fun onAutoCorrectionReverted(subtype: Subtype, original: String, corrected: String) {
+        if (original.isBlank()) return
+        autoCommitState = "" to null
+        scope.launch {
+            val provider = getSuggestionProvider(subtype)
+            if (provider is LatinLanguageProvider) {
+                provider.acceptTypedWord(
+                    subtype,
+                    original,
+                    persist = !keyboardManager.activeState.isIncognitoMode,
+                )
+                provider.notifySuggestionReverted(
+                    subtype,
+                    WordSuggestionCandidate(corrected, sourceProvider = provider),
+                )
+            }
+            suggest(subtype, editorInstance.activeContent)
         }
     }
 
@@ -338,7 +372,11 @@ class NlpManager(context: Context) {
             val suggestions = when {
                 emojiSuggestions.isNotEmpty() && prefs.emoji.suggestionType.get().prefix.isNotEmpty() -> emptyList()
                 else -> {
-                    getSuggestionProvider(subtype).suggest(
+                    val provider = getSuggestionProvider(subtype)
+                    if (provider is LatinLanguageProvider) {
+                        provider.autocorrectAllowedForField = isAutocorrectAllowedForField()
+                    }
+                    provider.suggest(
                         subtype = subtype,
                         content = content,
                         maxCandidateCount = MAX_CURATED_CANDIDATES,
@@ -349,6 +387,8 @@ class NlpManager(context: Context) {
             }
             internalSuggestionsGuard.withLock {
                 if (internalSuggestions.first < reqTime) {
+                    autoCommitState = content.composingText.toString() to
+                        suggestions.firstOrNull { it.isEligibleForAutoCommit }
                     internalSuggestions = reqTime to curateCandidates(buildList {
                         addAll(suggestions)        // text predictions first (Gboard behavior)
                         addAll(emojiSuggestions)    // emojis at end of strip
@@ -358,8 +398,32 @@ class NlpManager(context: Context) {
         }
     }
 
+    /**
+     * Autocorrect only makes sense in prose fields: never in URL, e-mail,
+     * password, filter or phonetic inputs, where "fixing" words breaks them.
+     */
+    private fun isAutocorrectAllowedForField(): Boolean {
+        if (keyboardManager.activeState.keyVariation != KeyVariation.NORMAL) return false
+        val attributes = editorInstance.activeInfo.inputAttributes
+        if (attributes.type != InputAttributes.Type.TEXT) return false
+        return when (attributes.variation) {
+            InputAttributes.Variation.URI,
+            InputAttributes.Variation.EMAIL_ADDRESS,
+            InputAttributes.Variation.WEB_EMAIL_ADDRESS,
+            InputAttributes.Variation.PASSWORD,
+            InputAttributes.Variation.VISIBLE_PASSWORD,
+            InputAttributes.Variation.WEB_PASSWORD,
+            InputAttributes.Variation.FILTER,
+            InputAttributes.Variation.PERSON_NAME,
+            InputAttributes.Variation.POSTAL_ADDRESS,
+            InputAttributes.Variation.PHONETIC -> false
+            else -> true
+        }
+    }
+
     fun suggestDirectly(suggestions: List<SuggestionCandidate>) {
         val reqTime = SystemClock.uptimeMillis()
+        autoCommitState = "" to null
         scope.launch {
             // Glide typing already returns candidates in confidence order. Curate
             // without re-sorting so its best result remains the first result.
@@ -374,8 +438,37 @@ class NlpManager(context: Context) {
         }
     }
 
-    fun getAutoCommitCandidate(): SuggestionCandidate? {
-        return activeCandidates.firstOrNull { it.isEligibleForAutoCommit }
+    /**
+     * The candidate a word separator (space, punctuation) should commit in
+     * place of the composing word, or null to keep the word as typed.
+     *
+     * Suggestions are computed asynchronously with a short debounce, so when
+     * the user types fast the latest pass may still describe the previous
+     * prefix — applying it would turn "thin" into "this". For the Latin
+     * provider we therefore only trust a pass computed for exactly the word
+     * on screen and otherwise decide synchronously (a single native decode,
+     * a few milliseconds), like AOSP LatinIME does. [separator] is the key
+     * that ends the word (a single letter before "." is never corrected).
+     */
+    fun getAutoCommitCandidate(separator: String = " "): SuggestionCandidate? {
+        val subtype = subtypeManager.activeSubtype
+        val provider = runBlocking { getSuggestionProvider(subtype) }
+        if (provider !is LatinLanguageProvider) {
+            return activeCandidates.firstOrNull { it.isEligibleForAutoCommit }
+        }
+        if (!isAutocorrectAllowedForField()) return null
+        provider.autocorrectAllowedForField = true
+        val content = editorInstance.activeContent
+        val composing = content.composingText.toString()
+        if (composing.isBlank()) return null
+        if (!provider.allowsAutocorrectBefore(content, separator)) return null
+        val state = autoCommitState
+        if (state.first == composing) return state.second
+        return try {
+            provider.autocorrectFor(content)
+        } catch (e: Exception) {
+            null
+        }
     }
 
     fun removeSuggestion(subtype: Subtype, candidate: SuggestionCandidate): Boolean {
@@ -389,6 +482,19 @@ class NlpManager(context: Context) {
                     }
                 }
             }
+        }
+    }
+
+    /**
+     * Glide language model: log-probability bonuses for words that follow
+     * [previousWord] (see [LatinLanguageProvider.bigramBonuses]).
+     */
+    fun getBigramBonuses(subtype: Subtype, previousWord: String): Map<String, Double> {
+        if (previousWord.isBlank()) return emptyMap()
+        return runBlocking {
+            (getSuggestionProvider(subtype) as? LatinLanguageProvider)
+                ?.bigramBonuses(subtype.primaryLocale, previousWord)
+                ?: emptyMap()
         }
     }
 

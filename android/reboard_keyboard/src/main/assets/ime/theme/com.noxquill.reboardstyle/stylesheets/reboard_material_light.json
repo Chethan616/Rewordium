@@ -291,6 +291,9 @@
     "font-size": "8sp",
     "margin": "0dp 2dp 0dp 0dp"
   },
+  "smartbar-candidate-word-text[auto-commit=1]": {
+    "font-weight": "bold"
+  },
   "smartbar-candidate-clip": {
     "background": "transparent",
     "foreground": "var(--key-fg)",

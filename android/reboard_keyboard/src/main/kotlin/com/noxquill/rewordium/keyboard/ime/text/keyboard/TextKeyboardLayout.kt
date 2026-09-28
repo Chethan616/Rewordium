@@ -38,6 +38,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -69,6 +70,7 @@ import com.noxquill.rewordium.keyboard.ime.input.InputShiftState
 import androidx.compose.material3.MaterialTheme
 import com.noxquill.rewordium.keyboard.editorInstance
 import com.noxquill.rewordium.keyboard.glideTypingManager
+import com.noxquill.rewordium.keyboard.ime.nlp.engine.TypingProximity
 import com.noxquill.rewordium.keyboard.ime.editor.OperationScope
 import com.noxquill.rewordium.keyboard.ime.editor.OperationUnit
 import com.noxquill.rewordium.keyboard.ime.input.InputEventDispatcher
@@ -263,6 +265,14 @@ fun TextKeyboardLayout(
                 }
                 desiredKey.visibleBounds.applyFrom(desiredKey.touchBounds).deflateBy(keyMarginH, keyMarginV)
                 keyboard.layout(keyboardWidth, keyboardHeight, desiredKey, true, firstRowFactor)
+            }
+        }
+        if (!isPreview && keyboard.mode == KeyboardMode.CHARACTERS) {
+            // Keep the autocorrect decoder's spatial model in sync with the
+            // keys actually on screen (resize, one-handed mode, subtype...).
+            // No-op when the geometry is unchanged.
+            SideEffect {
+                TypingProximity.update(keyboard.keys().asSequence().toList())
             }
         }
 
@@ -701,6 +711,17 @@ private class TextKeyboardLayoutController(
         }
     }
 
+    /**
+     * Remembers where a letter was actually tapped so autocorrect can weigh
+     * near-miss taps (thick fingers) against intentional ones.
+     */
+    private fun recordLetterTap(event: MotionEvent, pointer: TouchPointer, code: Int) {
+        if (code <= KeyCode.SPACE || !Character.isLetter(code)) return
+        val index = pointer.index
+        if (index < 0 || index >= event.pointerCount) return
+        TypingProximity.recordTap(code, event.getX(index), event.getY(index))
+    }
+
     private fun onTouchUpInternal(event: MotionEvent, pointer: TouchPointer) {
         flogDebug(LogTopic.TEXT_KEYBOARD_VIEW) { "pointer=$pointer" }
         pointer.pressedKeyInfo?.cancelJobs()
@@ -718,6 +739,7 @@ private class TextKeyboardLayoutController(
             if (popupUiController.isSuitableForPopups(activeKey)) {
                 val retData = popupUiController.getActiveKeyData(activeKey)
                 if (retData != null && !pointer.hasTriggeredGestureMove) {
+                    recordLetterTap(event, pointer, retData.code)
                     if (retData == activeKey.computedData) {
                         if (activeKey.computedData != activeKey.computedDataOnDown) {
                             inputEventDispatcher.sendCancel(activeKey.computedDataOnDown)
@@ -737,6 +759,7 @@ private class TextKeyboardLayoutController(
                 if (pointer.hasTriggeredGestureMove) {
                     inputEventDispatcher.sendCancel(activeKey.computedDataOnDown)
                 } else {
+                    recordLetterTap(event, pointer, activeKey.computedData.code)
                     if (activeKey.computedData != activeKey.computedDataOnDown) {
                         inputEventDispatcher.sendCancel(activeKey.computedDataOnDown)
                         inputEventDispatcher.sendDownUp(activeKey.computedData)

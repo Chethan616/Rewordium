@@ -17,7 +17,6 @@
 package com.noxquill.rewordium.keyboard.ime.keyboard
 
 import android.content.Context
-import android.icu.lang.UCharacter
 import android.view.KeyEvent
 import android.widget.Toast
 import androidx.compose.runtime.getValue
@@ -48,6 +47,9 @@ import com.noxquill.rewordium.keyboard.ime.input.InputShiftState
 import com.noxquill.rewordium.keyboard.ime.nlp.ClipboardSuggestionCandidate
 import com.noxquill.rewordium.keyboard.ime.nlp.PunctuationRule
 import com.noxquill.rewordium.keyboard.ime.nlp.SuggestionCandidate
+import com.noxquill.rewordium.keyboard.ime.nlp.engine.TypingProximity
+import com.noxquill.rewordium.keyboard.ime.media.MediaPanelTab
+import com.noxquill.rewordium.keyboard.ime.smartbar.quickaction.QuickAction
 import com.noxquill.rewordium.keyboard.ime.onehanded.OneHandedMode
 import com.noxquill.rewordium.keyboard.ime.popup.PopupMappingComponent
 import com.noxquill.rewordium.keyboard.ime.text.composing.Composer
@@ -84,6 +86,14 @@ import org.florisboard.lib.kotlin.collectIn
 import org.florisboard.lib.kotlin.collectLatestIn
 
 private val DoubleSpacePeriodMatcher = """([^.!?‽\s]\s)""".toRegex()
+
+/**
+ * Punctuation that finishes a word and therefore applies a pending
+ * autocorrection. Apostrophes, hyphens, digits and URL/e-mail symbols are
+ * deliberately absent: they continue a token ("don't", "e-mail", "abc1",
+ * "name@") and must never trigger a correction of the partial word.
+ */
+private val AutoCorrectSeparators = setOf(".", ",", "!", "?", ";", ":", ")", "]", "}", "\"", "…", "‽")
 
 class KeyboardManager(context: Context) : InputKeyEventReceiver {
     private val prefs by FlorisPreferenceStore
@@ -133,6 +143,32 @@ class KeyboardManager(context: Context) : InputKeyEventReceiver {
     // returns null when search is not active, "" or query text otherwise.
     private val _emojiSearchQuery = MutableStateFlow<String?>(null)
     val emojiSearchQuery get() = _emojiSearchQuery.asStateFlow()
+
+    /**
+     * Gboard-style in-keyboard resize mode: while true, a drag-to-resize
+     * overlay covers the keys (see KeyboardResizeOverlay).
+     */
+    private val _isResizeMode = MutableStateFlow(false)
+    val isResizeMode get() = _isResizeMode.asStateFlow()
+
+    fun setResizeMode(enabled: Boolean) {
+        _isResizeMode.value = enabled
+        if (enabled) activeState.imeUiMode = ImeUiMode.TEXT
+    }
+
+    /** Remembers the media panel tab so the emoji key can reopen it ("last used"). */
+    fun rememberMediaPanelTab(tab: String) {
+        scope.launch { prefs.emoji.lastPanelTab.set(tab) }
+    }
+
+    private fun mediaTabForEmojiKey(): String {
+        return when (prefs.emoji.panelOpensTo.get()) {
+            MediaPanelTab.EMOJI -> "EMOJI"
+            MediaPanelTab.GIF -> "GIF"
+            MediaPanelTab.STICKER -> "STICKER"
+            MediaPanelTab.LAST_USED -> prefs.emoji.lastPanelTab.get().ifBlank { "EMOJI" }
+        }
+    }
 
     fun beginEmojiSearch() = beginMediaSearch(MediaSearchMode.EMOJI)
     fun endEmojiSearch() = endMediaSearch()
@@ -335,6 +371,21 @@ class KeyboardManager(context: Context) : InputKeyEventReceiver {
                 reevaluateDebugFlags()
             }
         }
+        scope.launch { migrateSmartbarActions() }
+    }
+
+    /**
+     * Offers smartbar actions introduced after a user customised (and thereby
+     * persisted) their quick-action arrangement: the dedicated GIF button and
+     * keyboard resize (both requested in Play Store reviews).
+     */
+    private suspend fun migrateSmartbarActions() {
+        if (prefs.internal.smartbarActionsMigration.get() >= 1) return
+        val migrated = prefs.smartbar.actionArrangement.get()
+            .withActionAdded(QuickAction.InsertKey(TextKeyData.IME_UI_MODE_GIF), index = 1)
+            .withActionAdded(QuickAction.InsertKey(TextKeyData.KEYBOARD_RESIZE), index = 5)
+        prefs.smartbar.actionArrangement.set(migrated)
+        prefs.internal.smartbarActionsMigration.set(1)
     }
 
     private fun updateActiveEvaluators(action: () -> Unit = { }) = scope.launch {
@@ -446,6 +497,19 @@ class KeyboardManager(context: Context) : InputKeyEventReceiver {
         if (keyData != null) {
             inputEventDispatcher.sendDownUp(keyData)
         }
+    }
+
+    /**
+     * Applies the pending autocorrection (if any) for the composing word right
+     * before [separator] is committed. Returns the (original, corrected) pair
+     * so the caller can register the undo after committing the separator.
+     */
+    private fun applyAutoCorrection(separator: String = " "): Pair<String, String>? {
+        val candidate = nlpManager.getAutoCommitCandidate(separator) ?: return null
+        val original = editorInstance.activeContent.composingText.toString()
+        commitCandidate(candidate)
+        val corrected = candidate.text.toString()
+        return if (original.isNotEmpty() && original != corrected) original to corrected else null
     }
 
     fun commitCandidate(candidate: SuggestionCandidate) {
@@ -608,7 +672,19 @@ class KeyboardManager(context: Context) : InputKeyEventReceiver {
             it.isManualSelectionModeStart = false
             it.isManualSelectionModeEnd = false
         }
+        // Gboard behaviour: Backspace right after an autocorrection restores
+        // exactly what was typed, and the keyboard stops correcting that word.
+        if (unit == OperationUnit.CHARACTERS) {
+            val subtype = subtypeManager.activeSubtype
+            val reverted = editorInstance.tryRevertAutoCorrection { original, corrected ->
+                nlpManager.onAutoCorrectionReverted(subtype, original, corrected)
+            }
+            if (reverted) return
+        }
         revertPreviouslyAcceptedCandidate()
+        if (unit == OperationUnit.CHARACTERS) {
+            TypingProximity.removeLastTap()
+        }
         editorInstance.deleteBackwards(unit)
     }
 
@@ -720,13 +796,15 @@ class KeyboardManager(context: Context) : InputKeyEventReceiver {
      * but skips handling changing to characters keyboard and double space periods.
      */
     fun handleHardwareKeyboardSpace() {
-        val candidate = nlpManager.getAutoCommitCandidate()
-        candidate?.let { commitCandidate(it) }
+        val correction = applyAutoCorrection()
         // Skip handling changing to characters keyboard and double space periods
         // TODO: this is whether we commit space after selecting candidate. Should be determined by SuggestionProvider
         if (!subtypeManager.activeSubtype.primaryLocale.supportsAutoSpace &&
-                candidate != null) { /* Do nothing */ } else {
+                correction != null) { /* Do nothing */ } else {
             editorInstance.commitText(KeyCode.SPACE.toChar().toString())
+            correction?.let { (original, corrected) ->
+                editorInstance.markAutoCorrection(original, corrected, KeyCode.SPACE.toChar().toString())
+            }
         }
     }
 
@@ -735,8 +813,7 @@ class KeyboardManager(context: Context) : InputKeyEventReceiver {
      * enabled by the user.
      */
     private fun handleSpace(data: KeyData) {
-        val candidate = nlpManager.getAutoCommitCandidate()
-        candidate?.let { commitCandidate(it) }
+        val correction = applyAutoCorrection()
         if (prefs.keyboard.spaceBarSwitchesToCharacters.get()) {
             when (activeState.keyboardMode) {
                 KeyboardMode.NUMERIC_ADVANCED,
@@ -759,8 +836,11 @@ class KeyboardManager(context: Context) : InputKeyEventReceiver {
         }
         // TODO: this is whether we commit space after selecting candidate. Should be determined by SuggestionProvider
         if (!subtypeManager.activeSubtype.primaryLocale.supportsAutoSpace &&
-                candidate != null) { /* Do nothing */ } else {
+                correction != null) { /* Do nothing */ } else {
             editorInstance.commitText(KeyCode.SPACE.toChar().toString())
+            correction?.let { (original, corrected) ->
+                editorInstance.markAutoCorrection(original, corrected, KeyCode.SPACE.toChar().toString())
+            }
         }
     }
 
@@ -791,10 +871,15 @@ class KeyboardManager(context: Context) : InputKeyEventReceiver {
      * Handles a [KeyCode.TOGGLE_AUTOCORRECT] event.
      */
     private fun handleToggleAutocorrect() {
+        val enabled = !prefs.correction.autoCorrect.get()
+        scope.launch { prefs.correction.autoCorrect.set(enabled) }
         lastToastReference.get()?.cancel()
         lastToastReference = WeakReference(
-            appContext.showLongToastSync("Autocorrect toggle is a placeholder and not yet implemented")
+            appContext.showShortToastSync(
+                if (enabled) R.string.autocorrect__toast_enabled else R.string.autocorrect__toast_disabled
+            )
         )
+        resetSuggestions(editorInstance.activeContent)
     }
 
     /**
@@ -1025,9 +1110,16 @@ class KeyboardManager(context: Context) : InputKeyEventReceiver {
             KeyCode.IME_NEXT_SUBTYPE -> subtypeManager.switchToNextSubtype()
             KeyCode.IME_UI_MODE_TEXT -> activeState.imeUiMode = ImeUiMode.TEXT
             KeyCode.IME_UI_MODE_MEDIA -> {
+                _isResizeMode.value = false
+                activeState.activeMediaMode = mediaTabForEmojiKey()
                 activeState.imeUiMode = ImeUiMode.MEDIA
-                activeState.activeMediaMode = "EMOJI"
             }
+            KeyCode.IME_UI_MODE_GIF -> {
+                _isResizeMode.value = false
+                activeState.activeMediaMode = "GIF"
+                activeState.imeUiMode = ImeUiMode.MEDIA
+            }
+            KeyCode.KEYBOARD_RESIZE -> setResizeMode(!_isResizeMode.value)
             KeyCode.IME_UI_MODE_CLIPBOARD -> activeState.imeUiMode = ImeUiMode.CLIPBOARD
             KeyCode.VOICE_INPUT -> FlorisImeService.switchToVoiceInputMethod()
             KeyCode.KANA_SWITCHER -> handleKanaSwitch()
@@ -1079,7 +1171,7 @@ class KeyboardManager(context: Context) : InputKeyEventReceiver {
             KeyCode.VIEW_SYMBOLS2 -> activeState.keyboardMode = KeyboardMode.SYMBOLS2
             else -> {
                 if (activeState.imeUiMode == ImeUiMode.MEDIA) {
-                    nlpManager.getAutoCommitCandidate()?.let { commitCandidate(it) }
+                    applyAutoCorrection()
                     editorInstance.commitText(data.asString(isForDisplay = false))
                     return@batchEdit
                 }
@@ -1104,10 +1196,11 @@ class KeyboardManager(context: Context) : InputKeyEventReceiver {
                     else -> when (data.type) {
                         KeyType.CHARACTER, KeyType.NUMERIC ->{
                             val text = data.asString(isForDisplay = false)
-                            if (!UCharacter.isUAlphabetic(UCharacter.codePointAt(text, 0))) {
-                                nlpManager.getAutoCommitCandidate()?.let { commitCandidate(it) }
-                            }
+                            val correction = if (text in AutoCorrectSeparators) applyAutoCorrection(text) else null
                             editorInstance.commitChar(text)
+                            correction?.let { (original, corrected) ->
+                                editorInstance.markAutoCorrection(original, corrected, text)
+                            }
                         }
                         else -> {
                             flogError(LogTopic.KEY_EVENTS) { "Received unknown key: $data" }

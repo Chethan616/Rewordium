@@ -35,10 +35,24 @@ import com.noxquill.rewordium.keyboard.lib.devtools.flogError
  */
 object LatinImeNative {
     /** Bump in lockstep with `nativeAbiVersion` in `latinime_jni.cpp`. */
-    private const val EXPECTED_ABI_VERSION = 6
+    private const val EXPECTED_ABI_VERSION = 7
 
     /** Sentinel for "open failed" — Kotlin must not pass 0 back to native. */
     const val INVALID_HANDLE: Long = 0L
+
+    /** Mirrors `defines.h` MAX_WORD_LENGTH; the typing decoder rejects longer input. */
+    const val MAX_WORD_LENGTH = 48
+
+    /** Mirrors `defines.h` NOT_A_COORDINATE. */
+    const val NOT_A_COORDINATE = -1
+
+    // Mirrors of suggest/core/dictionary/dictionary.h kind values/flags.
+    const val KIND_MASK_KIND = 0xFF
+    const val KIND_WHITELIST = 3
+    const val KIND_FLAG_POSSIBLY_OFFENSIVE = 0x80000000.toInt()
+    const val KIND_FLAG_EXACT_MATCH = 0x40000000
+    const val KIND_FLAG_EXACT_MATCH_WITH_INTENTIONAL_OMISSION = 0x20000000
+    const val KIND_FLAG_APPROPRIATE_FOR_AUTOCORRECTION = 0x10000000
 
     private val loaded: Boolean by lazy {
         try {
@@ -116,11 +130,18 @@ object LatinImeNative {
     external fun nativeCloseDict(handle: Long)
 
     /**
-     * Add a unigram entry. [probability] is 0–255 (AOSP's standard range,
-     * matches our existing JSON wordlist). Returns false on invalid
-     * handle, empty word, or AOSP rejection.
+     * Add a unigram entry. [probability] is 0–255 on AOSP's logarithmic scale
+     * (each step is a factor of 1.15, matching our JSON wordlist). Offensive
+     * words stay valid (never corrected away) but are kept out of corrections
+     * when the suggest call asks to block offensive words. Returns false on
+     * invalid handle, empty/overlong word, or AOSP rejection.
      */
-    external fun nativeAddUnigram(handle: Long, word: String, probability: Int): Boolean
+    external fun nativeAddUnigram(
+        handle: Long,
+        word: String,
+        probability: Int,
+        isPossiblyOffensive: Boolean,
+    ): Boolean
 
     /**
      * Remove a unigram entry. Used by the unlearn path so a word the user
@@ -226,6 +247,34 @@ object LatinImeNative {
      *
      * Empty array on invalid handle, empty stroke, or no candidates.
      */
+    /**
+     * Runs AOSP's typing Suggest pipeline (spatial proximity model, typo
+     * corrections, completions and n-gram context) for one composing word.
+     *
+     * @param codePoints  The typed word, one code point per tap, in typed case.
+     * @param xs / ys     Tap coordinates in the ProximityInfo's pixel space, one
+     *                    per code point; -1 when unknown.
+     * @param prevWord    Previous word in dictionary casing, "" for none.
+     * @param outScores   Receives AOSP output scores, best first.
+     * @param outTypes    Receives `Dictionary::KIND_*` | `KIND_FLAG_*` bit fields.
+     * @param outNormalizedScores Receives AOSP's normalized autocorrect score of
+     *                    typed → candidate (compare against the threshold).
+     * @return Candidates best first (at most [maxResults] and the out-array size).
+     */
+    external fun nativeSuggestForTyping(
+        dictHandle: Long,
+        proxHandle: Long,
+        codePoints: IntArray,
+        xs: IntArray,
+        ys: IntArray,
+        prevWord: String,
+        blockOffensive: Boolean,
+        maxResults: Int,
+        outScores: IntArray,
+        outTypes: IntArray,
+        outNormalizedScores: FloatArray,
+    ): Array<String>
+
     external fun nativeSuggestForGesture(
         dictHandle: Long,
         proxHandle: Long,

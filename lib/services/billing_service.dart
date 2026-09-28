@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:in_app_purchase/in_app_purchase.dart';
+import 'package:in_app_purchase_android/billing_client_wrappers.dart';
 import 'package:in_app_purchase_android/in_app_purchase_android.dart';
 
 /// Purchase state for UI - never expose raw billing codes
@@ -9,6 +10,7 @@ enum PurchaseState {
   idle,
   loading,
   processing,
+  pending,
   restoring,
   success,
   alreadyOwned,
@@ -23,6 +25,7 @@ class PurchaseStateMessages {
     PurchaseState.idle: '',
     PurchaseState.loading: 'Loading...',
     PurchaseState.processing: 'Processing Payment',
+    PurchaseState.pending: 'Payment Pending',
     PurchaseState.restoring: 'Restoring Purchases',
     PurchaseState.success: 'Welcome to Pro! 🎉',
     PurchaseState.alreadyOwned: 'Already Subscribed',
@@ -36,6 +39,10 @@ class PurchaseStateMessages {
     PurchaseState.loading: 'Please wait...',
     PurchaseState.processing:
         'Please don\'t go back or close the app.\nThis will only take a moment.',
+    PurchaseState.pending:
+        'Google Play is waiting for your payment to be confirmed (this can take '
+            'a few minutes for UPI and some cards).\nPro unlocks automatically '
+            'once it goes through — you can safely close this screen.',
     PurchaseState.restoring: 'Checking for previous purchases...',
     PurchaseState.success:
         'You now have unlimited access to all Pro features. Thank you for your support!',
@@ -49,6 +56,18 @@ class PurchaseStateMessages {
   };
 }
 
+/// Called whenever Google Play reports an active subscription.
+///
+/// [autoRenewing] is false when the user cancelled but is still inside the
+/// paid period; Play keeps reporting the purchase until that period ends.
+typedef SubscriptionActiveCallback = void Function(
+  String productId,
+  String? purchaseToken,
+  DateTime? purchaseDate,
+  bool isRestored,
+  bool autoRenewing,
+);
+
 /// Service for handling Google Play In-App Purchases (Subscriptions)
 ///
 /// Product IDs should match what's configured in Google Play Console:
@@ -56,6 +75,9 @@ class PurchaseStateMessages {
 class BillingService extends ChangeNotifier {
   static const String _monthlySubscriptionId = 'rewordium_pro_monthly';
   static const String _yearlySubscriptionId = 'rewordium_pro_yearly';
+
+  /// Promotional offer applied when the user is eligible for it.
+  static const String _specialOfferId = 'special-discount';
 
   static final Set<String> _productIds = {
     _monthlySubscriptionId,
@@ -66,7 +88,7 @@ class BillingService extends ChangeNotifier {
   StreamSubscription<List<PurchaseDetails>>? _subscription;
 
   List<ProductDetails> _products = [];
-  List<PurchaseDetails> _purchases = [];
+  final List<PurchaseDetails> _purchases = [];
   bool _isAvailable = false;
   bool _purchasePending = false;
   bool _loading = true;
@@ -79,12 +101,7 @@ class BillingService extends ChangeNotifier {
 
   // Callbacks
   Function(bool success, String? message)? onPurchaseComplete;
-  Function(
-    String productId,
-    String? purchaseToken,
-    DateTime? purchaseDate,
-    bool isRestored,
-  )? onSubscriptionActive;
+  SubscriptionActiveCallback? onSubscriptionActive;
   Function(PurchaseState state)? onStateChanged;
 
   // Getters
@@ -115,22 +132,42 @@ class BillingService extends ChangeNotifier {
 
   /// Reset state to idle
   void resetState() {
-    _purchaseState = PurchaseState.idle;
+    // A pending payment is still pending when the screen is reopened.
+    _purchaseState = _purchasePending ? PurchaseState.pending : PurchaseState.idle;
     _errorMessage = null;
     notifyListeners();
   }
 
-  ProductDetails? get monthlyProduct =>
-      _products.cast<ProductDetails?>().firstWhere(
-            (p) => p?.id == _monthlySubscriptionId,
-            orElse: () => null,
-          );
+  ProductDetails? get monthlyProduct => _productFor(_monthlySubscriptionId);
 
-  ProductDetails? get yearlyProduct =>
-      _products.cast<ProductDetails?>().firstWhere(
-            (p) => p?.id == _yearlySubscriptionId,
-            orElse: () => null,
-          );
+  ProductDetails? get yearlyProduct => _productFor(_yearlySubscriptionId);
+
+  /// Play returns one [GooglePlayProductDetails] per offer of a subscription.
+  /// Pick the one we will actually buy — the special offer when the user is
+  /// eligible (Play only lists offers the user can redeem), otherwise the
+  /// base plan — so the price shown is exactly the price charged.
+  ProductDetails? _productFor(String productId) {
+    final candidates = _products.where((p) => p.id == productId).toList();
+    if (candidates.isEmpty) return null;
+    String? offerIdOf(ProductDetails product) {
+      if (product is GooglePlayProductDetails) {
+        final index = product.subscriptionIndex;
+        final offers = product.productDetails.subscriptionOfferDetails;
+        if (index != null && offers != null && index < offers.length) {
+          return offers[index].offerId;
+        }
+      }
+      return null;
+    }
+
+    for (final product in candidates) {
+      if (offerIdOf(product) == _specialOfferId) return product;
+    }
+    for (final product in candidates) {
+      if (offerIdOf(product) == null) return product; // base plan
+    }
+    return candidates.first;
+  }
 
   bool get hasActiveSubscription {
     return _purchases.any((purchase) =>
@@ -168,8 +205,10 @@ class BillingService extends ChangeNotifier {
     // Load products
     await _loadProducts();
 
-    // Restore purchases to check existing subscriptions
-    await restorePurchases();
+    // Silently re-validate existing subscriptions. This keeps renewing
+    // subscribers' entitlement fresh on every launch without flashing a
+    // "Restoring purchases" / "Welcome to Pro" screen at them.
+    await syncActivePurchases();
 
     _loading = false;
     notifyListeners();
@@ -202,6 +241,38 @@ class BillingService extends ChangeNotifier {
     }
   }
 
+  /// Queries Google Play for subscriptions that are active right now and
+  /// reports them via [onSubscriptionActive] (acknowledging any that were
+  /// never acknowledged — Play refunds unacknowledged purchases after 3 days).
+  /// Does not touch the UI state. Safe to call repeatedly, e.g. after sign-in.
+  Future<void> syncActivePurchases() async {
+    if (!Platform.isAndroid || !_isAvailable) return;
+    try {
+      final addition = _inAppPurchase
+          .getPlatformAddition<InAppPurchaseAndroidPlatformAddition>();
+      final response = await addition.queryPastPurchases();
+      if (response.error != null && kDebugMode) {
+        print('[BillingService] queryPastPurchases error: ${response.error}');
+      }
+      for (final purchase in response.pastPurchases) {
+        final wrapper = purchase.billingClientPurchase;
+        if (wrapper.purchaseState != PurchaseStateWrapper.purchased) {
+          continue; // pending payments are reported when they complete
+        }
+        if (!wrapper.isAcknowledged) {
+          await _inAppPurchase.completePurchase(purchase);
+        }
+        purchase.status = PurchaseStatus.restored;
+        _purchases.removeWhere((p) => p.productID == purchase.productID);
+        _purchases.add(purchase);
+        _reportSubscription(purchase, isRestored: true);
+      }
+      notifyListeners();
+    } catch (e) {
+      if (kDebugMode) print('[BillingService] syncActivePurchases failed: $e');
+    }
+  }
+
   /// Purchase a subscription
   Future<bool> purchaseSubscription(ProductDetails productDetails) async {
     if (!_isAvailable) {
@@ -214,30 +285,12 @@ class BillingService extends ChangeNotifier {
     _updateState(PurchaseState.processing);
 
     try {
-      const specialOfferId = 'special-discount';
-      PurchaseParam purchaseParam;
-
-      if (Platform.isAndroid && productDetails is GooglePlayProductDetails) {
-        String? offerToken;
-        final offers =
-          productDetails.productDetails.subscriptionOfferDetails;
-        if (offers != null) {
-          for (final offer in offers) {
-            if (offer.offerId == specialOfferId &&
-                offer.offerIdToken.isNotEmpty) {
-              offerToken = offer.offerIdToken;
-              break;
-            }
-          }
-        }
-
-        purchaseParam = GooglePlayPurchaseParam(
-          productDetails: productDetails,
-          offerToken: offerToken,
-        );
-      } else {
-        purchaseParam = PurchaseParam(productDetails: productDetails);
-      }
+      // The chosen product entry already carries the offer token of the
+      // offer we displayed (see _productFor), so price shown == price paid.
+      final PurchaseParam purchaseParam =
+          Platform.isAndroid && productDetails is GooglePlayProductDetails
+              ? GooglePlayPurchaseParam(productDetails: productDetails)
+              : PurchaseParam(productDetails: productDetails);
 
       // For subscriptions, we use buyNonConsumable
       final success = await _inAppPurchase.buyNonConsumable(
@@ -253,7 +306,12 @@ class BillingService extends ChangeNotifier {
     } catch (e) {
       _purchasePending = false;
       if (kDebugMode) print('[BillingService] Purchase error: $e');
-      _updateState(PurchaseState.error);
+      final message = e.toString().toLowerCase();
+      if (message.contains('already') || message.contains('owned')) {
+        _updateState(PurchaseState.alreadyOwned);
+      } else {
+        _updateState(PurchaseState.error);
+      }
       return false;
     }
   }
@@ -278,15 +336,14 @@ class BillingService extends ChangeNotifier {
     return purchaseSubscription(yearlyProduct!);
   }
 
-  /// Restore previous purchases
-  /// Returns true if purchases were restored successfully, false otherwise
+  /// Restore previous purchases (user initiated).
+  /// Returns true if an active purchase was found.
   Future<bool> restorePurchases() async {
     if (!_isAvailable) {
       _updateState(PurchaseState.billingUnavailable);
       return false;
     }
 
-    // Set up completer to wait for restore result
     _isRestoring = true;
     _restoreCompleter = Completer<bool>();
     _updateState(PurchaseState.restoring);
@@ -294,22 +351,17 @@ class BillingService extends ChangeNotifier {
     try {
       await _inAppPurchase.restorePurchases();
 
-      // Wait for the purchase stream to process (with timeout)
-      // The stream will complete the completer when it receives restored purchases
+      // The purchase stream delivers the result (an empty list when the user
+      // owns nothing); the timeout only guards against a stalled store.
       final result = await _restoreCompleter!.future.timeout(
-        const Duration(seconds: 10),
-        onTimeout: () {
-          // If no purchases were received, check if we have any in the list
-          if (_purchases.isNotEmpty && hasActiveSubscription) {
-            return true;
-          }
-          // No purchases found
-          _updateState(PurchaseState.idle);
-          return false;
-        },
+        const Duration(seconds: 15),
+        onTimeout: () => hasActiveSubscription,
       );
 
       _isRestoring = false;
+      if (!result && _purchaseState == PurchaseState.restoring) {
+        _updateState(PurchaseState.idle);
+      }
       return result;
     } catch (e) {
       _isRestoring = false;
@@ -321,8 +373,21 @@ class BillingService extends ChangeNotifier {
     }
   }
 
+  void _completeRestore(bool found) {
+    if (_isRestoring &&
+        _restoreCompleter != null &&
+        !_restoreCompleter!.isCompleted) {
+      _restoreCompleter!.complete(found);
+    }
+  }
+
   /// Handle purchase updates
-  void _onPurchaseUpdated(List<PurchaseDetails> purchaseDetailsList) {
+  Future<void> _onPurchaseUpdated(List<PurchaseDetails> purchaseDetailsList) async {
+    if (purchaseDetailsList.isEmpty) {
+      // restorePurchases() found nothing.
+      _completeRestore(false);
+      return;
+    }
     for (var purchaseDetails in purchaseDetailsList) {
       if (kDebugMode) {
         print(
@@ -331,83 +396,62 @@ class BillingService extends ChangeNotifier {
 
       switch (purchaseDetails.status) {
         case PurchaseStatus.pending:
+          // Slow payment methods (UPI, cash, some cards). Don't trap the user
+          // on a blocking spinner; Pro unlocks when Play confirms.
           _purchasePending = true;
-          _updateState(PurchaseState.processing);
+          _updateState(PurchaseState.pending);
           break;
 
         case PurchaseStatus.purchased:
           _purchasePending = false;
           _handleSuccessfulPurchase(purchaseDetails, isRestored: false);
-          // Complete restore completer if we were restoring
-          if (_isRestoring &&
-              _restoreCompleter != null &&
-              !_restoreCompleter!.isCompleted) {
-            _restoreCompleter!.complete(true);
-          }
+          _completeRestore(true);
           break;
 
         case PurchaseStatus.restored:
           _purchasePending = false;
           _handleSuccessfulPurchase(purchaseDetails, isRestored: true);
-          // Complete restore completer if we were restoring
-          if (_isRestoring &&
-              _restoreCompleter != null &&
-              !_restoreCompleter!.isCompleted) {
-            _restoreCompleter!.complete(true);
-          }
+          _completeRestore(true);
           break;
 
         case PurchaseStatus.error:
           _purchasePending = false;
           _handlePurchaseError(purchaseDetails);
-          // Complete restore completer with failure if we were restoring
-          if (_isRestoring &&
-              _restoreCompleter != null &&
-              !_restoreCompleter!.isCompleted) {
-            _restoreCompleter!.complete(false);
-          }
+          _completeRestore(false);
           break;
 
         case PurchaseStatus.canceled:
           _purchasePending = false;
           _updateState(PurchaseState.cancelled);
           onPurchaseComplete?.call(false, null);
-          // Complete restore completer with failure if we were restoring
-          if (_isRestoring &&
-              _restoreCompleter != null &&
-              !_restoreCompleter!.isCompleted) {
-            _restoreCompleter!.complete(false);
-          }
+          _completeRestore(false);
           break;
       }
 
-      // Complete the purchase
+      // Acknowledge the purchase. Unacknowledged purchases are refunded by
+      // Google Play after 3 days.
       if (purchaseDetails.pendingCompletePurchase) {
-        _inAppPurchase.completePurchase(purchaseDetails);
+        try {
+          await _inAppPurchase.completePurchase(purchaseDetails);
+        } catch (e) {
+          if (kDebugMode) print('[BillingService] completePurchase failed: $e');
+        }
       }
     }
   }
 
   /// Handle purchase errors with user-friendly states
   void _handlePurchaseError(PurchaseDetails purchaseDetails) {
-    // Check for specific error codes on Android
-    if (Platform.isAndroid && purchaseDetails is GooglePlayPurchaseDetails) {
-      // Check error message for "already owned" scenario
-      final errorMessage = (purchaseDetails.error?.message ?? '').toLowerCase();
-      if (errorMessage.contains('already') || errorMessage.contains('owned')) {
-        _updateState(PurchaseState.alreadyOwned);
-        onPurchaseComplete?.call(false, null);
-        return;
-      }
-    }
-
-    // Check generic error message
     final errorMessage = (purchaseDetails.error?.message ?? '').toLowerCase();
+    final errorCode = (purchaseDetails.error?.code ?? '').toLowerCase();
     if (errorMessage.contains('already') ||
         errorMessage.contains('owned') ||
-        errorMessage.contains('item_already_owned')) {
+        errorMessage.contains('item_already_owned') ||
+        errorCode.contains('already')) {
       _updateState(PurchaseState.alreadyOwned);
       onPurchaseComplete?.call(false, null);
+      // They own it — make sure the entitlement is applied.
+      unawaited(syncActivePurchases());
       return;
     }
 
@@ -429,36 +473,35 @@ class BillingService extends ChangeNotifier {
     PurchaseDetails purchaseDetails, {
     required bool isRestored,
   }) {
-    // Add to purchases list
     _purchases.removeWhere((p) => p.productID == purchaseDetails.productID);
     _purchases.add(purchaseDetails);
 
-    // Verify purchase on your server if needed
-    // For now, we just trust Google Play's verification
+    _updateState(PurchaseState.success);
+    _reportSubscription(purchaseDetails, isRestored: isRestored);
+    onPurchaseComplete?.call(true, null);
+  }
 
-    // Get purchase token for Android
+  void _reportSubscription(PurchaseDetails purchaseDetails, {required bool isRestored}) {
     String? purchaseToken;
     DateTime? purchaseDate;
+    var autoRenewing = true;
     if (Platform.isAndroid && purchaseDetails is GooglePlayPurchaseDetails) {
-      purchaseToken = purchaseDetails.billingClientPurchase.purchaseToken;
-      final purchaseTime = purchaseDetails.billingClientPurchase.purchaseTime;
+      final wrapper = purchaseDetails.billingClientPurchase;
+      purchaseToken = wrapper.purchaseToken;
+      autoRenewing = wrapper.isAutoRenewing;
+      final purchaseTime = wrapper.purchaseTime;
       if (purchaseTime > 0) {
         purchaseDate =
             DateTime.fromMillisecondsSinceEpoch(purchaseTime, isUtc: true);
       }
     }
-
-    // Update state to success
-    _updateState(PurchaseState.success);
-
-    // Notify listeners
     onSubscriptionActive?.call(
       purchaseDetails.productID,
       purchaseToken,
       purchaseDate,
       isRestored,
+      autoRenewing,
     );
-    onPurchaseComplete?.call(true, null);
   }
 
   void _onPurchaseStreamDone() {
@@ -469,6 +512,7 @@ class BillingService extends ChangeNotifier {
     if (kDebugMode) {
       print('[BillingService] Purchase stream error: $error');
     }
+    _completeRestore(false);
   }
 
   @override

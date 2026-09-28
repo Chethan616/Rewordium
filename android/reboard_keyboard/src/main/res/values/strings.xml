@@ -93,6 +93,19 @@
     <string name="quick_action__toggle_incognito_mode" comment="Please mind the limited available space for the quick action strings">Incognito</string>
     <string name="quick_action__toggle_incognito_mode__tooltip">Toggle incognito mode</string>
     <string name="quick_action__toggle_autocorrect" comment="Please mind the limited available space for the quick action strings">Autocorrect</string>
+    <string name="quick_action__ime_ui_mode_gif" comment="Please mind the limited available space for the quick action strings">GIFs</string>
+    <string name="quick_action__ime_ui_mode_gif__tooltip">Search GIFs</string>
+    <string name="quick_action__keyboard_resize" comment="Please mind the limited available space for the quick action strings">Resize</string>
+    <string name="quick_action__keyboard_resize__tooltip">Resize keyboard</string>
+    <string name="keyboard_resize__title">Drag to resize</string>
+    <string name="keyboard_resize__height">Height {v}%</string>
+    <string name="keyboard_resize__reset">Reset</string>
+    <string name="keyboard_resize__done">Done</string>
+    <string name="prefs__media__panel_opens_to">Emoji key opens</string>
+    <string name="enum__media_panel_tab__last_used">Last used tab</string>
+    <string name="enum__media_panel_tab__emoji">Emoji</string>
+    <string name="enum__media_panel_tab__gif">GIFs</string>
+    <string name="enum__media_panel_tab__sticker">Stickers</string>
     <string name="quick_action__toggle_autocorrect__tooltip">Toggle autocorrect</string>
     <string name="quick_action__voice_input" comment="Please mind the limited available space for the quick action strings">Voice input</string>
     <string name="quick_action__voice_input__tooltip" comment="IME stands for Input Method Editor and is indirectly equivalent to 'keyboard'.">Open voice input provider</string>
@@ -536,6 +549,15 @@
     <string name="pref__correction__remember_caps_lock_state__summary" comment="Preference summary">Caps lock will stay on when moving to another text field</string>
     <string name="pref__correction__double_space_period__label" comment="Preference title">Double-space period</string>
     <string name="pref__correction__double_space_period__summary" comment="Preference summary">Tapping twice on spacebar inserts a period followed by a space</string>
+    <string name="pref__correction__auto_correct__label" comment="Preference title">Autocorrect</string>
+    <string name="pref__correction__auto_correct__summary" comment="Preference summary">Fix typos automatically when you finish a word. Press Backspace right after a correction to undo it.</string>
+    <string name="pref__correction__auto_correct_level__label" comment="Preference title">Autocorrect strength</string>
+    <string name="enum__auto_correct_level__modest" comment="Enum value label">Balanced (recommended)</string>
+    <string name="enum__auto_correct_level__modest__description" comment="Enum value description">Only corrects clear typos and leaves names and slang alone</string>
+    <string name="enum__auto_correct_level__aggressive" comment="Enum value label">Aggressive</string>
+    <string name="enum__auto_correct_level__aggressive__description" comment="Enum value description">Corrects more mistakes, including heavily misspelled words</string>
+    <string name="autocorrect__toast_enabled">Autocorrect on</string>
+    <string name="autocorrect__toast_disabled">Autocorrect off</string>
     <string name="pref__correction__smart_quotes__label" comment="Preference title">Smart quotes</string>
     <string name="pref__correction__smart_quotes__summary" comment="Preference summary">Automatically use curly quotes (“ ”) instead of straight quotes</string>
     <string name="pref__spelling__title" comment="Preference group title">Spelling</string>

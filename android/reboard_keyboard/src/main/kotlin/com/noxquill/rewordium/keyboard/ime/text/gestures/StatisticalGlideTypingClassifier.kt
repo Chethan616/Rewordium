@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2025 The ReBoard Contributors
+ * Copyright (C) 2025-2026 The ReBoard Contributors
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -18,186 +18,186 @@ package com.noxquill.rewordium.keyboard.ime.text.gestures
 
 import android.content.Context
 import androidx.collection.LruCache
-import androidx.collection.SparseArrayCompat
-import androidx.collection.set
 import com.noxquill.rewordium.keyboard.BuildConfig
+import com.noxquill.rewordium.keyboard.editorInstance
 import com.noxquill.rewordium.keyboard.ime.core.Subtype
 import com.noxquill.rewordium.keyboard.ime.keyboard.KeyData
 import com.noxquill.rewordium.keyboard.ime.text.key.KeyCode
 import com.noxquill.rewordium.keyboard.ime.text.keyboard.TextKey
+import com.noxquill.rewordium.keyboard.lib.devtools.flogDebug
 import com.noxquill.rewordium.keyboard.nlpManager
-import com.noxquill.rewordium.keyboard.editorInstance
 import java.text.Normalizer
-import java.util.*
-import java.util.concurrent.ConcurrentHashMap
-import kotlin.math.PI
+import java.util.concurrent.Executors
+import java.util.concurrent.atomic.AtomicInteger
 import kotlin.math.abs
-import kotlin.math.exp
+import kotlin.math.ln
 import kotlin.math.max
 import kotlin.math.min
-import kotlin.math.pow
 import kotlin.math.sqrt
-import kotlin.math.ln
-
-private fun TextKey.baseCode(): Int {
-    return (data as? KeyData)?.code ?: KeyCode.UNSPECIFIED
-}
 
 /**
- * Classifies gestures by comparing them with an "ideal gesture".
+ * Classifies gestures by comparing them with the "ideal gesture" of each
+ * candidate word (the polyline through its key centres) — SHARK²-style
+ * shape + location channels combined with a unigram/bigram language model.
  *
- * Check out Étienne Desticourt's excellent write up at https://github.com/AnySoftKeyboard/AnySoftKeyboard/pull/1870
+ * Search runs in stages so a ~170k-word vocabulary stays fast and accurate:
+ *  1. first/last-key pruning (6 nearest keys to the gesture's endpoints),
+ *  2. a relative path-length gate,
+ *  3. a cheap 10-point location + frequency score over all survivors,
+ *  4. full 120-point shape/location scoring of the best [COARSE_KEEP].
+ *
+ * Offline simulation over the shipped dictionary (see tools/) showed the
+ * old "keep the 256 most frequent survivors" cap discarded the right word
+ * in ~19% of swipes once the vocabulary grew; the staged search lifts top-3
+ * recall from ~80% to ~95%.
+ *
+ * Check out Étienne Desticourt's write up at https://github.com/AnySoftKeyboard/AnySoftKeyboard/pull/1870
  */
 class StatisticalGlideTypingClassifier(context: Context) : GlideTypingClassifier {
     private val nlpManager by context.nlpManager()
     private val editorInstance by context.editorInstance()
-    private val reranker = ContextLmReranker(context)
 
     private val gesture = Gesture()
-    private var keysByCharacter: SparseArrayCompat<TextKey> = SparseArrayCompat()
-    private var words: List<String> = emptyList()
-    // Snapshot of word frequencies loaded once per subtype change so the inner scoring loop
-    // can do O(1) map lookups instead of a runBlocking JNI call per candidate.
-    private var wordFrequencies: Map<String, Double> = emptyMap()
 
-    /**
-     * Per-gesture beam of best-seen-so-far candidates across mid-gesture preview calls.
-     * Maps word → best (lowest) confidence value observed. Lower confidence = higher rank.
-     * When [BuildConfig.ENABLE_BEAM_SEARCH_GESTURES] is on, [getSuggestions] returns a
-     * stabilised ranking from this beam instead of the latest single-pass scoring, which
-     * reduces flapping of the top candidate as the user's swipe progresses.
-     *
-     * Cleared on [clear] (gesture end). Acceptance gate before flipping the flag on by
-     * default: beam-ranked top-1 must match current top-1 on >95% of a curated corpus.
-     */
-    private val beam = HashMap<String, Float>(16)
-    private var keys: ArrayList<TextKey> = arrayListOf()
-    private lateinit var pruner: Pruner
-    private var wordDataSubtype: Subtype? = null
-    private var layoutSubtype: Subtype? = null
-    private var currentSubtype: Subtype? = null
+    /** Immutable snapshot of everything the decoder needs; swapped atomically. */
+    private class Index(
+        val subtype: Subtype,
+        val layout: Layout,
+        val tree: HashMap<Long, ArrayList<String>>,
+        val frequencies: Map<String, Double>,
+        val templates: LruCache<String, Array<Template>>,
+    )
+
+    /** Key geometry captured at [setLayout] time (TextKey bounds are mutable). */
+    private class Layout(
+        val codes: IntArray,
+        val centerXs: FloatArray,
+        val centerYs: FloatArray,
+        val keyWidths: FloatArray,
+        val keyHeights: FloatArray,
+        val radius: Float,
+        val signature: Int,
+    ) {
+        private val indexByCode = HashMap<Int, Int>(codes.size * 2).also { map ->
+            for (i in codes.indices) map[codes[i]] = i
+        }
+
+        fun indexOf(char: Char): Int {
+            val lower = Character.toLowerCase(char)
+            indexByCode[lower.code]?.let { return it }
+            // Accented letters fall back to their base key ("é" -> "e").
+            val base = Normalizer.normalize(lower.toString(), Normalizer.Form.NFD).firstOrNull() ?: return -1
+            return indexByCode[base.code] ?: -1
+        }
+    }
+
+    /** Resampled ideal gesture of a word, in absolute and box-normalised form. */
+    private class Template(
+        val xs: FloatArray,
+        val ys: FloatArray,
+        val nxs: FloatArray,
+        val nys: FloatArray,
+        val length: Float,
+    )
+
+    @Volatile private var index: Index? = null
+    @Volatile private var pendingLayout: Layout? = null
+    @Volatile private var pendingSubtype: Subtype? = null
+    private val buildGeneration = AtomicInteger(0)
+    private val builder = Executors.newSingleThreadExecutor { runnable ->
+        Thread(runnable, "GlideIndexBuilder").apply { isDaemon = true; priority = Thread.NORM_PRIORITY - 1 }
+    }
+
     override val ready: Boolean
-        get() = currentSubtype == layoutSubtype && wordDataSubtype == layoutSubtype && wordDataSubtype != null
-    private val prunerCache = LruCache<Subtype, Pruner>(PRUNER_CACHE_SIZE)
+        get() {
+            val idx = index ?: return false
+            return idx.subtype == pendingSubtype && idx.layout.signature == pendingLayout?.signature
+        }
 
-    /**
-     * The minimum distance between points to be added to a gesture.
-     */
-    private var distanceThresholdSquared = 0
+    /** The minimum distance between points to be added to a gesture. */
+    @Volatile private var distanceThresholdSquared = 0f
 
     companion object {
-        /**
-         * Describes the allowed length variance in a gesture. If a gesture is too long or too short, it is immediately
-         * discarded to save cycles.
-         */
-        private const val PRUNING_LENGTH_THRESHOLD = 8.42
+        /** Number of evenly spaced points gestures are resampled to before comparison. */
+        private const val SAMPLING_POINTS = 120
+
+        /** Points of the cheap pre-scoring pass. */
+        private const val COARSE_POINTS = 10
+
+        /** Candidates kept after the cheap pass for full scoring. */
+        private const val COARSE_KEEP = 200
+
+        /** Spread of the cheap pass' mean location error, in key widths. */
+        private const val COARSE_STD = 0.6f
 
         /**
-         * Number of evenly-spaced points to resample a gesture into before comparison.
-         * Reduced from 240 → 120 for a 2× speedup in inner-loop distance calculations
-         * with negligible accuracy loss at typical Android key sizes (~40 dp).
-         */
-        private const val SAMPLING_POINTS: Int = 120
-
-        /**
-         * Standard deviation of the distribution of distances between the shapes of two gestures
-         * representing the same word. It's expressed for normalized gestures and is therefore
-         * independent of the keyboard or key size.
+         * Standard deviation of the distance between the shapes of two gestures
+         * representing the same word (normalised gestures, keyboard independent).
          */
         private const val SHAPE_STD = 22.08f
 
         /**
-         * Standard deviation of the distribution of distances between the locations of two gestures
-         * representing the same word. It's expressed as a factor of key radius as it's applied to
-         * un-normalized gestures and is therefore dependent on the size of the keys/keyboard.
-         * Tightened from 0.58 → 0.46 to penalise spatially-offset gestures more aggressively,
-         * improving precision for common short words.
+         * Standard deviation of the location distance between two gestures of
+         * the same word, as a factor of the key size.
          */
         private const val LOCATION_STD = 0.46f
 
-        /**
-         * Reference "fast" gesture velocity in px / ms. Used to normalise a gesture's measured
-         * 95th-percentile velocity into [0,1] for velocity-aware LOCATION_STD widening.
-         * 8 px/ms ≈ a typical fast-but-deliberate Gboard-style swipe on a 1080p phone.
-         */
+        /** Reference fast swipe velocity (px/ms) for velocity-aware LOCATION_STD widening. */
         private const val V_MAX_REFERENCE_PX_PER_MS = 8.0f
 
-        /**
-         * Maximum amount by which a fast gesture widens LOCATION_STD (0.5 = +50%). Faster gestures
-         * have lower per-point positional certainty, so we score them more leniently.
-         */
+        /** Max widening of LOCATION_STD for fast gestures (0.5 = +50%). */
         private const val VELOCITY_STD_GAIN = 0.5f
 
-        /**
-         * Fraction of the resampled gesture's length after which sample points are down-weighted
-         * in shape/location distance. 0.88 = the last 12% of points are softened. Only applied
-         * when terminal velocity is HIGH (see [V_FAST_FINISH_PX_PER_MS]); a deliberate slow
-         * lift gets full-weight tails so that "tomorrow" beats "tomorrow's".
-         */
+        /** Fraction of the resampled gesture after which points are down-weighted when the lift was fast. */
         private const val TAIL_FRACTION_START = 0.88f
 
-        /** Weight applied to sample points after [TAIL_FRACTION_START] when tail-softening is active. */
+        /** Weight of the softened tail points. */
         private const val TAIL_WEIGHT = 0.35f
 
-        /**
-         * Terminal-velocity threshold (px / ms) above which the gesture is considered to have
-         * been "lifted mid-flight" — i.e., the user did not decelerate before lifting, so the
-         * path was likely truncated. Endpoint tolerance only kicks in above this threshold.
-         * Calibrated for ~1080p phones; typical deliberate lifts decelerate well below this.
-         */
+        /** Terminal velocity (px/ms) above which the user lifted mid-flight (path truncated). */
         private const val V_FAST_FINISH_PX_PER_MS = 1.5f
 
-        /**
-         * Length-match bonus: candidates whose ideal path length matches the user's gesture
-         * length within [LENGTH_MATCH_FALLOFF_KEYS] key-widths get up to this multiplicative
-         * confidence advantage.
-         *
-         * Raised 1.6 → 2.0 alongside the length-pruner tightening: when a personal short word
-         * like "rupak" ties shape-wise with a dict word like "tropical", we want the
-         * length-matching candidate to win decisively rather than be edged out by the dict
-         * word's frequency.
-         */
-        private const val LENGTH_MATCH_MAX_BONUS = 2.0f
-        private const val LENGTH_MATCH_FALLOFF_KEYS = 1.5f
+        /** Relative path-length gate: user length must lie in [L·(1-lo) - slack, L·(1+hi) + slack]. */
+        private const val LENGTH_GATE_SHORTER = 0.40f
+        private const val LENGTH_GATE_LONGER = 0.45f
+        private const val LENGTH_GATE_SLACK_KEYS = 1.5f
+
+        /** Weight of the unigram log-frequency (AOSP log scale, 1..255) in the score. */
+        private const val FREQUENCY_WEIGHT = 1.0
 
         /**
-         * Prefix-extension multiplier — kept for the disabled experimental promotion path.
-         * Length-match bonus + velocity-gated tail-softening replace this in normal operation.
+         * All-caps dictionary entries ("HD", "OK", "USA") are rarely what a
+         * glide means; without this "he" loses to "HD" on similar paths.
          */
-        private const val PREFIX_TIE_MULT = 1.4f
+        private const val ALL_CAPS_PENALTY = 1.0
+
+        /** Weight of the bigram (previous word) bonus. */
+        private const val BIGRAM_WEIGHT = 1.0
+
+        /** Slight preference for the plain form over an apostrophe form on exact ties. */
+        private const val APOSTROPHE_PENALTY = 0.05
 
         /**
-         * Suggestion LRU cache size. Raised from 48 → 128 for a higher hit rate during rapid
-         * multi-word glide sessions; modern devices have ample memory.
+         * Where a glide starts and lifts is its most deliberate part, while
+         * the resampled channels weigh every point equally. This extra
+         * Gaussian on the first/last touch vs. the word's first/last key
+         * separates "off"/"of", "made"/"mad", "hits"/"his" (simulated
+         * top-1 85.8% -> 92.0%, top-3 96.3% -> 99.3%).
          */
+        private const val ENDPOINT_WEIGHT = 0.5
+        private const val ENDPOINT_STD_KEYS = 0.8f
+
         private const val SUGGESTION_CACHE_SIZE = 128
+        private const val TEMPLATE_CACHE_SIZE = 2048
 
-        /**
-         * For multiple subtypes, the pruner is cached.
-         */
-        private const val PRUNER_CACHE_SIZE = 8
-
-        /**
-         * Size of the per-Pruner LRU cache holding `generateIdealGestures` results.
-         * 1024 entries handily covers a typing session's working vocabulary while
-         * keeping memory bounded (≈ word.length × few-hundred-bytes per entry).
-         */
-        private const val IDEAL_GESTURES_CACHE_SIZE = 1024
-
-        /**
-         * Maximum number of words scored per mid-stroke preview after the extremities
-         * + length pruners have run. See call-site for rationale.
-         */
-        private const val MAX_SCORING_CANDIDATES = 256
+        private fun pairKey(first: Int, last: Int): Long = (first.toLong() shl 32) or (last.toLong() and 0xffffffffL)
     }
 
     override fun addGesturePoint(position: GlideTypingGesture.Detector.Position) {
-        // Fall back to system clock when the position carries no event time (legacy callers).
         val t = if (position.t != 0L) position.t else System.currentTimeMillis()
         if (!gesture.isEmpty) {
             val dx = gesture.getLastX() - position.x
             val dy = gesture.getLastY() - position.y
-
             if (dx * dx + dy * dy > distanceThresholdSquared) {
                 gesture.addPoint(position.x, position.y, t)
             }
@@ -207,75 +207,107 @@ class StatisticalGlideTypingClassifier(context: Context) : GlideTypingClassifier
     }
 
     override fun setLayout(keyViews: List<TextKey>, subtype: Subtype) {
-        setWordData(subtype)
-        // stop duplicate calls
-        if (layoutSubtype == subtype && keys == keyViews) {
+        val layout = captureLayout(keyViews) ?: return
+        val current = pendingLayout
+        if (current != null && current.signature == layout.signature && pendingSubtype == subtype) {
             return
         }
-
-        // if only layout changed but not subtype
-        val layoutChanged = layoutSubtype == subtype
-
-        keysByCharacter.clear()
-        keys.clear()
-        keyViews.forEach {
-            keysByCharacter[it.baseCode()] = it
-            keys.add(it)
-        }
-        layoutSubtype = subtype
-        distanceThresholdSquared = (keyViews.first().visibleBounds.width / 8).toInt()
-        distanceThresholdSquared *= distanceThresholdSquared
-
-        if (
-            (wordDataSubtype == layoutSubtype)
-            || layoutChanged // should force a re-initialize
-        ) {
-            initializePruner(layoutChanged)
-        }
+        pendingLayout = layout
+        pendingSubtype = subtype
+        distanceThresholdSquared = (layout.radius / 8f).let { it * it }
+        scheduleRebuild(force = false)
     }
 
     override fun setWordData(subtype: Subtype, force: Boolean) {
-        // Early-exit unless caller explicitly forces a rebuild (used by the
-        // adaptive learned-swipe pipeline after enough personal words have
-        // accumulated to warrant re-snapshotting the lexicon).
-        if (!force && wordDataSubtype == subtype) {
-            return
-        }
-
-        this.words = nlpManager.getListOfWords(subtype)
-        // Load all frequencies up-front so unCachedGetSuggestions can use a local map lookup
-        // instead of calling nlpManager.getFrequencyForWord() (a runBlocking call) per candidate.
-        this.wordFrequencies = nlpManager.getFrequencyMap(subtype)
-
-        this.wordDataSubtype = subtype
-        if (force) {
-            // Drop the cached pruner so initializePruner rebuilds with the
-            // newly-learned vocabulary instead of returning the stale one.
-            prunerCache.remove(subtype)
-            lruSuggestionCache.evictAll()
-        }
-        if (wordDataSubtype == layoutSubtype) {
-            initializePruner(invalidateCache = force)
-        }
+        if (!force && pendingSubtype == subtype && (index?.subtype == subtype)) return
+        pendingSubtype = subtype
+        scheduleRebuild(force)
     }
 
     /**
-     * Exists because Pruner requires both word data and layout are initialized,
-     * however we don't know what order they're initialized in.
+     * (Re)builds the search index off the UI thread. Keyboard layout changes
+     * only invalidate the geometry-dependent template cache; vocabulary
+     * changes (subtype switch, learned words) re-snapshot the word list.
      */
-    private fun initializePruner(invalidateCache: Boolean) {
-        val currentSubtype = this.layoutSubtype!!
-        val cached = when {
-            invalidateCache -> null
-            else -> prunerCache.get(currentSubtype)
+    private fun scheduleRebuild(force: Boolean) {
+        val generation = buildGeneration.incrementAndGet()
+        builder.execute {
+            if (generation != buildGeneration.get()) return@execute
+            val subtype = pendingSubtype ?: return@execute
+            val layout = pendingLayout ?: return@execute
+            try {
+                val previous = index
+                val reuseWords = !force && previous != null && previous.subtype == subtype
+                val words: List<String>
+                val frequencies: Map<String, Double>
+                if (reuseWords) {
+                    words = emptyList()
+                    frequencies = previous!!.frequencies
+                } else {
+                    words = nlpManager.getListOfWords(subtype)
+                    frequencies = nlpManager.getFrequencyMap(subtype)
+                }
+                val tree = if (reuseWords && previous!!.layout.codes.contentEquals(layout.codes)) {
+                    previous.tree
+                } else {
+                    buildTree(if (reuseWords) previous!!.tree.values.flatten() else words, layout)
+                }
+                if (generation != buildGeneration.get()) return@execute
+                index = Index(subtype, layout, tree, frequencies, LruCache(TEMPLATE_CACHE_SIZE))
+                lruSuggestionCache.evictAll()
+                flogDebug { "Glide index built: ${tree.values.sumOf { it.size }} words" }
+            } catch (e: Exception) {
+                flogDebug { "Glide index build failed: $e" }
+            }
         }
-        if (cached == null) {
-            this.pruner = Pruner(PRUNING_LENGTH_THRESHOLD, this.words, keysByCharacter)
-            prunerCache.put(currentSubtype, this.pruner)
-        } else {
-            this.pruner = cached
+    }
+
+    private fun captureLayout(keyViews: List<TextKey>): Layout? {
+        val letters = keyViews.filter { key ->
+            val code = (key.data as? KeyData)?.code ?: KeyCode.UNSPECIFIED
+            code > KeyCode.SPACE && Character.isLetter(code) &&
+                key.visibleBounds.width > 0f && key.visibleBounds.height > 0f
         }
-        this.currentSubtype = currentSubtype
+        if (letters.isEmpty()) return null
+        val n = letters.size
+        val codes = IntArray(n)
+        val xs = FloatArray(n)
+        val ys = FloatArray(n)
+        val ws = FloatArray(n)
+        val hs = FloatArray(n)
+        var signature = n
+        for ((i, key) in letters.withIndex()) {
+            val bounds = key.visibleBounds
+            codes[i] = Character.toLowerCase((key.data as KeyData).code)
+            xs[i] = bounds.left + bounds.width / 2f
+            ys[i] = bounds.top + bounds.height / 2f
+            ws[i] = bounds.width
+            hs[i] = bounds.height
+            signature = 31 * signature + codes[i]
+            signature = 31 * signature + xs[i].toInt()
+            signature = 31 * signature + ys[i].toInt()
+            signature = 31 * signature + ws[i].toInt()
+        }
+        val first = letters.first().visibleBounds
+        val radius = min(first.width, first.height)
+        return Layout(codes, xs, ys, ws, hs, radius, signature)
+    }
+
+    private fun buildTree(words: List<String>, layout: Layout): HashMap<Long, ArrayList<String>> {
+        val tree = HashMap<Long, ArrayList<String>>(1024)
+        for (word in words) {
+            var first = -1
+            var last = -1
+            for (c in word) {
+                val idx = layout.indexOf(c)
+                if (idx < 0) continue
+                if (first < 0) first = idx
+                last = idx
+            }
+            if (first < 0) continue
+            tree.getOrPut(pairKey(layout.codes[first], layout.codes[last])) { ArrayList() }.add(word)
+        }
+        return tree
     }
 
     override fun initGestureFromPointerData(pointerData: GlideTypingGesture.Detector.PointerData) {
@@ -285,474 +317,292 @@ class StatisticalGlideTypingClassifier(context: Context) : GlideTypingClassifier
     }
 
     private val lruSuggestionCache = LruCache<Pair<Gesture, Int>, List<String>>(SUGGESTION_CACHE_SIZE)
-    override fun getSuggestions(maxSuggestionCount: Int, gestureCompleted: Boolean): List<String> {
-        return when (val cached = lruSuggestionCache.get(Pair(this.gesture, maxSuggestionCount))) {
-            null -> {
-                val suggestions = unCachedGetSuggestions(maxSuggestionCount)
-                lruSuggestionCache.put(Pair(this.gesture.clone(), maxSuggestionCount), suggestions)
 
-                suggestions
-            }
-            else -> {
-                cached
-            }
-        }
+    override fun getSuggestions(maxSuggestionCount: Int, gestureCompleted: Boolean): List<String> {
+        val cacheKey = Pair(this.gesture, maxSuggestionCount)
+        lruSuggestionCache.get(cacheKey)?.let { return it }
+        val suggestions = unCachedGetSuggestions(maxSuggestionCount)
+        lruSuggestionCache.put(Pair(this.gesture.clone(), maxSuggestionCount), suggestions)
+        return suggestions
     }
 
     private fun unCachedGetSuggestions(maxSuggestionCount: Int): List<String> {
-        val candidates = arrayListOf<String>()
-        val candidateWeights = arrayListOf<Float>()
-        val key = keys.firstOrNull() ?: return listOf()
-        val radius = min(key.visibleBounds.height, key.visibleBounds.width)
-        val extremityCandidates = pruner.pruneByExtremities(gesture, this.keys)
+        val idx = index ?: return emptyList()
+        if (gesture.pointCount == 0) return emptyList()
+        val layout = idx.layout
+        val radius = layout.radius
+        if (radius <= 0f) return emptyList()
+
+        // 1. First/last key pruning.
+        val startKeys = nearestKeys(layout, gesture.getFirstX(), gesture.getFirstY(), 6)
+        val endKeys = nearestKeys(layout, gesture.getLastX(), gesture.getLastY(), 6)
+        val userLength = gesture.getLength()
+        val slack = LENGTH_GATE_SLACK_KEYS * radius
+        val survivors = ArrayList<String>(512)
+        for (s in startKeys) {
+            for (e in endKeys) {
+                val bucket = idx.tree[pairKey(layout.codes[s], layout.codes[e])] ?: continue
+                for (word in bucket) {
+                    // 2. Relative path-length gate.
+                    val ideal = idealLength(word, layout)
+                    if (userLength >= ideal * (1f - LENGTH_GATE_SHORTER) - slack &&
+                        userLength <= ideal * (1f + LENGTH_GATE_LONGER) + slack
+                    ) {
+                        survivors.add(word)
+                    }
+                }
+            }
+        }
+        if (survivors.isEmpty()) return emptyList()
+
         // Optionally simplify the raw gesture with Douglas-Peucker before resampling.
-        // Removes micro-jitter while preserving directional corners.
-        val smoothedGesture = if (BuildConfig.ENABLE_PATH_SMOOTHER) {
+        val smoothed = if (BuildConfig.ENABLE_PATH_SMOOTHER) {
             GesturePathSmoother.simplify(gesture, epsilon = 2.0f)
         } else {
             gesture
         }
-        val userGesture = smoothedGesture.resample(SAMPLING_POINTS)
-        val normalizedUserGesture: Gesture = userGesture.normalizeByBoxSide()
-        val lengthCandidates = pruner.pruneByLength(gesture, extremityCandidates, keysByCharacter, keys)
-        val preCappedWords = if (lengthCandidates.isNotEmpty()) {
-            lengthCandidates
+
+        // 3. Cheap 10-point location + frequency pass.
+        val finalists = if (survivors.size <= COARSE_KEEP) {
+            survivors
         } else {
-            extremityCandidates
-        }
-        // Per-stroke ceiling on scored candidates. Mid-stroke previews need to finish in
-        // well under the preview-refresh delay (150ms) or the keyboard feels laggy. On
-        // ambiguous prefixes the extremities+length pruner can still return 500-1000
-        // words; without a cap the inner scoring loop dominates the frame.
-        //
-        // Keep the highest-frequency MAX_SCORING_CANDIDATES of them — high-freq words
-        // are the ones the user is overwhelmingly likely to actually be swiping, and
-        // shape-match scoring decides among them. A long-tail rarity that happened to
-        // pass both pruners but isn't in the user's top vocabulary is almost certainly
-        // not what they meant.
-        val remainingWords = if (preCappedWords.size <= MAX_SCORING_CANDIDATES) {
-            preCappedWords
-        } else {
-            preCappedWords
-                .asSequence()
-                .sortedByDescending { wordFrequencies.getOrDefault(it, 0.0) }
-                .take(MAX_SCORING_CANDIDATES)
-                .toCollection(ArrayList(MAX_SCORING_CANDIDATES))
+            val ux = FloatArray(COARSE_POINTS)
+            val uy = FloatArray(COARSE_POINTS)
+            resampleInto(smoothed, COARSE_POINTS, ux, uy)
+            val scores = DoubleArray(survivors.size)
+            val tx = FloatArray(COARSE_POINTS)
+            val ty = FloatArray(COARSE_POINTS)
+            val coarseDenominator = 2.0 * COARSE_STD * COARSE_STD
+            for ((i, word) in survivors.withIndex()) {
+                idealPolylineResample(word, layout, COARSE_POINTS, tx, ty)
+                var sum = 0.0
+                for (p in 0 until COARSE_POINTS) {
+                    val dx = tx[p] - ux[p]
+                    val dy = ty[p] - uy[p]
+                    sum += sqrt((dx * dx + dy * dy).toDouble())
+                }
+                val d = sum / COARSE_POINTS / radius
+                scores[i] = -(d * d) / coarseDenominator + FREQUENCY_WEIGHT * lnFrequency(idx, word)
+            }
+            survivors.indices.sortedByDescending { scores[it] }.take(COARSE_KEEP).map { survivors[it] }
         }
 
-        // Velocity-aware LOCATION_STD: widen the location distribution for fast gestures
-        // so that high-velocity swipes (lower positional certainty) score more leniently.
-        // Computed from the raw gesture's 95th-percentile per-segment velocity.
+        // 4. Full scoring.
+        val userXs = FloatArray(SAMPLING_POINTS)
+        val userYs = FloatArray(SAMPLING_POINTS)
+        resampleInto(smoothed, SAMPLING_POINTS, userXs, userYs)
+        val userNxs = FloatArray(SAMPLING_POINTS)
+        val userNys = FloatArray(SAMPLING_POINTS)
+        normalizeInto(userXs, userYs, userNxs, userNys)
+
+        // Velocity-aware LOCATION_STD: fast swipes have lower positional certainty.
         val effectiveLocationStd = if (BuildConfig.ENABLE_VELOCITY_AWARE_GESTURE) {
-            val v = gesture.peakVelocity()
-            val velocityFactor = (v / V_MAX_REFERENCE_PX_PER_MS).coerceIn(0f, 1f)
+            val velocityFactor = (gesture.peakVelocity() / V_MAX_REFERENCE_PX_PER_MS).coerceIn(0f, 1f)
             LOCATION_STD * (1f + velocityFactor * VELOCITY_STD_GAIN)
         } else {
             LOCATION_STD
         }
-
-        // Tail-softening is conditional on terminal velocity: only kicks in when the user
-        // lifted mid-flight (high velocity at the end), i.e., the path was truncated.
-        // For deliberate decelerated lifts, we score the full path so that exact-length
-        // candidates like "tomorrow" aren't beaten by their extensions like "tomorrow's".
+        val locationStdPx = effectiveLocationStd * radius
+        // Tail softening only when the user lifted mid-flight (path truncated).
         val softenTail = BuildConfig.ENABLE_GESTURE_ENDPOINT_TOLERANCE &&
             gesture.terminalVelocity() > V_FAST_FINISH_PX_PER_MS
+        val bigrams = previousWord()?.let { nlpManager.getBigramBonuses(idx.subtype, it) } ?: emptyMap()
+        val startX = gesture.getFirstX()
+        val startY = gesture.getFirstY()
+        val endX = gesture.getLastX()
+        val endY = gesture.getLastY()
+        val endpointStdPx = ENDPOINT_STD_KEYS * radius
+        val endpointDenominator = 2.0 * endpointStdPx * endpointStdPx
 
-        val userPathLength = gesture.getLength()
-
-        for (i in remainingWords.indices) {
-            val word = remainingWords[i]
-            // Shared cache with pruneByLength — same word, same layout, identical result.
-            val idealGestures = pruner.getIdealGestures(word, keysByCharacter)
-
-            for (idealGesture in idealGestures) {
-                val wordGesture = idealGesture.resample(SAMPLING_POINTS)
-                val normalizedGesture: Gesture = wordGesture.normalizeByBoxSide()
-                val shapeDistance = calcShapeDistance(normalizedGesture, normalizedUserGesture, softenTail)
-                val locationDistance = calcLocationDistance(wordGesture, userGesture, softenTail)
-                val shapeProbability = max(0.000001f, calcGaussianProbability(shapeDistance, 0.0f, SHAPE_STD))
-                val locationProbability = max(0.000001f, calcGaussianProbability(locationDistance, 0.0f, effectiveLocationStd * radius))
-                // Length-aware frequency: when candidates saturate the unigram cap (e.g., "hello"
-                // and "hell" are both very common), bias toward the longer one. The dictionary file
-                // tops out at byte-range 255, so common words tie on raw frequency — this gentle
-                // length factor breaks ties in favor of complete words over their short prefixes.
-                val rawFreq = 255f * wordFrequencies.getOrDefault(word, 0.0).toFloat()
-                val lengthBonus = if (word.length >= 5) 1f + ((word.length - 4).coerceAtMost(6)) * 0.10f else 1f
-                // Length-match bonus: reward candidates whose ideal path length matches the
-                // user's actual gesture length. Direct fix for "tomorrow → tomorrow's": the
-                // longer extension's ideal path is too long for the user's actual swipe.
-                val idealPathLength = idealGesture.getLength()
-                val lengthMismatchKeys = abs(idealPathLength - userPathLength) / radius
-                val lengthMatchBonus = 1f + (LENGTH_MATCH_MAX_BONUS - 1f) *
-                    exp(-lengthMismatchKeys / LENGTH_MATCH_FALLOFF_KEYS)
-                val frequency = max(1f, rawFreq * lengthBonus * lengthMatchBonus)
-                val confidence = 1.0f / (shapeProbability * locationProbability * frequency)
-
-                var candidateDistanceSortedIndex = 0
-                var duplicateIndex = Int.MAX_VALUE
-
-                while (candidateDistanceSortedIndex < candidateWeights.size
-                    && candidateWeights[candidateDistanceSortedIndex] <= confidence
-                ) {
-                    if (candidates[candidateDistanceSortedIndex].contentEquals(word)) duplicateIndex =
-                        candidateDistanceSortedIndex
-                    candidateDistanceSortedIndex++
-                }
-                if (candidateDistanceSortedIndex < maxSuggestionCount && candidateDistanceSortedIndex <= duplicateIndex) {
-                    if (duplicateIndex < Int.MAX_VALUE) {
-                        candidateWeights.removeAt(duplicateIndex)
-                        candidates.removeAt(duplicateIndex)
-                    }
-                    candidateWeights.add(candidateDistanceSortedIndex, confidence)
-                    candidates.add(candidateDistanceSortedIndex, word)
-                    if (candidateWeights.size > maxSuggestionCount) {
-                        candidateWeights.removeAt(maxSuggestionCount)
-                        candidates.removeAt(maxSuggestionCount)
-                    }
-                }
+        val best = HashMap<String, Double>(finalists.size * 2)
+        for (word in finalists) {
+            val lnFreq = lnFrequency(idx, word)
+            val bigram = bigrams[word] ?: bigrams[word.lowercase()] ?: 0.0
+            val allCaps = word.length >= 2 && word.all { !it.isLetter() || it.isUpperCase() }
+            val endpoint = endpointPenalty(word, layout, startX, startY, endX, endY) / endpointDenominator
+            for (template in templatesFor(idx, word)) {
+                val shape = shapeDistance(template, userNxs, userNys, softenTail)
+                val location = locationDistance(template, userXs, userYs, softenTail)
+                var score = -(shape * shape) / (2.0 * SHAPE_STD * SHAPE_STD) -
+                    (location * location) / (2.0 * locationStdPx * locationStdPx)
+                // Note: an explicit "ideal length matches gesture length" bonus
+                // was evaluated and lowered accuracy (85.5% -> 82.5% top-1);
+                // the location channel already captures it.
+                score += FREQUENCY_WEIGHT * lnFreq
+                score += BIGRAM_WEIGHT * bigram
+                if (word.indexOf('\'') >= 0) score -= APOSTROPHE_PENALTY
+                if (allCaps) score -= ALL_CAPS_PENALTY
+                score -= ENDPOINT_WEIGHT * endpoint
+                val previous = best[word]
+                if (previous == null || score > previous) best[word] = score
             }
         }
-
-        if (BuildConfig.ENABLE_GESTURE_PREFIX_BIAS && candidates.size >= 2) {
-            // Prefix-extension preference: when the #1 candidate is a strict prefix of another
-            // candidate in the top-K, and the longer one's confidence is within PREFIX_TIE_MULT
-            // of #1, promote the longer one. This is the fix for "hello" being beaten by "hell"
-            // when both saturate the unigram frequency cap and the geometric difference is small.
-            promotePrefixExtensions(candidates, candidateWeights)
-        }
-
-        if (BuildConfig.ENABLE_BEAM_SEARCH_GESTURES) {
-            // Merge this scoring pass into the per-gesture beam (keep best/lowest confidence per word),
-            // then return a stabilised ranking. Smooths candidate flapping across mid-gesture previews.
-            for (j in candidates.indices) {
-                val w = candidates[j]
-                val c = candidateWeights[j]
-                val existing = beam[w]
-                if (existing == null || c < existing) beam[w] = c
-            }
-            // Cap beam size to avoid unbounded growth on long sessions; keep top-K by confidence.
-            if (beam.size > 32) {
-                val keepers = beam.entries.sortedBy { it.value }.take(16).map { it.key }.toHashSet()
-                val it = beam.entries.iterator()
-                while (it.hasNext()) if (!keepers.contains(it.next().key)) it.remove()
-            }
-            val beamCandidates = beam.entries.sortedBy { it.value }.take(maxSuggestionCount * 2)
-            
-            // Apply Context LM Reranking
-            val contextText = editorInstance.run { activeContent.getTextBeforeCursor(25) }
-            val contextWords = contextText.split("\\s+".toRegex()).filter { it.isNotBlank() }
-            
-            val candidatesWithProbs = beamCandidates.map { entry ->
-                // Convert confidence (cost) to pseudo log-probability
-                entry.key to ln(1.0f / entry.value.coerceAtLeast(0.000001f))
-            }
-            
-            val reranked = reranker.rerank(candidatesWithProbs, contextWords)
-            
-            // Apply Apostrophe penalty
-            val finalReranked = reranked.map { word ->
-                val penalty = if (word.contains("'")) -0.01f else 0f
-                val origScore = candidatesWithProbs.find { it.first == word }?.second ?: 0f
-                word to (origScore + penalty)
-            }.sortedByDescending { it.second }.map { it.first }
-            
-            return finalReranked.take(maxSuggestionCount)
-        }
-
-        // Apply Context LM Reranking (Non-Beam Path)
-        val contextText = editorInstance.run { activeContent.getTextBeforeCursor(25) }
-        val contextWords = contextText.split("\\s+".toRegex()).filter { it.isNotBlank() }
-        
-        val candidatesWithProbs = candidates.mapIndexed { idx, word ->
-            val conf = candidateWeights[idx]
-            word to ln(1.0f / conf.coerceAtLeast(0.000001f))
-        }
-        
-        val reranked = reranker.rerank(candidatesWithProbs, contextWords)
-        
-        // Apply Apostrophe penalty
-        val finalReranked = reranked.map { word ->
-            val penalty = if (word.contains("'")) -0.01f else 0f
-            val origScore = candidatesWithProbs.find { it.first == word }?.second ?: 0f
-            word to (origScore + penalty)
-        }.sortedByDescending { it.second }.map { it.first }
-
-        return finalReranked.take(maxSuggestionCount)
+        return best.entries
+            .sortedByDescending { it.value }
+            .take(maxSuggestionCount)
+            .map { it.key }
     }
 
-    /**
-     * Walks the scored candidate list and promotes any longer candidate B that strictly extends
-     * candidate A (i.e., B starts with A and is longer), provided B's confidence is within
-     * [PREFIX_TIE_MULT] of A's. Operates in-place on the parallel lists.
-     */
-    private fun promotePrefixExtensions(
-        candidates: ArrayList<String>,
-        weights: ArrayList<Float>,
-    ) {
-        var i = 0
-        while (i < candidates.size - 1) {
-            val shorter = candidates[i]
-            var bestJ = -1
-            var bestJWeight = Float.MAX_VALUE
-            for (j in i + 1 until candidates.size) {
-                val longer = candidates[j]
-                if (longer.length > shorter.length && longer.startsWith(shorter)) {
-                    val w = weights[j]
-                    if (w <= weights[i] * PREFIX_TIE_MULT && w < bestJWeight) {
-                        bestJ = j
-                        bestJWeight = w
-                    }
-                }
-            }
-            if (bestJ >= 0) {
-                val tmpW = weights[i]; weights[i] = weights[bestJ]; weights[bestJ] = tmpW
-                val tmpC = candidates[i]; candidates[i] = candidates[bestJ]; candidates[bestJ] = tmpC
-            }
-            i++
+    /** Squared distances of the gesture's first/last touch from the word's first/last key centres. */
+    private fun endpointPenalty(word: String, layout: Layout, sx: Float, sy: Float, ex: Float, ey: Float): Double {
+        var first = -1
+        var last = -1
+        for (c in word) {
+            val i = layout.indexOf(c)
+            if (i < 0) continue
+            if (first < 0) first = i
+            last = i
         }
+        if (first < 0) return 0.0
+        val dsx = (sx - layout.centerXs[first]).toDouble()
+        val dsy = (sy - layout.centerYs[first]).toDouble()
+        val dex = (ex - layout.centerXs[last]).toDouble()
+        val dey = (ey - layout.centerYs[last]).toDouble()
+        return dsx * dsx + dsy * dsy + dex * dex + dey * dey
+    }
+
+    private fun lnFrequency(idx: Index, word: String): Double {
+        val f = 255.0 * (idx.frequencies[word] ?: 0.0)
+        return ln(max(1.0, f))
+    }
+
+    /** Last word before the cursor (context for the bigram model), or null at sentence start. */
+    private fun previousWord(): String? {
+        val text = editorInstance.activeContent.textBeforeSelection.toString().trimEnd()
+        if (text.isEmpty()) return null
+        val last = text.last()
+        if (last == '.' || last == '!' || last == '?' || last == '\n') return null
+        val start = text.lastIndexOf(' ') + 1
+        val word = text.substring(start).trim { !it.isLetter() && it != '\'' }
+        return word.takeIf { it.isNotEmpty() }
+    }
+
+    private fun nearestKeys(layout: Layout, x: Float, y: Float, n: Int): List<Int> {
+        return layout.codes.indices
+            .sortedBy { i ->
+                val dx = layout.centerXs[i] - x
+                val dy = layout.centerYs[i] - y
+                dx * dx + dy * dy
+            }
+            .take(n)
+    }
+
+    private fun idealLength(word: String, layout: Layout): Float {
+        var length = 0f
+        var px = Float.NaN
+        var py = Float.NaN
+        for (c in word) {
+            val i = layout.indexOf(c)
+            if (i < 0) continue
+            val x = layout.centerXs[i]
+            val y = layout.centerYs[i]
+            if (!px.isNaN()) {
+                val dx = x - px
+                val dy = y - py
+                length += sqrt(dx * dx + dy * dy)
+            }
+            px = x
+            py = y
+        }
+        return length
+    }
+
+    /** Resamples the plain ideal polyline of [word] to [n] points without allocating. */
+    private fun idealPolylineResample(word: String, layout: Layout, n: Int, outX: FloatArray, outY: FloatArray) {
+        val xs = FloatArray(word.length)
+        val ys = FloatArray(word.length)
+        var count = 0
+        for (c in word) {
+            val i = layout.indexOf(c)
+            if (i < 0) continue
+            xs[count] = layout.centerXs[i]
+            ys[count] = layout.centerYs[i]
+            count++
+        }
+        resampleArrays(xs, ys, count, n, outX, outY)
+    }
+
+    private fun templatesFor(idx: Index, word: String): Array<Template> {
+        idx.templates.get(word)?.let { return it }
+        val layout = idx.layout
+        val plainX = ArrayList<Float>()
+        val plainY = ArrayList<Float>()
+        val loopX = ArrayList<Float>()
+        val loopY = ArrayList<Float>()
+        var hasLoops = false
+        var previous = '\u0000'
+        for (raw in word) {
+            val c = Character.toLowerCase(raw)
+            val i = layout.indexOf(c)
+            if (i < 0) continue
+            val cx = layout.centerXs[i]
+            val cy = layout.centerYs[i]
+            if (c == previous) {
+                // A small loop on the key distinguishes "pool" from "pol", "lull" from "lul".
+                val qx = layout.keyWidths[i] / 4f
+                val qy = layout.keyHeights[i] / 4f
+                loopX += listOf(cx + qx, cx + qx, cx - qx, cx - qx)
+                loopY += listOf(cy + qy, cy - qy, cy - qy, cy + qy)
+                hasLoops = true
+            } else {
+                loopX += cx
+                loopY += cy
+            }
+            plainX += cx
+            plainY += cy
+            previous = c
+        }
+        val paths = if (hasLoops) listOf(plainX to plainY, loopX to loopY) else listOf(plainX to plainY)
+        val result = paths.map { (px, py) ->
+            val ax = px.toFloatArray()
+            val ay = py.toFloatArray()
+            val xs = FloatArray(SAMPLING_POINTS)
+            val ys = FloatArray(SAMPLING_POINTS)
+            resampleArrays(ax, ay, ax.size, SAMPLING_POINTS, xs, ys)
+            val nxs = FloatArray(SAMPLING_POINTS)
+            val nys = FloatArray(SAMPLING_POINTS)
+            normalizeInto(xs, ys, nxs, nys)
+            Template(xs, ys, nxs, nys, polylineLength(ax, ay, ax.size))
+        }.toTypedArray()
+        idx.templates.put(word, result)
+        return result
+    }
+
+    private fun shapeDistance(template: Template, userNxs: FloatArray, userNys: FloatArray, softenTail: Boolean): Double {
+        val tailStart = (SAMPLING_POINTS * TAIL_FRACTION_START).toInt()
+        var weighted = 0.0
+        var weights = 0.0
+        for (i in 0 until SAMPLING_POINTS) {
+            val w = if (softenTail && i >= tailStart) TAIL_WEIGHT.toDouble() else 1.0
+            val dx = template.nxs[i] - userNxs[i]
+            val dy = template.nys[i] - userNys[i]
+            weighted += sqrt((dx * dx + dy * dy).toDouble()) * w
+            weights += w
+        }
+        return weighted * (SAMPLING_POINTS / weights)
+    }
+
+    private fun locationDistance(template: Template, userXs: FloatArray, userYs: FloatArray, softenTail: Boolean): Double {
+        val tailStart = (SAMPLING_POINTS * TAIL_FRACTION_START).toInt()
+        var weighted = 0.0
+        var weights = 0.0
+        for (i in 0 until SAMPLING_POINTS) {
+            val w = if (softenTail && i >= tailStart) TAIL_WEIGHT.toDouble() else 1.0
+            weighted += (abs(template.xs[i] - userXs[i]) + abs(template.ys[i] - userYs[i])) * w
+            weights += w
+        }
+        return weighted / weights / 2.0
     }
 
     override fun clear() {
         gesture.clear()
-        beam.clear()
     }
 
-    private fun calcLocationDistance(gesture1: Gesture, gesture2: Gesture, softenTail: Boolean): Float {
-        if (!softenTail) {
-            var totalDistance = 0.0f
-            for (i in 0 until SAMPLING_POINTS) {
-                val distance = abs(gesture1.getX(i) - gesture2.getX(i)) +
-                    abs(gesture1.getY(i) - gesture2.getY(i))
-                totalDistance += distance
-            }
-            return totalDistance / SAMPLING_POINTS / 2
-        }
-        var weightedSum = 0.0f
-        var weightTotal = 0.0f
-        val tailStart = (SAMPLING_POINTS * TAIL_FRACTION_START).toInt()
-        for (i in 0 until SAMPLING_POINTS) {
-            val w = if (i < tailStart) 1.0f else TAIL_WEIGHT
-            val distance = abs(gesture1.getX(i) - gesture2.getX(i)) +
-                abs(gesture1.getY(i) - gesture2.getY(i))
-            weightedSum += distance * w
-            weightTotal += w
-        }
-        return (weightedSum / weightTotal) / 2f
-    }
-
-    private fun calcGaussianProbability(value: Float, mean: Float, standardDeviation: Float): Float {
-        val factor = 1.0 / (standardDeviation * sqrt(2 * PI))
-        val exponent = ((value - mean) / standardDeviation).toDouble().pow(2.0)
-        val probability = factor * exp(-1.0 / 2 * exponent)
-        return probability.toFloat()
-    }
-
-    private fun calcShapeDistance(gesture1: Gesture, gesture2: Gesture, softenTail: Boolean): Float {
-        if (!softenTail) {
-            var totalDistance = 0.0f
-            for (i in 0 until SAMPLING_POINTS) {
-                totalDistance += Gesture.distance(
-                    gesture1.getX(i), gesture1.getY(i),
-                    gesture2.getX(i), gesture2.getY(i),
-                )
-            }
-            return totalDistance
-        }
-        var weightedSum = 0.0f
-        var weightTotal = 0.0f
-        val tailStart = (SAMPLING_POINTS * TAIL_FRACTION_START).toInt()
-        for (i in 0 until SAMPLING_POINTS) {
-            val w = if (i < tailStart) 1.0f else TAIL_WEIGHT
-            val d = Gesture.distance(
-                gesture1.getX(i), gesture1.getY(i),
-                gesture2.getX(i), gesture2.getY(i),
-            )
-            weightedSum += d * w
-            weightTotal += w
-        }
-        return weightedSum * (SAMPLING_POINTS / weightTotal)
-    }
-
-    class Pruner(
-        /**
-         * The length difference between a user gesture and a word gesture above which a word will
-         * be pruned.
-         */
-        private val lengthThreshold: Double,
-        words: List<String>,
-        keysByCharacter: SparseArrayCompat<TextKey>,
-    ) {
-
-        /** A tree that provides fast access to words based on their first and last letter.  */
-        private val wordTree = Collections.synchronizedMap(HashMap<Pair<Int, Int>, ArrayList<String>>())
-
-        /**
-         * Per-word LRU cache of [Gesture.generateIdealGestures] results. Without this the
-         * ideal-path walk runs twice per word per scoring pass — once in [pruneByLength]
-         * and again in the main scoring loop — and the cost compounds with every
-         * mid-stroke preview refresh. The cache is per-Pruner, which is per-Subtype, so
-         * layout switches naturally rebuild and don't see stale entries.
-         *
-         * 1024 entries comfortably covers a typing session's active vocabulary; older
-         * words drop out and are recomputed if the user circles back to them.
-         */
-        private val idealGesturesCache = LruCache<String, List<Gesture>>(IDEAL_GESTURES_CACHE_SIZE)
-
-        fun getIdealGestures(word: String, keysByCharacter: SparseArrayCompat<TextKey>): List<Gesture> {
-            idealGesturesCache.get(word)?.let { return it }
-            val computed = Gesture.generateIdealGestures(word, keysByCharacter)
-            idealGesturesCache.put(word, computed)
-            return computed
-        }
-
-        /**
-         * Finds the words whose start and end letter are closest to the start and end points of the
-         * user gesture.
-         *
-         * @param userGesture The current user gesture.
-         * @param keys The keys on the keyboard.
-         * @return A list of likely words.
-         */
-        fun pruneByExtremities(
-            userGesture: Gesture,
-            keys: Iterable<TextKey>,
-        ): ArrayList<String> {
-            val remainingWords = ArrayList<String>()
-            val startX = userGesture.getFirstX()
-            val startY = userGesture.getFirstY()
-            val endX = userGesture.getLastX()
-            val endY = userGesture.getLastY()
-            // Search 6 nearest keys (up from 4) — improves short-word accuracy
-            // since the gesture end-point is often slightly offset from the key centre.
-            val startKeys = findNClosestKeys(startX, startY, 6, keys)
-            val endKeys = findNClosestKeys(endX, endY, 6, keys)
-            for (startKey in startKeys) {
-                for (endKey in endKeys) {
-                    val keyPair = Pair(startKey, endKey)
-                    val wordsForKeys = synchronized(wordTree) { wordTree[keyPair] }
-                    if (wordsForKeys != null) {
-                        remainingWords.addAll(wordsForKeys)
-                    }
-                }
-            }
-            return remainingWords
-        }
-
-        /**
-         * Finds the words whose ideal gesture length is within a certain threshold of the user
-         * gesture's length.
-         *
-         * @param userGesture The current user gesture.
-         * @param words A list of words to consider.
-         * @return A list of words that remained after pruning the input list by length.
-         */
-        fun pruneByLength(
-            userGesture: Gesture,
-            words: ArrayList<String>,
-            keysByCharacter: SparseArrayCompat<TextKey>,
-            keys: List<TextKey>,
-        ): ArrayList<String> {
-            val remainingWords = ArrayList<String>()
-
-            val key = keys.firstOrNull() ?: return arrayListOf()
-            val radius = min(key.visibleBounds.height, key.visibleBounds.width)
-            val userLength = userGesture.getLength()
-            // Asymmetric tolerance: when the word's ideal path is LONGER than the user gesture
-            // (i.e., they under-shot), allow up to 1.25x the standard threshold. When the word
-            // is SHORTER than the user gesture, keep the original threshold.
-            //
-            // Tightened from 1.8 → 1.25 because the wider window was admitting much-longer
-            // dictionary words ("tropical", ~8 letters) into candidate scoring against short
-            // personal swipes ("rupak", 5 letters); their high frequency then beat the
-            // length-match bonus. 1.25 still admits genuine under-shoots like a fast "hello"
-            // swipe that stopped 1 key short of the final 'o' without admitting words that
-            // are twice as long as the gesture.
-            val longerTolerance =
-                if (BuildConfig.ENABLE_GESTURE_LENGTH_ASYMMETRY) lengthThreshold * 1.25 else lengthThreshold
-            val shorterTolerance = lengthThreshold
-            for (word in words) {
-                val idealGestures = getIdealGestures(word, keysByCharacter)
-                for (idealGesture in idealGestures) {
-                    val wordIdealLength = getCachedIdealLength(word, idealGesture)
-                    val diff = wordIdealLength - userLength
-                    val tolerance = if (diff >= 0) longerTolerance else shorterTolerance
-                    if (abs(diff) < tolerance * radius) {
-                        remainingWords.add(word)
-                    }
-                }
-            }
-            return remainingWords
-        }
-
-        private val cachedIdealLength = ConcurrentHashMap<String, Float>()
-        private fun getCachedIdealLength(word: String, idealGesture: Gesture): Float {
-            return cachedIdealLength.getOrPut(word) { idealGesture.getLength() }
-        }
-
-        companion object {
-            private fun getFirstKeyLastKey(
-                word: String,
-                keysByCharacter: SparseArrayCompat<TextKey>,
-            ): Pair<Int, Int>? {
-                val firstLetter = word[0]
-                val lastLetter = word[word.length - 1]
-                val firstBaseChar = Normalizer.normalize(firstLetter.toString(), Normalizer.Form.NFD)[0]
-                val lastBaseChar = Normalizer.normalize(lastLetter.toString(), Normalizer.Form.NFD)[0]
-                return when {
-                    keysByCharacter.indexOfKey(firstBaseChar.code) < 0 || keysByCharacter.indexOfKey(lastBaseChar.code) < 0 -> {
-                        null
-                    }
-                    else -> {
-                        val firstKey = keysByCharacter[firstBaseChar.code]
-                        val lastKey = keysByCharacter[lastBaseChar.code]
-                        if (firstKey != null && lastKey != null) {
-                            firstKey.baseCode() to lastKey.baseCode()
-                        } else {
-                            null
-                        }
-                    }
-                }
-            }
-
-            /**
-             * Finds a chosen number of keys closest to a given point on the keyboard.
-             *
-             * @param x X coordinate of the point.
-             * @param y Y coordinate of the point.
-             * @param n The number of keys to return.
-             * @param keys The keys of the keyboard.
-             * @return A list of the n closest keys.
-             */
-            private fun findNClosestKeys(
-                x: Float, y: Float, n: Int, keys: Iterable<TextKey>
-            ): Iterable<Int> {
-                val keyDistances = HashMap<TextKey, Float>()
-                for (key in keys) {
-                    val visibleBoundsCenter = key.visibleBounds.center
-                    val distance = Gesture.distance(
-                        visibleBoundsCenter.x,
-                        visibleBoundsCenter.y,
-                        x,
-                        y
-                    )
-                    keyDistances[key] = distance
-                }
-
-                return keyDistances.entries.sortedWith { c1, c2 -> c1.value.compareTo(c2.value) }.take(n)
-                    .map { it.key.baseCode() }
-            }
-        }
-
-        init {
-            synchronized(wordTree) {
-                for (word in words) {
-                    val keyPair = getFirstKeyLastKey(word, keysByCharacter)
-                    keyPair?.let {
-                        wordTree.getOrPut(keyPair) { arrayListOf() }.add(word)
-                    }
-                }
-            }
-        }
+    private fun resampleInto(source: Gesture, n: Int, outX: FloatArray, outY: FloatArray) {
+        val count = source.pointCount
+        val xs = FloatArray(count) { source.getX(it) }
+        val ys = FloatArray(count) { source.getY(it) }
+        resampleArrays(xs, ys, count, n, outX, outY)
     }
 
     class Gesture(
@@ -762,78 +612,12 @@ class StatisticalGlideTypingClassifier(context: Context) : GlideTypingClassifier
         private var size: Int = 0,
     ) {
         companion object {
-            // TODO: Find out optimal max size
             private const val MAX_SIZE = 500
 
-            fun generateIdealGestures(word: String, keysByCharacter: SparseArrayCompat<TextKey>): List<Gesture> {
-                val idealGesture = Gesture()
-                val idealGestureWithLoops = Gesture()
-                var previousLetter = '\u0000'
-                var hasLoops = false
-
-                // Add points for each key
-                for (c in word) {
-                    val lc = Character.toLowerCase(c)
-                    var key = keysByCharacter[lc.code]
-                    if (key == null) {
-                        // Try finding the base character instead, e.g., the "e" key instead of "é"
-                        val baseCharacter: Char = Normalizer.normalize(lc.toString(), Normalizer.Form.NFD)[0]
-                        key = keysByCharacter[baseCharacter.code]
-                        if (key == null) {
-                            continue
-                        }
-                    }
-                    val visibleBoundsCenter = key.visibleBounds.center
-
-                    // We adda little loop on  the key for duplicate letters
-                    // so that we can differentiate words like pool and poll, lull and lul, etc...
-                    if (previousLetter == lc) {
-                        // bottom right
-                        idealGestureWithLoops.addPoint(
-                            visibleBoundsCenter.x + key.visibleBounds.width / 4.0f,
-                            visibleBoundsCenter.y + key.visibleBounds.height / 4.0f
-                        )
-                        // top right
-                        idealGestureWithLoops.addPoint(
-                            visibleBoundsCenter.x + key.visibleBounds.width / 4.0f,
-                            visibleBoundsCenter.y - key.visibleBounds.height / 4.0f
-                        )
-                        // top left
-                        idealGestureWithLoops.addPoint(
-                            visibleBoundsCenter.x - key.visibleBounds.width / 4.0f,
-                            visibleBoundsCenter.y - key.visibleBounds.height / 4.0f
-                        )
-                        // bottom left
-                        idealGestureWithLoops.addPoint(
-                            visibleBoundsCenter.x - key.visibleBounds.width / 4.0f,
-                            visibleBoundsCenter.y + key.visibleBounds.height / 4.0f
-                        )
-                        hasLoops = true
-
-                        idealGesture.addPoint(
-                            visibleBoundsCenter.x,
-                            visibleBoundsCenter.y
-                        )
-                    } else {
-                        idealGesture.addPoint(
-                            visibleBoundsCenter.x,
-                            visibleBoundsCenter.y
-                        )
-                        idealGestureWithLoops.addPoint(
-                            visibleBoundsCenter.x,
-                            visibleBoundsCenter.y
-                        )
-                    }
-                    previousLetter = lc
-                }
-                return when (hasLoops) {
-                    true -> listOf(idealGesture, idealGestureWithLoops)
-                    false -> listOf(idealGesture)
-                }
-            }
-
             fun distance(x1: Float, y1: Float, x2: Float, y2: Float): Float {
-                return sqrt((x1 - x2).pow(2) + (y1 - y2).pow(2))
+                val dx = x1 - x2
+                val dy = y1 - y2
+                return sqrt(dx * dx + dy * dy)
             }
         }
 
@@ -859,10 +643,7 @@ class StatisticalGlideTypingClassifier(context: Context) : GlideTypingClassifier
 
         fun getT(i: Int): Long = if (i in 0 until size) ts[i] else 0L
 
-        /**
-         * Velocity (px / ms) at point [i], computed from the segment [i-1, i].
-         * Returns 0 for the first point or invalid indices.
-         */
+        /** Velocity (px / ms) at point [i], from the segment [i-1, i]; 0 for the first point. */
         fun velocityAt(i: Int): Float {
             if (i <= 0 || i >= size) return 0f
             val dt = (ts[i] - ts[i - 1]).coerceAtLeast(1L).toFloat()
@@ -871,10 +652,7 @@ class StatisticalGlideTypingClassifier(context: Context) : GlideTypingClassifier
             return sqrt(dx * dx + dy * dy) / dt
         }
 
-        /**
-         * 95th-percentile per-segment velocity, used to self-normalise V_MAX for
-         * velocity-aware location uncertainty scoring. Returns 0 when fewer than 2 points.
-         */
+        /** 95th-percentile per-segment velocity; 0 when fewer than 2 points. */
         fun peakVelocity(): Float {
             if (size < 2) return 0f
             val vs = FloatArray(size - 1)
@@ -883,12 +661,7 @@ class StatisticalGlideTypingClassifier(context: Context) : GlideTypingClassifier
             return vs[(vs.size * 0.95f).toInt().coerceAtMost(vs.size - 1)]
         }
 
-        /**
-         * Average velocity (px / ms) over the trailing [tailPoints] segments — the user's speed
-         * at the moment of lift. High terminal velocity ⇒ lifted mid-flight (path truncated).
-         * Low terminal velocity ⇒ decelerated to a deliberate stop. Returns 0 when fewer
-         * than 2 points or when timestamps are unset.
-         */
+        /** Average velocity over the trailing [tailPoints] segments — the speed at lift. */
         fun terminalVelocity(tailPoints: Int = 5): Float {
             if (size < 2) return 0f
             val n = tailPoints.coerceAtMost(size - 1).coerceAtLeast(1)
@@ -897,123 +670,19 @@ class StatisticalGlideTypingClassifier(context: Context) : GlideTypingClassifier
             return sum / n
         }
 
-        /**
-         * Resamples the gesture into a new gesture with the chosen number of points by oversampling
-         * it.
-         *
-         * @param numPoints The number of points that the new gesture will have. Must be superior to
-         * the number of points in the current gesture.
-         * @return An oversampled copy of the gesture.
-         */
-        fun resample(numPoints: Int): Gesture {
-            val interpointDistance = (getLength() / numPoints)
-            val resampledGesture = Gesture()
-            resampledGesture.addPoint(xs[0], ys[0], ts[0])
-            var lastX = xs[0]
-            var lastY = ys[0]
-            var newX: Float
-            var newY: Float
-            var cumulativeError = 0.0f
+        fun getFirstX(): Float = if (size > 0) xs[0] else 0f
+        fun getFirstY(): Float = if (size > 0) ys[0] else 0f
+        fun getLastX(): Float = if (size > 0) xs[size - 1] else 0f
+        fun getLastY(): Float = if (size > 0) ys[size - 1] else 0f
 
-            // otherwise nothing happens if size is only 1:
-            if (this.size == 1) {
-                for (i in 0 until SAMPLING_POINTS) {
-                    resampledGesture.addPoint(xs[0], ys[0], ts[0])
-                }
-            }
-
-            for (i in 0 until size - 1) {
-                // We calculate the unit vector from the two points we're between in the actual
-                // gesture
-                var dx = xs[i + 1] - xs[i]
-                var dy = ys[i + 1] - ys[i]
-                val norm = sqrt(dx.pow(2.0f) + dy.pow(2.0f))
-                dx /= norm
-                dy /= norm
-
-                // The number of evenly sampled points that fit between the two actual points
-                var numNewPoints = norm / interpointDistance
-
-                // The number of point that'd fit between the two actual points is often not round,
-                // which means we'll get an increasingly large error as we resample the gesture
-                // and round down that number. To compensate for this we keep track of the error
-                // and add additional points when it gets too large.
-                cumulativeError += numNewPoints - numNewPoints.toInt()
-                if (cumulativeError > 1) {
-                    numNewPoints = (numNewPoints.toInt() + cumulativeError.toInt()).toFloat()
-                    cumulativeError %= 1
-                }
-                val segStartT = ts[i]
-                val segDurationMs = (ts[i + 1] - ts[i]).coerceAtLeast(0L)
-                val totalNew = numNewPoints.toInt()
-                for (j in 0 until totalNew) {
-                    newX = lastX + dx * interpointDistance
-                    newY = lastY + dy * interpointDistance
-                    lastX = newX
-                    lastY = newY
-                    val fraction = (j + 1).toFloat() / max(1, totalNew)
-                    val newT = segStartT + (segDurationMs * fraction).toLong()
-                    resampledGesture.addPoint(newX, newY, newT)
-                }
-            }
-            return resampledGesture
-        }
-
-        fun normalizeByBoxSide(): Gesture {
-            val normalizedGesture = Gesture()
-
-            var maxX = -1.0f
-            var maxY = -1.0f
-            var minX = 10000.0f
-            var minY = 10000.0f
-
-            for (i in 0 until size) {
-                maxX = max(xs[i], maxX)
-                maxY = max(ys[i], maxY)
-                minX = min(xs[i], minX)
-                minY = min(ys[i], minY)
-            }
-
-            val width = maxX - minX
-            val height = maxY - minY
-            val longestSide = max(max(width, height), 0.00001f)
-
-            val centroidX = (width / 2 + minX) / longestSide
-            val centroidY = (height / 2 + minY) / longestSide
-
-            for (i in 0 until size) {
-                val x = xs[i] / longestSide - centroidX
-                val y = ys[i] / longestSide - centroidY
-                normalizedGesture.addPoint(x, y, ts[i])
-            }
-
-            return normalizedGesture
-        }
-
-        fun getFirstX(): Float = xs.getOrElse(0) { 0f }
-        fun getFirstY(): Float = ys.getOrElse(0) { 0f }
-        fun getLastX(): Float = xs.getOrElse(size - 1) { 0f }
-        fun getLastY(): Float = ys.getOrElse(size - 1) { 0f }
-
-        fun getLength(): Float {
-            var length = 0f
-            for (i in 1 until size) {
-                val previousX = xs[i - 1]
-                val previousY = ys[i - 1]
-                val currentX = xs[i]
-                val currentY = ys[i]
-                length += distance(previousX, previousY, currentX, currentY)
-            }
-
-            return length
-        }
+        fun getLength(): Float = polylineLength(xs, ys, size)
 
         fun clear() {
             this.size = 0
         }
 
-        fun getX(i: Int): Float = xs.getOrElse(i) { 0f }
-        fun getY(i: Int): Float = ys.getOrElse(i) { 0f }
+        fun getX(i: Int): Float = if (i in 0 until size) xs[i] else 0f
+        fun getY(i: Int): Float = if (i in 0 until size) ys[i] else 0f
 
         fun clone(): Gesture {
             return Gesture(xs.clone(), ys.clone(), ts.clone(), size)
@@ -1022,23 +691,92 @@ class StatisticalGlideTypingClassifier(context: Context) : GlideTypingClassifier
         override fun equals(other: Any?): Boolean {
             if (this === other) return true
             if (javaClass != other?.javaClass) return false
-
             other as Gesture
-
             if (this.size != other.size) return false
-
             for (i in 0 until size) {
                 if (xs[i] != other.xs[i] || ys[i] != other.ys[i]) return false
             }
-
             return true
         }
 
         override fun hashCode(): Int {
-            var result = xs.contentHashCode()
-            result = 31 * result + ys.contentHashCode()
-            result = 31 * result + size
+            // Only the live prefix: cleared gestures keep stale array contents.
+            var result = size
+            for (i in 0 until size) {
+                result = 31 * result + xs[i].toBits()
+                result = 31 * result + ys[i].toBits()
+            }
             return result
         }
+    }
+}
+
+private fun polylineLength(xs: FloatArray, ys: FloatArray, count: Int): Float {
+    var length = 0f
+    for (i in 1 until count) {
+        val dx = xs[i] - xs[i - 1]
+        val dy = ys[i] - ys[i - 1]
+        length += sqrt(dx * dx + dy * dy)
+    }
+    return length
+}
+
+/**
+ * Exact arc-length resampling of the first [count] points of ([xs], [ys]) to
+ * [n] points (first and last preserved). The previous implementation could
+ * return fewer than [n] points, leaving stale (0, 0) entries that then
+ * counted as huge distances in the comparison.
+ */
+private fun resampleArrays(xs: FloatArray, ys: FloatArray, count: Int, n: Int, outX: FloatArray, outY: FloatArray) {
+    if (count <= 0) {
+        outX.fill(0f); outY.fill(0f)
+        return
+    }
+    val total = polylineLength(xs, ys, count)
+    if (count == 1 || total <= 0f) {
+        outX.fill(xs[0]); outY.fill(ys[0])
+        return
+    }
+    val step = total / (n - 1)
+    var segment = 0
+    var segmentStart = 0f
+    var segmentLength = run {
+        val dx = xs[1] - xs[0]
+        val dy = ys[1] - ys[0]
+        sqrt(dx * dx + dy * dy)
+    }
+    for (p in 0 until n) {
+        val target = if (p == n - 1) total else p * step
+        while (segment < count - 2 && segmentStart + segmentLength < target) {
+            segmentStart += segmentLength
+            segment++
+            val dx = xs[segment + 1] - xs[segment]
+            val dy = ys[segment + 1] - ys[segment]
+            segmentLength = sqrt(dx * dx + dy * dy)
+        }
+        val t = if (segmentLength > 0f) ((target - segmentStart) / segmentLength).coerceIn(0f, 1f) else 0f
+        outX[p] = xs[segment] + (xs[segment + 1] - xs[segment]) * t
+        outY[p] = ys[segment] + (ys[segment + 1] - ys[segment]) * t
+    }
+}
+
+/** Scales the gesture into a unit box by its longest side, centred at the origin. */
+private fun normalizeInto(xs: FloatArray, ys: FloatArray, outX: FloatArray, outY: FloatArray) {
+    var minX = Float.MAX_VALUE
+    var minY = Float.MAX_VALUE
+    var maxX = -Float.MAX_VALUE
+    var maxY = -Float.MAX_VALUE
+    for (i in xs.indices) {
+        minX = min(minX, xs[i]); maxX = max(maxX, xs[i])
+        minY = min(minY, ys[i]); maxY = max(maxY, ys[i])
+    }
+    val width = maxX - minX
+    val height = maxY - minY
+    val longestSide = max(max(width, height), 0.00001f)
+    val centroidX = (width / 2 + minX) / longestSide
+    val centroidY = (height / 2 + minY) / longestSide
+    for (i in xs.indices) {
+        outX[i] = xs[i] / longestSide - centroidX
+        outY[i] = ys[i] / longestSide - centroidY
     }
 }

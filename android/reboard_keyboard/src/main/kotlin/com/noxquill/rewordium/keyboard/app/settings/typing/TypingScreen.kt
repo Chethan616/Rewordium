@@ -141,6 +141,18 @@ fun TypingScreen() = FlorisScreen {
 
         PreferenceGroup(title = stringRes(R.string.pref__correction__title)) {
             SwitchPreference(
+                prefs.correction.autoCorrect,
+                title = stringRes(R.string.pref__correction__auto_correct__label),
+                summary = stringRes(R.string.pref__correction__auto_correct__summary),
+                enabledIf = { prefs.suggestion.enabled isEqualTo true },
+            )
+            ListPreference(
+                prefs.correction.autoCorrectLevel,
+                title = stringRes(R.string.pref__correction__auto_correct_level__label),
+                entries = enumDisplayEntriesOf(com.noxquill.rewordium.keyboard.ime.nlp.latin.AutoCorrectLevel::class),
+                enabledIf = { prefs.suggestion.enabled isEqualTo true && prefs.correction.autoCorrect isEqualTo true },
+            )
+            SwitchPreference(
                 prefs.correction.autoCapitalization,
                 title = stringRes(R.string.pref__correction__auto_capitalization__label),
                 summary = stringRes(R.string.pref__correction__auto_capitalization__summary),

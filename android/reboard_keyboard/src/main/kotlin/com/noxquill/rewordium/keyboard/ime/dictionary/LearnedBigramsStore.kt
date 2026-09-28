@@ -163,6 +163,12 @@ class LearnedBigramsStore(private val context: Context) {
      * Snapshot of [locale]'s `previousWord → (nextWord → score)` map.
      * Safe to iterate; callers should treat the result as immutable.
      */
+    /** Learned continuations of [prevWord] only (copies one row, not the whole store). */
+    fun continuationsOf(locale: FlorisLocale, prevWord: String): Map<String, Int> {
+        val row = perLocale[locale.languageTag()]?.get(prevWord) ?: return emptyMap()
+        return HashMap(row)
+    }
+
     fun snapshot(locale: FlorisLocale): Map<String, Map<String, Int>> {
         val sub = perLocale[locale.languageTag()] ?: return emptyMap()
         return sub.mapValues { (_, inner) -> HashMap(inner) }

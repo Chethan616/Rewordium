@@ -34,6 +34,9 @@ class _AdminPanelState extends State<AdminPanel> with TickerProviderStateMixin {
     'free': 0,
     'activeNow': 0,
     'dau': 0,
+    'mau': 0,
+    'installs': 0,
+    'activeInstalls30d': 0,
   };
   Map<String, dynamic> _revenueStats = {};
   Map<String, dynamic> _apiUsageStats = {};
@@ -567,8 +570,47 @@ class _AdminPanelState extends State<AdminPanel> with TickerProviderStateMixin {
                   ),
                 ),
                 const SizedBox(width: 16),
-                const Expanded(child: SizedBox.shrink()),
+                Expanded(
+                  child: _buildStatCard(
+                    'Monthly Active Users',
+                    (_userStats['mau'] ?? 0).toString(),
+                    Icons.calendar_month,
+                    Colors.cyan,
+                  ),
+                ),
               ],
+            ),
+            const SizedBox(height: 16),
+            Row(
+              children: [
+                Expanded(
+                  child: _buildStatCard(
+                    'Devices (all installs)',
+                    (_userStats['installs'] ?? 0).toString(),
+                    Icons.phone_android,
+                    Colors.green,
+                  ),
+                ),
+                const SizedBox(width: 16),
+                Expanded(
+                  child: _buildStatCard(
+                    'Active Devices (30d)',
+                    (_userStats['activeInstalls30d'] ?? 0).toString(),
+                    Icons.devices,
+                    Colors.teal,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 12),
+            Text(
+              '"Total Users" counts signed-up accounts. Google Play counts every '
+              'device that installs the app, including people who never sign in. '
+              '"Devices" counts every app launch since v3.1.0 (older installs '
+              'appear once they open an updated version).',
+              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                    color: Theme.of(context).colorScheme.onSurfaceVariant,
+                  ),
             ),
             const SizedBox(height: 32),
             Text(

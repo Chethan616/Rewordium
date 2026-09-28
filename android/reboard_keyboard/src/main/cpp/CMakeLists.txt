@@ -59,7 +59,8 @@ set(AOSP_CORE_SOURCES
     ${AOSP_ROOT}/src/dictionary/structure/v2/ver2_pt_node_array_reader.cpp
     # dictionary/structure/v4
     ${AOSP_ROOT}/src/dictionary/structure/v4/ver4_dict_buffers.cpp
-    ${AOSP_ROOT}/src/dictionary/structure/v4/ver4_dict_constants.cpp
+    # Patched copy (see aosp_overrides/): raises the on-memory trie size cap.
+    ${CMAKE_CURRENT_SOURCE_DIR}/aosp_overrides/dictionary/structure/v4/ver4_dict_constants.cpp
     ${AOSP_ROOT}/src/dictionary/structure/v4/ver4_patricia_trie_node_reader.cpp
     ${AOSP_ROOT}/src/dictionary/structure/v4/ver4_patricia_trie_node_writer.cpp
     ${AOSP_ROOT}/src/dictionary/structure/v4/ver4_patricia_trie_policy.cpp

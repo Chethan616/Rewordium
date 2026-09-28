@@ -29,6 +29,7 @@ import androidx.compose.material.icons.automirrored.outlined.Undo
 import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.KeyboardArrowUp
 import androidx.compose.material.icons.outlined.Close
+import androidx.compose.material.icons.outlined.Height
 import androidx.compose.material.icons.outlined.ContentCopy
 import androidx.compose.material.icons.outlined.ContentCut
 import androidx.compose.material.icons.outlined.ContentPaste
@@ -261,6 +262,13 @@ fun ComputingEvaluator.computeImageVector(data: KeyData): ImageVector? {
         }
         KeyCode.IME_UI_MODE_MEDIA -> {
             Icons.Outlined.Mood
+        }
+        KeyCode.IME_UI_MODE_GIF -> {
+            // Same GIF glyph as the emoji panel's bottom bar.
+            context()?.vectorResource(id = R.drawable.ic_custom_gif)
+        }
+        KeyCode.KEYBOARD_RESIZE -> {
+            Icons.Outlined.Height
         }
         KeyCode.IME_UI_MODE_CLIPBOARD -> {
             context()?.vectorResource(id = R.drawable.ic_custom_clipboard)
