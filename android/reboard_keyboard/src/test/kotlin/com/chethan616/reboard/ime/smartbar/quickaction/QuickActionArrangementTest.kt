@@ -16,7 +16,9 @@
 
 package com.chethan616.reboard.ime.smartbar.quickaction
 
-import com.chethan616.reboard.ime.text.keyboard.TextKeyData
+import com.noxquill.rewordium.keyboard.ime.smartbar.quickaction.QuickAction
+import com.noxquill.rewordium.keyboard.ime.smartbar.quickaction.QuickActionArrangement
+import com.noxquill.rewordium.keyboard.ime.text.keyboard.TextKeyData
 import org.junit.jupiter.api.assertAll
 import kotlin.test.Test
 import kotlin.test.assertEquals

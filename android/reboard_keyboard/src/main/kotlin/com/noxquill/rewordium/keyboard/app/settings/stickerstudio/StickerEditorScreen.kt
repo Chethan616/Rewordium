@@ -1096,7 +1096,7 @@ fun StickerEditorScreen(sourceUri: String?, gifMode: Boolean = false) = FlorisSc
                                 aiLoading = true
                                 scope.launch {
                                     val aiManager = com.noxquill.rewordium.keyboard.ime.ai.AIManager(context)
-                                    val res = aiManager.rewriteTextWithPrompt("Generate a short, funny meme caption suitable for a sticker (max 4 words). Output just the caption without quotes.").getOrNull() as? String
+                                    val res = aiManager.generate("Write a short, funny meme caption for a sticker, at most 4 words.").getOrNull()
                                     aiLoading = false
                                     if (res != null) draft = res
                                 }

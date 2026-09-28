@@ -1,3 +1,6 @@
+# Disabled: GitHub only runs workflows in .github/workflows/.
+# To re-enable the iOS build, move this file back there and uncomment it.
+
 # name: iOS Sideloadly Build
 # 
 # on:

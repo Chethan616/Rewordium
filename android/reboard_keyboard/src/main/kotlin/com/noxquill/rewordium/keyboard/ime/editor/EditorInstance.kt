@@ -20,6 +20,7 @@ import android.content.ClipDescription
 import android.content.ContentUris
 import android.content.Context
 import android.view.KeyEvent
+import android.view.inputmethod.ExtractedTextRequest
 import androidx.core.view.inputmethod.InputConnectionCompat
 import androidx.core.view.inputmethod.InputContentInfoCompat
 import com.noxquill.rewordium.keyboard.FlorisImeService
@@ -800,6 +801,50 @@ class EditorInstance(context: Context) : AbstractEditorInstance(context) {
      *
      * @return True on success, false if an error occurred or the input connection is invalid.
      */
+    /**
+     * The whole field for the AI tools, read straight from the editor: the
+     * cached [activeContent] only holds a few hundred characters around the
+     * cursor, and rewriting "all text" from that window would delete the
+     * rest of a long message. [AiTextSnapshot.complete] is false when the
+     * editor wouldn't reveal all of its text.
+     */
+    fun snapshotForAi(): AiTextSnapshot? {
+        val ic = currentInputConnection() ?: return null
+        if (activeInfo.isRawInputEditor) return null
+        val extracted = runCatching { ic.getExtractedText(ExtractedTextRequest(), 0) }.getOrNull()
+        val extractedText = extracted?.text
+        if (extracted != null && extractedText != null && extracted.startOffset == 0 && extracted.partialStartOffset < 0) {
+            val text = extractedText.toString()
+            val start = minOf(extracted.selectionStart, extracted.selectionEnd).coerceIn(0, text.length)
+            val end = maxOf(extracted.selectionStart, extracted.selectionEnd).coerceIn(0, text.length)
+            return AiTextSnapshot(text, start, end, complete = true)
+        }
+        val before = ic.getTextBeforeCursor(AI_TEXT_LIMIT, 0)?.toString().orEmpty()
+        val selected = ic.getSelectedText(0)?.toString().orEmpty()
+        val after = ic.getTextAfterCursor(AI_TEXT_LIMIT, 0)?.toString().orEmpty()
+        // A shorter answer than requested means we reached the field's edge,
+        // so offsets in the snapshot are real editor offsets.
+        val complete = before.length < AI_TEXT_LIMIT && after.length < AI_TEXT_LIMIT
+        return AiTextSnapshot(before + selected + after, before.length, before.length + selected.length, complete)
+    }
+
+    /** Replaces [start, end) of the field with [replacement] in one edit. */
+    fun replaceRangeForAi(start: Int, end: Int, replacement: String): Boolean {
+        val ic = currentInputConnection() ?: return false
+        lastCommittedNovelWord = null
+        lastGestureCommitLength = 0
+        autoCorrectionRecord = null
+        autoSpace.setInactive()
+        phantomSpace.setInactive()
+        ic.beginBatchEdit()
+        return try {
+            ic.finishComposingText()
+            ic.setSelection(start, end) && ic.commitText(replacement, 1)
+        } finally {
+            ic.endBatchEdit()
+        }
+    }
+
     fun performClipboardSelectAll(): Boolean {
         lastCommittedNovelWord = null
         autoSpace.setInactive()
