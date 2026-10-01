@@ -142,13 +142,7 @@ img { max-width: 100%; display: block; }
 /* brand lockup (used in footer) */
 .brand-mark {
   width: 38px; height: 38px; border-radius: 11px;
-  background: var(--green-bright);
-  display: grid; place-items: center;
-  box-shadow: inset 0 -3px 0 rgba(0,0,0,0.12), 0 6px 14px -4px rgba(34,197,94,0.55);
-}
-.brand-mark span {
-  font-family: var(--display); font-weight: 800; font-size: 19px; color: #07210f;
-  font-style: italic; letter-spacing: -.04em;
+  display: block; object-fit: cover;
 }
 .brand-name { font-family: var(--display); font-weight: 800; font-size: 23px; letter-spacing: -.035em; }
 
