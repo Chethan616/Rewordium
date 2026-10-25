@@ -269,6 +269,10 @@ private fun RewordiumRootContent(
                 account = account,
                 platformStatus = platformStatus,
                 recentTools = recentToolIds.mapNotNull { id -> writingTools.firstOrNull { it.id == id } },
+                onClearRecents = {
+                    recentToolIds = emptyList()
+                    appPrefs.edit().remove("recent_tool_ids").apply()
+                },
                 mascotType = mascotType,
                 onOpenTool = ::navigateTo,
                 onOpenRecentTool = { id ->

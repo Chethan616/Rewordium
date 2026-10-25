@@ -108,6 +108,7 @@ fun HomeScreen(
     account: AccountInfo?,
     platformStatus: PlatformSetupStatus,
     recentTools: List<WritingTool>,
+    onClearRecents: () -> Unit,
     mascotType: String,
     onOpenTool: (String) -> Unit,
     onOpenRecentTool: (String) -> Unit,
@@ -200,7 +201,13 @@ fun HomeScreen(
             Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
                 Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.SpaceBetween) {
                     Text("Recent", style = MaterialTheme.typography.titleLarge)
-                    Icon(Icons.Filled.History, null, tint = MaterialTheme.colorScheme.onSurfaceVariant)
+                    if (recentTools.isNotEmpty()) {
+                        IconButton(onClick = { haptics.click(); onClearRecents() }) {
+                            Icon(Icons.Filled.History, "Clear recent tools", tint = MaterialTheme.colorScheme.onSurfaceVariant)
+                        }
+                    } else {
+                        Icon(Icons.Filled.History, null, tint = MaterialTheme.colorScheme.onSurfaceVariant)
+                    }
                 }
                 Surface(shape = MaterialTheme.shapes.large, color = MaterialTheme.colorScheme.surfaceContainerLow) {
                     Column {
@@ -253,17 +260,21 @@ fun HomeScreen(
                 platformStatus.keyboardSelected -> "Keyboard is ready · set up accessibility"
                 else -> "Set up your keyboard and accessibility tools"
             }
-            Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+            Row(
+                Modifier.fillMaxWidth().clickable { haptics.click(); onOpenSettings() },
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(12.dp),
+            ) {
                 BotAvatar(type = "droid", mood = BotMood.Idle, size = 42.dp, still = true)
                 Column(Modifier.weight(1f)) {
                     Text("Your setup", style = MaterialTheme.typography.titleSmall)
                     Text(setupSummary, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
-                IconButton(onClick = onOpenSettings) { Icon(Icons.Filled.ChevronRight, "Open settings") }
+                Icon(Icons.Filled.ChevronRight, "Open settings", tint = MaterialTheme.colorScheme.onSurfaceVariant)
             }
         }
         item {
-            ElevatedCard(onClick = onOpenPro, modifier = Modifier.fillMaxWidth().expressivePress(), shape = MaterialTheme.shapes.large, colors = CardDefaults.elevatedCardColors(containerColor = MaterialTheme.colorScheme.secondaryContainer)) {
+            ElevatedCard(onClick = { haptics.click(); onOpenPro() }, modifier = Modifier.fillMaxWidth().expressivePress(), shape = MaterialTheme.shapes.large, colors = CardDefaults.elevatedCardColors(containerColor = MaterialTheme.colorScheme.secondaryContainer)) {
                 Row(Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                     BotAvatar(type = "star", mood = BotMood.Happy, size = 42.dp, still = true)
                     Column(Modifier.weight(1f)) {
