@@ -1,6 +1,3 @@
-# Disable obfuscation (we use Proguard exclusively for optimization)
--dontobfuscate
-
 # Keep Routes classes and all serialization data
 -keep class com.noxquill.rewordium.keyboard.app.Routes { *; }
 -keep class com.noxquill.rewordium.keyboard.app.Routes$* { *; }

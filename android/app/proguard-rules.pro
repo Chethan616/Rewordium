@@ -1,4 +1,8 @@
 # ==============================================================================
+# Preserve readable names during the app-wide R8 pass, as the keyboard's
+# serialization and reflection-based integrations depend on them.
+-dontobfuscate
+
 # FIREBASE AUTH & GOOGLE SIGN-IN — CRITICAL FOR RELEASE BUILDS
 # Without these rules, minification breaks auth in release APKs.
 # ==============================================================================

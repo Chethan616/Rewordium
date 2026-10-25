@@ -1,4 +1,4 @@
-# Rewordium for Android
+# Rewordium Android
 
 Rewordium is a native Android writing assistant with an on-device keyboard and an optional accessibility service for writing actions in other apps.
 
@@ -21,6 +21,14 @@ From the repository root on Windows:
 cd android
 .\gradlew.bat :app:assembleDebug
 ```
+
+Build a signed release APK with:
+
+```powershell
+.\gradlew.bat :app:assembleRelease
+```
+
+The APK is written to `build/app/outputs/apk/release/app-release.apk`.
 
 Build a Play Store bundle with:
 
