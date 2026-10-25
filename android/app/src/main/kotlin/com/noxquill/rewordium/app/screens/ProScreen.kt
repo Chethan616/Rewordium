@@ -24,17 +24,20 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
+import androidx.compose.material3.LoadingIndicator
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.android.billingclient.api.ProductDetails
-import com.noxquill.rewordium.app.ui.JadeMascot
+import com.noxquill.rewordium.app.ui.avatar.BotAvatar
+import com.noxquill.rewordium.app.ui.avatar.BotMood
 import com.noxquill.rewordium.billing.BillingUiState
 import com.noxquill.rewordium.data.AccountInfo
 
-@OptIn(ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterial3ExpressiveApi::class)
 @Composable
 fun ProScreen(
     account: AccountInfo?, billing: BillingUiState,
@@ -47,9 +50,9 @@ fun ProScreen(
         })
         LazyColumn(contentPadding = PaddingValues(20.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
             item {
-                ElevatedCard(shape = MaterialTheme.shapes.extraLarge, colors = CardDefaults.elevatedCardColors(containerColor = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.7f))) {
+                ElevatedCard(shape = MaterialTheme.shapes.extraLarge, colors = CardDefaults.elevatedCardColors(containerColor = MaterialTheme.colorScheme.primaryContainer)) {
                     Column(Modifier.fillMaxWidth().padding(22.dp), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                        JadeMascot(size = 92.dp, mood = "happy")
+                        BotAvatar(type = "star", mood = BotMood.Happy, size = 92.dp, label = "Rewordium Pro mascot")
                         Text("Make space for more ideas.", style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.SemiBold)
                         Text("Unlimited writing tools, wherever you write.", color = MaterialTheme.colorScheme.onSurfaceVariant)
                     }
@@ -76,7 +79,12 @@ fun ProScreen(
                         Icon(Icons.Filled.Stars, null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(24.dp))
                         Column(Modifier.weight(1f)) {
                             Text(if (yearly) "Yearly" else "Monthly", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
-                            Text(price ?: if (billing.loading) "Loading Play price…" else "Price unavailable", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            if (billing.loading) {
+                                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(7.dp)) {
+                                    LoadingIndicator(Modifier.size(20.dp))
+                                    Text("Connecting to Google Play", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                }
+                            } else Text(price ?: "Price unavailable", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
                         }
                         Button(onClick = { if (account == null) onSignIn() else onPurchase(id) }, enabled = !billing.loading && product != null && account?.isPro != true) {
                             Text(if (account?.isPro == true) "Active" else if (account == null) "Sign in" else "Choose")

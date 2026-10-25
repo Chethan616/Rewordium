@@ -29,7 +29,8 @@
         android:roundIcon="@mipmap/ic_launcher_round"
         android:largeHeap="true"
         android:hardwareAccelerated="true"
-        android:usesCleartextTraffic="true">
+        android:usesCleartextTraffic="true"
+        android:enableOnBackInvokedCallback="true">
         <property android:name="android.app.16kb_page_size.enabled" android:value="true" />
         <meta-data android:name="com.google.android.gms.wallet.api.enabled" android:value="true" />
         <meta-data android:name="com.google.firebase.messaging.default_notification_channel_id" android:value="rewordium_updates" />

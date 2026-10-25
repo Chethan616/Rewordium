@@ -13,6 +13,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Add
@@ -31,6 +32,9 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
+import com.noxquill.rewordium.app.ui.avatar.BotAvatar
+import com.noxquill.rewordium.app.ui.avatar.BotMood
+import com.noxquill.rewordium.app.ui.haptics.LocalHaptics
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -98,6 +102,7 @@ fun PersonaScreen(onBack: () -> Unit) {
     var showAdd by remember { mutableStateOf(false) }
     var name by remember { mutableStateOf("") }
     var description by remember { mutableStateOf("") }
+    val haptics = LocalHaptics.current
 
     LaunchedEffect(active, personas) {
         val selected = personas.firstOrNull { it.name == active } ?: personas.first()
@@ -118,10 +123,10 @@ fun PersonaScreen(onBack: () -> Unit) {
             item {
                 ElevatedCard(
                     shape = MaterialTheme.shapes.extraLarge,
-                    colors = CardDefaults.elevatedCardColors(containerColor = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.72f)),
+                    colors = CardDefaults.elevatedCardColors(containerColor = MaterialTheme.colorScheme.primaryContainer),
                 ) {
                     Row(Modifier.fillMaxWidth().padding(18.dp), horizontalArrangement = Arrangement.spacedBy(13.dp), verticalAlignment = Alignment.CenterVertically) {
-                        Icon(Icons.Filled.AutoAwesome, null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(26.dp))
+                        BotAvatar(type = "flower", mood = BotMood.Happy, size = 46.dp, still = true)
                         Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
                             Text("Give every rewrite a voice", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
                             Text("Your choice is shared with the Rewordium keyboard.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
@@ -130,10 +135,11 @@ fun PersonaScreen(onBack: () -> Unit) {
                 }
                 Spacer(Modifier.height(5.dp))
             }
-            items(personas, key = { it.name }) { persona ->
+            itemsIndexed(personas, key = { _, persona -> persona.name }) { index, persona ->
                 val selected = persona.name == active
                 ElevatedCard(
                     onClick = {
+                        haptics.tick()
                         active = persona.name
                         activatePersona(context, persona)
                     },
@@ -143,11 +149,7 @@ fun PersonaScreen(onBack: () -> Unit) {
                     ),
                 ) {
                     Row(Modifier.fillMaxWidth().padding(start = 16.dp, end = 8.dp, top = 14.dp, bottom = 14.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                        Icon(
-                            if (selected) Icons.Filled.CheckCircle else Icons.Filled.AutoAwesome,
-                            contentDescription = if (selected) "Selected" else null,
-                            tint = MaterialTheme.colorScheme.primary,
-                        )
+                        BotAvatar(type = personaMascots[index % personaMascots.size], mood = if (selected) BotMood.Happy else BotMood.Idle, size = 42.dp, still = true, label = "${persona.name} persona")
                         Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(3.dp)) {
                             Text(persona.name, style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold)
                             Text(persona.description, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
@@ -166,7 +168,7 @@ fun PersonaScreen(onBack: () -> Unit) {
                 }
             }
             item {
-                Button(onClick = { name = ""; description = ""; showAdd = true }, modifier = Modifier.fillMaxWidth()) {
+                Button(onClick = { haptics.click(); name = ""; description = ""; showAdd = true }, modifier = Modifier.fillMaxWidth(), shapes = androidx.compose.material3.ButtonDefaults.shapes()) {
                     Icon(Icons.Filled.Add, null)
                     Text("  Create a persona")
                 }
@@ -200,3 +202,5 @@ fun PersonaScreen(onBack: () -> Unit) {
         dismissButton = { TextButton(onClick = { showAdd = false }) { Text("Cancel") } },
     )
 }
+
+private val personaMascots = listOf("flower", "ghost", "cat", "star", "droid", "clover", "drop", "alien")

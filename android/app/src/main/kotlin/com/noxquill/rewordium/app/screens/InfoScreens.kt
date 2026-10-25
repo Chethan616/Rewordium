@@ -2,6 +2,7 @@ package com.noxquill.rewordium.app.screens
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
@@ -15,6 +16,7 @@ import androidx.compose.material.icons.filled.OpenInNew
 import androidx.compose.material3.Button
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ElevatedCard
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -27,6 +29,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import com.noxquill.rewordium.app.ui.avatar.BotAvatar
+import com.noxquill.rewordium.app.ui.avatar.BotMood
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -49,18 +53,26 @@ fun InfoScreen(title: String, onBack: () -> Unit, onOpenLink: (String) -> Unit) 
         })
         LazyColumn(contentPadding = PaddingValues(20.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
             item {
-                ElevatedCard(shape = MaterialTheme.shapes.large, colors = CardDefaults.elevatedCardColors(containerColor = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.5f))) {
-                    Column(Modifier.padding(18.dp), verticalArrangement = Arrangement.spacedBy(5.dp)) {
-                        Text(if (privacy) "Your choices matter." else "A few things to know.", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.SemiBold)
-                        Text("This in-app overview is a quick guide. Read the full current document on our website.", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                ElevatedCard(shape = MaterialTheme.shapes.large, colors = CardDefaults.elevatedCardColors(containerColor = MaterialTheme.colorScheme.primaryContainer)) {
+                    Row(Modifier.fillMaxWidth().padding(18.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                        BotAvatar(type = if (privacy) "ghost" else "circle", mood = BotMood.Idle, size = 48.dp, still = true)
+                        Column(verticalArrangement = Arrangement.spacedBy(5.dp)) {
+                            Text(if (privacy) "Your choices matter." else "A few things to know.", style = MaterialTheme.typography.titleLarge)
+                            Text("This in-app overview is a quick guide. Read the full current document on our website.", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onPrimaryContainer)
+                        }
                     }
                 }
             }
-            items(sections) { (heading, body) ->
-                ElevatedCard(shape = MaterialTheme.shapes.large, colors = CardDefaults.elevatedCardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerHigh)) {
-                    Column(Modifier.padding(17.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                        Text(heading, style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold)
-                        Text(body, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            item {
+                androidx.compose.material3.Surface(shape = MaterialTheme.shapes.large, color = MaterialTheme.colorScheme.surfaceContainerLow) {
+                    Column {
+                        sections.forEachIndexed { index, (heading, body) ->
+                            if (index > 0) HorizontalDivider(Modifier.padding(start = 16.dp, end = 16.dp), color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.55f))
+                            Column(Modifier.padding(horizontal = 16.dp, vertical = 15.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                                Text(heading, style = MaterialTheme.typography.titleSmall)
+                                Text(body, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            }
+                        }
                     }
                 }
             }
@@ -88,6 +100,8 @@ fun LicensesScreen(onBack: () -> Unit, onOpenLink: (String) -> Unit) {
         LicenseEntry("ReBoard / FlorisBoard", "Apache License 2.0 · keyboard foundation", "https://github.com/florisboard/florisboard"),
         LicenseEntry("AOSP LatinIME", "Apache License 2.0 · upstream notices included", "https://android.googlesource.com/platform/packages/inputmethods/LatinIME"),
         LicenseEntry("Jetpack Compose and Material 3", "Apache License 2.0", "https://developer.android.com/jetpack/compose"),
+        LicenseEntry("Material 3 Expressive patterns", "Apache License 2.0 · meticha", "https://github.com/meticha/material-3-expressive-catalog"),
+        LicenseEntry("Bot avatars · Libraries.dev", "MIT License · Copyright Jakub Antalik", "https://libraries.dev"),
         LicenseEntry("Firebase Android SDK", "Apache License 2.0", "https://github.com/firebase/firebase-android-sdk"),
         LicenseEntry("Retrofit and OkHttp", "Apache License 2.0", "https://github.com/square/okhttp"),
         LicenseEntry("Google Play Billing and ML Kit", "Google developer terms", "https://developer.android.com/google/play/billing"),
@@ -98,25 +112,33 @@ fun LicensesScreen(onBack: () -> Unit, onOpenLink: (String) -> Unit) {
         })
         LazyColumn(contentPadding = PaddingValues(20.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
             item {
-                ElevatedCard(shape = MaterialTheme.shapes.large, colors = CardDefaults.elevatedCardColors(containerColor = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.5f))) {
-                    Text("Rewordium is built with open-source projects. We’re grateful to the people who make them available.", Modifier.padding(18.dp), style = MaterialTheme.typography.bodyLarge)
+                ElevatedCard(shape = MaterialTheme.shapes.large, colors = CardDefaults.elevatedCardColors(containerColor = MaterialTheme.colorScheme.primaryContainer)) {
+                    Row(Modifier.padding(18.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                        BotAvatar(type = "clover", mood = BotMood.Happy, size = 46.dp, still = true)
+                        Text("Rewordium is built with open-source projects. We’re grateful to the people who make them available.", style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.onPrimaryContainer)
+                    }
                 }
             }
-            items(entries) { entry ->
-                ElevatedCard(onClick = { onOpenLink(entry.url) }, shape = MaterialTheme.shapes.large, colors = CardDefaults.elevatedCardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerHigh)) {
-                    Row(Modifier.fillMaxWidth().padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
-                        Column(Modifier.weight(1f)) {
-                            Text(entry.name, style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold)
-                            Text(entry.license, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            item {
+                androidx.compose.material3.Surface(shape = MaterialTheme.shapes.large, color = MaterialTheme.colorScheme.surfaceContainerLow) {
+                    Column {
+                        entries.forEachIndexed { index, entry ->
+                            if (index > 0) HorizontalDivider(Modifier.padding(start = 16.dp), color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.55f))
+                            Row(Modifier.fillMaxWidth().clickable { onOpenLink(entry.url) }.padding(horizontal = 16.dp, vertical = 13.dp), verticalAlignment = Alignment.CenterVertically) {
+                                Column(Modifier.weight(1f)) {
+                                    Text(entry.name, style = MaterialTheme.typography.titleSmall)
+                                    Text(entry.license, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                }
+                                Icon(Icons.Filled.OpenInNew, null, tint = MaterialTheme.colorScheme.onSurfaceVariant)
+                            }
                         }
-                        Icon(Icons.Filled.OpenInNew, null, tint = MaterialTheme.colorScheme.onSurfaceVariant)
                     }
                 }
             }
             item {
                 ElevatedCard(shape = MaterialTheme.shapes.large, colors = CardDefaults.elevatedCardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerLow)) {
                     Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                        Text("Keyboard notices", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
+                        Text("Third-party license notices", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
                         Text(keyboardNotices, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                     }
                 }

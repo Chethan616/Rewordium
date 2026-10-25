@@ -37,7 +37,8 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
-import com.noxquill.rewordium.app.ui.JadeMascot
+import com.noxquill.rewordium.app.ui.avatar.BotAvatar
+import com.noxquill.rewordium.app.ui.avatar.BotMood
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -58,9 +59,9 @@ fun AiSettingsScreen(onBack: () -> Unit) {
         })
         LazyColumn(contentPadding = PaddingValues(20.dp), verticalArrangement = Arrangement.spacedBy(13.dp)) {
             item {
-                ElevatedCard(shape = MaterialTheme.shapes.large, colors = CardDefaults.elevatedCardColors(containerColor = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.52f))) {
+                ElevatedCard(shape = MaterialTheme.shapes.large, colors = CardDefaults.elevatedCardColors(containerColor = MaterialTheme.colorScheme.primaryContainer)) {
                     Row(Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                        JadeMascot(size = 52.dp, animate = false)
+                        BotAvatar(type = "droid", mood = BotMood.Idle, size = 52.dp, still = true, label = "Rewordium mascot")
                         Column(Modifier.weight(1f)) {
                             Text("Choose how Rewordium thinks", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
                             Text("These settings are shared with Jade and the keyboard.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)

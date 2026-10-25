@@ -13,6 +13,7 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.animateContentSize
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -24,6 +25,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
@@ -34,14 +36,24 @@ import androidx.compose.material.icons.filled.ChevronRight
 import androidx.compose.material.icons.filled.Keyboard
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.Stars
+import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material.icons.filled.History
+import androidx.compose.material.icons.filled.EditNote
+import androidx.compose.material.icons.filled.Shield
+import androidx.compose.material.icons.filled.KeyboardArrowRight
 import androidx.compose.material3.AssistChip
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
+import androidx.compose.material3.LoadingIndicator
 import androidx.compose.material3.ElevatedCard
+import androidx.compose.material3.FilledTonalIconButton
 import androidx.compose.material3.FilterChip
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Surface
@@ -58,7 +70,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
@@ -72,7 +83,10 @@ import com.noxquill.rewordium.app.model.WritingTool
 import com.noxquill.rewordium.app.model.toolFor
 import com.noxquill.rewordium.app.model.writingTools
 import com.noxquill.rewordium.app.ui.expressivePress
-import com.noxquill.rewordium.app.ui.JadeMascot
+import com.noxquill.rewordium.app.ui.avatar.BotAvatar
+import com.noxquill.rewordium.app.ui.avatar.BotMood
+import com.noxquill.rewordium.app.ui.avatar.botTypeFor
+import com.noxquill.rewordium.app.ui.haptics.LocalHaptics
 import com.noxquill.rewordium.data.AccountInfo
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -82,127 +96,155 @@ import kotlinx.coroutines.withContext
 fun HomeScreen(
     account: AccountInfo?,
     platformStatus: PlatformSetupStatus,
+    recentTools: List<WritingTool>,
+    mascotType: String,
     onOpenTool: (String) -> Unit,
     onOpenSettings: () -> Unit,
+    onOpenJade: () -> Unit,
     onOpenPro: () -> Unit,
 ) {
+    val haptics = LocalHaptics.current
     LazyColumn(
         modifier = Modifier.fillMaxSize(),
-        contentPadding = PaddingValues(start = 20.dp, end = 20.dp, top = 18.dp, bottom = 26.dp),
-        verticalArrangement = Arrangement.spacedBy(18.dp),
+        contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 12.dp, bottom = 28.dp),
+        verticalArrangement = Arrangement.spacedBy(20.dp),
     ) {
         item {
-            Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.SpaceBetween) {
-                Column {
-                    Text("Good writing starts here", style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                    Text(account?.name?.let { "Hello, $it" } ?: "Hello, writer", style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.SemiBold)
+            Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                BotAvatar(type = mascotType, mood = BotMood.Idle, size = 58.dp, label = "Rewordium mascot")
+                Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(3.dp)) {
+                    Text(account?.name?.takeIf(String::isNotBlank)?.let { "Hello, $it" } ?: "Hello, writer", style = MaterialTheme.typography.headlineSmall)
+                    Text(if (account?.isPro == true) "Rewordium Pro" else "${account?.credits ?: 0} writing credits", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
-                Surface(shape = CircleShape, color = MaterialTheme.colorScheme.secondaryContainer) {
-                    Icon(Icons.Filled.AutoAwesome, contentDescription = "Open Jade AI", modifier = Modifier.padding(14.dp).size(24.dp), tint = MaterialTheme.colorScheme.onSecondaryContainer)
+                FilledTonalIconButton(onClick = { haptics.click(); onOpenSettings() }) {
+                    Icon(Icons.Filled.Settings, contentDescription = "Settings")
                 }
             }
         }
         item {
-            Box(
-                Modifier
-                    .fillMaxWidth()
-                    .clip(MaterialTheme.shapes.extraLarge)
-                    .background(Brush.linearGradient(listOf(MaterialTheme.colorScheme.primaryContainer, MaterialTheme.colorScheme.tertiaryContainer)))
-                    .padding(22.dp),
+            Surface(
+                onClick = { haptics.click(); onOpenTool("paraphraser") },
+                modifier = Modifier.fillMaxWidth().expressivePress(),
+                shape = MaterialTheme.shapes.extraLarge,
+                color = MaterialTheme.colorScheme.surfaceContainerHigh,
             ) {
-                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                            Icon(Icons.Filled.Stars, null, Modifier.size(17.dp), tint = MaterialTheme.colorScheme.primary)
-                            Text("YOUR WRITING COMPANION", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.primary, fontWeight = FontWeight.SemiBold)
-                        }
-                        Text("A little more you, in every sentence.", style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.SemiBold, lineHeight = MaterialTheme.typography.headlineSmall.lineHeight)
-                        Text("Smooth out the rough edges while keeping your voice.", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                        Button(
-                            onClick = { onOpenTool("paraphraser") },
-                            modifier = Modifier.expressivePress(),
-                            shape = MaterialTheme.shapes.large,
-                            contentPadding = PaddingValues(horizontal = 18.dp, vertical = 12.dp),
-                        ) {
-                            Text("Start writing")
-                            Icon(Icons.Filled.ChevronRight, null, Modifier.padding(start = 4.dp).size(19.dp))
+                Row(Modifier.padding(start = 18.dp, top = 18.dp, bottom = 18.dp, end = 10.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                    Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(7.dp)) {
+                        Text("Start with a thought", style = MaterialTheme.typography.headlineSmall)
+                        Text("Make it clearer while keeping your voice.", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        Button(onClick = { haptics.click(); onOpenTool("paraphraser") }, modifier = Modifier.padding(top = 4.dp).expressivePress(), shapes = ButtonDefaults.shapes()) {
+                            Icon(Icons.Filled.EditNote, null, Modifier.size(19.dp))
+                            Text("Start writing", Modifier.padding(start = 8.dp))
                         }
                     }
-                    JadeMascot(size = 90.dp, modifier = Modifier.padding(start = 2.dp))
+                    BotAvatar(type = "blob", mood = BotMood.Happy, size = 92.dp, label = "Writing companion")
                 }
-            }
-        }
-        item {
-            Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.SpaceBetween) {
-                Column {
-                    Text("Your words, your way", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.SemiBold)
-                    Text("A few thoughtful tools to get you started.", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                }
-                TextButton(onClick = { onOpenTool("tools") }) { Text("See all") }
             }
         }
         item {
             Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                val featured = writingTools.filter { it.id in setOf("paraphraser", "grammar", "summarizer", "translator") }
-                featured.chunked(2).forEach { row ->
-                    Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                        row.forEach { tool ->
-                            ToolTile(tool, Modifier.weight(1f)) { onOpenTool(tool.id) }
+                Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.SpaceBetween) {
+                    Text("Quick actions", style = MaterialTheme.typography.titleLarge)
+                    TextButton(onClick = { haptics.click(); onOpenTool("tools") }) { Text("All tools") }
+                }
+                LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp), contentPadding = PaddingValues(end = 8.dp)) {
+                    items(writingTools.filter { it.id in setOf("paraphraser", "grammar", "summarizer", "translator", "tone") }, key = { it.id }) { tool ->
+                        AssistChip(onClick = { haptics.tick(); onOpenTool(tool.id) }, label = { Text(tool.title) }, leadingIcon = { Icon(tool.icon, null, Modifier.size(18.dp)) })
+                    }
+                    item {
+                        AssistChip(onClick = { haptics.tick(); onOpenJade() }, label = { Text("Ask Jade") }, leadingIcon = { Icon(Icons.Filled.AutoAwesome, null, Modifier.size(18.dp)) })
+                    }
+                }
+            }
+        }
+        item {
+            Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.SpaceBetween) {
+                    Text("Recent", style = MaterialTheme.typography.titleLarge)
+                    Icon(Icons.Filled.History, null, tint = MaterialTheme.colorScheme.onSurfaceVariant)
+                }
+                Surface(shape = MaterialTheme.shapes.large, color = MaterialTheme.colorScheme.surfaceContainerLow) {
+                    Column {
+                        if (recentTools.isEmpty()) {
+                            Row(Modifier.fillMaxWidth().padding(18.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                                BotAvatar(type = "circle", mood = BotMood.Idle, size = 42.dp, still = true)
+                                Column {
+                                    Text("Your recent tools will show up here", style = MaterialTheme.typography.titleSmall)
+                                    Text("Choose a quick action to get started.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                }
+                            }
+                        } else recentTools.forEachIndexed { index, tool ->
+                            if (index > 0) HorizontalDivider(Modifier.padding(start = 66.dp), color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.55f))
+                            Row(
+                                Modifier.fillMaxWidth().clickable { haptics.click(); onOpenTool(tool.id) }.padding(horizontal = 14.dp, vertical = 10.dp),
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(12.dp),
+                            ) {
+                                BotAvatar(type = recentBotTypes[index % recentBotTypes.size], mood = BotMood.Idle, size = 40.dp, still = true, label = tool.title)
+                                Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                                    Text(tool.title, style = MaterialTheme.typography.titleSmall)
+                                    Text(tool.description, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                                }
+                                Icon(Icons.Filled.KeyboardArrowRight, null, tint = MaterialTheme.colorScheme.onSurfaceVariant)
+                            }
                         }
-                        if (row.size == 1) Spacer(Modifier.weight(1f))
                     }
                 }
             }
         }
         item {
-            ElevatedCard(
-                onClick = onOpenPro,
-                modifier = Modifier.fillMaxWidth().expressivePress(),
-                shape = MaterialTheme.shapes.large,
-                colors = CardDefaults.elevatedCardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerHigh),
-            ) {
+            val setupSummary = when {
+                platformStatus.accessibilityEnabled && platformStatus.keyboardSelected -> "Keyboard and accessibility are ready"
+                platformStatus.accessibilityEnabled -> "Accessibility is on · set up your keyboard"
+                platformStatus.keyboardSelected -> "Keyboard is ready · set up accessibility"
+                else -> "Set up your keyboard and accessibility tools"
+            }
+            Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                BotAvatar(type = "droid", mood = BotMood.Idle, size = 42.dp, still = true)
+                Column(Modifier.weight(1f)) {
+                    Text("Your setup", style = MaterialTheme.typography.titleSmall)
+                    Text(setupSummary, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                }
+                IconButton(onClick = onOpenSettings) { Icon(Icons.Filled.ChevronRight, "Open settings") }
+            }
+        }
+        item {
+            ElevatedCard(onClick = onOpenPro, modifier = Modifier.fillMaxWidth().expressivePress(), shape = MaterialTheme.shapes.large, colors = CardDefaults.elevatedCardColors(containerColor = MaterialTheme.colorScheme.secondaryContainer)) {
                 Row(Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                    Surface(shape = CircleShape, color = MaterialTheme.colorScheme.tertiaryContainer) {
-                        Icon(if (account?.isPro == true) Icons.Filled.Stars else Icons.Filled.Lock, null, Modifier.padding(12.dp).size(23.dp), tint = MaterialTheme.colorScheme.onTertiaryContainer)
-                    }
+                    BotAvatar(type = "star", mood = BotMood.Happy, size = 42.dp, still = true)
                     Column(Modifier.weight(1f)) {
-                        Text(if (account?.isPro == true) "Rewordium Pro is on" else "Make room for more ideas", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
-                        Text(if (account?.isPro == true) "Your writing tools are ready." else "${account?.credits ?: 0} credits left · Explore Pro", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        Text(if (account?.isPro == true) "Rewordium Pro is active" else "More room for your ideas", style = MaterialTheme.typography.titleSmall)
+                        Text(if (account?.isPro == true) "Your writing tools are ready." else "${account?.credits ?: 0} credits · Explore Pro", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSecondaryContainer)
                     }
-                    Icon(Icons.Filled.ChevronRight, null, tint = MaterialTheme.colorScheme.onSurfaceVariant)
+                    Icon(Icons.Filled.ChevronRight, null)
                 }
             }
         }
-        item {
-            PlatformSetupCard(
-                status = platformStatus,
-                onOpenSettings = onOpenSettings,
-                onOpenKeyboard = { onOpenTool("keyboard_settings") },
-            )
-        }
-        item { Spacer(Modifier.height(4.dp)) }
     }
 }
 
 @Composable
-fun ToolsScreen(onOpenTool: (String) -> Unit) {
+fun ToolsScreen(onOpenTool: (String) -> Unit, onBack: () -> Unit) {
     var query by remember { mutableStateOf("") }
     val filtered = writingTools.filter { it.title.contains(query, ignoreCase = true) || it.description.contains(query, ignoreCase = true) }
     Column(Modifier.fillMaxSize()) {
-        Column(Modifier.padding(horizontal = 20.dp, vertical = 18.dp), verticalArrangement = Arrangement.spacedBy(5.dp)) {
-            Text("Writing tools", style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.SemiBold)
-            Text("Pick a place to begin. Jade is here if you’re not sure.", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        Row(Modifier.fillMaxWidth().padding(start = 8.dp, end = 20.dp, top = 8.dp, bottom = 4.dp), verticalAlignment = Alignment.CenterVertically) {
+            IconButton(onClick = onBack) { Icon(Icons.AutoMirrored.Filled.ArrowBack, "Back") }
+            Column(Modifier.padding(start = 4.dp), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                Text("Writing tools", style = MaterialTheme.typography.titleLarge)
+                Text("Choose what you want to work on", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            }
         }
         TextField(
             value = query,
             onValueChange = { query = it },
-            modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 10.dp),
+            modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 10.dp),
             placeholder = { Text("Find a tool") },
             singleLine = true,
             shape = MaterialTheme.shapes.large,
             colors = TextFieldDefaults.colors(unfocusedContainerColor = MaterialTheme.colorScheme.surfaceContainerHigh),
         )
-        LazyColumn(contentPadding = PaddingValues(start = 20.dp, end = 20.dp, bottom = 24.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+        LazyColumn(contentPadding = PaddingValues(start = 16.dp, end = 16.dp, bottom = 24.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
             items(filtered, key = { it.id }) { tool -> ToolTile(tool, Modifier.fillMaxWidth()) { onOpenTool(tool.id) } }
         }
     }
@@ -210,13 +252,14 @@ fun ToolsScreen(onOpenTool: (String) -> Unit) {
 
 @Composable
 private fun ToolTile(tool: WritingTool, modifier: Modifier = Modifier, onClick: () -> Unit) {
+    val haptics = LocalHaptics.current
     ElevatedCard(
-        onClick = onClick,
+        onClick = { haptics.click(); onClick() },
         modifier = modifier.expressivePress(),
         shape = MaterialTheme.shapes.large,
         colors = CardDefaults.elevatedCardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerHigh),
     ) {
-        Row(Modifier.padding(15.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+        Row(Modifier.padding(horizontal = 16.dp, vertical = 13.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
             Surface(shape = MaterialTheme.shapes.medium, color = MaterialTheme.colorScheme.primaryContainer) {
                 Icon(tool.icon, contentDescription = null, Modifier.padding(11.dp).size(22.dp), tint = MaterialTheme.colorScheme.onPrimaryContainer)
             }
@@ -229,48 +272,10 @@ private fun ToolTile(tool: WritingTool, modifier: Modifier = Modifier, onClick: 
     }
 }
 
-@Composable
-private fun PlatformSetupCard(
-    status: PlatformSetupStatus,
-    onOpenSettings: () -> Unit,
-    onOpenKeyboard: () -> Unit,
-) {
-    ElevatedCard(shape = MaterialTheme.shapes.large, colors = CardDefaults.elevatedCardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerLow)) {
-        Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-            Text("Ready when you are", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
-            val accessText = if (status.accessibilityEnabled) "Accessibility tools are on" else "Set up accessibility tools"
-            val keyboardText = when {
-                status.keyboardSelected -> "Rewordium keyboard is selected"
-                status.keyboardEnabled -> "Choose Rewordium keyboard to start"
-                else -> "Enable your Rewordium keyboard"
-            }
-            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                Surface(shape = CircleShape, color = if (status.accessibilityEnabled) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surfaceContainerHighest) {
-                    Icon(Icons.Filled.AutoAwesome, null, Modifier.padding(9.dp).size(19.dp), tint = MaterialTheme.colorScheme.primary)
-                }
-                Column(Modifier.weight(1f)) {
-                    Text(accessText, style = MaterialTheme.typography.titleSmall)
-                    Text("Use writing actions while you type.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                }
-            }
-            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                Surface(shape = CircleShape, color = if (status.keyboardSelected) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surfaceContainerHighest) {
-                    Icon(Icons.Filled.Keyboard, null, Modifier.padding(9.dp).size(19.dp), tint = MaterialTheme.colorScheme.primary)
-                }
-                Column(Modifier.weight(1f)) {
-                    Text(keyboardText, style = MaterialTheme.typography.titleSmall)
-                    Text("Bring Rewordium into the apps you use.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                }
-            }
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                AssistChip(onClick = onOpenSettings, label = { Text("Accessibility") })
-                AssistChip(onClick = onOpenKeyboard, label = { Text("Keyboard") })
-            }
-        }
-    }
-}
+private val recentBotTypes = listOf("flower", "ghost", "cat", "droid", "star")
 
 @Composable
+@OptIn(ExperimentalMaterial3ExpressiveApi::class)
 fun WritingToolScreen(
     toolId: String,
     onBack: () -> Unit,
@@ -280,6 +285,7 @@ fun WritingToolScreen(
     val tool = toolFor(toolId)
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
+    val haptics = LocalHaptics.current
     var input by remember(tool.id) { mutableStateOf("") }
     var result by remember(tool.id) { mutableStateOf("") }
     var targetLanguage by remember { mutableStateOf("English") }
@@ -304,14 +310,15 @@ fun WritingToolScreen(
 
     Column(Modifier.fillMaxSize()) {
         Row(Modifier.fillMaxWidth().padding(start = 12.dp, end = 20.dp, top = 12.dp, bottom = 12.dp), verticalAlignment = Alignment.CenterVertically) {
-            androidx.compose.material3.IconButton(onClick = onBack) {
+            androidx.compose.material3.IconButton(onClick = { haptics.click(); onBack() }) {
                 androidx.compose.material3.Icon(androidx.compose.material.icons.Icons.AutoMirrored.Filled.ArrowBack, "Back")
             }
+            BotAvatar(type = botTypeFor(tool.id), mood = if (busy) BotMood.Working else BotMood.Idle, size = 42.dp, label = tool.title)
             Column(Modifier.weight(1f)) {
                 Text(tool.title, style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.SemiBold)
                 Text(tool.description, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
-            if (tool.id == "document") TextButton(onClick = { importText.launch(arrayOf("text/plain", "application/pdf")) }) { Text("Import text or PDF") }
+            if (tool.id == "document") TextButton(onClick = { haptics.click(); importText.launch(arrayOf("text/plain", "application/pdf")) }) { Text("Import text or PDF") }
         }
         LazyColumn(
             modifier = Modifier.fillMaxSize(),
@@ -343,7 +350,7 @@ fun WritingToolScreen(
                         Text("Choose a tone", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold)
                         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                             listOf("Clear", "Warm", "Confident", "Professional").forEach { tone ->
-                                FilterChip(selected = selectedTone == tone, onClick = { selectedTone = tone }, label = { Text(tone) })
+                                FilterChip(selected = selectedTone == tone, onClick = { haptics.tick(); selectedTone = tone }, label = { Text(tone) })
                             }
                         }
                     }
@@ -367,21 +374,22 @@ fun WritingToolScreen(
             item {
                 Button(
                     onClick = {
+                        haptics.send()
                         scope.launch {
                             busy = true
                             result = ""
                             error = null
                             runCatching { onGenerate(input, selectedTone, targetLanguage) }
-                                .onSuccess { result = it }
-                                .onFailure { error = it.message ?: "We couldn’t finish that. Please try again." }
+                                .onSuccess { result = it; haptics.success() }
+                                .onFailure { error = it.message ?: "We couldn’t finish that. Please try again."; haptics.reject() }
                             busy = false
                         }
                     },
                     modifier = Modifier.fillMaxWidth().height(56.dp),
                     enabled = !busy,
-                    shape = MaterialTheme.shapes.large,
+                    shapes = ButtonDefaults.shapes(),
                 ) {
-                    if (busy) CircularProgressIndicator(Modifier.size(19.dp), strokeWidth = 2.dp)
+                    if (busy) LoadingIndicator(Modifier.size(24.dp))
                     else {
                         Icon(tool.icon, null, Modifier.size(19.dp))
                         Text("  ${tool.actionLabel}")
@@ -394,12 +402,13 @@ fun WritingToolScreen(
                     ElevatedCard(
                         modifier = Modifier.fillMaxWidth().animateContentSize(),
                         shape = MaterialTheme.shapes.large,
-                        colors = CardDefaults.elevatedCardColors(containerColor = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.56f)),
+                        colors = CardDefaults.elevatedCardColors(containerColor = MaterialTheme.colorScheme.primaryContainer),
                     ) {
                         Column(Modifier.padding(18.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
                             Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.SpaceBetween) {
                                 Text(if (tool.id == "detector") "Jade’s review" else "Your result", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
                                 TextButton(onClick = {
+                                    haptics.click()
                                     val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
                                     clipboard.setPrimaryClip(ClipData.newPlainText("Rewordium result", result))
                                     Toast.makeText(context, "Copied", Toast.LENGTH_SHORT).show()
@@ -412,7 +421,7 @@ fun WritingToolScreen(
                 }
             }
             item {
-                TextButton(onClick = { input = ""; result = ""; error = null }) { Text("Clear draft") }
+                TextButton(onClick = { haptics.click(); input = ""; result = ""; error = null }) { Text("Clear draft") }
             }
         }
     }

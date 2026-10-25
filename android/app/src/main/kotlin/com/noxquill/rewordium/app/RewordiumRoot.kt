@@ -3,38 +3,36 @@ package com.noxquill.rewordium.app
 import android.content.Intent
 import android.net.Uri
 import android.widget.Toast
-import androidx.compose.foundation.layout.Box
+import androidx.compose.animation.core.CubicBezierEasing
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.slideInHorizontally
+import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.padding
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.AutoAwesome
-import androidx.compose.material.icons.filled.EditNote
-import androidx.compose.material.icons.filled.Home
-import androidx.compose.material.icons.filled.Settings
-import androidx.compose.material3.Icon
-import androidx.compose.material3.NavigationBar
-import androidx.compose.material3.NavigationBarItem
-import androidx.compose.material3.NavigationBarItemDefaults
-import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Text
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Surface
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
-import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.Modifier
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
+import androidx.navigation.NavType
+import androidx.navigation.navArgument
+import androidx.navigation.compose.NavHost
+import androidx.navigation.compose.composable
+import androidx.navigation.compose.rememberNavController
 import com.google.firebase.auth.FirebaseAuth
-import com.google.firebase.auth.FirebaseUser
 import com.noxquill.rewordium.MainActivity
 import com.noxquill.rewordium.app.model.toolFor
+import com.noxquill.rewordium.app.model.writingTools
 import com.noxquill.rewordium.app.screens.AiSettingsScreen
 import com.noxquill.rewordium.app.screens.AuthScreen
 import com.noxquill.rewordium.app.screens.HomeScreen
@@ -47,11 +45,14 @@ import com.noxquill.rewordium.app.screens.ProScreen
 import com.noxquill.rewordium.app.screens.SettingsScreen
 import com.noxquill.rewordium.app.screens.ToolsScreen
 import com.noxquill.rewordium.app.screens.WritingToolScreen
+import com.noxquill.rewordium.app.ui.haptics.LocalHaptics
+import com.noxquill.rewordium.app.ui.haptics.rememberHaptics
 import com.noxquill.rewordium.billing.BillingUiState
 import com.noxquill.rewordium.billing.PlayBillingManager
 import com.noxquill.rewordium.data.AccountInfo
 import com.noxquill.rewordium.data.RewordiumRepository
 import com.noxquill.rewordium.data.WritingRepository
+import com.noxquill.rewordium.util.KeyboardConstants
 import kotlinx.coroutines.launch
 
 @Composable
@@ -61,25 +62,66 @@ fun RewordiumRoot(
     onRouteConsumed: () -> Unit,
 ) {
     val context = LocalContext.current
+    val prefs = remember(context) { context.getSharedPreferences(KeyboardConstants.PREFS_NAME, 0) }
+    val haptics = rememberHaptics { prefs.getBoolean(KeyboardConstants.KEY_HAPTIC_FEEDBACK, true) }
+    CompositionLocalProvider(LocalHaptics provides haptics) {
+        RewordiumRootContent(activity, routeRequest, onRouteConsumed)
+    }
+}
+
+@Composable
+private fun RewordiumRootContent(
+    activity: MainActivity,
+    routeRequest: String?,
+    onRouteConsumed: () -> Unit,
+) {
+    val context = LocalContext.current
     val scope = rememberCoroutineScope()
     val appPrefs = remember { context.getSharedPreferences("rewordium_app", 0) }
     var onboardingDone by remember { mutableStateOf(appPrefs.getBoolean("onboarding_complete", false)) }
-    var destination by rememberSaveable { mutableStateOf(routeRequest ?: "home") }
-    var tab by rememberSaveable { mutableIntStateOf(0) }
+    val navController = rememberNavController()
+    var activeToolId by rememberSaveable { mutableStateOf("paraphraser") }
+    var mascotType by remember { mutableStateOf(appPrefs.getString("mascot_type", "flower") ?: "flower") }
+    var recentToolIds by remember {
+        mutableStateOf(
+            appPrefs.getString("recent_tool_ids", "")
+                .orEmpty().split(',').filter(String::isNotBlank).distinct().take(5),
+        )
+    }
     var account by remember { mutableStateOf<AccountInfo?>(null) }
     var platformStatus by remember { mutableStateOf(activity.setupStatus()) }
     var busy by remember { mutableStateOf(false) }
     var authError by remember { mutableStateOf<String?>(null) }
-    var authReturnTo by remember { mutableStateOf("settings") }
     var billingState by remember { mutableStateOf(BillingUiState()) }
 
-    LaunchedEffect(routeRequest) {
-        routeRequest?.let { route ->
-            destination = when (route) {
-                "home", "tools", "settings", "jade", "keyboard_settings" -> route
-                else -> route
+    fun recordRecent(id: String) {
+        if (writingTools.none { it.id == id }) return
+        recentToolIds = (listOf(id) + recentToolIds.filterNot { it == id }).take(5)
+        appPrefs.edit().putString("recent_tool_ids", recentToolIds.joinToString(",")).apply()
+    }
+
+    fun navigateTo(id: String) {
+        when (id) {
+            "home", "tools", "jade", "settings", "settings/access", "pro", "auth", "ai_settings", "licenses", "privacy", "terms", "personas" ->
+                navController.navigate(id)
+            "keyboard_settings" -> navController.navigate("settings/access")
+            else -> {
+                activeToolId = id
+                recordRecent(id)
+                navController.navigate("tool/$id")
             }
-            tab = when (destination) { "home" -> 0; "tools" -> 1; "jade" -> 2; "settings" -> 3; else -> tab }
+        }
+    }
+
+    LaunchedEffect(routeRequest) {
+        routeRequest?.let { requested ->
+            when (requested) {
+                "home", "tools", "settings", "jade", "pro", "ai_settings", "licenses", "privacy", "terms", "personas" -> navigateTo(requested)
+                "keyboard_settings" -> navigateTo("settings/access")
+                "settings/access" -> navigateTo("settings/access")
+                "auth" -> navigateTo("auth")
+                else -> navigateTo(requested)
+            }
             onRouteConsumed()
         }
     }
@@ -112,7 +154,7 @@ fun RewordiumRoot(
             onState = { billingState = it },
             onPurchaseGranted = { productId, token, purchasedAt, autoRenewing, restored ->
                 val granted = RewordiumRepository.activateProFromPlay(productId, token, purchasedAt, autoRenewing, restored)
-                if (granted) refreshAccount()
+                if (granted) scope.launch { refreshAccount() }
                 granted
             },
         )
@@ -120,10 +162,9 @@ fun RewordiumRoot(
     LaunchedEffect(billingManager) { billingManager.connect() }
     DisposableEffect(billingManager) { onDispose { billingManager.close() } }
 
-    fun goToAuth(returnTo: String) {
-        authReturnTo = returnTo
+    fun goToAuth() {
         authError = null
-        destination = "auth"
+        navigateTo("auth")
     }
 
     fun runAuth(action: suspend () -> Unit) {
@@ -133,7 +174,7 @@ fun RewordiumRoot(
             runCatching { action() }
                 .onSuccess {
                     refreshAccount()
-                    destination = authReturnTo
+                    navController.popBackStack()
                 }
                 .onFailure { authError = authMessage(it) }
             busy = false
@@ -145,20 +186,14 @@ fun RewordiumRoot(
             .onFailure { Toast.makeText(context, "Couldn’t open this link.", Toast.LENGTH_SHORT).show() }
     }
 
-    fun openTool(id: String) {
-        destination = if (id == "tools") "tools" else if (id == "jade") "jade" else id
-        if (destination == "tools") tab = 1
-        if (destination == "jade") tab = 2
-    }
-
     suspend fun requestWriting(text: String, tone: String, language: String): String {
         if (RewordiumRepository.currentUser == null) throw IllegalStateException("Sign in to use Jade and keep your credits with your account.")
         if (account?.isPro != true) {
-            val allowed = RewordiumRepository.consumeCredit(context, "writing_${destination}")
+            val allowed = RewordiumRepository.consumeCredit(context, "writing_$activeToolId")
             if (!allowed) throw IllegalStateException("You’re out of credits. Explore Rewordium Pro for more room to write.")
             refreshAccount()
         }
-        val toolId = if (destination in setOf("paraphraser", "grammar", "summarizer", "translator", "tone", "detector", "document")) destination else toolFor(destination).id
+        val toolId = if (activeToolId in setOf("paraphraser", "grammar", "summarizer", "translator", "tone", "detector", "document")) activeToolId else toolFor(activeToolId).id
         return WritingRepository.generate(context, toolId, text, tone, language).also { activity.onAiGenerationSuccess() }
     }
 
@@ -174,117 +209,138 @@ fun RewordiumRoot(
     }
 
     if (!onboardingDone) {
-        OnboardingScreen {
-            appPrefs.edit().putBoolean("onboarding_complete", true).apply()
-            onboardingDone = true
-        }
-        return
-    }
-
-    if (destination == "auth") {
-        AuthScreen(
-            onBack = { destination = authReturnTo },
-            onSignIn = { email, password -> runAuth { RewordiumRepository.signIn(email, password) } },
-            onSignUp = { name, email, password, news -> runAuth { RewordiumRepository.signUp(name, email, password, news) } },
-            onGoogleToken = { token -> runAuth { RewordiumRepository.signInWithGoogleIdToken(token) } },
-            onResetPassword = { email -> runAuth { RewordiumRepository.sendPasswordReset(email) } },
-            busy = busy,
-            error = authError,
-        )
-        return
-    }
-
-    if (destination in setOf("home", "tools", "jade", "settings")) {
-        Scaffold(
-            bottomBar = {
-                NavigationBar {
-                    val labels = listOf("Home", "Write", "Jade", "Settings")
-                    val icons = listOf(Icons.Filled.Home, Icons.Filled.EditNote, Icons.Filled.AutoAwesome, Icons.Filled.Settings)
-                    labels.forEachIndexed { index, label ->
-                        NavigationBarItem(
-                            selected = tab == index,
-                            onClick = {
-                                tab = index
-                                destination = when (index) { 0 -> "home"; 1 -> "tools"; 2 -> "jade"; else -> "settings" }
-                            },
-                            icon = { Icon(icons[index], contentDescription = label) },
-                            label = { Text(label) },
-                            colors = NavigationBarItemDefaults.colors(indicatorColor = androidx.compose.material3.MaterialTheme.colorScheme.secondaryContainer),
-                        )
-                    }
-                }
-            },
-        ) { insets ->
-            Box(Modifier.fillMaxSize().padding(insets)) {
-                when (destination) {
-                    "home" -> HomeScreen(
-                        account = account,
-                        platformStatus = platformStatus,
-                        onOpenTool = ::openTool,
-                        onOpenSettings = activity::openAccessibilitySettings,
-                        onOpenPro = { destination = "pro" },
-                    )
-                    "tools" -> ToolsScreen(::openTool)
-                    "jade" -> JadeScreen(::requestJade)
-                    "settings" -> SettingsScreen(
-                        account = account,
-                        status = platformStatus,
-                        onSignIn = { goToAuth("settings") },
-                        onSignOut = { RewordiumRepository.signOut(context); account = null },
-                        onDelete = {
-                            scope.launch {
-                                runCatching { RewordiumRepository.deleteAccount() }
-                                    .onSuccess { RewordiumRepository.signOut(context); account = null; Toast.makeText(context, "Account deleted", Toast.LENGTH_SHORT).show() }
-                                    .onFailure { Toast.makeText(context, authMessage(it), Toast.LENGTH_LONG).show() }
-                            }
-                        },
-                        onPro = { destination = "pro" },
-                        onKeyboard = activity::openKeyboardPreferences,
-                        onAccessibility = activity::openAccessibilitySettings,
-                        onEnableKeyboard = activity::openKeyboardActivationSettings,
-                        onChooseKeyboard = activity::chooseKeyboard,
-                        onAiSettings = { destination = "ai_settings" },
-                        onLicenses = { destination = "licenses" },
-                        onPersonas = { destination = "personas" },
-                        onPrivacy = { destination = "privacy" },
-                        onTerms = { destination = "terms" },
-                    )
-                }
+        Surface(Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
+            OnboardingScreen {
+                appPrefs.edit().putBoolean("onboarding_complete", true).apply()
+                onboardingDone = true
             }
         }
         return
     }
 
-    when (destination) {
-        "pro" -> ProScreen(
-            account = account,
-            billing = billingState,
-            onBack = { destination = "settings" },
-            onSignIn = { goToAuth("pro") },
-            onPurchase = { id ->
-                if (account == null) goToAuth("pro") else billingManager.purchase(activity, id)
-            },
-            onRestore = {
-                if (account == null) goToAuth("pro") else billingManager.restorePurchases()
-            },
-        )
-        "ai_settings" -> AiSettingsScreen(onBack = { destination = "settings" })
-        "personas" -> com.noxquill.rewordium.app.screens.PersonaScreen(onBack = { destination = "settings" })
-        "licenses" -> LicensesScreen(onBack = { destination = "settings" }, onOpenLink = ::openLink)
-        "privacy" -> InfoScreen("Privacy policy", onBack = { destination = "settings" }, onOpenLink = ::openLink)
-        "terms" -> InfoScreen("Terms of service", onBack = { destination = "settings" }, onOpenLink = ::openLink)
-        "keyboard_settings" -> {
-            activity.openKeyboardPreferences()
-            destination = "settings"
+    Surface(Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
+      NavHost(
+          navController = navController,
+          startDestination = "home",
+          enterTransition = { slideInHorizontally(NavSlide) { it } },
+          exitTransition = { slideOutHorizontally(NavSlide) { -it / 4 } },
+          popEnterTransition = { slideInHorizontally(NavSlide) { -it / 4 } },
+          popExitTransition = { slideOutHorizontally(NavSlide) { it } },
+          predictivePopEnterTransition = { slideInHorizontally(NavSlide) { -it / 4 } },
+          predictivePopExitTransition = { slideOutHorizontally(NavSlide) { it } },
+      ) {
+        composable("home") {
+            HomeScreen(
+                account = account,
+                platformStatus = platformStatus,
+                recentTools = recentToolIds.mapNotNull { id -> writingTools.firstOrNull { it.id == id } },
+                mascotType = mascotType,
+                onOpenTool = ::navigateTo,
+                onOpenSettings = { navigateTo("settings") },
+                onOpenJade = { navigateTo("jade") },
+                onOpenPro = { navigateTo("pro") },
+            )
         }
-        else -> WritingToolScreen(
-            toolId = destination,
-            onBack = { destination = "tools"; tab = 1 },
-            onUpgrade = { destination = "pro" },
-            onGenerate = ::requestWriting,
-        )
+        composable("tools") {
+            ToolsScreen(onOpenTool = ::navigateTo, onBack = { navController.popBackStack() })
+        }
+        composable("settings") {
+            SettingsScreen(
+                account = account, status = platformStatus,
+                onBack = { navController.popBackStack() },
+                mascotType = mascotType,
+                onMascotSelected = { type -> mascotType = type; appPrefs.edit().putString("mascot_type", type).apply() },
+                onSignIn = ::goToAuth,
+                onSignOut = { RewordiumRepository.signOut(context); account = null },
+                onDelete = {
+                    scope.launch {
+                        runCatching { RewordiumRepository.deleteAccount() }
+                            .onSuccess { RewordiumRepository.signOut(context); account = null; Toast.makeText(context, "Account deleted", Toast.LENGTH_SHORT).show() }
+                            .onFailure { Toast.makeText(context, authMessage(it), Toast.LENGTH_LONG).show() }
+                    }
+                },
+                onPro = { navigateTo("pro") },
+                onKeyboard = activity::openKeyboardPreferences,
+                onAccessibility = activity::openAccessibilitySettings,
+                onEnableKeyboard = activity::openKeyboardActivationSettings,
+                onChooseKeyboard = activity::chooseKeyboard,
+                onAiSettings = { navigateTo("ai_settings") },
+                onLicenses = { navigateTo("licenses") },
+                onPersonas = { navigateTo("personas") },
+                onPrivacy = { navigateTo("privacy") },
+                onTerms = { navigateTo("terms") },
+            )
+        }
+        composable("settings/access") {
+            SettingsScreen(
+                account = account, status = platformStatus,
+                onBack = { navController.popBackStack() }, initialTab = 1,
+                mascotType = mascotType,
+                onMascotSelected = { type -> mascotType = type; appPrefs.edit().putString("mascot_type", type).apply() },
+                onSignIn = ::goToAuth,
+                onSignOut = { RewordiumRepository.signOut(context); account = null },
+                onDelete = {
+                    scope.launch {
+                        runCatching { RewordiumRepository.deleteAccount() }
+                            .onSuccess { RewordiumRepository.signOut(context); account = null; Toast.makeText(context, "Account deleted", Toast.LENGTH_SHORT).show() }
+                            .onFailure { Toast.makeText(context, authMessage(it), Toast.LENGTH_LONG).show() }
+                    }
+                },
+                onPro = { navigateTo("pro") },
+                onKeyboard = activity::openKeyboardPreferences,
+                onAccessibility = activity::openAccessibilitySettings,
+                onEnableKeyboard = activity::openKeyboardActivationSettings,
+                onChooseKeyboard = activity::chooseKeyboard,
+                onAiSettings = { navigateTo("ai_settings") },
+                onLicenses = { navigateTo("licenses") },
+                onPersonas = { navigateTo("personas") },
+                onPrivacy = { navigateTo("privacy") },
+                onTerms = { navigateTo("terms") },
+            )
+        }
+        composable("jade") { JadeScreen(::requestJade, onBack = { navController.popBackStack() }) }
+        composable("auth") {
+            AuthScreen(
+                onBack = { navController.popBackStack() },
+                onSignIn = { email, password -> runAuth { RewordiumRepository.signIn(email, password) } },
+                onSignUp = { name, email, password, news -> runAuth { RewordiumRepository.signUp(name, email, password, news) } },
+                onGoogleToken = { token -> runAuth { RewordiumRepository.signInWithGoogleIdToken(token) } },
+                onResetPassword = { email -> runAuth { RewordiumRepository.sendPasswordReset(email) } },
+                busy = busy, error = authError,
+            )
+        }
+        composable("pro") {
+            ProScreen(
+                account = account, billing = billingState,
+                onBack = { navController.popBackStack() },
+                onSignIn = ::goToAuth,
+                onPurchase = { id -> if (account == null) goToAuth() else billingManager.purchase(activity, id) },
+                onRestore = { if (account == null) goToAuth() else billingManager.restorePurchases() },
+            )
+        }
+        composable("ai_settings") { AiSettingsScreen(onBack = { navController.popBackStack() }) }
+        composable("personas") { com.noxquill.rewordium.app.screens.PersonaScreen(onBack = { navController.popBackStack() }) }
+        composable("licenses") { LicensesScreen(onBack = { navController.popBackStack() }, onOpenLink = ::openLink) }
+        composable("privacy") { InfoScreen("Privacy policy", onBack = { navController.popBackStack() }, onOpenLink = ::openLink) }
+        composable("terms") { InfoScreen("Terms of service", onBack = { navController.popBackStack() }, onOpenLink = ::openLink) }
+        composable("tool/{toolId}", arguments = listOf(navArgument("toolId") { type = NavType.StringType })) { entry ->
+            val toolId = entry.arguments?.getString("toolId") ?: "paraphraser"
+            activeToolId = toolId
+            WritingToolScreen(
+                toolId = toolId,
+                onBack = { if (!navController.popBackStack()) navigateTo("tools") },
+                onUpgrade = { navigateTo("pro") },
+                onGenerate = ::requestWriting,
+            )
+        }
+      }
     }
 }
+
+private val NavSlide = tween<androidx.compose.ui.unit.IntOffset>(
+    durationMillis = 320,
+    easing = CubicBezierEasing(0.05f, 0.7f, 0.1f, 1f),
+)
 
 private fun authMessage(error: Throwable): String = when {
     error.message?.contains("email", ignoreCase = true) == true -> error.message.orEmpty()
