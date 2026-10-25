@@ -77,7 +77,7 @@ fun JadeScreen(onSend: suspend (String, List<JadeMessage>) -> String, onBack: ()
             navigationIcon = { IconButton(onClick = { haptics.click(); onBack() }) { Icon(Icons.AutoMirrored.Filled.ArrowBack, "Back") } },
             title = {
                 Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                    BotAvatar(type = "blob", mood = if (working) BotMood.Thinking else BotMood.Idle, size = 42.dp, label = "Jade")
+                    BotAvatar(type = "cloud", mood = if (working) BotMood.Thinking else BotMood.Idle, size = 42.dp, label = "Jade")
                     Column {
                         Text("Jade", style = MaterialTheme.typography.titleLarge)
                         Text("Your writing companion", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
@@ -95,7 +95,7 @@ fun JadeScreen(onSend: suspend (String, List<JadeMessage>) -> String, onBack: ()
                 horizontalAlignment = Alignment.CenterHorizontally,
                 verticalArrangement = Arrangement.Center,
             ) {
-                BotAvatar(type = "blob", mood = BotMood.Thinking, size = 132.dp, label = "Jade")
+                BotAvatar(type = "cloud", mood = BotMood.Thinking, size = 132.dp, label = "Jade")
                 Spacer(Modifier.height(18.dp))
                 Text("What are you working on?", style = MaterialTheme.typography.headlineSmall, textAlign = TextAlign.Center)
                 Spacer(Modifier.height(7.dp))
@@ -115,7 +115,7 @@ fun JadeScreen(onSend: suspend (String, List<JadeMessage>) -> String, onBack: ()
             ) {
                 itemsIndexed(messages) { _, message ->
                     Row(Modifier.fillMaxWidth(), horizontalArrangement = if (message.fromJade) Arrangement.Start else Arrangement.End, verticalAlignment = Alignment.Bottom) {
-                        if (message.fromJade) BotAvatar(type = "blob", mood = BotMood.Happy, size = 32.dp, still = true, label = "Jade")
+                        if (message.fromJade) BotAvatar(type = "cloud", mood = BotMood.Happy, size = 32.dp, still = true, label = "Jade")
                         Surface(
                             modifier = Modifier.padding(horizontal = 8.dp).weight(1f, fill = false),
                             shape = MaterialTheme.shapes.large,
@@ -137,7 +137,7 @@ fun JadeScreen(onSend: suspend (String, List<JadeMessage>) -> String, onBack: ()
                 }
                 if (working) item {
                     Row(Modifier.padding(start = 40.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                        LoadingIndicator(Modifier.size(25.dp))
+                        LoadingIndicator(Modifier.size(32.dp))
                         Text("Jade is thinking…", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
                     }
                 }

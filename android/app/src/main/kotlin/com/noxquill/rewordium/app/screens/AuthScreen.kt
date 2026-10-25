@@ -165,7 +165,10 @@ fun AuthScreen(
                     enabled = !busy && email.isNotBlank() && password.isNotBlank() && (!createAccount || name.isNotBlank()),
                     shapes = ButtonDefaults.shapes(),
                 ) {
-                    if (busy) LoadingIndicator(Modifier.size(24.dp))
+                    if (busy) {
+                        LoadingIndicator(Modifier.size(28.dp))
+                        Text("  Working…", style = MaterialTheme.typography.titleMedium)
+                    }
                     else Text(if (createAccount) "Create account" else "Sign in", style = MaterialTheme.typography.titleMedium)
                 }
                 if (!createAccount) {

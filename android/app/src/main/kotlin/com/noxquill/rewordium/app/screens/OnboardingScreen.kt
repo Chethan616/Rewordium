@@ -11,6 +11,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.navigationBarsPadding
+import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.pager.HorizontalPager
@@ -72,7 +73,7 @@ fun OnboardingScreen(onFinish: () -> Unit) {
         scope.launch { pagerState.animateScrollToPage(pagerState.currentPage - 1) }
     }
 
-    Column(Modifier.fillMaxSize().navigationBarsPadding().padding(horizontal = 20.dp, vertical = 12.dp)) {
+    Column(Modifier.fillMaxSize().statusBarsPadding().navigationBarsPadding().padding(horizontal = 20.dp, vertical = 12.dp)) {
         Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
             Row(Modifier.weight(1f), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(9.dp)) {
                 BotAvatar(type = "flower", mood = BotMood.Idle, size = 34.dp, still = true, label = "Rewordium")
@@ -110,7 +111,7 @@ fun OnboardingScreen(onFinish: () -> Unit) {
                             }
                         }
                         2 -> {
-                            BotAvatar(type = "blob", mood = BotMood.Thinking, size = 120.dp, modifier = Modifier.align(Alignment.Center), label = "Jade mascot")
+                            BotAvatar(type = "cloud", mood = BotMood.Thinking, size = 120.dp, modifier = Modifier.align(Alignment.Center), label = "Jade mascot")
                             BotAvatar(type = "star", mood = BotMood.Happy, size = 53.dp, modifier = Modifier.align(Alignment.TopStart).padding(start = 45.dp, top = 38.dp), label = "Star mascot")
                             BotAvatar(type = "alien", mood = BotMood.Idle, size = 52.dp, modifier = Modifier.align(Alignment.BottomEnd).padding(end = 45.dp, bottom = 42.dp), label = "Alien mascot")
                         }

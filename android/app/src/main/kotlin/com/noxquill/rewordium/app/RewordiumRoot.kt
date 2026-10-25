@@ -8,6 +8,8 @@ import androidx.compose.animation.core.tween
 import androidx.compose.animation.slideInHorizontally
 import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.safeDrawingPadding
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.runtime.Composable
@@ -28,6 +30,7 @@ import androidx.navigation.NavType
 import androidx.navigation.navArgument
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
+import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import com.google.firebase.auth.FirebaseAuth
 import com.noxquill.rewordium.MainActivity
@@ -47,6 +50,9 @@ import com.noxquill.rewordium.app.screens.ToolsScreen
 import com.noxquill.rewordium.app.screens.WritingToolScreen
 import com.noxquill.rewordium.app.ui.haptics.LocalHaptics
 import com.noxquill.rewordium.app.ui.haptics.rememberHaptics
+import com.noxquill.rewordium.app.ui.avatar.BotFlight
+import com.noxquill.rewordium.app.ui.avatar.BotFlightLayer
+import com.noxquill.rewordium.app.ui.avatar.LocalBotFlight
 import com.noxquill.rewordium.billing.BillingUiState
 import com.noxquill.rewordium.billing.PlayBillingManager
 import com.noxquill.rewordium.data.AccountInfo
@@ -80,6 +86,9 @@ private fun RewordiumRootContent(
     val appPrefs = remember { context.getSharedPreferences("rewordium_app", 0) }
     var onboardingDone by remember { mutableStateOf(appPrefs.getBoolean("onboarding_complete", false)) }
     val navController = rememberNavController()
+    val botFlight = remember { BotFlight() }
+    val currentEntry by navController.currentBackStackEntryAsState()
+    var openToolRoute by remember { mutableStateOf<String?>(null) }
     var activeToolId by rememberSaveable { mutableStateOf("paraphraser") }
     var mascotType by remember { mutableStateOf(appPrefs.getString("mascot_type", "flower") ?: "flower") }
     var recentToolIds by remember {
@@ -93,6 +102,18 @@ private fun RewordiumRootContent(
     var busy by remember { mutableStateOf(false) }
     var authError by remember { mutableStateOf<String?>(null) }
     var billingState by remember { mutableStateOf(BillingUiState()) }
+
+    LaunchedEffect(currentEntry) {
+        val toolId = currentEntry
+            ?.takeIf { it.destination.route == "tool/{toolId}" }
+            ?.arguments?.getString("toolId")
+        val previousToolId = openToolRoute
+        if (toolId != null && toolId != previousToolId) botFlight.chatOpened(toolId)
+        if (previousToolId != null && toolId == null && currentEntry?.destination?.route == "home") {
+            botFlight.toHome(previousToolId)
+        }
+        openToolRoute = toolId
+    }
 
     fun recordRecent(id: String) {
         if (writingTools.none { it.id == id }) return
@@ -219,6 +240,8 @@ private fun RewordiumRootContent(
     }
 
     Surface(Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
+      Box(Modifier.fillMaxSize().safeDrawingPadding()) {
+      CompositionLocalProvider(LocalBotFlight provides botFlight) {
       NavHost(
           navController = navController,
           startDestination = "home",
@@ -236,6 +259,10 @@ private fun RewordiumRootContent(
                 recentTools = recentToolIds.mapNotNull { id -> writingTools.firstOrNull { it.id == id } },
                 mascotType = mascotType,
                 onOpenTool = ::navigateTo,
+                onOpenRecentTool = { id ->
+                    activeToolId = id
+                    navController.navigate("tool/$id")
+                },
                 onOpenSettings = { navigateTo("settings") },
                 onOpenJade = { navigateTo("jade") },
                 onOpenPro = { navigateTo("pro") },
@@ -333,6 +360,9 @@ private fun RewordiumRootContent(
                 onGenerate = ::requestWriting,
             )
         }
+      }
+      BotFlightLayer(botFlight)
+      }
       }
     }
 }

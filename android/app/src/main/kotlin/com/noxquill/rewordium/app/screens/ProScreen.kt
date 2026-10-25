@@ -81,7 +81,7 @@ fun ProScreen(
                             Text(if (yearly) "Yearly" else "Monthly", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
                             if (billing.loading) {
                                 Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(7.dp)) {
-                                    LoadingIndicator(Modifier.size(20.dp))
+                                    LoadingIndicator(Modifier.size(28.dp))
                                     Text("Connecting to Google Play", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                                 }
                             } else Text(price ?: "Price unavailable", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)

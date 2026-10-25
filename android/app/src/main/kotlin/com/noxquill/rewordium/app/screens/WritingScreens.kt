@@ -23,6 +23,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyRow
@@ -45,7 +46,6 @@ import androidx.compose.material3.AssistChip
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.LoadingIndicator
 import androidx.compose.material3.ElevatedCard
@@ -63,6 +63,7 @@ import androidx.compose.material3.TextField
 import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -70,6 +71,8 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
@@ -86,6 +89,9 @@ import com.noxquill.rewordium.app.ui.expressivePress
 import com.noxquill.rewordium.app.ui.avatar.BotAvatar
 import com.noxquill.rewordium.app.ui.avatar.BotMood
 import com.noxquill.rewordium.app.ui.avatar.botTypeFor
+import com.noxquill.rewordium.app.ui.avatar.flightEnd
+import com.noxquill.rewordium.app.ui.avatar.rememberFlightSpot
+import com.noxquill.rewordium.app.ui.avatar.LocalBotFlight
 import com.noxquill.rewordium.app.ui.haptics.LocalHaptics
 import com.noxquill.rewordium.data.AccountInfo
 import kotlinx.coroutines.Dispatchers
@@ -99,11 +105,13 @@ fun HomeScreen(
     recentTools: List<WritingTool>,
     mascotType: String,
     onOpenTool: (String) -> Unit,
+    onOpenRecentTool: (String) -> Unit,
     onOpenSettings: () -> Unit,
     onOpenJade: () -> Unit,
     onOpenPro: () -> Unit,
 ) {
     val haptics = LocalHaptics.current
+    val flight = LocalBotFlight.current
     LazyColumn(
         modifier = Modifier.fillMaxSize(),
         contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 12.dp, bottom = 28.dp),
@@ -113,7 +121,13 @@ fun HomeScreen(
             Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                 BotAvatar(type = mascotType, mood = BotMood.Idle, size = 58.dp, label = "Rewordium mascot")
                 Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(3.dp)) {
-                    Text(account?.name?.takeIf(String::isNotBlank)?.let { "Hello, $it" } ?: "Hello, writer", style = MaterialTheme.typography.headlineSmall)
+                    val firstName = account?.name?.trim()?.substringBefore(' ')?.takeIf(String::isNotBlank)
+                    Text(
+                        firstName?.let { "Hello, $it" } ?: "Hello, writer",
+                        style = MaterialTheme.typography.titleLarge,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                    )
                     Text(if (account?.isPro == true) "Rewordium Pro" else "${account?.credits ?: 0} writing credits", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
                 FilledTonalIconButton(onClick = { haptics.click(); onOpenSettings() }) {
@@ -137,7 +151,7 @@ fun HomeScreen(
                             Text("Start writing", Modifier.padding(start = 8.dp))
                         }
                     }
-                    BotAvatar(type = "blob", mood = BotMood.Happy, size = 92.dp, label = "Writing companion")
+                    BotAvatar(type = "cloud", mood = BotMood.Happy, size = 92.dp, label = "Writing companion")
                 }
             }
         }
@@ -174,18 +188,33 @@ fun HomeScreen(
                                 }
                             }
                         } else recentTools.forEachIndexed { index, tool ->
-                            if (index > 0) HorizontalDivider(Modifier.padding(start = 66.dp), color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.55f))
-                            Row(
-                                Modifier.fillMaxWidth().clickable { haptics.click(); onOpenTool(tool.id) }.padding(horizontal = 14.dp, vertical = 10.dp),
-                                verticalAlignment = Alignment.CenterVertically,
-                                horizontalArrangement = Arrangement.spacedBy(12.dp),
-                            ) {
-                                BotAvatar(type = recentBotTypes[index % recentBotTypes.size], mood = BotMood.Idle, size = 40.dp, still = true, label = tool.title)
-                                Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
-                                    Text(tool.title, style = MaterialTheme.typography.titleSmall)
-                                    Text(tool.description, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                            key(tool.id) {
+                                val botType = botTypeFor(tool.id)
+                                val spot = rememberFlightSpot()
+                                if (index > 0) HorizontalDivider(Modifier.padding(start = 66.dp), color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.55f))
+                                Row(
+                                    Modifier.fillMaxWidth().clickable {
+                                        haptics.click()
+                                        flight?.toChat(tool.id, botType, BotMood.Idle, spot.coords)
+                                        onOpenRecentTool(tool.id)
+                                    }.padding(horizontal = 14.dp, vertical = 10.dp),
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.spacedBy(12.dp),
+                                ) {
+                                    BotAvatar(
+                                        type = botType,
+                                        mood = BotMood.Idle,
+                                        size = 40.dp,
+                                        still = true,
+                                        label = tool.title,
+                                        modifier = Modifier.flightEnd(flight, tool.id, spot),
+                                    )
+                                    Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                                        Text(tool.title, style = MaterialTheme.typography.titleSmall)
+                                        Text(tool.description, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                                    }
+                                    Icon(Icons.Filled.KeyboardArrowRight, null, tint = MaterialTheme.colorScheme.onSurfaceVariant)
                                 }
-                                Icon(Icons.Filled.KeyboardArrowRight, null, tint = MaterialTheme.colorScheme.onSurfaceVariant)
                             }
                         }
                     }
@@ -244,7 +273,7 @@ fun ToolsScreen(onOpenTool: (String) -> Unit, onBack: () -> Unit) {
             shape = MaterialTheme.shapes.large,
             colors = TextFieldDefaults.colors(unfocusedContainerColor = MaterialTheme.colorScheme.surfaceContainerHigh),
         )
-        LazyColumn(contentPadding = PaddingValues(start = 16.dp, end = 16.dp, bottom = 24.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        LazyColumn(Modifier.weight(1f).fillMaxWidth(), contentPadding = PaddingValues(start = 16.dp, end = 16.dp, bottom = 24.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
             items(filtered, key = { it.id }) { tool -> ToolTile(tool, Modifier.fillMaxWidth()) { onOpenTool(tool.id) } }
         }
     }
@@ -272,8 +301,6 @@ private fun ToolTile(tool: WritingTool, modifier: Modifier = Modifier, onClick: 
     }
 }
 
-private val recentBotTypes = listOf("flower", "ghost", "cat", "droid", "star")
-
 @Composable
 @OptIn(ExperimentalMaterial3ExpressiveApi::class)
 fun WritingToolScreen(
@@ -283,6 +310,7 @@ fun WritingToolScreen(
     onGenerate: suspend (text: String, tone: String, targetLanguage: String) -> String,
 ) {
     val tool = toolFor(toolId)
+    val botFlight = LocalBotFlight.current
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
     val haptics = LocalHaptics.current
@@ -308,20 +336,30 @@ fun WritingToolScreen(
         }
     }
 
-    Column(Modifier.fillMaxSize()) {
+    Column(Modifier.fillMaxSize().onGloballyPositioned { botFlight?.chatScreen = it }) {
         Row(Modifier.fillMaxWidth().padding(start = 12.dp, end = 20.dp, top = 12.dp, bottom = 12.dp), verticalAlignment = Alignment.CenterVertically) {
             androidx.compose.material3.IconButton(onClick = { haptics.click(); onBack() }) {
                 androidx.compose.material3.Icon(androidx.compose.material.icons.Icons.AutoMirrored.Filled.ArrowBack, "Back")
             }
-            BotAvatar(type = botTypeFor(tool.id), mood = if (busy) BotMood.Working else BotMood.Idle, size = 42.dp, label = tool.title)
+            val headerBotType = botTypeFor(tool.id)
+            val headerMood = if (busy) BotMood.Working else BotMood.Idle
+            BotAvatar(
+                type = headerBotType,
+                mood = headerMood,
+                size = 42.dp,
+                label = tool.title,
+                modifier = Modifier
+                    .onGloballyPositioned { botFlight?.chatBotPlaced(it, headerBotType, headerMood) }
+                    .graphicsLayer { alpha = if (botFlight?.hidesChatBot(tool.id) == true) 0f else 1f },
+            )
             Column(Modifier.weight(1f)) {
                 Text(tool.title, style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.SemiBold)
                 Text(tool.description, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
-            if (tool.id == "document") TextButton(onClick = { haptics.click(); importText.launch(arrayOf("text/plain", "application/pdf")) }) { Text("Import text or PDF") }
+            if (tool.id == "document") TextButton(onClick = { haptics.click(); importText.launch(arrayOf("text/plain", "application/pdf")) }) { Text("Import") }
         }
         LazyColumn(
-            modifier = Modifier.fillMaxSize(),
+            modifier = Modifier.weight(1f).fillMaxWidth(),
             contentPadding = PaddingValues(start = 20.dp, end = 20.dp, top = 8.dp, bottom = 28.dp),
             verticalArrangement = Arrangement.spacedBy(14.dp),
         ) {
@@ -332,10 +370,10 @@ fun WritingToolScreen(
                         OutlinedTextField(
                             value = input,
                             onValueChange = { input = it; error = null },
-                            modifier = Modifier.fillMaxWidth().height(216.dp),
+                            modifier = Modifier.fillMaxWidth().heightIn(min = 144.dp, max = 192.dp),
                             placeholder = { Text(if (tool.id == "detector") "Paste writing you’d like Jade to review…" else "Type or paste your writing here…") },
                             shape = MaterialTheme.shapes.medium,
-                            minLines = 6,
+                            minLines = 5,
                         )
                         Row(Modifier.fillMaxWidth().padding(top = 6.dp), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
                             Text("${input.length} / 8,000", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
@@ -369,7 +407,9 @@ fun WritingToolScreen(
                 }
             }
             if (error != null) item {
-                Text(error.orEmpty(), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.error)
+                Surface(shape = MaterialTheme.shapes.medium, color = MaterialTheme.colorScheme.errorContainer) {
+                    Text(error.orEmpty(), Modifier.fillMaxWidth().padding(14.dp), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onErrorContainer)
+                }
             }
             item {
                 Button(
@@ -389,7 +429,10 @@ fun WritingToolScreen(
                     enabled = !busy,
                     shapes = ButtonDefaults.shapes(),
                 ) {
-                    if (busy) LoadingIndicator(Modifier.size(24.dp))
+                    if (busy) {
+                        LoadingIndicator(Modifier.size(28.dp))
+                        Text("  Working…")
+                    }
                     else {
                         Icon(tool.icon, null, Modifier.size(19.dp))
                         Text("  ${tool.actionLabel}")
