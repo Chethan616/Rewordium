@@ -337,11 +337,12 @@ private fun QuickActionCard(
 
 @Composable
 fun ToolsScreen(onOpenTool: (String) -> Unit, onBack: () -> Unit) {
+    val haptics = LocalHaptics.current
     var query by remember { mutableStateOf("") }
     val filtered = writingTools.filter { it.title.contains(query, ignoreCase = true) || it.description.contains(query, ignoreCase = true) }
     Column(Modifier.fillMaxSize()) {
         Row(Modifier.fillMaxWidth().padding(start = 8.dp, end = 20.dp, top = 8.dp, bottom = 4.dp), verticalAlignment = Alignment.CenterVertically) {
-            IconButton(onClick = onBack) { Icon(Icons.AutoMirrored.Filled.ArrowBack, "Back") }
+            IconButton(onClick = { haptics.click(); onBack() }) { Icon(Icons.AutoMirrored.Filled.ArrowBack, "Back") }
             Column(Modifier.padding(start = 4.dp), verticalArrangement = Arrangement.spacedBy(2.dp)) {
                 Text("Writing tools", style = MaterialTheme.typography.titleLarge)
                 Text("Choose what you want to work on", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)

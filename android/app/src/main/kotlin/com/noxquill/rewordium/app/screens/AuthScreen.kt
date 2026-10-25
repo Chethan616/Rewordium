@@ -65,6 +65,7 @@ private val accountMascots = listOf("flower", "cloud", "triangle", "droid")
 @Composable
 fun AuthScreen(
     onBack: () -> Unit,
+    showBack: Boolean = true,
     onSignIn: (String, String) -> Unit,
     onSignUp: (String, String, String, Boolean) -> Unit,
     onGoogleToken: (String) -> Unit,
@@ -96,9 +97,11 @@ fun AuthScreen(
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
             Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-                androidx.compose.material3.IconButton(onClick = { haptics.click(); onBack() }) {
-                    Icon(Icons.AutoMirrored.Filled.ArrowBack, "Back")
-                }
+                if (showBack) {
+                    androidx.compose.material3.IconButton(onClick = { haptics.click(); onBack() }) {
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, "Back")
+                    }
+                } else Spacer(Modifier.size(48.dp))
                 Spacer(Modifier.weight(1f))
                 Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(7.dp)) {
                     Icon(Icons.Filled.AutoAwesome, null, Modifier.size(18.dp), tint = MaterialTheme.colorScheme.primary)

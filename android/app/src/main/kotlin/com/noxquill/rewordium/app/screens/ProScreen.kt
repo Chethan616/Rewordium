@@ -36,6 +36,7 @@ import com.noxquill.rewordium.app.ui.avatar.BotAvatar
 import com.noxquill.rewordium.app.ui.avatar.BotMood
 import com.noxquill.rewordium.billing.BillingUiState
 import com.noxquill.rewordium.data.AccountInfo
+import com.noxquill.rewordium.app.ui.haptics.LocalHaptics
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterial3ExpressiveApi::class)
 @Composable
@@ -44,9 +45,10 @@ fun ProScreen(
     onBack: () -> Unit, onSignIn: () -> Unit,
     onPurchase: (String) -> Unit, onRestore: () -> Unit,
 ) {
+    val haptics = LocalHaptics.current
     Column(Modifier.fillMaxSize()) {
         TopAppBar(title = { Text("Rewordium Pro") }, navigationIcon = {
-            androidx.compose.material3.IconButton(onClick = onBack) { Icon(Icons.AutoMirrored.Filled.ArrowBack, "Back") }
+            androidx.compose.material3.IconButton(onClick = { haptics.click(); onBack() }) { Icon(Icons.AutoMirrored.Filled.ArrowBack, "Back") }
         })
         LazyColumn(contentPadding = PaddingValues(20.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
             item {

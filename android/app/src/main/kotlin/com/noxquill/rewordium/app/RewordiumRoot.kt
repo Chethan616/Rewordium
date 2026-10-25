@@ -105,6 +105,9 @@ private fun RewordiumRootContent(
     var platformStatus by remember { mutableStateOf(activity.setupStatus()) }
     var busy by remember { mutableStateOf(false) }
     var authError by remember { mutableStateOf<String?>(null) }
+    var requireSignInAfterLogout by rememberSaveable {
+        mutableStateOf(appPrefs.getBoolean("require_sign_in_after_logout", false))
+    }
     var billingState by remember { mutableStateOf(BillingUiState()) }
 
     fun selectMascot(type: String) {
@@ -131,6 +134,7 @@ private fun RewordiumRootContent(
     }
 
     fun navigateTo(id: String) {
+        if (requireSignInAfterLogout && id != "auth") return
         when (id) {
             "home", "tools", "jade", "settings", "settings/access", "pro", "auth", "ai_settings", "licenses", "privacy", "terms", "personas" ->
                 navController.navigate(id)
@@ -197,6 +201,18 @@ private fun RewordiumRootContent(
         navigateTo("auth")
     }
 
+    fun signOutAndRequireAuth() {
+        RewordiumRepository.signOut(context)
+        account = null
+        authError = null
+        requireSignInAfterLogout = true
+        appPrefs.edit().putBoolean("require_sign_in_after_logout", true).apply()
+        navController.navigate("auth") {
+            popUpTo(navController.graph.startDestinationId) { inclusive = true }
+            launchSingleTop = true
+        }
+    }
+
     fun runAuth(action: suspend () -> Unit) {
         scope.launch {
             busy = true
@@ -204,7 +220,16 @@ private fun RewordiumRootContent(
             runCatching { action() }
                 .onSuccess {
                     refreshAccount()
-                    navController.popBackStack()
+                    if (requireSignInAfterLogout) {
+                        requireSignInAfterLogout = false
+                        appPrefs.edit().putBoolean("require_sign_in_after_logout", false).apply()
+                        navController.navigate("home") {
+                            popUpTo("auth") { inclusive = true }
+                            launchSingleTop = true
+                        }
+                    } else if (!navController.popBackStack()) {
+                        navController.navigate("home") { launchSingleTop = true }
+                    }
                 }
                 .onFailure { authError = authMessage(it) }
             busy = false
@@ -256,7 +281,7 @@ private fun RewordiumRootContent(
       CompositionLocalProvider(LocalBotFlight provides botFlight) {
       NavHost(
           navController = navController,
-          startDestination = "home",
+          startDestination = if (requireSignInAfterLogout) "auth" else "home",
           enterTransition = { fadeIn(tween(180)) + slideInHorizontally(NavSlide) { it / 8 } },
           exitTransition = { fadeOut(tween(140)) + slideOutHorizontally(NavSlide) { -it / 12 } },
           popEnterTransition = { fadeIn(tween(180)) + slideInHorizontally(NavSlide) { -it / 10 } },
@@ -296,11 +321,11 @@ private fun RewordiumRootContent(
                 mascotType = mascotType,
                 onMascotSelected = ::selectMascot,
                 onSignIn = ::goToAuth,
-                onSignOut = { RewordiumRepository.signOut(context); account = null },
+                onSignOut = ::signOutAndRequireAuth,
                 onDelete = {
                     scope.launch {
                         runCatching { RewordiumRepository.deleteAccount() }
-                            .onSuccess { RewordiumRepository.signOut(context); account = null; Toast.makeText(context, "Account deleted", Toast.LENGTH_SHORT).show() }
+                            .onSuccess { signOutAndRequireAuth(); Toast.makeText(context, "Account deleted", Toast.LENGTH_SHORT).show() }
                             .onFailure { Toast.makeText(context, authMessage(it), Toast.LENGTH_LONG).show() }
                     }
                 },
@@ -324,11 +349,11 @@ private fun RewordiumRootContent(
                 mascotType = mascotType,
                 onMascotSelected = ::selectMascot,
                 onSignIn = ::goToAuth,
-                onSignOut = { RewordiumRepository.signOut(context); account = null },
+                onSignOut = ::signOutAndRequireAuth,
                 onDelete = {
                     scope.launch {
                         runCatching { RewordiumRepository.deleteAccount() }
-                            .onSuccess { RewordiumRepository.signOut(context); account = null; Toast.makeText(context, "Account deleted", Toast.LENGTH_SHORT).show() }
+                            .onSuccess { signOutAndRequireAuth(); Toast.makeText(context, "Account deleted", Toast.LENGTH_SHORT).show() }
                             .onFailure { Toast.makeText(context, authMessage(it), Toast.LENGTH_LONG).show() }
                     }
                 },
@@ -349,6 +374,7 @@ private fun RewordiumRootContent(
         composable("auth") {
             StagedDestination("auth", settled = transition.currentState == EnterExitState.Visible && transition.targetState == EnterExitState.Visible) { AuthScreen(
                 onBack = { navController.popBackStack() },
+                showBack = !requireSignInAfterLogout,
                 onSignIn = { email, password -> runAuth { RewordiumRepository.signIn(email, password) } },
                 onSignUp = { name, email, password, news -> runAuth { RewordiumRepository.signUp(name, email, password, news) } },
                 onGoogleToken = { token -> runAuth { RewordiumRepository.signInWithGoogleIdToken(token) } },

@@ -39,11 +39,13 @@ import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
 import com.noxquill.rewordium.app.ui.avatar.BotAvatar
 import com.noxquill.rewordium.app.ui.avatar.BotMood
+import com.noxquill.rewordium.app.ui.haptics.LocalHaptics
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AiSettingsScreen(onBack: () -> Unit) {
     val context = LocalContext.current
+    val haptics = LocalHaptics.current
     val prefs = remember { context.getSharedPreferences("ai_settings", Context.MODE_PRIVATE) }
     var enabled by remember { mutableStateOf(prefs.getBoolean("advanced_ai_enabled", false)) }
     var provider by remember { mutableStateOf(prefs.getString("ai_provider", "groq") ?: "groq") }
@@ -55,7 +57,7 @@ fun AiSettingsScreen(onBack: () -> Unit) {
     val providers = listOf("groq", "openai", "gemini", "claude", "custom")
     Column(Modifier.fillMaxSize()) {
         TopAppBar(title = { Text("AI preferences") }, navigationIcon = {
-            androidx.compose.material3.IconButton(onClick = onBack) { Icon(Icons.AutoMirrored.Filled.ArrowBack, "Back") }
+            androidx.compose.material3.IconButton(onClick = { haptics.click(); onBack() }) { Icon(Icons.AutoMirrored.Filled.ArrowBack, "Back") }
         })
         LazyColumn(contentPadding = PaddingValues(20.dp), verticalArrangement = Arrangement.spacedBy(13.dp)) {
             item {

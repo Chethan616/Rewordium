@@ -113,8 +113,8 @@ fun PersonaScreen(onBack: () -> Unit) {
     Column(Modifier.fillMaxSize()) {
         TopAppBar(
             title = { Text("Writing personas") },
-            navigationIcon = { IconButton(onClick = onBack) { Icon(Icons.AutoMirrored.Filled.ArrowBack, "Back") } },
-            actions = { IconButton(onClick = { name = ""; description = ""; showAdd = true }) { Icon(Icons.Filled.Add, "Add a persona") } },
+            navigationIcon = { IconButton(onClick = { haptics.click(); onBack() }) { Icon(Icons.AutoMirrored.Filled.ArrowBack, "Back") } },
+            actions = { IconButton(onClick = { haptics.click(); name = ""; description = ""; showAdd = true }) { Icon(Icons.Filled.Add, "Add a persona") } },
         )
         LazyColumn(
             contentPadding = PaddingValues(start = 20.dp, end = 20.dp, top = 8.dp, bottom = 28.dp),

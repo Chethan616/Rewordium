@@ -31,10 +31,12 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.noxquill.rewordium.app.ui.avatar.BotAvatar
 import com.noxquill.rewordium.app.ui.avatar.BotMood
+import com.noxquill.rewordium.app.ui.haptics.LocalHaptics
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun InfoScreen(title: String, onBack: () -> Unit, onOpenLink: (String) -> Unit) {
+    val haptics = LocalHaptics.current
     val privacy = title.contains("privacy", ignoreCase = true)
     val sections = if (privacy) listOf(
         "Your writing" to "Text you submit is sent to the AI provider configured for Rewordium so it can complete your request. Avoid sharing sensitive information you do not want processed by that provider.",
@@ -49,7 +51,7 @@ fun InfoScreen(title: String, onBack: () -> Unit, onOpenLink: (String) -> Unit) 
     )
     Column(Modifier.fillMaxSize()) {
         TopAppBar(title = { Text(title) }, navigationIcon = {
-            androidx.compose.material3.IconButton(onClick = onBack) { Icon(Icons.AutoMirrored.Filled.ArrowBack, "Back") }
+            androidx.compose.material3.IconButton(onClick = { haptics.click(); onBack() }) { Icon(Icons.AutoMirrored.Filled.ArrowBack, "Back") }
         })
         LazyColumn(contentPadding = PaddingValues(20.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
             item {
@@ -92,6 +94,7 @@ data class LicenseEntry(val name: String, val license: String, val url: String)
 @Composable
 fun LicensesScreen(onBack: () -> Unit, onOpenLink: (String) -> Unit) {
     val context = LocalContext.current
+    val haptics = LocalHaptics.current
     val keyboardNotices = remember {
         runCatching { context.assets.open("open_source_licenses.md").bufferedReader().use { it.readText() } }
             .getOrElse { "Keyboard license notices are included with the Rewordium keyboard source." }
@@ -108,7 +111,7 @@ fun LicensesScreen(onBack: () -> Unit, onOpenLink: (String) -> Unit) {
     )
     Column(Modifier.fillMaxSize()) {
         TopAppBar(title = { Text("Open-source licenses") }, navigationIcon = {
-            androidx.compose.material3.IconButton(onClick = onBack) { Icon(Icons.AutoMirrored.Filled.ArrowBack, "Back") }
+            androidx.compose.material3.IconButton(onClick = { haptics.click(); onBack() }) { Icon(Icons.AutoMirrored.Filled.ArrowBack, "Back") }
         })
         LazyColumn(contentPadding = PaddingValues(20.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
             item {

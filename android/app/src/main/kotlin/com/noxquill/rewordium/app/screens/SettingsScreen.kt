@@ -95,7 +95,7 @@ fun SettingsScreen(
 
     Column(Modifier.fillMaxSize()) {
         TopAppBar(
-            navigationIcon = { IconButton(onClick = onBack) { Icon(Icons.AutoMirrored.Filled.ArrowBack, "Back") } },
+            navigationIcon = { IconButton(onClick = { haptics.click(); onBack() }) { Icon(Icons.AutoMirrored.Filled.ArrowBack, "Back") } },
             title = {
                 Column(verticalArrangement = Arrangement.spacedBy(1.dp)) {
                     Text("Settings", style = MaterialTheme.typography.titleLarge)
