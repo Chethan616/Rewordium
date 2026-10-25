@@ -43,7 +43,6 @@ import androidx.compose.material.icons.filled.Stars
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.History
 import androidx.compose.material.icons.filled.EditNote
-import androidx.compose.material.icons.filled.Description
 import androidx.compose.material.icons.filled.Shield
 import androidx.compose.material.icons.filled.KeyboardArrowRight
 import androidx.compose.material3.AssistChip
@@ -346,23 +345,6 @@ fun ToolsScreen(onOpenTool: (String) -> Unit, onBack: () -> Unit) {
             shape = MaterialTheme.shapes.large,
             colors = TextFieldDefaults.colors(unfocusedContainerColor = MaterialTheme.colorScheme.surfaceContainerHigh),
         )
-        ElevatedCard(
-            onClick = { onOpenTool("document") },
-            modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp).expressivePress(),
-            shape = MaterialTheme.shapes.large,
-            colors = CardDefaults.elevatedCardColors(containerColor = MaterialTheme.colorScheme.secondaryContainer),
-        ) {
-            Row(Modifier.padding(horizontal = 16.dp, vertical = 13.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                MorphBadge(phase = 2.4f, color = MaterialTheme.colorScheme.primaryContainer, modifier = Modifier.size(44.dp)) {
-                    Icon(Icons.Filled.Description, null, Modifier.align(Alignment.Center).size(22.dp), tint = MaterialTheme.colorScheme.onPrimaryContainer)
-                }
-                Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
-                    Text("Polish a document", style = MaterialTheme.typography.titleSmall)
-                    Text("Import a text file or PDF to refine it with Jade", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSecondaryContainer)
-                }
-                Icon(Icons.Filled.ChevronRight, null)
-            }
-        }
         LazyColumn(Modifier.weight(1f).fillMaxWidth(), contentPadding = PaddingValues(start = 16.dp, end = 16.dp, bottom = 24.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
             items(filtered, key = { it.id }) { tool -> ToolTile(tool, Modifier.fillMaxWidth()) { onOpenTool(tool.id) } }
         }
@@ -551,6 +533,7 @@ fun WritingToolScreen(
                         Text("  ${tool.actionLabel}")
                     }
                 }
+                Spacer(Modifier.height(12.dp))
                 Text("A credit is used when Jade completes a request. Your original text stays here until you clear it.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
             item {
