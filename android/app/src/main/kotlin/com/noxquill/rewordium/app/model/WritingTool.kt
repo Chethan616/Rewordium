@@ -2,6 +2,7 @@ package com.noxquill.rewordium.app.model
 
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AutoAwesome
+import androidx.compose.material.icons.filled.AutoFixHigh
 import androidx.compose.material.icons.filled.Description
 import androidx.compose.material.icons.filled.EditNote
 import androidx.compose.material.icons.filled.FactCheck
@@ -27,6 +28,7 @@ val writingTools = listOf(
     WritingTool("tone", "Tone editor", "Make it warmer, sharper, or calmer", Icons.Filled.Tune, "Adjust tone"),
     WritingTool("detector", "AI writing check", "Look for patterns with care", Icons.Filled.FactCheck, "Review writing"),
     WritingTool("document", "Document polish", "Improve a longer piece of writing", Icons.Filled.Description, "Polish document"),
+    WritingTool("humanizer", "Humanizer", "Keep your voice; lose the robotic phrasing", Icons.Filled.AutoFixHigh, "Make it sound like you"),
     WritingTool("jade", "Ask Jade", "Think through words together", Icons.Filled.AutoAwesome, "Ask Jade"),
 )
 

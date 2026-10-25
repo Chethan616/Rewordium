@@ -23,6 +23,7 @@ import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.AutoAwesome
 import androidx.compose.material.icons.filled.ContentCopy
 import androidx.compose.material.icons.filled.Send
+import androidx.compose.material.icons.filled.Tune
 import androidx.compose.material3.AssistChip
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.FilledIconButton
@@ -58,7 +59,11 @@ data class JadeMessage(val fromJade: Boolean, val text: String)
 
 @OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable
-fun JadeScreen(onSend: suspend (String, List<JadeMessage>) -> String, onBack: () -> Unit) {
+fun JadeScreen(
+    onSend: suspend (String, List<JadeMessage>) -> String,
+    onBack: () -> Unit,
+    onOpenKeyboardSettings: () -> Unit,
+) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
     val haptics = LocalHaptics.current
@@ -85,6 +90,9 @@ fun JadeScreen(onSend: suspend (String, List<JadeMessage>) -> String, onBack: ()
                 }
             },
             actions = {
+                IconButton(onClick = { haptics.click(); onOpenKeyboardSettings() }) {
+                    Icon(Icons.Filled.Tune, "Keyboard settings")
+                }
                 if (messages.isNotEmpty()) TextButton(onClick = { haptics.click(); messages.clear(); error = null }) { Text("New chat") }
             },
         )

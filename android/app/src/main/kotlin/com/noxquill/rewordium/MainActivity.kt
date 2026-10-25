@@ -2,6 +2,7 @@ package com.noxquill.rewordium
 
 import android.content.ComponentName
 import android.content.Intent
+import android.net.Uri
 import android.provider.Settings
 import android.view.inputmethod.InputMethodManager
 import android.content.Context
@@ -99,8 +100,14 @@ class MainActivity : ComponentActivity() {
         (getSystemService(Context.INPUT_METHOD_SERVICE) as InputMethodManager).showInputMethodPicker()
     }
 
-    fun openKeyboardPreferences() {
-        startActivity(Intent(this, FlorisAppActivity::class.java))
+    fun openKeyboardPreferences(section: String? = null) {
+        val intent = if (section.isNullOrBlank()) {
+            Intent(this, FlorisAppActivity::class.java)
+        } else {
+            Intent(Intent.ACTION_VIEW, Uri.parse("ui://ReBoard/settings/$section"))
+                .setClass(this, FlorisAppActivity::class.java)
+        }
+        startActivity(intent)
     }
 
     fun onAiGenerationSuccess() {

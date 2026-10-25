@@ -183,7 +183,10 @@ fun CandidatesRow(modifier: Modifier = Modifier) {
             showContactsPrompt -> {
                 ContactsPromptBanner(
                     onAllow = {
-                        context.startActivity(Intent(context, ContactsPermissionActivity::class.java))
+                        context.startActivity(
+                            Intent(context, ContactsPermissionActivity::class.java)
+                                .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK),
+                        )
                     },
                     onDismiss = {
                         scope.launch { prefs.spelling.contactsPromptDismissed.set(true) }

@@ -29,6 +29,7 @@ object WritingRepository {
             "tone" -> "Rewrite the text in a $tone tone. Keep the same meaning and avoid adding facts. Return only the revised text.\n\n$text"
             "detector" -> "Assess the writing below for patterns commonly associated with AI-generated prose. Be careful not to claim certainty. Give a short estimate, explain the strongest signals, and remind the reader this is not proof of authorship.\n\n$text"
             "document" -> "Improve this document for clarity, flow, and correctness while preserving its facts and structure.\n\n$text"
+            "humanizer" -> "Revise this writing so it sounds natural, specific, and like a real person wrote it. Preserve the writer’s meaning, facts, intent, and voice. Remove formulaic phrasing and unnecessary filler. Do not add errors, invent details, or discuss AI detection. Return only the revised writing.\n\n$text"
             else -> "Rewrite the text so it reads naturally and clearly while keeping the original meaning. Return only the revised text.\n\n$text"
         }
         val response = DynamicRetrofitClient.makeCompletionRequest(config, prompt)

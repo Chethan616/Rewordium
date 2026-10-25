@@ -4,7 +4,10 @@ import android.content.Intent
 import android.net.Uri
 import android.widget.Toast
 import androidx.compose.animation.core.CubicBezierEasing
+import androidx.compose.animation.EnterExitState
 import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
 import androidx.compose.animation.slideInHorizontally
 import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.foundation.layout.fillMaxSize
@@ -60,6 +63,7 @@ import com.noxquill.rewordium.data.RewordiumRepository
 import com.noxquill.rewordium.data.WritingRepository
 import com.noxquill.rewordium.util.KeyboardConstants
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.delay
 
 @Composable
 fun RewordiumRoot(
@@ -102,6 +106,11 @@ private fun RewordiumRootContent(
     var busy by remember { mutableStateOf(false) }
     var authError by remember { mutableStateOf<String?>(null) }
     var billingState by remember { mutableStateOf(BillingUiState()) }
+
+    fun selectMascot(type: String) {
+        mascotType = type
+        appPrefs.edit().putString("mascot_type", type).apply()
+    }
 
     LaunchedEffect(currentEntry) {
         val toolId = currentEntry
@@ -214,7 +223,7 @@ private fun RewordiumRootContent(
             if (!allowed) throw IllegalStateException("You’re out of credits. Explore Rewordium Pro for more room to write.")
             refreshAccount()
         }
-        val toolId = if (activeToolId in setOf("paraphraser", "grammar", "summarizer", "translator", "tone", "detector", "document")) activeToolId else toolFor(activeToolId).id
+        val toolId = if (activeToolId in setOf("paraphraser", "grammar", "summarizer", "translator", "tone", "detector", "document", "humanizer")) activeToolId else toolFor(activeToolId).id
         return WritingRepository.generate(context, toolId, text, tone, language).also { activity.onAiGenerationSuccess() }
     }
 
@@ -231,7 +240,10 @@ private fun RewordiumRootContent(
 
     if (!onboardingDone) {
         Surface(Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
-            OnboardingScreen {
+            OnboardingScreen(
+                mascotType = mascotType,
+                onMascotSelected = ::selectMascot,
+            ) {
                 appPrefs.edit().putBoolean("onboarding_complete", true).apply()
                 onboardingDone = true
             }
@@ -245,12 +257,12 @@ private fun RewordiumRootContent(
       NavHost(
           navController = navController,
           startDestination = "home",
-          enterTransition = { slideInHorizontally(NavSlide) { it } },
-          exitTransition = { slideOutHorizontally(NavSlide) { -it / 4 } },
-          popEnterTransition = { slideInHorizontally(NavSlide) { -it / 4 } },
-          popExitTransition = { slideOutHorizontally(NavSlide) { it } },
-          predictivePopEnterTransition = { slideInHorizontally(NavSlide) { -it / 4 } },
-          predictivePopExitTransition = { slideOutHorizontally(NavSlide) { it } },
+          enterTransition = { fadeIn(tween(180)) + slideInHorizontally(NavSlide) { it / 8 } },
+          exitTransition = { fadeOut(tween(140)) + slideOutHorizontally(NavSlide) { -it / 12 } },
+          popEnterTransition = { fadeIn(tween(180)) + slideInHorizontally(NavSlide) { -it / 10 } },
+          popExitTransition = { fadeOut(tween(140)) + slideOutHorizontally(NavSlide) { it / 8 } },
+          predictivePopEnterTransition = { fadeIn(tween(180)) + slideInHorizontally(NavSlide) { -it / 10 } },
+          predictivePopExitTransition = { fadeOut(tween(140)) + slideOutHorizontally(NavSlide) { it / 8 } },
       ) {
         composable("home") {
             HomeScreen(
@@ -269,14 +281,16 @@ private fun RewordiumRootContent(
             )
         }
         composable("tools") {
-            ToolsScreen(onOpenTool = ::navigateTo, onBack = { navController.popBackStack() })
+            StagedDestination("tools", settled = transition.currentState == EnterExitState.Visible && transition.targetState == EnterExitState.Visible) {
+                ToolsScreen(onOpenTool = ::navigateTo, onBack = { navController.popBackStack() })
+            }
         }
         composable("settings") {
-            SettingsScreen(
+            StagedDestination("settings", settled = transition.currentState == EnterExitState.Visible && transition.targetState == EnterExitState.Visible) { SettingsScreen(
                 account = account, status = platformStatus,
                 onBack = { navController.popBackStack() },
                 mascotType = mascotType,
-                onMascotSelected = { type -> mascotType = type; appPrefs.edit().putString("mascot_type", type).apply() },
+                onMascotSelected = ::selectMascot,
                 onSignIn = ::goToAuth,
                 onSignOut = { RewordiumRepository.signOut(context); account = null },
                 onDelete = {
@@ -287,7 +301,8 @@ private fun RewordiumRootContent(
                     }
                 },
                 onPro = { navigateTo("pro") },
-                onKeyboard = activity::openKeyboardPreferences,
+                onKeyboard = { activity.openKeyboardPreferences() },
+                onKeyboardSection = { section -> activity.openKeyboardPreferences(section) },
                 onAccessibility = activity::openAccessibilitySettings,
                 onEnableKeyboard = activity::openKeyboardActivationSettings,
                 onChooseKeyboard = activity::chooseKeyboard,
@@ -296,14 +311,14 @@ private fun RewordiumRootContent(
                 onPersonas = { navigateTo("personas") },
                 onPrivacy = { navigateTo("privacy") },
                 onTerms = { navigateTo("terms") },
-            )
+            ) }
         }
         composable("settings/access") {
-            SettingsScreen(
+            StagedDestination("settings/access", settled = transition.currentState == EnterExitState.Visible && transition.targetState == EnterExitState.Visible) { SettingsScreen(
                 account = account, status = platformStatus,
                 onBack = { navController.popBackStack() }, initialTab = 1,
                 mascotType = mascotType,
-                onMascotSelected = { type -> mascotType = type; appPrefs.edit().putString("mascot_type", type).apply() },
+                onMascotSelected = ::selectMascot,
                 onSignIn = ::goToAuth,
                 onSignOut = { RewordiumRepository.signOut(context); account = null },
                 onDelete = {
@@ -314,7 +329,8 @@ private fun RewordiumRootContent(
                     }
                 },
                 onPro = { navigateTo("pro") },
-                onKeyboard = activity::openKeyboardPreferences,
+                onKeyboard = { activity.openKeyboardPreferences() },
+                onKeyboardSection = { section -> activity.openKeyboardPreferences(section) },
                 onAccessibility = activity::openAccessibilitySettings,
                 onEnableKeyboard = activity::openKeyboardActivationSettings,
                 onChooseKeyboard = activity::chooseKeyboard,
@@ -323,42 +339,44 @@ private fun RewordiumRootContent(
                 onPersonas = { navigateTo("personas") },
                 onPrivacy = { navigateTo("privacy") },
                 onTerms = { navigateTo("terms") },
-            )
+            ) }
         }
-        composable("jade") { JadeScreen(::requestJade, onBack = { navController.popBackStack() }) }
+        composable("jade") { StagedDestination("jade", settled = transition.currentState == EnterExitState.Visible && transition.targetState == EnterExitState.Visible) { JadeScreen(::requestJade, onBack = { navController.popBackStack() }, onOpenKeyboardSettings = { activity.openKeyboardPreferences() }) } }
         composable("auth") {
-            AuthScreen(
+            StagedDestination("auth", settled = transition.currentState == EnterExitState.Visible && transition.targetState == EnterExitState.Visible) { AuthScreen(
                 onBack = { navController.popBackStack() },
                 onSignIn = { email, password -> runAuth { RewordiumRepository.signIn(email, password) } },
                 onSignUp = { name, email, password, news -> runAuth { RewordiumRepository.signUp(name, email, password, news) } },
                 onGoogleToken = { token -> runAuth { RewordiumRepository.signInWithGoogleIdToken(token) } },
                 onResetPassword = { email -> runAuth { RewordiumRepository.sendPasswordReset(email) } },
+                mascotType = mascotType,
+                onMascotSelected = ::selectMascot,
                 busy = busy, error = authError,
-            )
+            ) }
         }
         composable("pro") {
-            ProScreen(
+            StagedDestination("pro", settled = transition.currentState == EnterExitState.Visible && transition.targetState == EnterExitState.Visible) { ProScreen(
                 account = account, billing = billingState,
                 onBack = { navController.popBackStack() },
                 onSignIn = ::goToAuth,
                 onPurchase = { id -> if (account == null) goToAuth() else billingManager.purchase(activity, id) },
                 onRestore = { if (account == null) goToAuth() else billingManager.restorePurchases() },
-            )
+            ) }
         }
-        composable("ai_settings") { AiSettingsScreen(onBack = { navController.popBackStack() }) }
-        composable("personas") { com.noxquill.rewordium.app.screens.PersonaScreen(onBack = { navController.popBackStack() }) }
-        composable("licenses") { LicensesScreen(onBack = { navController.popBackStack() }, onOpenLink = ::openLink) }
-        composable("privacy") { InfoScreen("Privacy policy", onBack = { navController.popBackStack() }, onOpenLink = ::openLink) }
-        composable("terms") { InfoScreen("Terms of service", onBack = { navController.popBackStack() }, onOpenLink = ::openLink) }
+        composable("ai_settings") { StagedDestination("ai_settings", settled = transition.currentState == EnterExitState.Visible && transition.targetState == EnterExitState.Visible) { AiSettingsScreen(onBack = { navController.popBackStack() }) } }
+        composable("personas") { StagedDestination("personas", settled = transition.currentState == EnterExitState.Visible && transition.targetState == EnterExitState.Visible) { com.noxquill.rewordium.app.screens.PersonaScreen(onBack = { navController.popBackStack() }) } }
+        composable("licenses") { StagedDestination("licenses", settled = transition.currentState == EnterExitState.Visible && transition.targetState == EnterExitState.Visible) { LicensesScreen(onBack = { navController.popBackStack() }, onOpenLink = ::openLink) } }
+        composable("privacy") { StagedDestination("privacy", settled = transition.currentState == EnterExitState.Visible && transition.targetState == EnterExitState.Visible) { InfoScreen("Privacy policy", onBack = { navController.popBackStack() }, onOpenLink = ::openLink) } }
+        composable("terms") { StagedDestination("terms", settled = transition.currentState == EnterExitState.Visible && transition.targetState == EnterExitState.Visible) { InfoScreen("Terms of service", onBack = { navController.popBackStack() }, onOpenLink = ::openLink) } }
         composable("tool/{toolId}", arguments = listOf(navArgument("toolId") { type = NavType.StringType })) { entry ->
             val toolId = entry.arguments?.getString("toolId") ?: "paraphraser"
             activeToolId = toolId
-            WritingToolScreen(
+            StagedDestination("tool/$toolId", settled = transition.currentState == EnterExitState.Visible && transition.targetState == EnterExitState.Visible) { WritingToolScreen(
                 toolId = toolId,
                 onBack = { if (!navController.popBackStack()) navigateTo("tools") },
                 onUpgrade = { navigateTo("pro") },
                 onGenerate = ::requestWriting,
-            )
+            ) }
         }
       }
       BotFlightLayer(botFlight)
@@ -368,9 +386,28 @@ private fun RewordiumRootContent(
 }
 
 private val NavSlide = tween<androidx.compose.ui.unit.IntOffset>(
-    durationMillis = 320,
+    durationMillis = 240,
     easing = CubicBezierEasing(0.05f, 0.7f, 0.1f, 1f),
 )
+
+/**
+ * A route's opaque surface travels first. Delaying the heavy controls until
+ * that short slide has settled removes the half-built-card effect that caused
+ * dropped frames on device while keeping predictive back fully native.
+ */
+@Composable
+private fun StagedDestination(
+    route: String,
+    settled: Boolean,
+    content: @Composable () -> Unit,
+) {
+    // Compose the destination as it enters so the user never sees a blank
+    // route followed by a late card-build. Keep the route surface stable while
+    // the shorter motion runs.
+    Surface(Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
+        content()
+    }
+}
 
 private fun authMessage(error: Throwable): String = when {
     error.message?.contains("email", ignoreCase = true) == true -> error.message.orEmpty()

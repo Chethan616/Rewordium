@@ -59,6 +59,8 @@ import com.noxquill.rewordium.app.ui.avatar.BotAvatar
 import com.noxquill.rewordium.app.ui.avatar.BotMood
 import com.noxquill.rewordium.app.ui.haptics.LocalHaptics
 
+private val accountMascots = listOf("flower", "cloud", "triangle", "droid")
+
 @OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable
 fun AuthScreen(
@@ -67,6 +69,8 @@ fun AuthScreen(
     onSignUp: (String, String, String, Boolean) -> Unit,
     onGoogleToken: (String) -> Unit,
     onResetPassword: (String) -> Unit,
+    mascotType: String,
+    onMascotSelected: (String) -> Unit,
     busy: Boolean,
     error: String?,
 ) {
@@ -105,7 +109,7 @@ fun AuthScreen(
             }
             Spacer(Modifier.height(14.dp))
             Surface(shape = MaterialTheme.shapes.large, color = MaterialTheme.colorScheme.secondaryContainer) {
-                BotAvatar(type = "ghost", mood = BotMood.Thinking, modifier = Modifier.padding(10.dp), size = 72.dp, label = "Rewordium mascot")
+                BotAvatar(type = mascotType, mood = BotMood.Thinking, modifier = Modifier.padding(10.dp), size = 72.dp, label = "Rewordium mascot")
             }
             Spacer(Modifier.height(16.dp))
             Text(if (createAccount) "Make yourself at home" else "Welcome back", style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.SemiBold, textAlign = TextAlign.Center)
@@ -127,6 +131,24 @@ fun AuthScreen(
                         singleLine = true,
                         shape = MaterialTheme.shapes.large,
                     )
+                    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                        Text("Choose your companion", style = MaterialTheme.typography.titleSmall)
+                        Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
+                            accountMascots.forEach { type ->
+                                val selected = type == mascotType
+                                Surface(
+                                    onClick = { haptics.click(); onMascotSelected(type) },
+                                    modifier = Modifier.size(52.dp),
+                                    shape = CircleShape,
+                                    color = if (selected) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surfaceContainerHigh,
+                                ) {
+                                    Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                                        BotAvatar(type = type, mood = if (selected) BotMood.Happy else BotMood.Idle, size = 40.dp, interactive = false, still = true, label = "$type mascot")
+                                    }
+                                }
+                            }
+                        }
+                    }
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Checkbox(checked = newsOptIn, onCheckedChange = { haptics.toggle(it); newsOptIn = it })
                         Text("Email me occasional Rewordium news", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)

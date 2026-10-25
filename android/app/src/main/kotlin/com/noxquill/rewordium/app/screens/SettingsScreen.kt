@@ -64,6 +64,7 @@ import com.noxquill.rewordium.app.ui.avatar.BotAvatar
 import com.noxquill.rewordium.app.ui.avatar.BotMood
 import com.noxquill.rewordium.app.ui.haptics.LocalHaptics
 import com.noxquill.rewordium.app.ui.expressivePress
+import com.noxquill.rewordium.app.ui.MorphBadge
 import com.noxquill.rewordium.data.AccountInfo
 import com.noxquill.rewordium.util.KeyboardConstants
 
@@ -73,6 +74,7 @@ fun SettingsScreen(
     onBack: () -> Unit,
     onSignIn: () -> Unit, onSignOut: () -> Unit, onDelete: () -> Unit,
     onPro: () -> Unit, onKeyboard: () -> Unit, onAccessibility: () -> Unit,
+    onKeyboardSection: (String) -> Unit,
     onEnableKeyboard: () -> Unit, onChooseKeyboard: () -> Unit,
     onAiSettings: () -> Unit, onLicenses: () -> Unit,
     onPersonas: () -> Unit,
@@ -84,6 +86,7 @@ fun SettingsScreen(
     var tab by rememberSaveable { mutableStateOf(initialTab) }
     var confirmDelete by remember { mutableStateOf(false) }
     var showMascotPicker by remember { mutableStateOf(false) }
+    var pendingMascot by rememberSaveable { mutableStateOf(mascotType) }
     val context = LocalContext.current
     val keyboardPrefs = remember { context.getSharedPreferences(KeyboardConstants.PREFS_NAME, Context.MODE_PRIVATE) }
     var keyboardAiEnabled by rememberSaveable { mutableStateOf(keyboardPrefs.getBoolean("ai_rewrite_enabled", false)) }
@@ -107,15 +110,25 @@ fun SettingsScreen(
         if (tab == 0) {
             LazyColumn(contentPadding = PaddingValues(horizontal = 16.dp, vertical = 16.dp), verticalArrangement = Arrangement.spacedBy(18.dp)) {
                 item {
-                    Surface(shape = MaterialTheme.shapes.large, color = MaterialTheme.colorScheme.surfaceContainerLow, modifier = Modifier.fillMaxWidth().clickable { haptics.click(); showMascotPicker = true }.expressivePress()) {
+                    Surface(
+                        shape = MaterialTheme.shapes.large,
+                        color = MaterialTheme.colorScheme.surfaceContainerLow,
+                        modifier = Modifier.fillMaxWidth().clickable {
+                            haptics.click()
+                            pendingMascot = mascotType
+                            showMascotPicker = true
+                        }.expressivePress(),
+                    ) {
                         Row(Modifier.fillMaxWidth().padding(16.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                            BotAvatar(type = mascotType, mood = BotMood.Idle, size = 52.dp, label = "Choose your Rewordium mascot")
+                            BotAvatar(type = mascotType, mood = BotMood.Idle, size = 52.dp, interactive = false, label = "Choose your Rewordium mascot")
                             Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(3.dp)) {
                                 Text(account?.name?.takeIf(String::isNotBlank) ?: "Your account", style = MaterialTheme.typography.titleMedium)
                                 Text(account?.email?.takeIf(String::isNotBlank) ?: "Choose a mascot · Sign in to sync credits", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                             }
-                            TextButton(onClick = { haptics.click(); if (account == null) onSignIn() else onSignOut() }) { Text(if (account == null) "Sign in" else "Sign out") }
-                            Icon(Icons.Filled.ChevronRight, null, tint = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.size(18.dp))
+                            Column(horizontalAlignment = Alignment.End) {
+                                TextButton(onClick = { haptics.click(); pendingMascot = mascotType; showMascotPicker = true }) { Text("Avatar") }
+                                TextButton(onClick = { haptics.click(); if (account == null) onSignIn() else onSignOut() }) { Text(if (account == null) "Sign in" else "Sign out") }
+                            }
                         }
                     }
                 }
@@ -179,9 +192,25 @@ fun SettingsScreen(
                                 if (status.keyboardEnabled && !status.keyboardSelected) Button(onClick = { haptics.click(); onChooseKeyboard() }) { Text("Choose keyboard") }
                             }
                         }
+                    }
+                }
+                item {
+                    SettingsSection("ReBoard control center") {
+                        KeyboardControlCard(onOpen = onKeyboard)
                         SettingsDivider()
-                        SettingsRow(Icons.Filled.Keyboard, "Keyboard preferences", "Typing, themes, languages, gestures, and stickers", onKeyboard)
+                        SettingsRow(Icons.Filled.AutoAwesome, "Typing & suggestions", "Glide typing, corrections, candidates, and personal learning", { onKeyboardSection("typing") })
                         SettingsDivider()
+                        SettingsRow(Icons.Filled.Edit, "Dictionary & language", "Private words, language tools, and spelling", { onKeyboardSection("dictionary") })
+                        SettingsDivider()
+                        SettingsRow(Icons.Filled.Bolt, "Gestures & shortcuts", "Swipe actions, cursor controls, and smartbar behavior", { onKeyboardSection("gestures") })
+                        SettingsDivider()
+                        SettingsRow(Icons.Filled.Keyboard, "Keyboard layout & feel", "Keys, themes, input feedback, and display choices", { onKeyboardSection("keyboard") })
+                        SettingsDivider()
+                        SettingsRow(Icons.Filled.Shield, "Private backup & restore", "Keep a local copy of your settings and learned words", { onKeyboardSection("other/backup") })
+                    }
+                }
+                item {
+                    SettingsSection("Writing in the keyboard") {
                         SettingsRow(Icons.Filled.AutoAwesome, "Writing personas", "Pick the voice Rewordium uses", onPersonas)
                         SettingsDivider()
                         SettingsSwitchRow("AI rewrite in keyboard", "Show writing tools while you type", keyboardAiEnabled) {
@@ -229,21 +258,29 @@ fun SettingsScreen(
                     verticalArrangement = Arrangement.spacedBy(8.dp),
                 ) {
                     items(mascotTypes, key = { it }) { type ->
-                        val selected = type == mascotType
+                        val selected = type == pendingMascot
                         ElevatedCard(
-                            onClick = { haptics.click(); onMascotSelected(type); showMascotPicker = false },
+                            onClick = { haptics.tick(); pendingMascot = type },
                             modifier = Modifier.fillMaxWidth().expressivePress(0.9f),
                             shape = MaterialTheme.shapes.medium,
                             colors = CardDefaults.elevatedCardColors(containerColor = if (selected) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surfaceContainerLow),
                         ) {
                             Column(Modifier.fillMaxWidth().padding(vertical = 8.dp), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                                BotAvatar(type = type, mood = if (selected) BotMood.Happy else BotMood.Idle, size = 48.dp, still = true, label = "$type mascot")
+                                BotAvatar(type = type, mood = if (selected) BotMood.Happy else BotMood.Idle, size = 48.dp, interactive = false, still = true, label = "$type mascot")
                                 Text(type.replaceFirstChar(Char::uppercase), style = MaterialTheme.typography.labelSmall, color = if (selected) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSurfaceVariant)
                             }
                         }
                     }
                 }
-                TextButton(onClick = { showMascotPicker = false }, modifier = Modifier.align(Alignment.End)) { Text("Done") }
+                Button(
+                    onClick = {
+                        haptics.success()
+                        onMascotSelected(pendingMascot)
+                        showMascotPicker = false
+                    },
+                    modifier = Modifier.fillMaxWidth().expressivePress(),
+                ) { Text("Use ${pendingMascot.replaceFirstChar(Char::uppercase)} mascot") }
+                TextButton(onClick = { showMascotPicker = false }, modifier = Modifier.align(Alignment.End)) { Text("Cancel") }
             }
         }
     }
@@ -265,6 +302,36 @@ private fun SettingsDivider() {
 }
 
 @Composable
+private fun KeyboardControlCard(onOpen: () -> Unit) {
+    val haptics = LocalHaptics.current
+    Surface(
+        onClick = { haptics.click(); onOpen() },
+        modifier = Modifier.fillMaxWidth().padding(10.dp).expressivePress(),
+        shape = MaterialTheme.shapes.medium,
+        color = MaterialTheme.colorScheme.primaryContainer,
+    ) {
+        Row(
+            Modifier.fillMaxWidth().padding(14.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(12.dp),
+        ) {
+            MorphBadge(
+                phase = 2.22f,
+                color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.14f),
+                modifier = Modifier.size(52.dp),
+            ) {
+                BotAvatar(type = "droid", mood = BotMood.Happy, size = 46.dp, still = true, label = "ReBoard settings", modifier = Modifier.align(Alignment.Center))
+            }
+            Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                Text("All ReBoard settings", style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.onPrimaryContainer)
+                Text("Every keyboard customization in one place", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onPrimaryContainer)
+            }
+            Icon(Icons.Filled.OpenInNew, "Open ReBoard settings", tint = MaterialTheme.colorScheme.onPrimaryContainer)
+        }
+    }
+}
+
+@Composable
 private fun SettingsRow(
     icon: androidx.compose.ui.graphics.vector.ImageVector,
     title: String,
@@ -278,8 +345,12 @@ private fun SettingsRow(
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(12.dp),
     ) {
-        Surface(shape = MaterialTheme.shapes.small, color = if (destructive) MaterialTheme.colorScheme.errorContainer else MaterialTheme.colorScheme.primaryContainer) {
-            Icon(icon, null, Modifier.padding(8.dp).size(20.dp), tint = if (destructive) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onPrimaryContainer)
+        MorphBadge(
+            phase = (title.length % 5) + 0.22f,
+            color = if (destructive) MaterialTheme.colorScheme.errorContainer else MaterialTheme.colorScheme.primaryContainer,
+            modifier = Modifier.size(36.dp),
+        ) {
+            Icon(icon, null, Modifier.align(Alignment.Center).size(20.dp), tint = if (destructive) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onPrimaryContainer)
         }
         Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
             Text(title, style = MaterialTheme.typography.titleSmall, color = if (destructive) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurface)
@@ -294,8 +365,12 @@ private val mascotTypes = listOf("clover", "flower", "triangle", "square", "blob
 @Composable
 private fun SettingsSwitchRow(title: String, subtitle: String, checked: Boolean, onCheckedChange: (Boolean) -> Unit) {
     Row(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 12.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-        Surface(shape = MaterialTheme.shapes.small, color = MaterialTheme.colorScheme.primaryContainer) {
-            Icon(Icons.Filled.Bolt, null, Modifier.padding(8.dp).size(20.dp), tint = MaterialTheme.colorScheme.onPrimaryContainer)
+        MorphBadge(
+            phase = 3.22f,
+            color = MaterialTheme.colorScheme.primaryContainer,
+            modifier = Modifier.size(36.dp),
+        ) {
+            Icon(Icons.Filled.Bolt, null, Modifier.align(Alignment.Center).size(20.dp), tint = MaterialTheme.colorScheme.onPrimaryContainer)
         }
         Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
             Text(title, style = MaterialTheme.typography.titleSmall)

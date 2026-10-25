@@ -26,12 +26,10 @@ import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.Icon
 import androidx.compose.material3.LinearWavyProgressIndicator
-import androidx.compose.material3.MaterialShapes
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
-import androidx.compose.material3.toShape
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -48,6 +46,7 @@ import androidx.compose.ui.unit.sp
 import com.noxquill.rewordium.app.ui.avatar.BotAvatar
 import com.noxquill.rewordium.app.ui.avatar.BotMood
 import com.noxquill.rewordium.app.ui.expressivePress
+import com.noxquill.rewordium.app.ui.MorphingBackdrop
 import com.noxquill.rewordium.app.ui.haptics.LocalHaptics
 import kotlinx.coroutines.launch
 
@@ -55,12 +54,18 @@ private val onboardingContent = listOf(
     "Meet your writing companion" to "Clearer sentences, sharper ideas, and a voice that still sounds like you.",
     "Write wherever you are" to "Use the Rewordium keyboard and accessibility actions in the apps you already use.",
     "Say hello to Jade" to "Talk through a draft, find a better tone, or start with a blank page.",
-    "You stay in control" to "Choose when Rewordium helps. Your writing is always yours to review.",
+    "Make it yours" to "Choose a companion for the writing space that feels like home.",
 )
+
+private val onboardingMascots = listOf("flower", "cloud", "triangle", "droid")
 
 @OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable
-fun OnboardingScreen(onFinish: () -> Unit) {
+fun OnboardingScreen(
+    mascotType: String,
+    onMascotSelected: (String) -> Unit,
+    onFinish: () -> Unit,
+) {
     val pagerState = rememberPagerState(pageCount = { onboardingContent.size })
     val scope = rememberCoroutineScope()
     val haptics = LocalHaptics.current
@@ -76,7 +81,7 @@ fun OnboardingScreen(onFinish: () -> Unit) {
     Column(Modifier.fillMaxSize().statusBarsPadding().navigationBarsPadding().padding(horizontal = 20.dp, vertical = 12.dp)) {
         Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
             Row(Modifier.weight(1f), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(9.dp)) {
-                BotAvatar(type = "flower", mood = BotMood.Idle, size = 34.dp, still = true, label = "Rewordium")
+                BotAvatar(type = mascotType, mood = BotMood.Idle, size = 34.dp, still = true, label = "Rewordium")
                 Text("rewordium", style = MaterialTheme.typography.titleMedium)
             }
             TextButton(onClick = { haptics.click(); onFinish() }) { Text("Skip") }
@@ -86,11 +91,12 @@ fun OnboardingScreen(onFinish: () -> Unit) {
             val (headline, description) = onboardingContent[page]
             Column(Modifier.fillMaxSize().padding(horizontal = 6.dp), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.Center) {
                 Box(Modifier.fillMaxWidth().height(285.dp), contentAlignment = Alignment.Center) {
-                    Surface(
+                    // The page content glides over a single continuous shape rather than
+                    // rebuilding a new card while the pager is in motion.
+                    MorphingBackdrop(
+                        phase = pagerState.currentPage + pagerState.currentPageOffsetFraction,
                         modifier = Modifier.size(224.dp),
-                        shape = MaterialShapes.Puffy.toShape(),
-                        color = if (page == 2) MaterialTheme.colorScheme.tertiaryContainer else MaterialTheme.colorScheme.primaryContainer,
-                    ) {}
+                    )
                     when (page) {
                         0 -> {
                             BotAvatar(type = "flower", mood = BotMood.Happy, size = 112.dp, modifier = Modifier.align(Alignment.Center), label = "Flower mascot")
@@ -116,11 +122,24 @@ fun OnboardingScreen(onFinish: () -> Unit) {
                             BotAvatar(type = "alien", mood = BotMood.Idle, size = 52.dp, modifier = Modifier.align(Alignment.BottomEnd).padding(end = 45.dp, bottom = 42.dp), label = "Alien mascot")
                         }
                         else -> {
-                            Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                                BotAvatar(type = "droid", mood = BotMood.Sleeping, size = 102.dp, label = "Droid mascot")
-                                Surface(shape = CircleShape, color = MaterialTheme.colorScheme.surfaceContainerHigh) {
-                                    Icon(Icons.Filled.Shield, null, Modifier.padding(11.dp).size(26.dp), tint = MaterialTheme.colorScheme.primary)
+                            Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                                BotAvatar(type = mascotType, mood = BotMood.Happy, size = 102.dp, label = "Your mascot")
+                                Row(horizontalArrangement = Arrangement.spacedBy(10.dp), verticalAlignment = Alignment.CenterVertically) {
+                                    onboardingMascots.forEach { type ->
+                                        val selected = type == mascotType
+                                        Surface(
+                                            onClick = { haptics.click(); onMascotSelected(type) },
+                                            modifier = Modifier.size(56.dp).expressivePress(0.9f),
+                                            shape = CircleShape,
+                                            color = if (selected) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surfaceContainerHigh,
+                                        ) {
+                                            Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                                                BotAvatar(type = type, mood = if (selected) BotMood.Happy else BotMood.Idle, size = 42.dp, interactive = false, still = true, label = "$type mascot")
+                                            }
+                                        }
+                                    }
                                 }
+                                Text("Choose your companion", style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.onSurfaceVariant)
                             }
                         }
                     }

@@ -18,6 +18,9 @@ package com.noxquill.rewordium.keyboard.app.settings.keyboard
 
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.getValue
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.Text
 import kotlinx.coroutines.launch
 import com.noxquill.rewordium.keyboard.R
 import com.noxquill.rewordium.keyboard.app.LocalNavController
@@ -37,6 +40,7 @@ import dev.patrickgold.jetpref.datastore.ui.ListPreference
 import dev.patrickgold.jetpref.datastore.ui.Preference
 import dev.patrickgold.jetpref.datastore.ui.PreferenceGroup
 import dev.patrickgold.jetpref.datastore.ui.SwitchPreference
+import dev.patrickgold.jetpref.datastore.model.observeAsState
 import org.florisboard.lib.compose.stringRes
 
 @OptIn(ExperimentalJetPrefDatastoreUi::class)
@@ -49,6 +53,8 @@ fun KeyboardScreen() = FlorisScreen {
     val scope = rememberCoroutineScope()
 
     content {
+        val spaceBarMode by prefs.keyboard.spaceBarMode.observeAsState()
+        val customSpaceBarLabel by prefs.keyboard.spaceBarCustomLabel.observeAsState()
         SwitchPreference(
             prefs.keyboard.numberRow,
             title = stringRes(R.string.pref__keyboard__number_row__label),
@@ -85,6 +91,15 @@ fun KeyboardScreen() = FlorisScreen {
             title = stringRes(R.string.pref__keyboard__space_bar_mode__label),
             entries = enumDisplayEntriesOf(SpaceBarMode::class),
         )
+        if (spaceBarMode == SpaceBarMode.CUSTOM_LABEL) {
+            OutlinedTextField(
+                value = customSpaceBarLabel,
+                onValueChange = { value -> scope.launch { prefs.keyboard.spaceBarCustomLabel.set(value.take(16)) } },
+                label = { Text("Custom spacebar label") },
+                supportingText = { Text("Shown on the spacebar · 16 characters max") },
+                singleLine = true,
+            )
+        }
         ListPreference(
             prefs.keyboard.capitalizationBehavior,
             title = stringRes(R.string.pref__keyboard__capitalization_behavior__label),

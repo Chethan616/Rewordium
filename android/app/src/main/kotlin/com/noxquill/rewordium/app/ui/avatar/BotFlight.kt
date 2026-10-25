@@ -14,6 +14,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.staticCompositionLocalOf
+import androidx.compose.runtime.snapshotFlow
 import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Rect
@@ -23,7 +24,9 @@ import androidx.compose.ui.layout.LayoutCoordinates
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.util.lerp
-import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.filterNotNull
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.withTimeoutOrNull
 
 /**
  * The bot that flies between Home and a chat: tap a task and its bot lifts
@@ -131,10 +134,13 @@ fun BotFlightLayer(flight: BotFlight) {
       withFrameNanos { }
       f.airborne = true
     }
-    LaunchedEffect(f, to != null) {
-      if (to == null) {
-        // The very first chat: its top bar is measured a frame or two in.
-        delay(400)
+    LaunchedEffect(f, to) {
+      // Wait for the actual destination coordinates. A fixed delay can finish
+      // before a slow first composition, making the bot blink out mid-flight.
+      val destination = to ?: withTimeoutOrNull(1_200) {
+        snapshotFlow { flight.chatSpot }.filterNotNull().first()
+      }
+      if (destination == null) {
         flight.land(f)
         return@LaunchedEffect
       }
