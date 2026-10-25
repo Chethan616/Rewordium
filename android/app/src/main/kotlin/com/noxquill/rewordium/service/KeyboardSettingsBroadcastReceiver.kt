@@ -4,63 +4,46 @@ import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
+import android.os.Build
 import android.util.Log
-import io.flutter.embedding.android.FlutterActivity
-import io.flutter.embedding.engine.FlutterEngine
-import io.flutter.plugin.common.MethodChannel
+import com.noxquill.rewordium.keyboard.app.FlorisAppActivity
 
+/** Opens the full ReBoard settings surface when the keyboard asks for its settings. */
 class KeyboardSettingsBroadcastReceiver : BroadcastReceiver() {
-    companion object {
-        private const val CHANNEL = "keyboard_settings_service"
-        private const val TAG = "KeyboardSettingsReceiver"
-        private var methodChannel: MethodChannel? = null
-        private var instance: KeyboardSettingsBroadcastReceiver? = null
-        
-        fun getInstance(): KeyboardSettingsBroadcastReceiver {
-            if (instance == null) {
-                instance = KeyboardSettingsBroadcastReceiver()
-            }
-            return instance!!
-        }
-        
-        fun initialize(flutterEngine: FlutterEngine) {
-            methodChannel = MethodChannel(flutterEngine.dartExecutor.binaryMessenger, CHANNEL)
-            Log.d(TAG, "KeyboardSettingsBroadcastReceiver initialized")
-        }
-        
-        fun register(context: Context) {
-            val receiver = getInstance()
-            val filter = IntentFilter("com.noxquill.rewordium.SHOW_KEYBOARD_SETTINGS")
-            try {
-                context.registerReceiver(receiver, filter)
-                Log.d(TAG, "BroadcastReceiver registered successfully")
-            } catch (e: Exception) {
-                Log.e(TAG, "Error registering BroadcastReceiver: ${e.message}")
-            }
-        }
-        
-        fun unregister(context: Context) {
-            try {
-                val receiver = getInstance()
-                context.unregisterReceiver(receiver)
-                Log.d(TAG, "BroadcastReceiver unregistered successfully")
-            } catch (e: Exception) {
-                Log.e(TAG, "Error unregistering BroadcastReceiver: ${e.message}")
-            }
-        }
+    override fun onReceive(context: Context, intent: Intent?) {
+        if (intent?.action != ACTION_SHOW_SETTINGS) return
+        runCatching {
+            context.startActivity(
+                Intent(context, FlorisAppActivity::class.java)
+                    .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_SINGLE_TOP)
+            )
+        }.onFailure { Log.w(TAG, "Unable to open keyboard settings", it) }
     }
 
-    override fun onReceive(context: Context?, intent: Intent?) {
-        if (intent?.action == "com.noxquill.rewordium.SHOW_KEYBOARD_SETTINGS") {
-            Log.d(TAG, "Received broadcast to show keyboard settings")
-            
-            val isDarkMode = intent.getBooleanExtra("isDarkMode", false)
-            
-            methodChannel?.invokeMethod("showKeyboardSettings", mapOf(
-                "isDarkMode" to isDarkMode
-            ))
-            
-            Log.d(TAG, "Method channel invoked with isDarkMode: $isDarkMode")
+    companion object {
+        private const val TAG = "KeyboardSettingsReceiver"
+        private const val ACTION_SHOW_SETTINGS = "com.noxquill.rewordium.SHOW_KEYBOARD_SETTINGS"
+        private val receiver = KeyboardSettingsBroadcastReceiver()
+        private var registered = false
+
+        @Synchronized
+        fun register(context: Context) {
+            if (registered) return
+            val filter = IntentFilter(ACTION_SHOW_SETTINGS)
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                context.registerReceiver(receiver, filter, Context.RECEIVER_NOT_EXPORTED)
+            } else {
+                @Suppress("DEPRECATION")
+                context.registerReceiver(receiver, filter)
+            }
+            registered = true
+        }
+
+        @Synchronized
+        fun unregister(context: Context) {
+            if (!registered) return
+            runCatching { context.unregisterReceiver(receiver) }
+            registered = false
         }
     }
 }

@@ -8,7 +8,7 @@ GeneratedPluginRegistrant.java
 .cxx/
 
 # Remember to never publicly share your keystore.
-# See https://flutter.dev/to/reference-keystore
+# Local Android signing keys are kept out of version control.
 key.properties
 **/*.keystore
 **/*.jks

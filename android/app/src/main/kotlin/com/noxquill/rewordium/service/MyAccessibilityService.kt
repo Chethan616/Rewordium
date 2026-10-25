@@ -78,7 +78,7 @@ class MyAccessibilityService : AccessibilityService(), BubbleInteractionListener
         private val BUTTERY_INTERPOLATOR = android.view.animation.PathInterpolator(0.25f, 0.1f, 0.25f, 1.0f) // Cubic bezier for ultimate smoothness
     }
     
-    // Dynamic AI configuration - loaded from SharedPreferences (set by Flutter app)
+    // Dynamic AI configuration - loaded from the native app SharedPreferences.
     private var aiConfig: AIConfigProvider.AIConfig? = null
     
     // AI settings change receiver

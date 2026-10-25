@@ -28,10 +28,6 @@ config/*.json
 .env.production
 !.env.example
 
-# Google Play public key (local-only)
-lib/config/google_play_config.dart
-!lib/config/google_play_config.example.dart
-
 # API keys files
 **/api-keys.json
 **/secrets.json
@@ -46,13 +42,8 @@ android/*.keystore
 key.properties
 upload-keystore.jks
 
-# Firebase options — ignored per user request to not push secrets
-lib/firebase_options.dart
 android/app/google-services.json
 google-services.json
-# Secret files that must be supplied via CI environment variables:
-ios/Runner/GoogleService-Info.plist
-ios/firebase_app_id_file.json
 # Firebase service account private key — NEVER commit this
 rewordium-*.json
 *-firebase-adminsdk-*.json
@@ -81,21 +72,12 @@ desktop.ini
 *.code-workspace
 *.sublime-*
 
-# ===========================================================
-# Flutter / Dart
-# ===========================================================
+/build/
+**/build/
+# Generated tool metadata from existing local workspaces.
 .dart_tool/
 .flutter-plugins
 .flutter-plugins-dependencies
-.packages
-.pub-cache/
-.pub/
-# pubspec.lock is committed for reproducible CI builds
-# pubspec.lock
-
-/build/
-**/build/
-.fvm/
 
 # ===========================================================
 # Android
@@ -117,28 +99,6 @@ android/reboard_lib/**/build/
 android/reboard_keyboard/**/build/
 android/reboard_libnative/**/build/
 **/target/
-
-# ===========================================================
-# iOS / macOS
-# ===========================================================
-/ios/Pods/
-/ios/.symlinks/
-/ios/Flutter/Flutter.framework
-/ios/Flutter/Flutter.podspec
-/ios/.generated/
-/ios/Flutter/Generated.xcconfig
-/ios/Runner/GeneratedPluginRegistrant.*
-
-/macos/Pods/
-/macos/Flutter/ephemeral/
-/macos/.symlinks/
-
-# ===========================================================
-# Web / Windows / Linux
-# ===========================================================
-/web/build/
-/windows/flutter/ephemeral/
-/linux/flutter/ephemeral/
 
 # ===========================================================
 # Node.js (for Firebase Functions)
@@ -188,8 +148,6 @@ temp/
 tmp/
 
 # Debug files
-debug_*.dart
-**/debug_*.dart
 
 # Internal docs
 plan.md
@@ -206,8 +164,6 @@ payment_portal/
 
 # Backup files (may contain secrets from previous edits)
 *.bak2
-*.dart.bak
-*.dart.bak2
 *.orig
 
 # Scratch scripts

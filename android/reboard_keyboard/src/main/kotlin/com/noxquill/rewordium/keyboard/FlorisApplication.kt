@@ -54,7 +54,7 @@ import org.florisboard.libnative.dummyAdd
 
 /**
  * Singleton holder for ReBoard keyboard functionality. This class is designed to work as a library
- * component within a host application (like Flutter), rather than being the Application class itself.
+ * component within a host application, rather than being the Application class itself.
  * 
  * It extends ContextWrapper so it can be used wherever a Context is expected.
  * 

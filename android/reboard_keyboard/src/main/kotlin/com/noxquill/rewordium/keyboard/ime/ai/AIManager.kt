@@ -152,7 +152,7 @@ class AIManager(private val context: Context) {
 
     /**
      * Check if user is logged in by reading from SharedPreferences.
-     * The Flutter app syncs login state to keyboard_settings prefs.
+     * The Rewordium app syncs login state to keyboard_settings prefs.
      */
     private fun isUserLoggedIn(): Boolean {
         return try {

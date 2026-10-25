@@ -146,16 +146,16 @@ import kotlinx.coroutines.launch
  * input method service instance.
  */
 private var FlorisImeServiceReference = WeakReference<FlorisImeService?>(null)
-private const val FLUTTER_PREFS_NAME = "FlutterSharedPreferences"
-private const val KEY_ONBOARDING_NUMBER_ROW = "flutter.onboarding_keyboard_number_row"
-private const val KEY_ONBOARDING_CLIPBOARD_SUGGESTIONS =
+private const val LEGACY_PREFS_NAME = "FlutterSharedPreferences"
+private const val LEGACY_KEY_ONBOARDING_NUMBER_ROW = "flutter.onboarding_keyboard_number_row"
+private const val LEGACY_KEY_ONBOARDING_CLIPBOARD_SUGGESTIONS =
     "flutter.onboarding_keyboard_clipboard_suggestions"
-private const val KEY_ONBOARDING_AI_DEFAULT_ENABLED =
+private const val LEGACY_KEY_ONBOARDING_AI_DEFAULT_ENABLED =
     "flutter.onboarding_keyboard_ai_default_enabled"
-private const val KEY_ONBOARDING_HAPTICS_ENABLED =
+private const val LEGACY_KEY_ONBOARDING_HAPTICS_ENABLED =
     "flutter.onboarding_keyboard_haptics_enabled"
-private const val KEY_ONBOARDING_HAPTICS_MODE = "flutter.onboarding_keyboard_haptics_mode"
-private const val KEY_PARAPHRASER_ENABLED = "flutter.paraphraser_enabled"
+private const val LEGACY_KEY_ONBOARDING_HAPTICS_MODE = "flutter.onboarding_keyboard_haptics_mode"
+private const val LEGACY_KEY_PARAPHRASER_ENABLED = "flutter.paraphraser_enabled"
 
 /**
  * Core class responsible for linking together all managers and UI compose-ables to provide an IME service. Sets
@@ -427,20 +427,51 @@ class FlorisImeService : LifecycleInputMethodService() {
     }
 
     private fun syncOnboardingKeyboardPreferences() {
-        val flutterPrefs = getSharedPreferences(FLUTTER_PREFS_NAME, Context.MODE_PRIVATE)
+        val legacyPrefs = getSharedPreferences(LEGACY_PREFS_NAME, Context.MODE_PRIVATE)
+        val keyboardPrefs = getSharedPreferences("keyboard_settings", Context.MODE_PRIVATE)
 
-        // Persist use-contacts setting written by Flutter app immediately (no
-        // clear-after-sync — the app can toggle it repeatedly).
-        if (flutterPrefs.contains("flutter.keyboard_use_contacts")) {
-            val useContacts = flutterPrefs.getBoolean("flutter.keyboard_use_contacts", true)
-            lifecycleScope.launch { prefs.spelling.useContacts.set(useContacts) }
+        val onboardingAi = if (legacyPrefs.contains(LEGACY_KEY_ONBOARDING_AI_DEFAULT_ENABLED)) {
+            legacyPrefs.getBoolean(LEGACY_KEY_ONBOARDING_AI_DEFAULT_ENABLED, false)
+        } else null
+        val legacyAi = if (legacyPrefs.contains(LEGACY_KEY_PARAPHRASER_ENABLED)) {
+            legacyPrefs.getBoolean(LEGACY_KEY_PARAPHRASER_ENABLED, false)
+        } else null
+        if (onboardingAi != null || legacyAi != null) {
+            keyboardPrefs.edit().putBoolean("ai_rewrite_enabled", onboardingAi ?: legacyAi!!).apply()
+            legacyPrefs.edit().remove(LEGACY_KEY_PARAPHRASER_ENABLED).apply()
         }
 
-        val hasOnboardingKeyboardPrefs = flutterPrefs.contains(KEY_ONBOARDING_NUMBER_ROW) ||
-            flutterPrefs.contains(KEY_ONBOARDING_CLIPBOARD_SUGGESTIONS) ||
-            flutterPrefs.contains(KEY_ONBOARDING_HAPTICS_ENABLED) ||
-            flutterPrefs.contains(KEY_ONBOARDING_HAPTICS_MODE) ||
-            flutterPrefs.contains(KEY_ONBOARDING_AI_DEFAULT_ENABLED)
+        fun copyLegacyString(oldKey: String, newKey: String) {
+            if (legacyPrefs.contains(oldKey) && !keyboardPrefs.contains(newKey)) {
+                legacyPrefs.getString(oldKey, null)?.let { keyboardPrefs.edit().putString(newKey, it).apply() }
+            }
+        }
+        copyLegacyString("flutter.active_persona", "active_persona")
+        copyLegacyString("flutter.custom_personas", "custom_personas")
+        if (legacyPrefs.contains("flutter.keyboard_personas") && !keyboardPrefs.contains("selected_keyboard_personas")) {
+            runCatching { legacyPrefs.getStringSet("flutter.keyboard_personas", emptySet()).orEmpty() }
+                .onSuccess { keyboardPrefs.edit().putStringSet("selected_keyboard_personas", it).apply() }
+        }
+        legacyPrefs.edit()
+            .remove("flutter.active_persona")
+            .remove("flutter.custom_personas")
+            .remove("flutter.keyboard_personas")
+            .apply()
+
+        // Copy the former app preference once into the keyboard's native data store.
+        if (legacyPrefs.contains("flutter.keyboard_use_contacts")) {
+            val useContacts = legacyPrefs.getBoolean("flutter.keyboard_use_contacts", true)
+            lifecycleScope.launch {
+                runCatching { prefs.spelling.useContacts.set(useContacts) }
+                    .onSuccess { legacyPrefs.edit().remove("flutter.keyboard_use_contacts").apply() }
+            }
+        }
+
+        val hasOnboardingKeyboardPrefs = legacyPrefs.contains(LEGACY_KEY_ONBOARDING_NUMBER_ROW) ||
+            legacyPrefs.contains(LEGACY_KEY_ONBOARDING_CLIPBOARD_SUGGESTIONS) ||
+            legacyPrefs.contains(LEGACY_KEY_ONBOARDING_HAPTICS_ENABLED) ||
+            legacyPrefs.contains(LEGACY_KEY_ONBOARDING_HAPTICS_MODE) ||
+            legacyPrefs.contains(LEGACY_KEY_ONBOARDING_AI_DEFAULT_ENABLED)
 
         if (!hasOnboardingKeyboardPrefs) {
             return
@@ -448,14 +479,14 @@ class FlorisImeService : LifecycleInputMethodService() {
 
         lifecycleScope.launch {
             try {
-                val numberRow = flutterPrefs.getBoolean(
-                    KEY_ONBOARDING_NUMBER_ROW,
+                val numberRow = legacyPrefs.getBoolean(
+                    LEGACY_KEY_ONBOARDING_NUMBER_ROW,
                     prefs.keyboard.numberRow.get(),
                 )
                 prefs.keyboard.numberRow.set(numberRow)
 
-                val clipboardSuggestions = flutterPrefs.getBoolean(
-                    KEY_ONBOARDING_CLIPBOARD_SUGGESTIONS,
+                val clipboardSuggestions = legacyPrefs.getBoolean(
+                    LEGACY_KEY_ONBOARDING_CLIPBOARD_SUGGESTIONS,
                     prefs.clipboard.suggestionEnabled.get(),
                 )
                 prefs.clipboard.suggestionEnabled.set(clipboardSuggestions)
@@ -466,13 +497,13 @@ class FlorisImeService : LifecycleInputMethodService() {
                 // still opens an empty / disabled panel.
                 prefs.clipboard.historyEnabled.set(clipboardSuggestions)
 
-                val hapticsEnabled = flutterPrefs.getBoolean(
-                    KEY_ONBOARDING_HAPTICS_ENABLED,
+                val hapticsEnabled = legacyPrefs.getBoolean(
+                    LEGACY_KEY_ONBOARDING_HAPTICS_ENABLED,
                     prefs.inputFeedback.hapticEnabled.get(),
                 )
                 prefs.inputFeedback.hapticEnabled.set(hapticsEnabled)
 
-                val hapticsMode = flutterPrefs.getString(KEY_ONBOARDING_HAPTICS_MODE, null)
+                val hapticsMode = legacyPrefs.getString(LEGACY_KEY_ONBOARDING_HAPTICS_MODE, null)
                 val activationMode = if (hapticsMode == "alwaysVibrate") {
                     InputFeedbackActivationMode.IGNORE_SYSTEM_SETTINGS
                 } else {
@@ -486,21 +517,13 @@ class FlorisImeService : LifecycleInputMethodService() {
                 prefs.inputFeedback.hapticActivationMode.set(activationMode)
                 prefs.inputFeedback.hapticVibrationMode.set(vibrationMode)
 
-                val aiEnabled = flutterPrefs.getBoolean(
-                    KEY_ONBOARDING_AI_DEFAULT_ENABLED,
-                    flutterPrefs.getBoolean(KEY_PARAPHRASER_ENABLED, false),
-                )
-                if (flutterPrefs.getBoolean(KEY_PARAPHRASER_ENABLED, false) != aiEnabled) {
-                    flutterPrefs.edit().putBoolean(KEY_PARAPHRASER_ENABLED, aiEnabled).apply()
-                }
-
-                // Clear onboarding values after first sync so native settings are not overwritten again
-                flutterPrefs.edit()
-                    .remove(KEY_ONBOARDING_NUMBER_ROW)
-                    .remove(KEY_ONBOARDING_CLIPBOARD_SUGGESTIONS)
-                    .remove(KEY_ONBOARDING_HAPTICS_ENABLED)
-                    .remove(KEY_ONBOARDING_HAPTICS_MODE)
-                    .remove(KEY_ONBOARDING_AI_DEFAULT_ENABLED)
+                // Clear former onboarding values after copying them so native settings stay in control.
+                legacyPrefs.edit()
+                    .remove(LEGACY_KEY_ONBOARDING_NUMBER_ROW)
+                    .remove(LEGACY_KEY_ONBOARDING_CLIPBOARD_SUGGESTIONS)
+                    .remove(LEGACY_KEY_ONBOARDING_HAPTICS_ENABLED)
+                    .remove(LEGACY_KEY_ONBOARDING_HAPTICS_MODE)
+                    .remove(LEGACY_KEY_ONBOARDING_AI_DEFAULT_ENABLED)
                     .apply()
             } catch (e: Exception) {
                 flogWarning { "Unable to sync onboarding keyboard preferences: ${e.message}" }

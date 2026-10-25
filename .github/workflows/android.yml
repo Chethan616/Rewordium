@@ -4,6 +4,8 @@ on:
   push:
     branches:
       - main
+    tags:
+      - 'v*'
   workflow_dispatch:
 
 concurrency:
@@ -27,74 +29,51 @@ jobs:
           distribution: 'temurin'
           cache: 'gradle'
 
-      # Same Flutter as local release builds, so CI output matches.
-      - name: Set up Flutter
-        uses: subosito/flutter-action@v2
-        with:
-          channel: 'stable'
-          flutter-version: '3.44.0'
-          cache: true
+      - name: Install Android SDK components
+        uses: android-actions/setup-android@v3
+      - run: sdkmanager "platforms;android-37" "build-tools;36.1.0" "ndk;28.2.13676358" "cmake;4.1.2"
 
-      - name: Prepare config
+      - name: Restore Firebase Android config
         env:
-          GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
-          KLIPY_API_KEY: ${{ secrets.KLIPY_API_KEY }}
-          FIREBASE_API_KEY: ${{ secrets.FIREBASE_API_KEY }}
+          GOOGLE_SERVICES_JSON_BASE64: ${{ secrets.GOOGLE_SERVICES_JSON_BASE64 }}
         run: |
-          mkdir -p assets/config
-          touch assets/config/.gitkeep
-
-          # The Android Firebase key ships inside every APK and is already in
-          # google-services.json; a FIREBASE_API_KEY secret only overrides it.
-          if [ -z "${FIREBASE_API_KEY}" ]; then
-            FIREBASE_API_KEY=$(jq -r '.client[0].api_key[0].current_key' android/app/google-services.json)
+          if [ -z "$GOOGLE_SERVICES_JSON_BASE64" ]; then
+            echo "::error::GOOGLE_SERVICES_JSON_BASE64 secret is required for the Android release build."
+            exit 1
           fi
+          echo "$GOOGLE_SERVICES_JSON_BASE64" | base64 --decode > android/app/google-services.json
 
-          # .env is a Flutter asset (read at runtime) and a Gradle key source.
-          {
-            echo "GROQ_API_KEY=${GROQ_API_KEY}"
-            echo "KLIPY_API_KEY=${KLIPY_API_KEY}"
-            echo "FIREBASE_API_KEY=${FIREBASE_API_KEY}"
-          } > .env
-
-          [ -n "${GROQ_API_KEY}" ] || echo "::warning::GROQ_API_KEY secret is not set: AI features are disabled in this build."
-          [ -n "${KLIPY_API_KEY}" ] || echo "::warning::KLIPY_API_KEY secret is not set: the GIF panel is disabled in this build."
-
-      - name: Decode keystore
+      - name: Decode upload keystore
         env:
           KEYSTORE_BASE64: ${{ secrets.KEYSTORE_BASE64 }}
         run: |
-          if [ -z "${KEYSTORE_BASE64}" ]; then
-            echo "::error::KEYSTORE_BASE64 secret is not set; release builds must be signed with the upload key."
+          if [ -z "$KEYSTORE_BASE64" ]; then
+            echo "::error::KEYSTORE_BASE64 secret is required to sign release builds."
             exit 1
           fi
-          echo "${KEYSTORE_BASE64}" | base64 --decode > android/app/keystore.jks
+          echo "$KEYSTORE_BASE64" | base64 --decode > android/app/keystore.jks
 
-      - name: Grant execute permission for gradlew
+      - name: Grant execute permission for Gradle wrapper
         run: chmod +x android/gradlew
 
-      - name: Get dependencies
-        run: flutter pub get
-
-      - name: Build APK and App Bundle
+      - name: Build APK and Play Store bundle
         env:
           KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
           KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
           KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
           GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
           KLIPY_API_KEY: ${{ secrets.KLIPY_API_KEY }}
-          FLUTTER_NO_DAEMON: true
         run: |
-          flutter build apk --release
-          flutter build appbundle --release
+          cd android
+          ./gradlew :app:assembleRelease :app:bundleRelease --no-daemon
 
-      - name: Upload artifacts
+      - name: Upload release artifacts
         uses: actions/upload-artifact@v4
         with:
           name: rewordium-release
           path: |
-            build/app/outputs/flutter-apk/app-release.apk
-            build/app/outputs/bundle/release/app-release.aab
+            android/app/build/outputs/apk/release/app-release.apk
+            android/app/build/outputs/bundle/release/app-release.aab
           if-no-files-found: error
           retention-days: 14
 
@@ -103,8 +82,8 @@ jobs:
         if: startsWith(github.ref, 'refs/tags/')
         with:
           files: |
-            build/app/outputs/flutter-apk/app-release.apk
-            build/app/outputs/bundle/release/app-release.aab
+            android/app/build/outputs/apk/release/app-release.apk
+            android/app/build/outputs/bundle/release/app-release.aab
           draft: false
           prerelease: false
         env:

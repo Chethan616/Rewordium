@@ -18,6 +18,8 @@ package com.noxquill.rewordium.keyboard.ime.smartbar.quickaction
 
 import android.annotation.SuppressLint
 import android.content.Context
+import android.content.SharedPreferences
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.fillMaxSize
@@ -25,7 +27,9 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
@@ -38,8 +42,8 @@ import com.noxquill.rewordium.keyboard.keyboardManager
 import dev.patrickgold.jetpref.datastore.model.observeAsState
 import org.florisboard.lib.snygg.ui.SnyggRow
 
-private const val FLUTTER_PREFS_NAME = "FlutterSharedPreferences"
-private const val KEY_AI_ENABLED = "flutter.paraphraser_enabled"
+private const val KEYBOARD_PREFS_NAME = "keyboard_settings"
+private const val KEY_AI_ENABLED = "ai_rewrite_enabled"
 
 internal val ToggleOverflowPanelAction = QuickAction.InsertKey(TextKeyData.TOGGLE_ACTIONS_OVERFLOW)
 
@@ -59,10 +63,16 @@ fun QuickActionsRow(
     val actionArrangement by prefs.smartbar.actionArrangement.observeAsState()
     val sharedActionsExpanded by prefs.smartbar.sharedActionsExpanded.observeAsState()
     
-    // Check if AI features are enabled from Flutter SharedPreferences
-    val isAiEnabled = remember {
-        val flutterPrefs = context.getSharedPreferences(FLUTTER_PREFS_NAME, Context.MODE_PRIVATE)
-        flutterPrefs.getBoolean(KEY_AI_ENABLED, false)
+    val keyboardPrefs = remember {
+        context.getSharedPreferences(KEYBOARD_PREFS_NAME, Context.MODE_PRIVATE)
+    }
+    var isAiEnabled by remember { mutableStateOf(keyboardPrefs.getBoolean(KEY_AI_ENABLED, false)) }
+    DisposableEffect(keyboardPrefs) {
+        val listener = SharedPreferences.OnSharedPreferenceChangeListener { prefs, key ->
+            if (key == KEY_AI_ENABLED) isAiEnabled = prefs?.getBoolean(KEY_AI_ENABLED, false) ?: false
+        }
+        keyboardPrefs.registerOnSharedPreferenceChangeListener(listener)
+        onDispose { keyboardPrefs.unregisterOnSharedPreferenceChangeListener(listener) }
     }
 
     val dynamicActions = remember(smartbarLayout, actionArrangement, isAiEnabled) {

@@ -1,14 +1,3 @@
-# Flutter-specific rules.
-# These rules are required by the Flutter framework.
--keep class io.flutter.app.** { *; }
--keep class io.flutter.plugin.**  { *; }
--keep class io.flutter.util.**  { *; }
--keep class io.flutter.view.**  { *; }
--keep class io.flutter.embedding.**  { *; }
--keep class io.flutter.plugins.** { *; }
--keep class io.flutter.plugins.GeneratedPluginRegistrant { *; }
--dontwarn io.flutter.embedding.**
-
 # ==============================================================================
 # FIREBASE AUTH & GOOGLE SIGN-IN — CRITICAL FOR RELEASE BUILDS
 # Without these rules, minification breaks auth in release APKs.
@@ -191,9 +180,6 @@
 # Keep Google Play Core classes
 -keep class com.google.android.play.core.** { *; }
 -keep interface com.google.android.play.core.** { *; }
-
-# Keep Flutter Play Store Split Application
--keep class io.flutter.app.FlutterPlayStoreSplitApplication { *; }
 
 # Keep SplitCompatApplication (the missing class from the error)
 -keep class com.google.android.play.core.splitcompat.SplitCompatApplication { *; }
@@ -432,9 +418,8 @@
 # ==============================================================================
 # GOOGLE ML KIT TEXT RECOGNITION
 # ==============================================================================
-# The Flutter plugin references optional script-specific recognizers (Chinese,
-# Devanagari, Japanese, Korean) that aren't bundled unless their separate
-# dependencies are added. Tell R8 to silently ignore them.
+# The native OCR flow supports script-specific recognizers when their optional
+# models aren't bundled. Tell R8 to silently ignore those absent model classes.
 -dontwarn com.google.mlkit.vision.text.chinese.**
 -dontwarn com.google.mlkit.vision.text.devanagari.**
 -dontwarn com.google.mlkit.vision.text.japanese.**
@@ -476,5 +461,5 @@
 -keep class androidx.emoji2.** { *; }
 -keep class androidx.emoji.text.** { *; }
 
-# Keep QuickSettingsHelper for Flutter Quick Settings
+# Keep the keyboard Quick Settings integration.
 -keep class com.noxquill.rewordium.keyboard.app.QuickSettingsHelper { *; }

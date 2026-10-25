@@ -2,7 +2,7 @@ package com.noxquill.rewordium.util
 
 /**
  * Constants for keyboard settings and preferences.
- * Used for communication between the Flutter app and keyboard services.
+ * Shared by the Rewordium app, accessibility service, and keyboard IME.
  */
 object KeyboardConstants {
     // SharedPreferences name

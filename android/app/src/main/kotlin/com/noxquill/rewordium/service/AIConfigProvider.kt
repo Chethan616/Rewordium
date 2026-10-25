@@ -7,7 +7,7 @@ import com.noxquill.rewordium.BuildConfig
 
 /**
  * Provides AI configuration from SharedPreferences
- * This allows the accessibility service to use the AI settings configured in the Flutter app
+ * This allows the accessibility service to use the AI settings configured in the Rewordium app
  */
 object AIConfigProvider {
     private const val TAG = "AIConfigProvider"
@@ -113,7 +113,7 @@ object AIConfigProvider {
             val isAdvancedEnabled = prefs.getBoolean(KEY_ADVANCED_AI_ENABLED, false)
             
             if (isAdvancedEnabled) {
-                // Use advanced settings from Flutter
+                // Use advanced settings from the native Rewordium app
                 val provider = prefs.getString(KEY_AI_PROVIDER, PROVIDER_GROQ) ?: PROVIDER_GROQ
                 val apiKey = prefs.getString(KEY_AI_API_KEY, "") ?: ""
                 val model = prefs.getString(KEY_AI_MODEL, DEFAULT_MODEL) ?: DEFAULT_MODEL

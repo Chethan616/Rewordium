@@ -888,9 +888,8 @@ class KeyboardManager(context: Context) : InputKeyEventReceiver {
      * Automatically detects AI apps and activates Prompt Enhancer mode.
      */
     private fun handleAiRewrite() {
-        // Check if AI features are enabled from Flutter SharedPreferences
-        val flutterPrefs = appContext.getSharedPreferences("FlutterSharedPreferences", android.content.Context.MODE_PRIVATE)
-        val isAiEnabled = flutterPrefs.getBoolean("flutter.paraphraser_enabled", false)
+        val keyboardPrefs = appContext.getSharedPreferences("keyboard_settings", android.content.Context.MODE_PRIVATE)
+        val isAiEnabled = keyboardPrefs.getBoolean("ai_rewrite_enabled", false)
         
         if (!isAiEnabled) {
             lastToastReference.get()?.cancel()

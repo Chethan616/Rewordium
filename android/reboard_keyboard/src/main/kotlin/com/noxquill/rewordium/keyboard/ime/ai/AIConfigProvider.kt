@@ -22,7 +22,7 @@ import com.noxquill.rewordium.keyboard.BuildConfig
 
 /**
  * Provides AI configuration from SharedPreferences for the keyboard module.
- * This allows the keyboard to use AI settings configured in the main Flutter app.
+ * This allows the keyboard to use AI settings configured in the native Rewordium app.
  */
 object AIConfigProvider {
     private const val TAG = "AIConfigProvider-KB"
@@ -118,7 +118,7 @@ object AIConfigProvider {
             val isAdvancedEnabled = prefs.getBoolean(KEY_ADVANCED_AI_ENABLED, false)
             
             if (isAdvancedEnabled) {
-                // Use advanced settings from Flutter
+                // Use advanced settings from the Rewordium app.
                 val provider = prefs.getString(KEY_AI_PROVIDER, PROVIDER_GROQ) ?: PROVIDER_GROQ
                 val apiKey = prefs.getString(KEY_AI_API_KEY, "") ?: ""
                 val model = prefs.getString(KEY_AI_MODEL, DEFAULT_MODEL) ?: DEFAULT_MODEL

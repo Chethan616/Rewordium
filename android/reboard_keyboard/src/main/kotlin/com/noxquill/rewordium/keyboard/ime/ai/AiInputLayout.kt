@@ -288,7 +288,12 @@ fun AiInputLayout(
         job?.cancel()
         state = PanelState.Working(tool)
         job = scope.launch {
-            val options = AiOptions(targetLanguage = language, appName = aiAppName)
+            val keyboardPrefs = context.getSharedPreferences("keyboard_settings", Context.MODE_PRIVATE)
+            val options = AiOptions(
+                targetLanguage = language,
+                appName = aiAppName,
+                instruction = keyboardPrefs.getString("active_persona_description", null),
+            )
             val result = aiManager.runTool(tool, input, options)
             accountVersion++
             state = result.fold(

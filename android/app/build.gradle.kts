@@ -6,8 +6,7 @@ plugins {
     id("com.google.gms.google-services")
     id("com.google.firebase.appdistribution")
     id("kotlin-android")
-    id("dev.flutter.flutter-gradle-plugin")
-    id("org.jetbrains.kotlin.plugin.compose") version "2.1.21"  // Required for Compose in Kotlin 2.0+
+    id("org.jetbrains.kotlin.plugin.compose")
 }
 
 val keystoreProperties = Properties()
@@ -23,9 +22,8 @@ if (localPropertiesFile.exists()) {
     localProperties.load(localPropertiesFile.inputStream())
 }
 
-// This part is for Flutter versioning, and it's already in correct Kotlin syntax.
-val flutterVersionCode: String = localProperties.getProperty("flutter.versionCode") ?: "1"
-val flutterVersionName: String = localProperties.getProperty("flutter.versionName") ?: "1.0"
+val projectVersionCode: String = localProperties.getProperty("projectVersionCode") ?: "124"
+val projectVersionName: String = localProperties.getProperty("projectVersionName") ?: "3.1.0"
 
 // A helper function to get other properties (like your API key)
 fun getProperty(key: String): String {
@@ -91,7 +89,7 @@ if (localFirebaseKey.isNotBlank()) {
 
 android {
     namespace = "com.noxquill.rewordium"
-    compileSdk = 36
+    compileSdk = 37
     ndkVersion = "28.2.13676358" // NDK r28 with 16 KB page size support
 
     compileOptions {
@@ -112,6 +110,7 @@ android {
 
     buildFeatures {
         buildConfig = true
+        resValues = true
         compose = true // ENABLE JETPACK COMPOSE
     }
 
@@ -142,8 +141,8 @@ android {
         applicationId = "com.noxquill.rewordium"
         minSdk = 26
         targetSdk = 36
-        versionCode = flutterVersionCode.toInt()
-        versionName = flutterVersionName
+        versionCode = projectVersionCode.toInt()
+        versionName = projectVersionName
         vectorDrawables.useSupportLibrary = true
 
         multiDexEnabled = true
@@ -216,10 +215,6 @@ android {
     }
 }
 
-flutter {
-    source = "../.."
-}
-
 dependencies {
     // Your dependencies were duplicated, so I have cleaned them up.
     // This is the complete, correct set.
@@ -256,13 +251,15 @@ dependencies {
     
     // ========== JETPACK COMPOSE ==========
     // Compose BOM (Bill of Materials) - manages Compose versions
-    implementation(platform("androidx.compose:compose-bom:2026.02.01"))
+    implementation(platform("androidx.compose:compose-bom-beta:2026.10.01"))
     implementation("androidx.compose.ui:ui")
     implementation("androidx.compose.ui:ui-graphics")
     implementation("androidx.compose.ui:ui-tooling-preview")
     implementation("androidx.compose.foundation:foundation")
+    implementation("androidx.compose.animation:animation")
+    implementation("androidx.compose.material:material-icons-extended")
     implementation("androidx.compose.material3:material3")
-    implementation("androidx.activity:activity-compose:1.9.3")
+    implementation("androidx.activity:activity-compose:1.12.1")
     implementation("androidx.compose.runtime:runtime")
     
     debugImplementation("androidx.compose.ui:ui-tooling")
@@ -274,6 +271,9 @@ dependencies {
     implementation("com.google.firebase:firebase-firestore")
     implementation("com.google.firebase:firebase-analytics")
     implementation("com.google.firebase:firebase-messaging")
+    implementation("com.google.firebase:firebase-inappmessaging-display")
+    implementation("com.google.android.gms:play-services-auth:21.3.0")
+    implementation("com.android.billingclient:billing:8.3.0")
     
     // Google Play In-App Updates (replaces deprecated Play Core)
     implementation("com.google.android.play:app-update:2.1.0")
@@ -290,9 +290,9 @@ dependencies {
     implementation(project(":reboard_keyboard"))
 
     // ========== ML KIT TEXT RECOGNITION LANGUAGE PACKS ==========
-    // Latin is bundled by default with google_mlkit_text_recognition Flutter plugin.
-    // Add extra script packs for multi-language document scanning:
+    // Script packs for native document text recognition:
     implementation("com.google.mlkit:text-recognition-chinese:16.0.1")
+    implementation("com.google.mlkit:text-recognition:16.0.1")
     implementation("com.google.mlkit:text-recognition-devanagari:16.0.1")
     implementation("com.google.mlkit:text-recognition-japanese:16.0.1")
     implementation("com.google.mlkit:text-recognition-korean:16.0.1")

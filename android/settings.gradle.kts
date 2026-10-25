@@ -1,17 +1,4 @@
 pluginManagement {
-    val flutterSdkPath = run {
-        val properties = java.util.Properties()
-        val localPropertiesFile = file("local.properties")
-        if (localPropertiesFile.exists()) {
-            localPropertiesFile.inputStream().use { properties.load(it) }
-        }
-        val sdkPath = properties.getProperty("flutter.sdk") ?: System.getenv("FLUTTER_ROOT")
-        require(sdkPath != null) { "flutter.sdk not set in local.properties and FLUTTER_ROOT environment variable not found" }
-        sdkPath
-    }
-
-    includeBuild("$flutterSdkPath/packages/flutter_tools/gradle")
-
     repositories {
         google()
         mavenCentral()
@@ -21,18 +8,16 @@ pluginManagement {
 }
 
 plugins {
-    id("dev.flutter.flutter-plugin-loader") version "1.0.0"
-    id("com.android.application") version "8.13.2" apply false
-    id("com.android.library") version "8.13.2" apply false  // For backdrop module
-    // START: FlutterFire Configuration
+    id("com.android.application") version "9.1.1" apply false
+    id("com.android.library") version "9.1.1" apply false
+    // Firebase services used by the native app.
     id("com.google.gms.google-services") version("4.4.2") apply false
     id("com.google.firebase.appdistribution") version "5.0.0" apply false
-    // END: FlutterFire Configuration
-    id("org.jetbrains.kotlin.android") version "2.1.21" apply false
-    id("org.jetbrains.kotlin.jvm") version "2.1.21" apply false  // For pure JVM modules
-    id("org.jetbrains.kotlin.plugin.compose") version "2.1.21" apply false  // For Compose in backdrop
-    id("org.jetbrains.kotlin.plugin.serialization") version "2.1.21" apply false  // For ReBoard
-    id("com.google.devtools.ksp") version "2.1.21-2.0.2" apply false  // For ReBoard Room/KSP
+    id("org.jetbrains.kotlin.android") version "2.2.10" apply false
+    id("org.jetbrains.kotlin.jvm") version "2.2.10" apply false
+    id("org.jetbrains.kotlin.plugin.compose") version "2.2.10" apply false
+    id("org.jetbrains.kotlin.plugin.serialization") version "2.2.10" apply false
+    id("com.google.devtools.ksp") version "2.2.10-2.0.2" apply false
     id("com.mikepenz.aboutlibraries.plugin") version "11.2.3" apply false  // For ReBoard
     id("org.jetbrains.kotlinx.kover") version "0.9.1" apply false  // For ReBoard testing
 }

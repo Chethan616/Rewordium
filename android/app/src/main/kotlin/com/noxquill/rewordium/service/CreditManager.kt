@@ -39,8 +39,8 @@ class CreditManager(context: Context) {
     }
 
     fun consumeCredit() {
-        // NOTE: Credit consumption is now handled by Flutter/Firebase.
+        // Credit consumption is handled by the native Firebase repository.
         // This method is kept for compatibility but doesn't actually consume credits.
-        // The actual consumption happens in Flutter and gets synced back to Android via broadcast.
+        // The keyboard receives updated credit state through the native settings bridge.
     }
 }
