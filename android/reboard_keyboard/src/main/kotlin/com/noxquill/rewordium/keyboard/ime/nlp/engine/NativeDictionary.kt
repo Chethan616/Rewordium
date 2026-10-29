@@ -67,6 +67,10 @@ class NativeDictionary {
     private val unigramCount = AtomicLong(0)
     private val bigramCount = AtomicLong(0)
 
+    /** Word pairs the native dictionary accepted at load (for diagnostics and benchmarks). */
+    val loadedBigrams: Long get() = bigramCount.get()
+    val loadedUnigrams: Long get() = unigramCount.get()
+
     val isLoaded: Boolean get() = loaded
 
     /**
@@ -89,7 +93,8 @@ class NativeDictionary {
     suspend fun load(
         words: Map<String, Int>,
         offensiveWords: Set<String>,
-        bigrams: Map<String, Map<String, Int>>,
+        corpusBigrams: com.noxquill.rewordium.keyboard.ime.nlp.latin.BigramModel,
+        learnedBigrams: Map<String, Map<String, Int>>,
     ): Boolean = loadMutex.withLock {
         if (loaded) return@withLock true
         if (!LatinImeNative.ensureLoaded()) {
@@ -102,7 +107,7 @@ class NativeDictionary {
             return@withLock false
         }
         val ok = try {
-            populate(h, words, offensiveWords, bigrams)
+            populate(h, words, offensiveWords, corpusBigrams, learnedBigrams)
         } catch (t: Throwable) {
             flogError { "NativeDictionary: populate failed: $t" }
             false
@@ -255,11 +260,18 @@ class NativeDictionary {
         return LatinImeNative.nativeRemoveUnigram(handleRef, word)
     }
 
+    /** Sets a word pair's score (on the 0..255 scale), replacing a learned one. */
+    fun setPairScore(prev: String, next: String, score: Int): Boolean {
+        if (!loaded || prev.isEmpty() || next.isEmpty()) return false
+        return LatinImeNative.nativeAddBigram(handleRef, prev, next, score.coerceIn(0, 255))
+    }
+
     private fun populate(
         h: Long,
         words: Map<String, Int>,
         offensiveWords: Set<String>,
-        bigrams: Map<String, Map<String, Int>>,
+        corpusBigrams: com.noxquill.rewordium.keyboard.ime.nlp.latin.BigramModel,
+        learnedBigrams: Map<String, Map<String, Int>>,
     ): Boolean {
         var unigrams = 0L
         for ((word, freq) in words) {
@@ -277,16 +289,26 @@ class NativeDictionary {
             return false
         }
         var bigramsAdded = 0L
-        for ((prev, nextMap) in bigrams) {
-            if (prev.isEmpty()) continue
-            for ((next, freq) in nextMap) {
-                if (next.isEmpty()) continue
-                if (LatinImeNative.nativeAddBigram(h, prev, next, freq.coerceIn(0, 255))) {
-                    bigramsAdded++
-                }
-            }
+        var bigramsFailed = 0L
+        fun add(prev: String, next: String, freq: Int) {
+            if (prev.isEmpty() || next.isEmpty() || prev !in words || next !in words) return
+            if (LatinImeNative.nativeAddBigram(h, prev, next, freq.coerceIn(0, 255))) bigramsAdded++ else bigramsFailed++
+        }
+        // Corpus pairs first (each word's strongest continuations: the decoder only needs them to rank its
+        // candidates, which the full model re-ranks in Kotlin); the user's own learned pairs override them.
+        corpusBigrams.forEachTopPair(NATIVE_PAIRS_PER_WORD) { prev, next, score ->
+            if (learnedBigrams[prev]?.containsKey(next) != true) add(prev, next, score)
+        }
+        for ((prev, nextMap) in learnedBigrams) {
+            for ((next, freq) in nextMap) add(prev, next, freq)
         }
         bigramCount.set(bigramsAdded)
+        if (bigramsFailed > 0) flogError { "NativeDictionary: $bigramsFailed bigrams rejected (dictionary region full?)" }
         return true
+    }
+
+    private companion object {
+        /** Corpus pairs per word given to the decoder (the strongest ones). */
+        const val NATIVE_PAIRS_PER_WORD = 128
     }
 }

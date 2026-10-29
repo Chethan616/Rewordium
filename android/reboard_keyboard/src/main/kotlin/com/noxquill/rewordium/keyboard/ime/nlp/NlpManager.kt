@@ -26,6 +26,7 @@ import com.noxquill.rewordium.keyboard.editorInstance
 import com.noxquill.rewordium.keyboard.ime.clipboard.provider.ClipboardItem
 import com.noxquill.rewordium.keyboard.ime.clipboard.provider.ItemType
 import com.noxquill.rewordium.keyboard.ime.core.Subtype
+import com.noxquill.rewordium.keyboard.ime.editor.ComposingWord
 import com.noxquill.rewordium.keyboard.ime.editor.EditorContent
 import com.noxquill.rewordium.keyboard.ime.editor.EditorRange
 import com.noxquill.rewordium.keyboard.ime.editor.InputAttributes
@@ -159,13 +160,23 @@ class NlpManager(context: Context) {
      * the calling thread (UI / IME input pipeline) never blocks.
      */
     fun learnWord(subtype: Subtype, word: String) {
-        if (word.isBlank()) return
+        if (word.isBlank() || !isLearningAllowed()) return
         scope.launch {
             val provider = getSuggestionProvider(subtype)
             if (provider is LatinLanguageProvider) {
                 provider.learnWord(subtype, word)
             }
         }
+    }
+
+    /**
+     * Forgets everything the keyboard learned from typing (personal words, word pairs, emoji
+     * associations) for the active language. The user dictionary and contacts are kept.
+     */
+    suspend fun forgetLearning() {
+        val subtype = subtypeManager.activeSubtype
+        (getSuggestionProvider(subtype) as? LatinLanguageProvider)?.forgetLearning(subtype)
+        emojiSuggestionProvider.forgetLearning()
     }
 
     fun unlearnWord(subtype: Subtype, word: String) {
@@ -214,7 +225,7 @@ class NlpManager(context: Context) {
      * us to record an association against the wrong context.
      */
     fun notifyEmojiPickedFromPalette(subtype: Subtype, emojiValue: String) {
-        if (emojiValue.isBlank()) return
+        if (emojiValue.isBlank() || !isLearningAllowed()) return
         val textBefore = editorInstance.activeContent.textBeforeSelection.toString().trimEnd()
         if (textBefore.isBlank()) return
         val lastSpace = textBefore.lastIndexOf(' ')
@@ -357,6 +368,8 @@ class NlpManager(context: Context) {
             // delay elapses, no NLP work is done — eliminating redundant dictionary lookups
             // during rapid typing bursts.
             delay(50)
+            val learningAllowed = isLearningAllowed()
+            emojiSuggestionProvider.learningAllowed = learningAllowed
             val emojiSuggestions = when {
                 prefs.emoji.suggestionEnabled.get() -> {
                     emojiSuggestionProvider.suggest(
@@ -375,6 +388,7 @@ class NlpManager(context: Context) {
                     val provider = getSuggestionProvider(subtype)
                     if (provider is LatinLanguageProvider) {
                         provider.autocorrectAllowedForField = isAutocorrectAllowedForField()
+                        provider.learningAllowed = learningAllowed
                     }
                     provider.suggest(
                         subtype = subtype,
@@ -395,6 +409,30 @@ class NlpManager(context: Context) {
                     })
                 }
             }
+        }
+    }
+
+    /**
+     * Whether what is typed now may be learned (personal words, word pairs, emoji associations). Never in
+     * private mode, never when the app asks for no personalised learning (incognito tabs, banking apps), and
+     * never in password, e-mail, URL or number fields: what is typed there is credentials and addresses,
+     * not the user's vocabulary.
+     */
+    fun isLearningAllowed(): Boolean {
+        if (keyboardManager.activeState.isIncognitoMode) return false
+        if (keyboardManager.activeState.keyVariation != KeyVariation.NORMAL) return false
+        val info = editorInstance.activeInfo
+        if (info.imeOptions.flagNoPersonalizedLearning) return false
+        val attributes = info.inputAttributes
+        if (attributes.type != InputAttributes.Type.TEXT) return false
+        return when (attributes.variation) {
+            InputAttributes.Variation.PASSWORD,
+            InputAttributes.Variation.VISIBLE_PASSWORD,
+            InputAttributes.Variation.WEB_PASSWORD,
+            InputAttributes.Variation.URI,
+            InputAttributes.Variation.EMAIL_ADDRESS,
+            InputAttributes.Variation.WEB_EMAIL_ADDRESS -> false
+            else -> true
         }
     }
 
@@ -461,6 +499,8 @@ class NlpManager(context: Context) {
         val content = editorInstance.activeContent
         val composing = content.composingText.toString()
         if (composing.isBlank()) return null
+        // A separator typed inside a word splits it ("lo|ve" + space): there is no finished word to correct.
+        if (!ComposingWord.cursorAtEnd(content.localComposing, content.localSelection.start)) return null
         if (!provider.allowsAutocorrectBefore(content, separator)) return null
         val state = autoCommitState
         if (state.first == composing) return state.second

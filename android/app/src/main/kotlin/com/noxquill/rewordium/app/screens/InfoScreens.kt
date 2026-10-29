@@ -135,6 +135,10 @@ fun LicensesScreen(onBack: () -> Unit, onOpenLink: (String) -> Unit) {
     val entries = listOf(
         LicenseEntry("ReBoard / FlorisBoard", "Apache License 2.0 · keyboard foundation", "https://github.com/florisboard/florisboard"),
         LicenseEntry("AOSP LatinIME", "Apache License 2.0 · upstream notices included", "https://android.googlesource.com/platform/packages/inputmethods/LatinIME"),
+        LicenseEntry("Tatoeba sentences", "CC BY 2.0 FR · word prediction statistics derived from tatoeba.org", "https://tatoeba.org/en/downloads"),
+        LicenseEntry("FUTO Swipe dataset", "MIT License · © 2025 FUTO · sentence lists for prediction, swipes for testing", "https://huggingface.co/datasets/futo-org/swipe.futo.org"),
+        LicenseEntry("Mozilla Common Voice sentences", "CC0 · via the FUTO Swipe dataset", "https://commonvoice.mozilla.org"),
+        LicenseEntry("C4 (Colossal Clean Crawled Corpus)", "ODC-BY 1.0 · Allen Institute for AI · word prediction statistics", "https://huggingface.co/datasets/allenai/c4"),
         LicenseEntry("Jetpack Compose and Material 3", "Apache License 2.0", "https://developer.android.com/jetpack/compose"),
         LicenseEntry("Material 3 Expressive patterns", "Apache License 2.0 · meticha", "https://github.com/meticha/material-3-expressive-catalog"),
         LicenseEntry("MaterialKolor", "MIT License · seed colour schemes", "https://github.com/jordond/MaterialKolor"),

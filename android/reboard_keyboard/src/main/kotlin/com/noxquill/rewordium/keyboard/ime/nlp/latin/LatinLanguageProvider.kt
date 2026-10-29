@@ -57,6 +57,7 @@ import kotlinx.serialization.builtins.serializer
 import kotlinx.serialization.json.Json
 import org.florisboard.lib.android.readText
 import kotlin.math.abs
+import kotlin.math.ln
 import kotlin.math.max
 import kotlin.math.min
 
@@ -94,7 +95,10 @@ class LatinLanguageProvider(context: Context) : SpellingProvider, SuggestionProv
         private const val WORD_CACHE_NAME = "dict_words_v3.bin"
 
         private const val WORDLIST_ASSET = "ime/dict/data.json"
-        private const val BIGRAMS_ASSET = "ime/dict/bigrams.json"
+        private const val BIGRAMS_ASSET = "ime/dict/bigrams.bin"
+        private const val TRIGRAMS_ASSET = "ime/dict/trigrams.bin"
+        private const val FOURGRAMS_ASSET = "ime/dict/fourgrams.bin"
+        private const val FIVEGRAMS_ASSET = "ime/dict/fivegrams.bin"
         private const val OFFENSIVE_ASSET = "ime/dict/offensive.json"
 
         // Rebuild the glide classifier's index after this many newly
@@ -144,7 +148,40 @@ class LatinLanguageProvider(context: Context) : SpellingProvider, SuggestionProv
         private const val TIE_BREAK_MIN_FREQ_GAIN = 10
 
         private const val NATIVE_MAX_RESULTS = 12
+        // Context ranking (see [Scorer]). Decoder candidates within this fraction of the leader's confidence
+        // compete on channel + context; the decoder's own confidence counts for this much on top.
+        private const val RERANK_MIN_RATIO = 0.15f
+        private const val DECODER_WEIGHT = 0.5
+        // A correctly spelled word is only replaced when another word is this much more likely given what
+        // was typed and the word before it (in nats; 3.5 ~ 33x), plus one step per frequency step the typed
+        // word has above COMMON_TYPED_FREQ — a common word typed exactly was most likely meant. Calibrated on
+        // the autocorrect benchmark.
+        private const val REAL_WORD_MARGIN = 3.5
+        private const val COMMON_TYPED_FREQ = 110
+        // ...and the replacement must clearly beat the next-best alternative; close calls are only offered
+        // in the suggestion strip.
+        private const val REAL_WORD_AMBIGUITY = 1.5
+        // Without a previous word only very rare typed words ("Rhe") may become very common ones ("The").
+        private const val SENTENCE_START_MAX_TYPED_FREQ = 60
+        private const val SENTENCE_START_MIN_TARGET_FREQ = 170
+        // A misspelling is left for the strip when its two best readings are this close (nats; 0.5 ~ 1.6x).
+        private const val TYPO_AMBIGUITY = 0.5
+        // Unknown words count as about as common as a rare dictionary word.
+        private const val UNKNOWN_WORD_FREQ = 40
         private const val DISPLAY_MAX_RESULTS = 8
+        // Next-word prediction: each shorter context a word falls back to costs this much (nats; "stupid
+        // backoff" with 0.4 ~ 0.92 nats). 0.2-0.6 measured within 0.3 points on held-out sentences
+        // (tools/eval_predictions.py).
+        private const val PREDICTION_BACKOFF_NATS = 0.92
+        // Word-pair continuations considered per prediction.
+        private const val PREDICTION_PAIR_POOL = 40
+        // Longest context used: four words (the five-gram model).
+        private const val MAX_CONTEXT_WORDS = 4
+        // A phrase is offered when every word in it is at least this likely in the longest context the models
+        // know, and is at most this long. Calibrated on held-out sentences (tools/eval_predictions.py).
+        private const val PHRASE_MIN_PROBABILITY = 0.4
+        private const val PHRASE_MAX_WORDS = 3
+        private const val SENTENCE_START = BigramModel.SENTENCE_START
 
         private const val NLP_STATE_PREFS = "reboard_nlp_state"
         private const val LEGACY_VOCAB_CLEANED_KEY = "legacy_personal_vocab_cleaned_v1"
@@ -156,7 +193,6 @@ class LatinLanguageProvider(context: Context) : SpellingProvider, SuggestionProv
     private val prefs by FlorisPreferenceStore
 
     private val wordMapSerializer = MapSerializer(String.serializer(), Int.serializer())
-    private val bigramSerializer = MapSerializer(String.serializer(), MapSerializer(String.serializer(), Int.serializer()))
     private val json = Json { ignoreUnknownKeys = true }
 
     /** Shipped dictionary, dictionary casing -> frequency. Immutable after load. */
@@ -166,8 +202,12 @@ class LatinLanguageProvider(context: Context) : SpellingProvider, SuggestionProv
     @Volatile private var offensiveWords: Set<String> = emptySet()
     /** Common lowercase dictionary words by first letter, for the spelling fallback. */
     @Volatile private var spellIndex: Map<Char, List<String>> = emptyMap()
-    /** Static bigrams, dictionary casing: previous word -> (next word -> score). */
-    @Volatile private var bigramData: Map<String, Map<String, Int>> = emptyMap()
+    /** Word-pair language model, dictionary casing ([BigramModel]). */
+    @Volatile private var bigramModel: BigramModel = BigramModel.EMPTY
+    /** Two-, three- and four-word context models on the same scale ([NgramModel]), longest first. */
+    @Volatile private var ngramModels: List<NgramModel> = emptyList()
+    /** Benchmarks: whether autocorrect ranking also uses the two- and three-word contexts. */
+    @androidx.annotation.VisibleForTesting internal var longContextRanking = true
 
     /** Personal vocabulary that is "real" (graduated / accepted / contacts / user dict) -> frequency. */
     private val personalWords = ConcurrentHashMap<String, Int>()
@@ -185,6 +225,8 @@ class LatinLanguageProvider(context: Context) : SpellingProvider, SuggestionProv
 
     /** Set by NlpManager per editor: false in URL / e-mail / password / filter fields. */
     @Volatile var autocorrectAllowedForField: Boolean = true
+    /** Set by NlpManager per editor ([com.noxquill.rewordium.keyboard.ime.nlp.NlpManager.isLearningAllowed]). */
+    @Volatile var learningAllowed: Boolean = true
 
     /** AOSP typing decoder dictionary. */
     internal val nativeDictionary = NativeDictionary()
@@ -224,12 +266,17 @@ class LatinLanguageProvider(context: Context) : SpellingProvider, SuggestionProv
             offensiveWords = runCatching {
                 json.decodeFromString(ListSerializer(String.serializer()), appContext.assets.readText(OFFENSIVE_ASSET)).toHashSet()
             }.getOrElse { emptySet() }
-            bigramData = runCatching {
-                json.decodeFromString(bigramSerializer, appContext.assets.readText(BIGRAMS_ASSET))
+            bigramModel = runCatching {
+                appContext.assets.open(BIGRAMS_ASSET).use { BigramModel.read(it) }
             }.getOrElse { e ->
                 flogDebug { "Failed to load bigrams: ${e.message}" }
-                emptyMap()
+                BigramModel.EMPTY
             }
+            ngramModels = listOf(
+                loadNgrams(FIVEGRAMS_ASSET, 5),
+                loadNgrams(FOURGRAMS_ASSET, 4),
+                loadNgrams(TRIGRAMS_ASSET, 3),
+            ).filter { it.contextCount > 0 }
         }
 
         if (legacyLearnedBigramsPrefs == null) {
@@ -249,7 +296,7 @@ class LatinLanguageProvider(context: Context) : SpellingProvider, SuggestionProv
                         words[word] = max(words[word] ?: 0, freq)
                     }
                     applyUsageBoosts(subtype, words)
-                    val ok = nativeDictionary.load(words, offensiveWords, mergedBigramsForNative(subtype))
+                    val ok = nativeDictionary.load(words, offensiveWords, bigramModel, learnedBigramsForNative(subtype))
                     flogDebug { "LatinLanguageProvider: native dict load = $ok" }
                 } else {
                     for ((word, freq) in personalWords) nativeDictionary.addLearnedWord(word, freq)
@@ -259,6 +306,13 @@ class LatinLanguageProvider(context: Context) : SpellingProvider, SuggestionProv
         }
         _wordDataDirtyFlow.tryEmit(subtype)
         Unit
+    }
+
+    private fun loadNgrams(asset: String, order: Int): NgramModel = runCatching {
+        appContext.assets.open(asset).use { NgramModel.read(it) }.also { check(it.order == order) }
+    }.getOrElse { e ->
+        flogDebug { "Failed to load $asset: ${e.message}" }
+        NgramModel.empty(order)
     }
 
     private fun buildSpellIndex(words: Map<String, Int>): Map<Char, List<String>> {
@@ -339,9 +393,9 @@ class LatinLanguageProvider(context: Context) : SpellingProvider, SuggestionProv
         }
     }
 
-    private fun mergedBigramsForNative(subtype: Subtype): Map<String, Map<String, Int>> {
+    /** The user's learned word pairs for the native decoder; they take precedence over corpus pairs. */
+    private fun learnedBigramsForNative(subtype: Subtype): Map<String, Map<String, Int>> {
         val merged = HashMap<String, MutableMap<String, Int>>()
-        for ((prev, next) in bigramData) merged[prev] = HashMap(next)
         for ((prev, next) in learnedBigramsStore.snapshot(subtype.primaryLocale)) { // once per load
             val cPrev = canonicalForm(prev) ?: continue
             val inner = merged.getOrPut(cPrev) { HashMap() }
@@ -376,6 +430,17 @@ class LatinLanguageProvider(context: Context) : SpellingProvider, SuggestionProv
         if (personalWords.containsKey(word)) return word
         val lower = word.lowercase()
         return if (personalWords.containsKey(lower)) lower else null
+    }
+
+    /**
+     * The form the language models and the decoder's word pairs use for [word]: the lowercase word when
+     * the vocabulary has it, so a capitalised word at the start of a sentence ("Good", "Hope") reads as
+     * the common word rather than the name; otherwise its dictionary casing ("I", "London").
+     */
+    private fun lmForm(word: String): String {
+        val lower = word.lowercase()
+        if (lower in baseWords || personalWords.containsKey(lower)) return lower
+        return canonicalForm(word) ?: word
     }
 
     /**
@@ -594,24 +659,61 @@ class LatinLanguageProvider(context: Context) : SpellingProvider, SuggestionProv
         return last == '.' || last == '!' || last == '?' || last == '\n'
     }
 
+    /**
+     * The words before the cursor that predict the next one, oldest first, in dictionary casing: up to the
+     * last [MAX_CONTEXT_WORDS] words of the current sentence, led by [SENTENCE_START] when the sentence
+     * begins within them. Stops at anything that is not a word (a number, a link), so it can be empty.
+     */
+    private fun predictionContext(textBefore: CharSequence): List<String> {
+        val text = textBefore.toString()
+        val boundary = text.indexOfLast { it == '.' || it == '!' || it == '?' || it == '\n' || it == ';' || it == ':' }
+        val tokens = text.substring(boundary + 1).split(' ', '\t').filter { it.isNotEmpty() }
+        val out = ArrayList<String>(MAX_CONTEXT_WORDS + 1)
+        var complete = true
+        for (raw in tokens.asReversed()) {
+            if (out.size == MAX_CONTEXT_WORDS) {
+                complete = false
+                break
+            }
+            val word = raw.trim { !it.isLetter() && it != '\'' && it != '’' }.replace('’', '\'')
+            if (word.isEmpty() || !word.all { it.isLetter() || it == '\'' }) {
+                complete = false
+                break
+            }
+            out.add(0, lmForm(word))
+        }
+        if (complete && out.size < MAX_CONTEXT_WORDS) out.add(0, SENTENCE_START)
+        return out
+    }
+
     private class TypingContext(
         val typed: String,
         val previousWord: String?,
         val atSentenceStart: Boolean,
         /** Attached to the text before it ("B.Tech", "e.g", "site.com", "#tag", "@name"). */
         val attachedToPrevious: Boolean = false,
+        /** The words before it, as [predictionContext] reads them. */
+        val context: List<String> = emptyList(),
     )
 
     private fun typingContextOf(content: EditorContent): TypingContext? {
         val typed = content.composingText.ifBlank { content.currentWordText }.trim()
         if (typed.isEmpty()) return null
+        // The text before the word itself. The word may run past the cursor ("lo|ve"), so this is cut at
+        // the word's start rather than assuming the word ends at the cursor.
+        val wordRange = if (content.localComposing.isValid) content.localComposing else content.localCurrentWord
         val before = content.textBeforeSelection
-        val beforeWord = if (before.endsWith(typed)) before.substring(0, before.length - typed.length) else before
+        val beforeWord = when {
+            wordRange.isValid && wordRange.start <= content.text.length -> content.text.substring(0, wordRange.start)
+            before.endsWith(typed) -> before.substring(0, before.length - typed.length)
+            else -> before
+        }
         // A previous word only counts as context within the same sentence.
         val sentenceStart = isSentenceStart(beforeWord)
         val previous = if (sentenceStart) null else extractPreviousWord(beforeWord)
         val attached = beforeWord.isNotEmpty() && beforeWord.last().let { it.isDigit() || it in ATTACHING_CHARS }
-        return TypingContext(typed, previous, sentenceStart, attached)
+        val context = if (attached) emptyList() else predictionContext(beforeWord)
+        return TypingContext(typed, previous, sentenceStart, attached, context)
     }
 
     /**
@@ -654,6 +756,128 @@ class LatinLanguageProvider(context: Context) : SpellingProvider, SuggestionProv
         return true
     }
 
+    // ── Context ranking: noisy channel + language model ─────────────────────
+
+    /**
+     * log P(word | the words before it) on the AOSP frequency scale: the word-pair score
+     * ([BigramModel.contextScore]), raised when a longer context the corpus knows well makes the word more
+     * likely still ("I want [to]"). Only strong continuations of longer contexts are stored, so their
+     * absence is no evidence against a word.
+     */
+    private fun contextFreq(ctx: TypingContext, word: String): Int {
+        val unigram = frequencyOf(word).takeIf { it > 0 } ?: UNKNOWN_WORD_FREQ
+        val prev = ctx.previousWord?.let { lmForm(it) } ?: return unigram
+        var best = bigramModel.contextScore(prev, word, unigram)
+        if (longContextRanking) {
+            val context = ctx.context
+            for (model in ngramModels) {
+                val n = model.order - 1
+                if (context.size >= n) best = max(best, model.score(context.subList(context.size - n, context.size), word))
+            }
+        }
+        return best
+    }
+
+    /**
+     * Scores candidate words for one typed word: log P(typed | word) from the
+     * tap positions ([NoisyChannel]) plus log P(word | previous word) from the
+     * language model, in nats. Higher is more likely to be what was meant.
+     */
+    private inner class Scorer(
+        private val ctx: TypingContext,
+        private val xs: IntArray,
+        private val ys: IntArray,
+        private val geometry: KeyGeometry,
+    ) {
+        fun score(word: String): Double =
+            -NoisyChannel.cost(ctx.typed, xs, ys, word, geometry) + (contextFreq(ctx, word) - 255) / bigramModel.fPerNat
+
+        fun withDecoder(result: TypingSuggestion, leader: Float): Double =
+            score(result.word) + DECODER_WEIGHT * ln(max(result.normalizedScore, 1e-3f).toDouble() / max(leader, 1e-3f))
+    }
+
+    private fun scorerFor(ctx: TypingContext): Scorer? {
+        val geometry = TypingProximity.geometry() ?: return null
+        val coords = TypingProximity.withCoordinates(ctx.typed) { _, xs, ys -> xs to ys } ?: return null
+        return Scorer(ctx, coords.first, coords.second, geometry)
+    }
+
+    /**
+     * A correctly spelled word is replaced only when there is strong evidence
+     * it was a slip ("I was rhe first" -> "the"):
+     *  * the replacement must be positively supported by the previous word —
+     *    being a more common word is not enough ("could not buy" stays);
+     *  * it must be far more likely overall, and more so the more common the
+     *    typed word is;
+     *  * it must clearly beat every other alternative — otherwise the
+     *    candidates are only offered in the strip.
+     * Names and abbreviations typed with their capitals, personal words and
+     * single letters are never touched.
+     */
+    private fun realWordCorrection(ctx: TypingContext, results: List<TypingSuggestion>, scorer: Scorer?): String? {
+        if (scorer == null || ctx.typed.length < 2) return null
+        val canonical = canonicalDictionaryForm(ctx.typed) ?: return null
+        if (canonical.any { it.isUpperCase() }) return null
+        val typedFreq = frequencyOf(canonical)
+        val prev = ctx.previousWord?.let { lmForm(it) }
+        if (prev == null && typedFreq > SENTENCE_START_MAX_TYPED_FREQ) return null
+        val typedScore = scorer.score(canonical)
+        var best: String? = null
+        var bestScore = Double.NEGATIVE_INFINITY
+        var secondScore = Double.NEGATIVE_INFINITY
+        for (result in results) {
+            val word = result.word
+            if (word.equals(canonical, ignoreCase = true) || ' ' in word || word.any { it.isUpperCase() }) continue
+            if (word.endsWith("'s")) continue
+            val freq = frequencyOf(word)
+            if (freq <= 0) continue
+            val supported = if (prev == null) {
+                freq >= SENTENCE_START_MIN_TARGET_FREQ
+            } else {
+                bigramModel.score(prev, word) >= freq
+            }
+            val score = scorer.score(word)
+            if (score > bestScore) {
+                if (supported) {
+                    secondScore = maxOf(secondScore, bestScore)
+                    best = word
+                    bestScore = score
+                } else {
+                    // A stronger but unsupported alternative still makes the case ambiguous.
+                    secondScore = maxOf(secondScore, score)
+                }
+            } else if (score > secondScore) {
+                secondScore = score
+            }
+        }
+        if (best == null) return null
+        val margin = REAL_WORD_MARGIN + max(0, typedFreq - COMMON_TYPED_FREQ) / bigramModel.fPerNat
+        if (bestScore - typedScore < margin) return null
+        if (bestScore - secondScore < REAL_WORD_AMBIGUITY) return null
+        return applyTypedCase(ctx.typed, best)
+    }
+
+    /** True when another plausible word scores within [TYPO_AMBIGUITY] of [top]. */
+    private fun isCloseCall(typed: String, top: TypingSuggestion, results: List<TypingSuggestion>, scorer: Scorer): Boolean {
+        val leader = results.firstOrNull()?.normalizedScore ?: return false
+        // Score the winner with its own decoder confidence, not the leader's it inherited for the threshold.
+        val topScore = scorer.withDecoder(results.firstOrNull { it.word == top.word } ?: top, leader)
+        return results.any { other ->
+            !other.word.equals(top.word, ignoreCase = true) && !other.word.equals(typed, ignoreCase = true) &&
+                ' ' !in other.word && !isAllCaps(other.word) &&
+                topScore - scorer.withDecoder(other, leader) < TYPO_AMBIGUITY
+        }
+    }
+
+    /** Benchmarks: each decoder candidate with its context-ranking score, best first. */
+    internal fun debugRanking(content: EditorContent): List<Pair<String, Double>> {
+        val ctx = typingContextOf(content) ?: return emptyList()
+        val scorer = scorerFor(ctx) ?: return emptyList()
+        val results = decodeTyping(ctx, NATIVE_MAX_RESULTS) ?: return emptyList()
+        val leader = results.firstOrNull()?.normalizedScore ?: 1f
+        return results.map { it.word to scorer.withDecoder(it, leader) }.sortedByDescending { it.second }
+    }
+
     /**
      * AOSP LatinIME's auto-correction decision, extended with explicit rules
      * and a "clear winner" rule for long, badly mangled words. Returns the
@@ -666,10 +890,13 @@ class LatinLanguageProvider(context: Context) : SpellingProvider, SuggestionProv
         results: List<TypingSuggestion>,
         threshold: Float?,
         respectPersonal: Boolean = true,
+        scorer: Scorer? = null,
     ): String? {
         if (threshold == null) return null
         val typed = ctx.typed
         if (!isCorrectableInput(typed) || ctx.attachedToPrevious) return null
+        // Capitals inside a word ("GitHub", "iPhone", "McDonald") were typed on purpose.
+        if (typed.drop(1).any { it.isUpperCase() } && typed.any { it.isLowerCase() }) return null
         val lower = typed.lowercase()
         if (respectPersonal && (lower in sessionAccepted || personalWords.containsKey(typed) || personalWords.containsKey(lower))) {
             return null
@@ -677,17 +904,23 @@ class LatinLanguageProvider(context: Context) : SpellingProvider, SuggestionProv
         AutocorrectRules.replacementFor(lower, ctx.previousWord?.lowercase() ?: "", ctx.atSentenceStart)?.let {
             return applyTypedCase(typed, it)
         }
-        if (typedKnown) return null
+        if (typedKnown) return realWordCorrection(ctx, results, scorer)
         // Single letters are initials, list markers or shorthand ("B", "u",
         // "r") - like Gboard, never turn them into a word ("B" -> "By").
         if (typed.length == 1) return null
-        val top = pickCorrectionTarget(typed, results)
+        val top = pickCorrectionTarget(typed, results, scorer)
             ?: return spellingFallback(typed)?.let { applyTypedCase(typed, it) }
         if (!top.isAppropriateForAutoCorrection) return null
+        // Two readings about equally likely ("fnish": fish / finish): offer both, change nothing.
+        if (scorer != null && isCloseCall(typed, top, results, scorer)) return null
         // Completing a word on space is fine when one letter is missing
         // ("becaus" -> "because"); longer extensions turn names and new
-        // words into something else ("srinivas" -> "srinivasan").
-        if (top.word.lowercase().startsWith(lower) && top.word.length - typed.length >= 2) return null
+        // words into something else ("srinivas" -> "srinivasan"). A
+        // capitalised word mid-sentence is most likely a name, which is never
+        // completed into another word ("Siddharth" -> "Siddhartha").
+        val likelyName = typed[0].isUpperCase() && !ctx.atSentenceStart
+        val maxCompletion = if (likelyName) 1 else 2
+        if (top.word.lowercase().startsWith(lower) && top.word.length - typed.length >= maxCompletion) return null
         if (top.normalizedScore >= threshold) return applyTypedCase(typed, top.word)
         // Clear winner: a long word whose best correction is a single word two
         // edits away and far ahead of every alternative ("tommorow").
@@ -769,7 +1002,7 @@ class LatinLanguageProvider(context: Context) : SpellingProvider, SuggestionProv
      *  * among near-equal candidates a much more common word wins
      *    ("suer" -> "sure", not "sued").
      */
-    private fun pickCorrectionTarget(typed: String, results: List<TypingSuggestion>): TypingSuggestion? {
+    private fun pickCorrectionTarget(typed: String, results: List<TypingSuggestion>, scorer: Scorer? = null): TypingSuggestion? {
         val candidates = results.filter { it.word != typed }
         fun acceptable(candidate: TypingSuggestion): Boolean {
             val word = candidate.word
@@ -777,6 +1010,20 @@ class LatinLanguageProvider(context: Context) : SpellingProvider, SuggestionProv
             return word.equals(typed, ignoreCase = true) && frequencyOf(word) >= COMMON_ABBREVIATION_FREQ
         }
         var top = candidates.firstOrNull { acceptable(it) } ?: return null
+        if (scorer != null) {
+            // Context ranking: the near-equals compete on how well each explains the taps plus how likely it
+            // is after the previous word ("on tim" -> "time" not "Tim", "a cance" -> "chance" not "cancer").
+            val leader = top
+            val typedHasApostrophe = typed.any { it == '\'' || it == '’' }
+            val pool = candidates.filter { candidate ->
+                acceptable(candidate) && ' ' !in candidate.word &&
+                    candidate.normalizedScore >= RERANK_MIN_RATIO * leader.normalizedScore &&
+                    (candidate === leader || candidate.isAppropriateForAutoCorrection) &&
+                    (typedHasApostrophe || !candidate.word.endsWith("'s"))
+            }
+            val best = pool.maxByOrNull { scorer.withDecoder(it, leader.normalizedScore) } ?: leader
+            return if (best === leader) leader else best.copy(normalizedScore = max(best.normalizedScore, leader.normalizedScore))
+        }
         if (typed[0].isLowerCase() && top.word[0].isUpperCase() && !isAllCaps(top.word)) {
             val lowerTwin = top.word.lowercase()
             candidates.firstOrNull {
@@ -810,7 +1057,7 @@ class LatinLanguageProvider(context: Context) : SpellingProvider, SuggestionProv
 
     private fun decodeTyping(ctx: TypingContext, maxResults: Int): List<TypingSuggestion>? {
         if (!BuildConfig.ENABLE_NATIVE_SUGGESTER || !nativeDictionary.isLoaded) return null
-        val prev = ctx.previousWord?.let { canonicalForm(it) ?: it } ?: ""
+        val prev = ctx.previousWord?.let { lmForm(it) } ?: ""
         val blockOffensive = prefs.suggestion.blockPossiblyOffensive.get()
         return TypingProximity.withCoordinates(ctx.typed) { handle, xs, ys ->
             nativeDictionary.suggestForTyping(handle, ctx.typed, xs, ys, prev, blockOffensive, maxResults)
@@ -829,7 +1076,7 @@ class LatinLanguageProvider(context: Context) : SpellingProvider, SuggestionProv
         val ctx = typingContextOf(content) ?: return null
         val results = decodeTyping(ctx, NATIVE_MAX_RESULTS) ?: emptyList()
         val typedKnown = isKnownWord(ctx.typed)
-        val correction = decideAutocorrect(ctx, typedKnown, results, threshold) ?: return null
+        val correction = decideAutocorrect(ctx, typedKnown, results, threshold, scorer = scorerFor(ctx)) ?: return null
         if (correction == ctx.typed) return null
         return WordSuggestionCandidate(
             text = correction,
@@ -850,7 +1097,7 @@ class LatinLanguageProvider(context: Context) : SpellingProvider, SuggestionProv
     ): List<SuggestionCandidate> {
         val ctx = typingContextOf(content)
         if (ctx == null || content.composingText.isBlank() && content.currentWordText.isBlank()) {
-            return nextWordPredictions(subtype, content.textBeforeSelection, maxCandidateCount)
+            return nextWordPredictions(subtype, content.textBeforeSelection, maxCandidateCount, allowPossiblyOffensive)
         }
         val results = decodeTyping(ctx, NATIVE_MAX_RESULTS)
         if (results == null) {
@@ -858,7 +1105,8 @@ class LatinLanguageProvider(context: Context) : SpellingProvider, SuggestionProv
         }
         val typed = ctx.typed
         val typedKnown = isKnownWord(typed)
-        val correction = decideAutocorrect(ctx, typedKnown, results, autocorrectThreshold())
+        val scorer = scorerFor(ctx)
+        val correction = decideAutocorrect(ctx, typedKnown, results, autocorrectThreshold(), scorer = scorer)
             ?.takeIf { it != typed }
 
         val out = ArrayList<SuggestionCandidate>(DISPLAY_MAX_RESULTS)
@@ -874,8 +1122,12 @@ class LatinLanguageProvider(context: Context) : SpellingProvider, SuggestionProv
         } else if (typedKnown) {
             add(WordSuggestionCandidate(typed, confidence = 1.0, sourceProvider = this))
         }
+        // The strip follows the same ranking as autocorrect, so the word that fits the sentence comes first
+        // ("We will be their" offers "there").
+        val leader = results.firstOrNull()?.normalizedScore ?: 1f
+        val ordered = if (scorer == null) results else results.sortedByDescending { scorer.withDecoder(it, leader) }
         var rank = 0
-        for (result in results) {
+        for (result in ordered) {
             if (result.word == typed && typedKnown) continue
             val shown = applyTypedCase(typed, result.word)
             if (shown == typed && !typedKnown) continue
@@ -886,7 +1138,7 @@ class LatinLanguageProvider(context: Context) : SpellingProvider, SuggestionProv
         if (out.size < 3) {
             // Thin decoder output (e.g. first letter only): pad with prefix
             // completions ranked by the n-gram model.
-            val prev = ctx.previousWord?.let { canonicalForm(it) ?: it } ?: ""
+            val prev = ctx.previousWord?.let { lmForm(it) } ?: ""
             for (word in nativeDictionary.getCompletions(typed.lowercase(), prev, maxCandidateCount)) {
                 add(WordSuggestionCandidate(applyTypedCase(typed, word), confidence = 0.3, sourceProvider = this))
             }
@@ -894,27 +1146,125 @@ class LatinLanguageProvider(context: Context) : SpellingProvider, SuggestionProv
         return out
     }
 
-    /** Next-word predictions after a space, from static + learned bigrams. */
-    private suspend fun nextWordPredictions(
+    /**
+     * Next-word predictions once a word is finished: from the longest context the models know (the last
+     * three words, then two, then one — see [predictNextWords]), so picking one prediction after another
+     * keeps the strip filled. At the start of a sentence they are the likely first words. An empty field
+     * shows none, so the smart bar keeps its actions there.
+     */
+    private fun nextWordPredictions(
         subtype: Subtype,
         textBeforeCursor: CharSequence,
         maxCandidateCount: Int,
+        allowPossiblyOffensive: Boolean,
     ): List<SuggestionCandidate> {
-        if (isSentenceStart(textBeforeCursor)) return emptyList()
-        val previous = extractPreviousWord(textBeforeCursor) ?: return emptyList()
-        val bigrams = getBigramSuggestions(subtype.primaryLocale, previous, "")
-        if (bigrams.isEmpty()) return emptyList()
-        return bigrams.entries
-            .sortedByDescending { it.value }
+        if (textBeforeCursor.isBlank()) return emptyList()
+        // Right after punctuation, wait for the space: a prediction committed there would stick to it.
+        val last = textBeforeCursor.last()
+        if (!last.isWhitespace() && !last.isLetter() && last != '\'' && last != '’') return emptyList()
+        val context = predictionContext(textBeforeCursor)
+        if (context.isEmpty()) return emptyList()
+        val atSentenceStart = context.size == 1 && context[0] == SENTENCE_START
+        fun allowed(word: String) = allowPossiblyOffensive || (word !in offensiveWords && word.lowercase() !in offensiveWords)
+        fun shown(text: String) = if (atSentenceStart) text.replaceFirstChar { it.titlecase() } else text
+        val candidates = predictNextWords(subtype.primaryLocale, context, maxCandidateCount * 2)
+            .asSequence()
+            .filter { (word, _) -> allowed(word) }
             .take(maxCandidateCount)
             .map { (word, score) ->
                 WordSuggestionCandidate(
-                    text = word,
-                    confidence = (score / 255.0).coerceIn(0.0, 1.0),
+                    text = shown(word),
+                    confidence = (score / 255.0).coerceIn(0.02, 1.0),
                     sourceProvider = this,
                 )
             }
+            .toMutableList()
+        // When the models are sure how the sentence goes on, offer the whole phrase second ("let me know").
+        val first = candidates.firstOrNull() ?: return candidates
+        val phrase = predictPhrase(context, lmForm(first.text.toString()))
+        if (phrase != null && phrase.all(::allowed)) {
+            candidates.add(1, WordSuggestionCandidate(
+                text = shown(phrase.joinToString(" ")),
+                confidence = first.confidence - 0.01,
+                sourceProvider = this,
+            ))
+        }
+        return candidates
     }
+
+    /**
+     * The phrase that most likely follows [context] when it starts with [first] and the models are confident
+     * of every word in it ("let me know", "see you soon"), else null. A word is confident when the longest
+     * context the models know makes it at least [PHRASE_MIN_PROBABILITY] likely.
+     */
+    internal fun predictPhrase(context: List<String>, first: String): List<String>? {
+        if (bigramModel.intercept.isNaN() || confidentNext(context) != first) return null
+        val phrase = arrayListOf(first)
+        val running = ArrayList(context).apply { add(first) }
+        while (phrase.size < PHRASE_MAX_WORDS) {
+            val next = confidentNext(running) ?: break
+            phrase.add(next)
+            running.add(next)
+        }
+        return phrase.takeIf { it.size >= 2 }
+    }
+
+    /** The top next word after [context] when the longest context the models know is confident of it. */
+    private fun confidentNext(context: List<String>): String? {
+        if (context.isEmpty()) return null
+        var best: Pair<String, Int>? = null
+        for (model in ngramModels) {
+            val n = model.order - 1
+            if (context.size < n) continue
+            best = model.best(context.subList(context.size - n, context.size)) ?: continue
+            break
+        }
+        val (word, score) = best ?: bigramModel.top(context.last(), 1).firstOrNull() ?: return null
+        if (word == SENTENCE_START || word.equals(context.last(), ignoreCase = true)) return null
+        return word.takeIf { bigramModel.probability(score) >= PHRASE_MIN_PROBABILITY }
+    }
+
+    /**
+     * The likeliest next words after [context] (see [predictionContext]) with their scores on the frequency
+     * scale, best first. The longest known context wins; each shorter context a word falls back to costs
+     * [PREDICTION_BACKOFF_NATS], counted only for contexts that were known. The user's own phrasing (learned
+     * word pairs) raises a word on top.
+     */
+    internal fun predictNextWords(locale: FlorisLocale, context: List<String>, limit: Int): List<Pair<String, Double>> {
+        if (context.isEmpty()) return emptyList()
+        val penalty = PREDICTION_BACKOFF_NATS * bigramModel.fPerNat
+        val scores = HashMap<String, Double>()
+        var backoff = 0.0
+        fun offer(pairs: List<Pair<String, Int>>) {
+            for ((word, score) in pairs) {
+                val value = score - backoff
+                if (value > (scores[word] ?: Double.NEGATIVE_INFINITY)) scores[word] = value
+            }
+        }
+        for (model in ngramModels) {
+            val n = model.order - 1
+            if (context.size < n) continue
+            val continuations = model.continuations(context.subList(context.size - n, context.size))
+            if (continuations.isEmpty()) continue
+            offer(continuations)
+            backoff += penalty
+        }
+        val prev = context.last()
+        offer(bigramModel.top(prev, PREDICTION_PAIR_POOL))
+        if (prev != SENTENCE_START) {
+            learnedBigramsStore.continuationsOf(locale, prev.lowercase()).forEach { (word, score) ->
+                val shown = canonicalForm(word) ?: word
+                val base = scores[shown] ?: ((frequencyOf(shown).takeIf { it > 0 } ?: return@forEach) - backoff - penalty)
+                scores[shown] = base + learnedPairBonus(score) * bigramModel.fPerNat
+            }
+            scores.remove(prev)
+        }
+        scores.remove(SENTENCE_START)
+        return scores.entries.sortedByDescending { it.value }.take(limit).map { it.key to it.value }
+    }
+
+    /** Nats of evidence from a learned word pair's score (each use adds 5, see LearnedBigramsStore.bump). */
+    private fun learnedPairBonus(score: Int): Double = (score * 12).coerceAtMost(255) / 255.0 * 2.5
 
     /**
      * Fallback when the native decoder is unavailable (32-bit devices, native
@@ -970,7 +1320,10 @@ class LatinLanguageProvider(context: Context) : SpellingProvider, SuggestionProv
         if (query.isBlank()) return SpellingResult.unspecified()
         if (isKnownWord(query) || !isCorrectableInput(query)) return SpellingResult.validWord()
 
-        val ctx = TypingContext(query, precedingWords.lastOrNull(), precedingWords.isEmpty())
+        val ctx = TypingContext(
+            query, precedingWords.lastOrNull(), precedingWords.isEmpty(),
+            context = predictionContext(precedingWords.joinToString(" ")),
+        )
         val native = decodeTyping(ctx, maxSuggestionCount.coerceAtLeast(3) + 2)
         if (native != null) {
             val suggestions = native.asSequence()
@@ -1052,10 +1405,10 @@ class LatinLanguageProvider(context: Context) : SpellingProvider, SuggestionProv
     ): Map<String, Int> {
         val result = HashMap<String, Int>()
         val prefix = composingWord.lowercase()
-        val canonicalPrev = canonicalForm(previousWord) ?: previousWord
-        bigramData[canonicalPrev]?.forEach { (word, score) ->
+        val canonicalPrev = lmForm(previousWord)
+        for ((word, score) in bigramModel.continuations(canonicalPrev)) {
             if (prefix.isEmpty() || word.lowercase().startsWith(prefix)) {
-                result[word] = (result.getOrDefault(word, 0) + score).coerceAtMost(255)
+                result[word] = max(result.getOrDefault(word, 0), score)
             }
         }
         // The user's own phrasing is a stronger signal than corpus statistics.
@@ -1071,20 +1424,24 @@ class LatinLanguageProvider(context: Context) : SpellingProvider, SuggestionProv
     /**
      * Language-model evidence for words following [previousWord], used by the
      * glide decoder: word (dictionary casing and lowercase) -> log-probability
-     * bonus in nats (0..2.5). Static corpus bigrams and the user's own learned
-     * transitions are combined; empty when there is no evidence.
+     * bonus in nats (0..2.5). The glide decoder already weighs how common a
+     * word is, so the corpus bonus is only the pair's *lift* — how much more
+     * likely the word is after [previousWord] than on its own (log P(w|prev) -
+     * log P(w)). The user's own learned transitions add to it; empty when there
+     * is no evidence.
      */
     fun bigramBonuses(locale: FlorisLocale, previousWord: String): Map<String, Double> {
         val result = HashMap<String, Double>()
-        val canonicalPrev = canonicalForm(previousWord) ?: previousWord
-        bigramData[canonicalPrev]?.forEach { (word, score) ->
-            val bonus = score / 255.0 * 2.5
+        val canonicalPrev = lmForm(previousWord)
+        for ((word, score) in bigramModel.continuations(canonicalPrev)) {
+            val lift = score - (baseWords[word] ?: continue)
+            if (lift <= 0) continue
+            val bonus = (lift / bigramModel.fPerNat).coerceAtMost(2.5)
             result[word] = max(result[word] ?: 0.0, bonus)
             result[word.lowercase()] = max(result[word.lowercase()] ?: 0.0, bonus)
         }
         learnedBigramsStore.continuationsOf(locale, previousWord.lowercase()).forEach { (word, score) ->
-            // Each learned occurrence adds 5 to the score (see LearnedBigramsStore.bump).
-            val bonus = (score * 12).coerceAtMost(255) / 255.0 * 2.5
+            val bonus = learnedPairBonus(score)
             result[word] = max(result[word] ?: 0.0, bonus)
             canonicalForm(word)?.let { result[it] = max(result[it] ?: 0.0, bonus) }
         }
@@ -1093,11 +1450,14 @@ class LatinLanguageProvider(context: Context) : SpellingProvider, SuggestionProv
 
     override suspend fun notifySuggestionAccepted(subtype: Subtype, candidate: SuggestionCandidate) {
         flogDebug { candidate.toString() }
-        val accepted = candidate.text.toString().trim()
-        if (accepted.isBlank()) return
+        val acceptedText = candidate.text.toString().trim()
+        if (acceptedText.isBlank()) return
+        // A phrase ("let me know") counts as its first word for learning; the next word follows its last.
+        val accepted = acceptedText.substringBefore(' ')
         if (candidate is TypedWordSuggestionCandidate) {
-            acceptTypedWord(subtype, accepted)
-        } else if (prefs.dictionary.learnPersonalWords.get() &&
+            // Kept for this session either way; stored only where learning is allowed.
+            acceptTypedWord(subtype, accepted, persist = learningAllowed)
+        } else if (learningAllowed && prefs.dictionary.learnPersonalWords.get() &&
             accepted.length in LEARN_WORD_MIN_LEN..LEARN_WORD_MAX_LEN &&
             LEARN_WORD_PATTERN.matches(accepted)
         ) {
@@ -1105,11 +1465,43 @@ class LatinLanguageProvider(context: Context) : SpellingProvider, SuggestionProv
             learnedStore.bump(subtype.primaryLocale, accepted.lowercase(), freqDelta = 2)
         }
         lastCommittedWord?.let { prev ->
-            if (prev.isNotBlank() && !prev.equals(accepted, ignoreCase = true)) {
+            if (learningAllowed && prev.isNotBlank() && !prev.equals(accepted, ignoreCase = true)) {
                 learnedBigramsStore.bump(subtype.primaryLocale, prev.lowercase(), accepted.lowercase())
             }
         }
-        lastCommittedWord = accepted
+        lastCommittedWord = acceptedText.substringAfterLast(' ')
+    }
+
+    /**
+     * Forgets everything learned from typing in [subtype]'s language: personal words, word pairs and
+     * kept-as-typed words. The user dictionary and contact names stay. Takes effect immediately, including
+     * in the native decoder (learned pairs go back to their corpus scores).
+     */
+    suspend fun forgetLearning(subtype: Subtype) = withContext(Dispatchers.IO) {
+        val locale = subtype.primaryLocale
+        val learnedPairs = learnedBigramsStore.snapshot(locale)
+        val learnedWords = personalWords.keys.toList()
+        learnedStore.clear()
+        learnedBigramsStore.clear()
+        sessionAccepted.clear()
+        lastCommittedWord = null
+        personalWords.clear()
+        rebuildPersonalWords(subtype)
+        if (BuildConfig.ENABLE_NATIVE_SUGGESTER && nativeDictionary.isLoaded) {
+            for (word in learnedWords) {
+                if (!personalWords.containsKey(word)) nativeDictionary.removeLearnedWord(word)
+            }
+            for ((prev, nexts) in learnedPairs) {
+                val p = canonicalForm(prev) ?: continue
+                for (next in nexts.keys) {
+                    val n = canonicalForm(next) ?: continue
+                    val unigram = frequencyOf(n).takeIf { it > 0 } ?: continue
+                    nativeDictionary.setPairScore(p, n, bigramModel.contextScore(lmForm(prev), n, unigram))
+                }
+            }
+        }
+        _wordDataDirtyFlow.tryEmit(subtype)
+        Unit
     }
 
     override suspend fun notifySuggestionReverted(subtype: Subtype, candidate: SuggestionCandidate) {
@@ -1127,6 +1519,7 @@ class LatinLanguageProvider(context: Context) : SpellingProvider, SuggestionProv
         flogDebug { candidate.toString() }
         val word = candidate.text.toString().trim()
         val key = word.lowercase()
+        learnedBigramsStore.removeWord(subtype.primaryLocale, key)
         val removed = personalWords.remove(word) != null || personalWords.remove(key) != null
         if (removed) {
             learnedStore.set(subtype.primaryLocale, key, 0)

@@ -291,9 +291,7 @@ class EditorInstance(context: Context) : AbstractEditorInstance(context) {
         val terminatesWord = effectiveChar == SPACE
             || effectiveChar == "\n"
             || (effectiveChar.length == 1 && !effectiveChar[0].isLetter() && !effectiveChar[0].isDigit())
-        val composingBeforeCommit = if (terminatesWord) {
-            activeContent.composingText.toString().ifBlank { activeContent.currentWordText.trim() }
-        } else ""
+        val composingBeforeCommit = if (terminatesWord) finishedWordAtCursor() else ""
         val result = super.commitChar(
             char = effectiveChar,
             deletePreviousSpace = isDeletePreviousSpace,
@@ -336,9 +334,7 @@ class EditorInstance(context: Context) : AbstractEditorInstance(context) {
         val terminatesWord = text == SPACE
             || text == "\n"
             || (text.length == 1 && !text[0].isLetter() && !text[0].isDigit())
-        val composingBeforeCommit = if (terminatesWord) {
-            activeContent.composingText.toString().ifBlank { activeContent.currentWordText.trim() }
-        } else ""
+        val composingBeforeCommit = if (terminatesWord) finishedWordAtCursor() else ""
 
         val isPhantomSpaceActive = phantomSpace.determine(text)
         autoSpace.setInactive()
@@ -356,6 +352,17 @@ class EditorInstance(context: Context) : AbstractEditorInstance(context) {
             lastCommittedNovelWord = null
         }
         return result
+    }
+
+    /**
+     * The word a separator typed now would finish, for learning — or "" when the cursor is inside a word
+     * (a space there splits the word; neither half is a word the user typed).
+     */
+    private fun finishedWordAtCursor(): String {
+        val content = activeContent
+        val word = if (content.localComposing.isValid) content.localComposing else content.localCurrentWord
+        if (word.isValid && !ComposingWord.cursorAtEnd(word, content.localSelection.start)) return ""
+        return content.composingText.ifBlank { content.currentWordText.trim() }
     }
 
     /**
@@ -380,7 +387,9 @@ class EditorInstance(context: Context) : AbstractEditorInstance(context) {
                 candidate = candidate,
                 source = PhantomSpaceState.Source.COMPLETION,
             )
-            super.finalizeComposingText(text)
+            // If the word under the cursor can't be identified safely any more, insert rather than risk
+            // replacing the wrong text.
+            super.finalizeComposingText(text) || super.commitText(text).also { updateLastCommitPosition() }
         } else {
             val isPhantomSpaceActive = phantomSpace.determine(text)
             phantomSpace.setActive(

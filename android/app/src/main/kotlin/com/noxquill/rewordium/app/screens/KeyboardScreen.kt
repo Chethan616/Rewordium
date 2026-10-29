@@ -92,6 +92,8 @@ import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -155,7 +157,7 @@ private val keyboardPrefs by FlorisPreferenceStore
 private val SectionGap = 23.dp
 
 /** Rows in the Features section, across both of its list items. */
-private const val FeatureSegments = 12
+private const val FeatureSegments = 13
 
 private data class AccentSwatch(val label: String, val color: Color)
 
@@ -706,6 +708,42 @@ private fun FeaturesMore(modifier: Modifier) {
             AppSettings.setKeyboardAiRewrite(it)
         }
         PrefSwitch(keyboardPrefs.dictionary.learnPersonalWords, Icons.AutoMirrored.Filled.MenuBook, "Learn my words", "Remember names and words you use, on this phone", segmentShape(11, count), Tone.Primary)
+        ForgetLearningRow(segmentShape(12, count))
+    }
+}
+
+/** Forgets everything the keyboard learned from typing, after a confirmation. */
+@Composable
+private fun ForgetLearningRow(shape: Shape) {
+    val context = LocalContext.current
+    val scope = rememberCoroutineScope()
+    var confirming by rememberSaveable { mutableStateOf(false) }
+    SettingRow(Icons.Filled.DeleteOutline, "Forget learned words", "Clear words, phrases and emoji the keyboard picked up", shape, Tone.Tertiary) {
+        confirming = true
+    }
+    if (confirming) {
+        AlertDialog(
+            onDismissRequest = { confirming = false },
+            icon = { ToneIcon(Icons.Filled.DeleteOutline, Tone.Tertiary, size = 56.dp) },
+            title = { Text("Forget learned words?") },
+            text = {
+                Text(
+                    "The keyboard forgets the words, phrases and emoji it learned from your typing. " +
+                        "Your own dictionary and contact names stay.",
+                    style = MaterialTheme.typography.bodyMedium,
+                )
+            },
+            confirmButton = {
+                TextButton(onClick = {
+                    confirming = false
+                    scope.launch {
+                        val done = ReboardSettingsBridge.forgetLearning(context)
+                        Toast.makeText(context, if (done) "Learned words forgotten" else "Couldn’t reach the keyboard", Toast.LENGTH_SHORT).show()
+                    }
+                }) { Text("Forget") }
+            },
+            dismissButton = { TextButton(onClick = { confirming = false }) { Text("Cancel") } },
+        )
     }
 }
 

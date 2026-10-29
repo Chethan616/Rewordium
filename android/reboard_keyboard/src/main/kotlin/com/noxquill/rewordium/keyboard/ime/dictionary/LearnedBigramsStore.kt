@@ -195,6 +195,24 @@ class LearnedBigramsStore(private val context: Context) {
      * [LOCALE_PREV_CAP]. Ranking key = sum of the bucket's transition scores
      * — buckets that have never been reinforced go first.
      */
+    /** Forgets every learned pair with [word] on either side. */
+    fun removeWord(locale: FlorisLocale, word: String) {
+        val sub = perLocale[locale.languageTag()] ?: return
+        var changed = sub.remove(word) != null
+        for (inner in sub.values) {
+            if (inner.remove(word) != null) changed = true
+        }
+        if (changed) dirtyChannel.trySend(Unit)
+    }
+
+    /** Forgets everything learned, in memory and on disk (a later load finds nothing to bring back). */
+    fun clear() {
+        loaded = true
+        perLocale.clear()
+        storeFile.delete()
+        dirtyChannel.trySend(Unit)
+    }
+
     private fun evictLocale(sub: ConcurrentHashMap<String, ConcurrentHashMap<String, Int>>) {
         val ranked = sub.entries
             .map { e -> e.key to e.value.values.sum() }

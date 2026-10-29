@@ -161,6 +161,80 @@ object TypingProximity {
         }
     }
 
+    @Volatile private var geometryCache: Pair<KeyboardLayoutDescriptor, com.noxquill.rewordium.keyboard.ime.nlp.latin.KeyGeometry>? = null
+
+    /**
+     * Key centres and size of the layout the decoder is using (the live one,
+     * else the generic QWERTY), for the autocorrect channel model. Same
+     * coordinate space as [withCoordinates].
+     */
+    fun geometry(): com.noxquill.rewordium.keyboard.ime.nlp.latin.KeyGeometry? {
+        if (handle == LatinImeNative.INVALID_HANDLE) ensureFallback()
+        val desc = lock.read {
+            if (handle != LatinImeNative.INVALID_HANDLE && descriptor != null) descriptor else fallbackDescriptor
+        } ?: return null
+        geometryCache?.let { (cached, geometry) -> if (cached === desc) return geometry }
+        val centers = HashMap<Int, Pair<Float, Float>>()
+        for (i in 0 until desc.keyCount) {
+            val code = desc.keyCharCodes[i]
+            if (!Character.isLetter(code)) continue
+            centers.putIfAbsent(
+                Character.toLowerCase(code),
+                (desc.keyXCoordinates[i] + desc.keyWidths[i] / 2f) to (desc.keyYCoordinates[i] + desc.keyHeights[i] / 2f),
+            )
+        }
+        val geometry = com.noxquill.rewordium.keyboard.ime.nlp.latin.KeyGeometry(
+            keyWidth = desc.mostCommonKeyWidth.toFloat().coerceAtLeast(1f),
+            keyHeight = desc.mostCommonKeyHeight.toFloat().coerceAtLeast(1f),
+            centers = centers,
+        )
+        geometryCache = desc to geometry
+        return geometry
+    }
+
+    /**
+     * Benchmarks and tests: makes the generic phone QWERTY the *live* layout, so recorded taps are used
+     * exactly as they are for a real on-screen keyboard. Returns that layout, or null without the native
+     * library.
+     */
+    @androidx.annotation.VisibleForTesting
+    internal fun useStandardLayoutForTesting(): KeyboardLayoutDescriptor? {
+        if (!LatinImeNative.ensureLoaded()) return null
+        val desc = KeyboardLayoutDescriptor.standardQwerty() ?: return null
+        val h = try {
+            LatinImeNative.nativeOpenProximityInfo(
+                keyboardWidth = desc.keyboardWidth,
+                keyboardHeight = desc.keyboardHeight,
+                gridWidth = KeyboardLayoutDescriptor.GRID_WIDTH,
+                gridHeight = KeyboardLayoutDescriptor.GRID_HEIGHT,
+                mostCommonKeyWidth = desc.mostCommonKeyWidth,
+                mostCommonKeyHeight = desc.mostCommonKeyHeight,
+                proximityChars = desc.proximityChars,
+                keyCount = desc.keyCount,
+                keyXCoordinates = desc.keyXCoordinates,
+                keyYCoordinates = desc.keyYCoordinates,
+                keyWidths = desc.keyWidths,
+                keyHeights = desc.keyHeights,
+                keyCharCodes = desc.keyCharCodes,
+                sweetSpotCenterXs = desc.sweetSpotCenterXs,
+                sweetSpotCenterYs = desc.sweetSpotCenterYs,
+                sweetSpotRadii = desc.sweetSpotRadii,
+            )
+        } catch (t: Throwable) {
+            return null
+        }
+        if (h == LatinImeNative.INVALID_HANDLE) return null
+        lock.write {
+            val old = handle
+            handle = h
+            descriptor = desc
+            layoutSignature = -1
+            synchronized(taps) { taps.clear() }
+            if (old != LatinImeNative.INVALID_HANDLE) LatinImeNative.nativeCloseProximityInfo(old)
+        }
+        return desc
+    }
+
     private fun ensureFallback() {
         if (fallbackHandle != LatinImeNative.INVALID_HANDLE || !LatinImeNative.ensureLoaded()) return
         val desc = KeyboardLayoutDescriptor.standardQwerty() ?: return

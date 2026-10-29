@@ -1,0 +1,31 @@
+# prefix|word — correctly typed names, brands, slang and rare words that must stay as typed
+Hi|Chethan
+Meet|Srinivas
+I use|Rewordium
+We flew to|Bengaluru
+Ask|Priyanka
+Run|kubectl
+Open|Figma
+Call|Aditya
+I love|biryani
+That was|lit
+We said|bruh
+Send it to|Noxquill
+I live in|Hyderabad
+Install|npm
+My cat|Mochi
+Try|Kotlin
+Ping|Arjun
+It is|gonna
+Meet me at|Koramangala
+Use|GitHub
+Talk to|Siddharth
+We had|dosa
+I need|chai
+This is|sus
+Text|Ananya
+Visit|Mysuru
+My name is|Kavya
+Buy|Pixel
+I prefer|Linux
+Book an|Uber

@@ -353,6 +353,9 @@ class EmojiSuggestionProvider(private val context: Context) : SuggestionProvider
         const val RECENT_SUPPRESSION_WINDOW = 8
     }
 
+    /** Set by NlpManager per editor: false in private mode and credential fields. */
+    @Volatile var learningAllowed: Boolean = true
+
     override suspend fun notifySuggestionAccepted(subtype: Subtype, candidate: SuggestionCandidate) {
         if (candidate !is EmojiSuggestionCandidate) {
             return
@@ -378,9 +381,14 @@ class EmojiSuggestionProvider(private val context: Context) : SuggestionProvider
         // weight this emoji higher when the same previousWord shows up
         // again. Survives IME restart via the JSON-backed store.
         val prev = lastPreviousWord
-        if (prev.isNotBlank()) {
+        if (learningAllowed && prev.isNotBlank()) {
             learnedAssociations.bump(subtype.primaryLocale, prev, candidate.emoji.value)
         }
+    }
+
+    /** Forgets the learned word -> emoji associations. */
+    fun forgetLearning() {
+        learnedAssociations.clear()
     }
 
     override suspend fun notifySuggestionReverted(subtype: Subtype, candidate: SuggestionCandidate) {

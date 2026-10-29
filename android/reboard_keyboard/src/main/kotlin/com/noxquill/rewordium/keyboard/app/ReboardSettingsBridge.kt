@@ -22,6 +22,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.toArgb
 import com.noxquill.rewordium.keyboard.FlorisApplication
 import com.noxquill.rewordium.keyboard.lib.ext.ExtensionComponentName
+import com.noxquill.rewordium.keyboard.nlpManager
 import com.noxquill.rewordium.keyboard.themeManager
 import dev.patrickgold.jetpref.datastore.model.LocalTime
 import dev.patrickgold.jetpref.datastore.model.PreferenceData
@@ -144,6 +145,18 @@ object ReboardSettingsBridge {
             return false
         }
         return withTimeoutOrNull(5_000) { app.preferenceStoreLoaded.first { it } } ?: false
+    }
+
+    /**
+     * Forgets everything the keyboard learned from typing (personal words, word pairs, emoji associations).
+     * The user dictionary and contact names stay. Returns false when the keyboard engine isn't available.
+     */
+    suspend fun forgetLearning(context: Context): Boolean {
+        if (!awaitReady(context)) return false
+        return runCatching {
+            val nlp by context.applicationContext.nlpManager()
+            nlp.forgetLearning()
+        }.isSuccess
     }
 
     private const val UNAVAILABLE = "Keyboard settings aren’t available on this device right now."

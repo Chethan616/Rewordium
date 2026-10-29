@@ -117,6 +117,22 @@ class StatisticalGlideTypingClassifier(context: Context) : GlideTypingClassifier
     /** The minimum distance between points to be added to a gesture. */
     @Volatile private var distanceThresholdSquared = 0f
 
+    // Language-model weights (see [scoreLanguageModel]); variables only so the glide benchmark can compare them.
+    @androidx.annotation.VisibleForTesting internal var unigramMode = UnigramMode.LOG_OF_LOG
+    @androidx.annotation.VisibleForTesting internal var unigramWeight = FREQUENCY_WEIGHT
+    @androidx.annotation.VisibleForTesting internal var bigramWeight = BIGRAM_WEIGHT
+    /** Benchmarks: the previous word to use instead of the editor's ("" = sentence start). */
+    @androidx.annotation.VisibleForTesting internal var previousWordForTesting: String? = null
+
+    /** How a word's dictionary frequency enters the score. */
+    internal enum class UnigramMode {
+        /** ln of the 0..255 log-scale frequency: a deliberately weak prior (the long-standing behaviour). */
+        LOG_OF_LOG,
+
+        /** The calibrated log-probability ([BigramModel.DEFAULT_F_PER_NAT] frequency steps per nat). */
+        CALIBRATED,
+    }
+
     companion object {
         /** Number of evenly spaced points gestures are resampled to before comparison. */
         private const val SAMPLING_POINTS = 120
@@ -171,8 +187,12 @@ class StatisticalGlideTypingClassifier(context: Context) : GlideTypingClassifier
          */
         private const val ALL_CAPS_PENALTY = 1.0
 
-        /** Weight of the bigram (previous word) bonus. */
-        private const val BIGRAM_WEIGHT = 1.0
+        /**
+         * Weight of the previous-word bonus (the pair's lift in nats, see LatinLanguageProvider.bigramBonuses).
+         * Measured on 2,000 real swipes from the swipe.futo.org test split: top-1 83.3% without context,
+         * 84.3% at 0.15, 82.3% at 0.3 (RealSwipeBenchmark); 0.15 was also best on simulated sloppy swipes.
+         */
+        private const val BIGRAM_WEIGHT = 0.15
 
         /** Slight preference for the plain form over an apostrophe form on exact ties. */
         private const val APOSTROPHE_PENALTY = 0.05
@@ -382,7 +402,7 @@ class StatisticalGlideTypingClassifier(context: Context) : GlideTypingClassifier
                     sum += sqrt((dx * dx + dy * dy).toDouble())
                 }
                 val d = sum / COARSE_POINTS / radius
-                scores[i] = -(d * d) / coarseDenominator + FREQUENCY_WEIGHT * lnFrequency(idx, word)
+                scores[i] = -(d * d) / coarseDenominator + unigramWeight * lnFrequency(idx, word)
             }
             survivors.indices.sortedByDescending { scores[it] }.take(COARSE_KEEP).map { survivors[it] }
         }
@@ -428,8 +448,8 @@ class StatisticalGlideTypingClassifier(context: Context) : GlideTypingClassifier
                 // Note: an explicit "ideal length matches gesture length" bonus
                 // was evaluated and lowered accuracy (85.5% -> 82.5% top-1);
                 // the location channel already captures it.
-                score += FREQUENCY_WEIGHT * lnFreq
-                score += BIGRAM_WEIGHT * bigram
+                score += unigramWeight * lnFreq
+                score += bigramWeight * bigram
                 if (word.indexOf('\'') >= 0) score -= APOSTROPHE_PENALTY
                 if (allCaps) score -= ALL_CAPS_PENALTY
                 score -= ENDPOINT_WEIGHT * endpoint
@@ -463,11 +483,15 @@ class StatisticalGlideTypingClassifier(context: Context) : GlideTypingClassifier
 
     private fun lnFrequency(idx: Index, word: String): Double {
         val f = 255.0 * (idx.frequencies[word] ?: 0.0)
-        return ln(max(1.0, f))
+        return when (unigramMode) {
+            UnigramMode.LOG_OF_LOG -> ln(max(1.0, f))
+            UnigramMode.CALIBRATED -> (max(1.0, f) - 255.0) / com.noxquill.rewordium.keyboard.ime.nlp.latin.BigramModel.DEFAULT_F_PER_NAT
+        }
     }
 
     /** Last word before the cursor (context for the bigram model), or null at sentence start. */
     private fun previousWord(): String? {
+        previousWordForTesting?.let { return it.ifEmpty { null } }
         val text = editorInstance.activeContent.textBeforeSelection.toString().trimEnd()
         if (text.isEmpty()) return null
         val last = text.last()
@@ -596,6 +620,27 @@ class StatisticalGlideTypingClassifier(context: Context) : GlideTypingClassifier
 
     override fun clear() {
         gesture.clear()
+    }
+
+    /** Benchmarks: uses this key geometry instead of an on-screen keyboard. */
+    @androidx.annotation.VisibleForTesting
+    internal fun setLayoutForTesting(codes: IntArray, xs: FloatArray, ys: FloatArray, widths: FloatArray, heights: FloatArray, subtype: Subtype) {
+        var signature = codes.size
+        for (i in codes.indices) signature = 31 * (31 * signature + codes[i]) + xs[i].toInt()
+        val layout = Layout(codes, xs, ys, widths, heights, min(widths[0], heights[0]), signature)
+        pendingLayout = layout
+        pendingSubtype = subtype
+        distanceThresholdSquared = (layout.radius / 8f).let { it * it }
+        scheduleRebuild(force = true)
+    }
+
+    /** Benchmarks: decodes one gesture from scratch (no suggestion cache). */
+    @androidx.annotation.VisibleForTesting
+    internal fun decodeForTesting(points: List<GlideTypingGesture.Detector.Position>, maxSuggestions: Int): List<String> {
+        gesture.clear()
+        points.forEach { addGesturePoint(it) }
+        lruSuggestionCache.evictAll()
+        return unCachedGetSuggestions(maxSuggestions).also { gesture.clear() }
     }
 
     private fun resampleInto(source: Gesture, n: Int, outX: FloatArray, outY: FloatArray) {

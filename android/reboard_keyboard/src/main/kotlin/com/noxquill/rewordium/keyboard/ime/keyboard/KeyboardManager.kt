@@ -352,6 +352,13 @@ class KeyboardManager(context: Context) : InputKeyEventReceiver {
             subtypeManager.subtypesFlow.collectLatestIn(scope) {
                 updateActiveEvaluators()
             }
+            // The evaluator snapshots the editor info (glide availability, the enter key's action, ...).
+            // Re-evaluate whenever the editor changes, or a keyboard state computed while no editor was
+            // attached sticks until some unrelated state change (shift, 123 and back) recomputes it — the
+            // "glide trail vanishes until I switch layouts" bug.
+            editorInstance.activeInfoFlow.collectLatestIn(scope) {
+                updateActiveEvaluators()
+            }
             subtypeManager.activeSubtypeFlow.collectLatestIn(scope) {
                 reevaluateInputShiftState()
                 updateActiveEvaluators()

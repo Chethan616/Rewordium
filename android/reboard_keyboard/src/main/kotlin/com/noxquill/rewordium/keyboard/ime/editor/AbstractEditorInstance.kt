@@ -245,10 +245,16 @@ abstract class AbstractEditorInstance(context: Context) {
             return EditorContent.Unspecified
         }
 
-        // Determine local composing word range, if any
+        // Determine local composing word range, if any. It covers the whole word the cursor is in — the part
+        // after the cursor too — so editing inside a word ("lo|v") and then picking a suggestion replaces the
+        // entire word instead of leaving its tail behind ("lovev").
         val localCurrentWord =
             if (shouldDetermineComposingRegion(editorInfo) && localSelection.isCursorMode && textBeforeSelection.isNotEmpty()) {
-                determineLocalComposing(textBeforeSelection, _lastCommitPosition.pos - offset)
+                ComposingWord.aroundCursor(
+                    wordBeforeCursor = determineLocalComposing(textBeforeSelection, _lastCommitPosition.pos - offset),
+                    cursor = localSelection.start,
+                    textAfterCursor = textAfterSelection,
+                )
             } else {
                 EditorRange.Unspecified
             }
@@ -421,30 +427,61 @@ abstract class AbstractEditorInstance(context: Context) {
         return true
     }
 
+    /**
+     * Replaces the whole composing word with [text] and puts the cursor right after it. The word may extend
+     * past the cursor ("lo|v" -> "love|"). Before replacing, the editor's actual text around the cursor is
+     * checked against what we expect; if the app changed it behind our back, the word is re-read from the
+     * editor so only that word is replaced — never a stale range.
+     */
     open fun finalizeComposingText(text: String): Boolean {
         val ic = currentInputConnection() ?: return false
-        val content = activeContent
+        if (activeInfo.isRawInputEditor) return false
+        val content = currentWordContent(ic) ?: return false
         val composing = content.composing
+        if (composing.isNotValid) return false
         ic.beginBatchEdit()
-        if (activeInfo.isRawInputEditor || composing.isNotValid) {
-            return false
-        } else runBlocking {
-            val newSelection = EditorRange.cursor(composing.end + (text.length - content.composingText.length))
+        runBlocking {
+            val replaced = ComposingWord.replace(content.text, content.localComposing, text)
             val newContent = content.generateCopy(
-                selection = newSelection,
-                textBeforeSelection = buildString {
-                    append(content.textBeforeSelection.removeSuffix(content.composingText))
-                    append(text)
-                },
+                selection = EditorRange.cursor(composing.start + text.length),
+                textBeforeSelection = replaced.textBefore,
+                textAfterSelection = replaced.textAfter,
                 selectedText = "",
             )
             expectedContentQueue.push(newContent)
+            // Pin the region we are about to replace, then replace it in one step.
+            ic.setComposingRegion(composing.start, composing.end)
             ic.setComposingText(text, 1)
             ic.finishComposingText()
             _lastCommitPosition.handleCommit(newContent.selection)
         }
         ic.endBatchEdit()
         return true
+    }
+
+    /**
+     * [activeContent] if the editor still holds exactly the composing word we think it does around the
+     * cursor; otherwise a fresh read of the editor (so a word the app edited itself is replaced correctly);
+     * or null when no word can be identified safely.
+     */
+    private fun currentWordContent(ic: InputConnection): EditorContent? {
+        val content = activeContent
+        val local = content.localComposing
+        val cursor = content.localSelection
+        if (local.isValid && cursor.isCursorMode && cursor.start in local.start..local.end) {
+            val beforePart = content.text.substring(local.start, cursor.start)
+            val afterPart = content.text.substring(cursor.start, local.end)
+            val actualBefore = ic.getTextBeforeCursor(beforePart.length, 0)?.toString()
+            val actualAfter = if (afterPart.isEmpty()) "" else ic.getTextAfterCursor(afterPart.length, 0)?.toString()
+            if (actualBefore == beforePart && actualAfter == afterPart) return content
+        }
+        val selection = content.selection
+        if (selection.isNotValid || selection.isSelectionMode) return null
+        val textBefore = ic.getTextBeforeCursor(NumCharsBeforeCursor, 0) ?: return null
+        val textAfter = ic.getTextAfterCursor(NumCharsAfterCursor, 0) ?: ""
+        return runBlocking {
+            generateContent(activeInfo, selection, textBefore, textAfter, "").takeIf { it.composing.isValid }
+        }
     }
 
     /**

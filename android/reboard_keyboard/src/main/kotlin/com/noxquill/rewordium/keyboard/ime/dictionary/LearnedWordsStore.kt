@@ -197,6 +197,14 @@ class LearnedWordsStore(private val context: Context) {
      * [LOCALE_CAP]. Score = freq × exp(-(age in seconds) / DECAY_SECONDS).
      * Worst case is one O(n log n) sort when n = LOCALE_CAP (cheap at ~5000).
      */
+    /** Forgets everything learned, in memory and on disk (a later load finds nothing to bring back). */
+    fun clear() {
+        loaded = true
+        perLocale.clear()
+        storeFile.delete()
+        dirtyChannel.trySend(Unit)
+    }
+
     private fun evictLocale(sub: ConcurrentHashMap<String, LearnedEntry>, nowSec: Long) {
         val ranked = sub.entries
             .map { e -> e.key to scoreOf(e.value, nowSec) }

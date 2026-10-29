@@ -136,7 +136,10 @@ fun TextKeyboardLayout(
 
     val keyboard = evaluator.keyboard as TextKeyboard
     val glideEnabledInternal by prefs.glide.enabled.observeAsState()
-    val glideEnabled = glideEnabledInternal && evaluator.editorInfo.isRichInputEditor &&
+    // The live editor, not the evaluator's snapshot of it: the trail must follow the same rules as the
+    // gesture itself, or swiping keeps working while the trail silently disappears.
+    val liveEditorInfo by context.editorInstance().value.activeInfoFlow.collectAsState()
+    val glideEnabled = glideEnabledInternal && liveEditorInfo.isRichInputEditor &&
         evaluator.state.keyVariation != KeyVariation.PASSWORD
     val glideShowTrail by prefs.glide.showTrail.observeAsState()
     val glideTrailWidth by prefs.glide.trailWidth.observeAsState()
@@ -475,8 +478,10 @@ private class TextKeyboardLayoutController(
         fadingGlideRadius = 0.0f
         isGliding = false
     }
+    /** Same rule as the trail in [TextKeyboardLayout]: glide only where a glided word can be committed. */
     val isGlideEnabled: Boolean get() = prefs.glide.enabled.get() &&
-        keyboardManager.activeState.keyVariation != KeyVariation.PASSWORD
+        keyboardManager.activeState.keyVariation != KeyVariation.PASSWORD &&
+        editorInstance.activeInfo.isRichInputEditor
 
     fun onTouchEventInternal(event: MotionEvent) {
         flogDebug { "event=$event" }
