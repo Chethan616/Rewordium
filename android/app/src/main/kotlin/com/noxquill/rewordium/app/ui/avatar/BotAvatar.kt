@@ -286,7 +286,7 @@ fun BotAvatar(
     modifier
       .size(size)
       .then(tapModifier)
-      .semantics { contentDescription = label ?: "DEX, ${moodLabel(mood)}" },
+      .semantics { contentDescription = label ?: "Rewordium bot, ${moodLabel(mood)}" },
   ) {
     val unit = this.size.minDimension / 100f
     val breath = breathPhase?.value ?: 0f

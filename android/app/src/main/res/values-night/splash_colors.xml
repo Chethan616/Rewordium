@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="rewordium_splash_background">#0E0913</color>
+    <color name="rewordium_splash_shape">#BE8BFA</color>
+    <color name="rewordium_window_background">#0E0913</color>
+</resources>

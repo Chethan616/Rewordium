@@ -197,8 +197,59 @@ object RewordiumRepository {
         }.onFailure { Log.w(TAG, "Could not save the Play purchase", it) }.getOrDefault(false)
     }
 
+    /**
+     * Sends a report about a Jade reply (Google Play's AI-generated content
+     * policy). Stored as an admin-only usage event, so no other user can read it.
+     */
+    suspend fun reportAiContent(context: Context, reason: String, details: String, reply: String, prompt: String?) {
+        val user = requireNotNull(currentUser) { "Sign in to send a report." }
+        val version = runCatching { context.packageManager.getPackageInfo(context.packageName, 0).versionName }.getOrNull().orEmpty()
+        io {
+            Tasks.await(firestore.collection("usage_events").add(mapOf(
+                "uid" to user.uid,
+                "type" to "ai_content_report",
+                "surface" to "jade",
+                "reason" to reason,
+                "details" to details.take(1_000),
+                "reply" to reply.take(4_000),
+                "prompt" to prompt?.take(2_000),
+                "appVersion" to version,
+                "createdAt" to FieldValue.serverTimestamp(),
+            )))
+        }
+    }
+
+    /** Whether the signed-in account uses Google rather than an email password. */
+    val signedInWithGoogle: Boolean
+        get() = currentUser?.providerData?.any { it.providerId == GoogleAuthProvider.PROVIDER_ID } == true
+
+    /** Firebase only deletes accounts that signed in within the last few minutes. */
+    fun needsFreshSignIn(): Boolean {
+        val signedIn = currentUser?.metadata?.lastSignInTimestamp ?: return true
+        val last = maxOf(signedIn, lastReauthenticatedAt)
+        return System.currentTimeMillis() - last > 4 * 60_000L
+    }
+
+    // Re-authenticating refreshes the token's sign-in time but not the user metadata.
+    @Volatile private var lastReauthenticatedAt = 0L
+
+    suspend fun reauthenticateWithPassword(password: String) {
+        val user = requireNotNull(currentUser) { "No account is signed in." }
+        val email = requireNotNull(user.email) { "This account has no email address." }
+        io { Tasks.await(user.reauthenticate(com.google.firebase.auth.EmailAuthProvider.getCredential(email, password))) }
+        lastReauthenticatedAt = System.currentTimeMillis()
+    }
+
+    suspend fun reauthenticateWithGoogle(idToken: String) {
+        val user = requireNotNull(currentUser) { "No account is signed in." }
+        io { Tasks.await(user.reauthenticate(GoogleAuthProvider.getCredential(idToken, null))) }
+        lastReauthenticatedAt = System.currentTimeMillis()
+    }
+
+    /** Deletes the profile, then the sign-in account itself. Call after a fresh sign-in. */
     suspend fun deleteAccount() {
         val user = requireNotNull(currentUser) { "No account is signed in." }
+        check(!needsFreshSignIn()) { "For your security, confirm it's you before deleting your account." }
         io { Tasks.await(firestore.collection("users").document(user.uid).delete()) }
         io { Tasks.await(user.delete()) }
     }

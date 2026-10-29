@@ -262,7 +262,8 @@ dependencies {
     implementation("androidx.activity:activity-compose:1.12.1")
     implementation("androidx.compose.runtime:runtime")
     implementation(libs.androidx.navigation.compose)
-    
+    implementation(libs.androidx.core.splashscreen)
+
     debugImplementation("androidx.compose.ui:ui-tooling")
     // ========== END COMPOSE DEPENDENCIES ==========
 
@@ -289,6 +290,8 @@ dependencies {
     
     // ========== REBOARD KEYBOARD MODULE ==========
     implementation(project(":reboard_keyboard"))
+    // Seed-colour schemes (materialkolor) for the app's expressive palettes.
+    implementation(project(":reboard_lib:color"))
 
     // ========== ML KIT TEXT RECOGNITION LANGUAGE PACKS ==========
     // Script packs for native document text recognition:

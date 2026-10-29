@@ -7,25 +7,25 @@ import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyRow
+import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Key
+import androidx.compose.material.icons.filled.Visibility
+import androidx.compose.material.icons.filled.VisibilityOff
 import androidx.compose.material3.Button
-import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.DropdownMenu
-import androidx.compose.material3.DropdownMenuItem
-import androidx.compose.material3.ElevatedCard
+import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
+import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.Switch
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
-import androidx.compose.material3.TopAppBar
-import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -34,14 +34,17 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.PasswordVisualTransformation
+import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.dp
+import com.noxquill.rewordium.app.ui.ExpressiveScaffold
+import com.noxquill.rewordium.app.ui.ExpressiveSwitch
+import com.noxquill.rewordium.app.ui.enterStagger
 import com.noxquill.rewordium.app.ui.avatar.BotAvatar
 import com.noxquill.rewordium.app.ui.avatar.BotMood
 import com.noxquill.rewordium.app.ui.haptics.LocalHaptics
 
-@OptIn(ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable
 fun AiSettingsScreen(onBack: () -> Unit) {
     val context = LocalContext.current
@@ -52,65 +55,78 @@ fun AiSettingsScreen(onBack: () -> Unit) {
     var apiKey by remember { mutableStateOf(prefs.getString("ai_api_key", "") ?: "") }
     var model by remember { mutableStateOf(prefs.getString("ai_model", "openai/gpt-oss-120b") ?: "openai/gpt-oss-120b") }
     var endpoint by remember { mutableStateOf(prefs.getString("ai_custom_endpoint", "") ?: "") }
-    var menuOpen by remember { mutableStateOf(false) }
+    var showKey by remember { mutableStateOf(false) }
     var saved by remember { mutableStateOf(false) }
-    val providers = listOf("groq", "openai", "gemini", "claude", "custom")
-    Column(Modifier.fillMaxSize()) {
-        TopAppBar(title = { Text("AI preferences") }, navigationIcon = {
-            androidx.compose.material3.IconButton(onClick = { haptics.click(); onBack() }) { Icon(Icons.AutoMirrored.Filled.ArrowBack, "Back") }
-        })
-        LazyColumn(contentPadding = PaddingValues(20.dp), verticalArrangement = Arrangement.spacedBy(13.dp)) {
+    val providers = listOf("groq" to "Groq", "openai" to "OpenAI", "gemini" to "Gemini", "claude" to "Claude", "custom" to "Custom")
+
+    ExpressiveScaffold(title = "AI provider", subtitle = "Shared by Jade and the keyboard", onBack = onBack, heading = com.noxquill.rewordium.app.ui.Heading.Airy) { padding ->
+        LazyColumn(
+            modifier = Modifier.fillMaxSize(),
+            contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = padding.calculateTopPadding() + 4.dp, bottom = 32.dp),
+            verticalArrangement = Arrangement.spacedBy(14.dp),
+        ) {
             item {
-                ElevatedCard(shape = MaterialTheme.shapes.large, colors = CardDefaults.elevatedCardColors(containerColor = MaterialTheme.colorScheme.primaryContainer)) {
-                    Row(Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                        BotAvatar(type = "droid", mood = BotMood.Idle, size = 52.dp, still = true, label = "Rewordium mascot")
+                Surface(shape = MaterialTheme.shapes.extraLarge, color = MaterialTheme.colorScheme.surfaceContainer, modifier = Modifier.fillMaxWidth().enterStagger(0)) {
+                    Row(Modifier.padding(18.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(14.dp)) {
+                        BotAvatar(type = "droid", mood = if (enabled) BotMood.Working else BotMood.Idle, size = 52.dp, label = null)
                         Column(Modifier.weight(1f)) {
-                            Text("Choose how Rewordium thinks", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
-                            Text("These settings are shared with Jade and the keyboard.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            Text("Use my own API key", style = MaterialTheme.typography.titleMedium)
+                            Text("Off uses Rewordium’s AI with your credits.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                         }
-                    }
-                }
-            }
-            item {
-                ElevatedCard(shape = MaterialTheme.shapes.large, colors = CardDefaults.elevatedCardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerHigh)) {
-                    Row(Modifier.fillMaxWidth().padding(16.dp), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
-                        Column(Modifier.weight(1f)) {
-                            Text("Use my own provider", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold)
-                            Text("Turn off to use the configured Rewordium provider.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                        }
-                        Switch(checked = enabled, onCheckedChange = { enabled = it; saved = false })
+                        ExpressiveSwitch(enabled) { enabled = it; saved = false; haptics.toggle(it) }
                     }
                 }
             }
             if (enabled) {
                 item {
                     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                        Text("Provider", style = MaterialTheme.typography.labelLarge)
-                        OutlinedButton(onClick = { menuOpen = true }) {
-                            Text(provider.replaceFirstChar(Char::uppercase))
-                            DropdownMenu(expanded = menuOpen, onDismissRequest = { menuOpen = false }) {
-                                providers.forEach { option -> DropdownMenuItem(text = { Text(option.replaceFirstChar(Char::uppercase)) }, onClick = { provider = option; menuOpen = false; saved = false }) }
+                        Text("Provider", style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.primary)
+                        LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            items(providers, key = { it.first }) { (id, label) ->
+                                FilterChip(selected = provider == id, onClick = { haptics.tick(); provider = id; saved = false }, label = { Text(label) })
                             }
                         }
+                        if (provider == "claude" || provider == "gemini") Text(
+                            "Jade can chat with this provider, but changing settings for you needs Rewordium’s AI or an OpenAI-compatible one.",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.tertiary,
+                        )
                     }
                 }
                 item { OutlinedTextField(value = model, onValueChange = { model = it; saved = false }, modifier = Modifier.fillMaxWidth(), label = { Text("Model") }, singleLine = true, shape = MaterialTheme.shapes.large) }
-                item { OutlinedTextField(value = apiKey, onValueChange = { apiKey = it; saved = false }, modifier = Modifier.fillMaxWidth(), label = { Text("API key") }, leadingIcon = { Icon(Icons.Filled.Key, null) }, visualTransformation = PasswordVisualTransformation(), singleLine = true, shape = MaterialTheme.shapes.large) }
-                if (provider == "custom") item { OutlinedTextField(value = endpoint, onValueChange = { endpoint = it; saved = false }, modifier = Modifier.fillMaxWidth(), label = { Text("API endpoint") }, singleLine = true, shape = MaterialTheme.shapes.large) }
-                item { Text("Your API key stays on this device and is sent to the provider you choose. Only use a key you trust this device with.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant) }
+                item {
+                    OutlinedTextField(
+                        value = apiKey,
+                        onValueChange = { apiKey = it; saved = false },
+                        modifier = Modifier.fillMaxWidth(),
+                        label = { Text("API key") },
+                        leadingIcon = { Icon(Icons.Filled.Key, null) },
+                        trailingIcon = { IconButton(onClick = { showKey = !showKey }) { Icon(if (showKey) Icons.Filled.VisibilityOff else Icons.Filled.Visibility, if (showKey) "Hide key" else "Show key") } },
+                        visualTransformation = if (showKey) VisualTransformation.None else PasswordVisualTransformation(),
+                        singleLine = true,
+                        shape = MaterialTheme.shapes.large,
+                    )
+                }
+                if (provider == "custom") item { OutlinedTextField(value = endpoint, onValueChange = { endpoint = it; saved = false }, modifier = Modifier.fillMaxWidth(), label = { Text("Chat completions URL") }, singleLine = true, shape = MaterialTheme.shapes.large) }
+                item { Text("Your API key stays on this phone and is only sent to the provider you choose.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant) }
             }
             item {
-                Button(onClick = {
-                    prefs.edit()
-                        .putBoolean("advanced_ai_enabled", enabled)
-                        .putString("ai_provider", provider)
-                        .putString("ai_api_key", apiKey)
-                        .putString("ai_model", model)
-                        .putInt("ai_max_tokens", 8192)
-                        .putString("ai_custom_endpoint", endpoint)
-                        .apply()
-                    saved = true
-                }, modifier = Modifier.fillMaxWidth()) { Text(if (saved) "Saved" else "Save preferences") }
+                Button(
+                    onClick = {
+                        prefs.edit()
+                            .putBoolean("advanced_ai_enabled", enabled)
+                            .putString("ai_provider", provider)
+                            .putString("ai_api_key", apiKey.trim())
+                            .putString("ai_model", model.trim())
+                            .putInt("ai_max_tokens", 8192)
+                            .putString("ai_custom_endpoint", endpoint.trim())
+                            .apply()
+                        saved = true
+                        haptics.success()
+                    },
+                    shapes = ButtonDefaults.shapes(),
+                    modifier = Modifier.fillMaxWidth().height(54.dp),
+                ) { Text(if (saved) "Saved ✓" else "Save") }
             }
         }
     }

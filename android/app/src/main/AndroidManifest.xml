@@ -5,7 +5,6 @@
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
     <uses-permission android:name="android.permission.WAKE_LOCK" />
-    <uses-permission android:name="android.permission.SCHEDULE_EXACT_ALARM" />
     <uses-permission android:name="android.permission.READ_CONTACTS" />
     <uses-permission android:name="android.permission.CAMERA" />
 
@@ -39,7 +38,7 @@
             android:name=".MainActivity"
             android:exported="true"
             android:launchMode="singleTop"
-            android:theme="@style/Theme.Rewordium"
+            android:theme="@style/Theme.Rewordium.Starting"
             android:windowSoftInputMode="adjustResize"
             android:windowAnimationStyle="@style/WindowAnimation">
             <intent-filter>
@@ -58,15 +57,8 @@
                 <data android:scheme="rewordium" android:host="grammar" />
                 <data android:scheme="rewordium" android:host="tools" />
                 <data android:scheme="rewordium" android:host="jade_ai" />
-            </intent-filter>
-            <intent-filter android:autoVerify="true">
-                <action android:name="android.intent.action.VIEW" />
-                <category android:name="android.intent.category.DEFAULT" />
-                <category android:name="android.intent.category.BROWSABLE" />
-                <data android:scheme="http" />
-                <data android:scheme="https" />
-                <data android:host="rewordium.tech" />
-                <data android:host="www.rewordium.tech" />
+                <data android:scheme="rewordium" android:host="jade" />
+                <data android:scheme="rewordium" android:host="pro" />
             </intent-filter>
             <meta-data android:name="android.app.shortcuts" android:resource="@xml/shortcuts" />
         </activity>

@@ -1,10 +1,16 @@
 package com.noxquill.rewordium.app.screens
 
-import android.content.Context
-import androidx.compose.foundation.clickable
+import android.app.Activity
+import android.os.Build
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.animation.core.Spring
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.spring
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -13,377 +19,575 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.lazy.grid.GridCells
-import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
-import androidx.compose.foundation.lazy.grid.items
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyRow
+import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.MenuBook
 import androidx.compose.material.icons.filled.AutoAwesome
-import androidx.compose.material.icons.filled.Bolt
-import androidx.compose.material.icons.filled.CheckCircle
-import androidx.compose.material.icons.filled.ChevronRight
+import androidx.compose.material.icons.filled.Backup
+import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.filled.ContentPaste
+import androidx.compose.material.icons.filled.DarkMode
 import androidx.compose.material.icons.filled.DeleteForever
-import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material.icons.filled.DeleteSweep
+import androidx.compose.material.icons.filled.Description
+import androidx.compose.material.icons.filled.Gavel
+import androidx.compose.material.icons.filled.Gesture
+import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.Key
 import androidx.compose.material.icons.filled.Keyboard
-import androidx.compose.material.icons.filled.OpenInNew
+import androidx.compose.material.icons.filled.Language
+import androidx.compose.material.icons.filled.LightMode
+import androidx.compose.material.icons.automirrored.filled.Logout
+import androidx.compose.material.icons.automirrored.filled.OpenInNew
+import androidx.compose.material.icons.filled.Palette
 import androidx.compose.material.icons.filled.Policy
-import androidx.compose.material.icons.filled.Shield
+import androidx.compose.material.icons.filled.RecordVoiceOver
+import androidx.compose.material.icons.filled.Smartphone
 import androidx.compose.material.icons.filled.Stars
+import androidx.compose.material.icons.filled.TouchApp
+import androidx.compose.material.icons.filled.Vibration
+import androidx.compose.material.icons.automirrored.filled.ViewQuilt
+import androidx.compose.material.icons.filled.Wallpaper
+import androidx.compose.material.icons.filled.AccessibilityNew
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
-import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.ElevatedCard
-import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.ButtonGroupDefaults
+import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
+import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
+import androidx.compose.material3.LoadingIndicator
+import androidx.compose.material3.MaterialShapes
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
-import androidx.compose.material3.PrimaryTabRow
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Surface
-import androidx.compose.material3.Switch
-import androidx.compose.material3.Tab
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
-import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.ToggleButton
+import androidx.compose.material3.toShape
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
-import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.role
+import androidx.compose.ui.semantics.selected
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.input.PasswordVisualTransformation
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import com.google.android.gms.auth.api.signin.GoogleSignIn
+import com.google.android.gms.auth.api.signin.GoogleSignInOptions
+import com.google.android.gms.common.api.ApiException
 import com.noxquill.rewordium.PlatformSetupStatus
-import com.noxquill.rewordium.app.ui.avatar.BotAvatar
+import com.noxquill.rewordium.R
+import com.noxquill.rewordium.app.ui.AvatarBadge
+import com.noxquill.rewordium.app.ui.AvatarPickerSheet
+import com.noxquill.rewordium.app.ui.ExpressiveScaffold
+import com.noxquill.rewordium.app.ui.Heading
+import androidx.compose.material.icons.filled.ChevronRight
+import com.noxquill.rewordium.app.ui.SectionLabel
+import com.noxquill.rewordium.app.ui.SegmentedSection
+import com.noxquill.rewordium.app.ui.SettingRow
+import com.noxquill.rewordium.app.ui.SettingSwitchRow
+import com.noxquill.rewordium.app.ui.StatusPill
+import com.noxquill.rewordium.app.ui.Tone
+import com.noxquill.rewordium.app.ui.avatarName
+import com.noxquill.rewordium.app.ui.colorSchemeFor
+import com.noxquill.rewordium.app.ui.enterStagger
+import com.noxquill.rewordium.app.ui.expressivePress
 import com.noxquill.rewordium.app.ui.avatar.BotMood
 import com.noxquill.rewordium.app.ui.haptics.LocalHaptics
-import com.noxquill.rewordium.app.ui.expressivePress
-import com.noxquill.rewordium.app.ui.MorphBadge
 import com.noxquill.rewordium.data.AccountInfo
-import com.noxquill.rewordium.util.KeyboardConstants
+import com.noxquill.rewordium.data.AppSettings
+import com.noxquill.rewordium.data.RewordiumRepository
+import com.noxquill.rewordium.data.RewordiumLinks
+import androidx.compose.material.icons.filled.Email
+import androidx.compose.material.icons.filled.Shield
+import androidx.compose.foundation.isSystemInDarkTheme
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.text.TextAutoSize
+import androidx.compose.ui.unit.sp
+import com.noxquill.rewordium.app.ui.ShapeMotion
+import kotlinx.coroutines.launch
 
+@OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable
 fun SettingsScreen(
-    account: AccountInfo?, status: PlatformSetupStatus,
-    onBack: () -> Unit,
-    onSignIn: () -> Unit, onSignOut: () -> Unit, onDelete: () -> Unit,
-    onPro: () -> Unit, onKeyboard: () -> Unit, onAccessibility: () -> Unit,
-    onKeyboardSection: (String) -> Unit,
-    onEnableKeyboard: () -> Unit, onChooseKeyboard: () -> Unit,
-    onAiSettings: () -> Unit, onLicenses: () -> Unit,
+    account: AccountInfo?,
+    status: PlatformSetupStatus,
+    bottomInset: androidx.compose.ui.unit.Dp,
+    onPro: () -> Unit,
+    onAiSettings: () -> Unit,
     onPersonas: () -> Unit,
-    onPrivacy: () -> Unit, onTerms: () -> Unit,
-    mascotType: String,
-    onMascotSelected: (String) -> Unit,
-    initialTab: Int = 0,
+    onPrivacy: () -> Unit,
+    onTerms: () -> Unit,
+    onLicenses: () -> Unit,
+    onOpenLink: (String) -> Unit,
+    onOpenKeyboard: () -> Unit,
+    onAccessibility: () -> Unit,
+    onAskJade: () -> Unit,
+    onClearJadeHistory: () -> Unit,
+    onBackupRestored: () -> Unit,
+    onSignOut: () -> Unit,
+    onDeleteAccount: suspend (password: String?, googleIdToken: String?) -> Unit,
 ) {
-    var tab by rememberSaveable { mutableStateOf(initialTab) }
-    var confirmDelete by remember { mutableStateOf(false) }
-    var showMascotPicker by remember { mutableStateOf(false) }
-    var pendingMascot by rememberSaveable { mutableStateOf(mascotType) }
     val context = LocalContext.current
-    val keyboardPrefs = remember { context.getSharedPreferences(KeyboardConstants.PREFS_NAME, Context.MODE_PRIVATE) }
-    var keyboardAiEnabled by rememberSaveable { mutableStateOf(keyboardPrefs.getBoolean("ai_rewrite_enabled", false)) }
-    var hapticsEnabled by rememberSaveable { mutableStateOf(keyboardPrefs.getBoolean(KeyboardConstants.KEY_HAPTIC_FEEDBACK, true)) }
     val haptics = LocalHaptics.current
+    val avatar by AppSettings.avatar.collectAsState()
+    val themeMode by AppSettings.themeMode.collectAsState()
+    val palette by AppSettings.palette.collectAsState()
+    val hapticsOn by AppSettings.haptics.collectAsState()
+    val keyboardAi by AppSettings.keyboardAiRewrite.collectAsState()
+    var showAvatarPicker by rememberSaveable { mutableStateOf(false) }
+    var confirmSignOut by rememberSaveable { mutableStateOf(false) }
+    var confirmClearChats by rememberSaveable { mutableStateOf(false) }
+    var showDelete by rememberSaveable { mutableStateOf(false) }
+    val listState = rememberLazyListState()
+    val version = remember { runCatching { context.packageManager.getPackageInfo(context.packageName, 0).versionName }.getOrNull().orEmpty() }
 
-    Column(Modifier.fillMaxSize()) {
-        TopAppBar(
-            navigationIcon = { IconButton(onClick = { haptics.click(); onBack() }) { Icon(Icons.AutoMirrored.Filled.ArrowBack, "Back") } },
-            title = {
-                Column(verticalArrangement = Arrangement.spacedBy(1.dp)) {
-                    Text("Settings", style = MaterialTheme.typography.titleLarge)
-                    Text("Your Rewordium, your way", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                }
-            },
-        )
-        PrimaryTabRow(selectedTabIndex = tab) {
-            Tab(selected = tab == 0, onClick = { haptics.tick(); tab = 0 }, text = { Text("Rewordium") })
-            Tab(selected = tab == 1, onClick = { haptics.tick(); tab = 1 }, text = { Text("Access & keyboard") })
-        }
-        if (tab == 0) {
-            LazyColumn(contentPadding = PaddingValues(horizontal = 16.dp, vertical = 16.dp), verticalArrangement = Arrangement.spacedBy(18.dp)) {
-                item {
-                    Surface(
-                        shape = MaterialTheme.shapes.large,
-                        color = MaterialTheme.colorScheme.surfaceContainerLow,
-                        modifier = Modifier.fillMaxWidth().clickable {
-                            haptics.click()
-                            pendingMascot = mascotType
-                            showMascotPicker = true
-                        }.expressivePress(),
-                    ) {
-                        Row(Modifier.fillMaxWidth().padding(16.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                            BotAvatar(type = mascotType, mood = BotMood.Idle, size = 52.dp, interactive = false, label = "Choose your Rewordium mascot")
-                            Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(3.dp)) {
-                                Text(account?.name?.takeIf(String::isNotBlank) ?: "Your account", style = MaterialTheme.typography.titleMedium)
-                                Text(account?.email?.takeIf(String::isNotBlank) ?: "Choose a mascot · Sign in to sync credits", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+    ExpressiveScaffold(title = "Settings", subtitle = "Make Rewordium yours", heading = Heading.Narrow) { padding ->
+        LazyColumn(
+            state = listState,
+            modifier = Modifier.fillMaxSize(),
+            contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = padding.calculateTopPadding() + 4.dp, bottom = bottomInset + 24.dp),
+            verticalArrangement = Arrangement.spacedBy(24.dp),
+        ) {
+            // 0 · Profile
+            item(key = "profile") {
+                Surface(
+                    shape = MaterialTheme.shapes.extraLarge,
+                    color = MaterialTheme.colorScheme.secondaryContainer,
+                    contentColor = MaterialTheme.colorScheme.onSecondaryContainer,
+                    modifier = Modifier.fillMaxWidth().enterStagger(0),
+                ) {
+                    Column(Modifier.padding(20.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
+                        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(16.dp)) {
+                            // The bot on its own library shape in the accent colour, turning slowly.
+                            AvatarBadge(
+                                type = avatar,
+                                size = 84.dp,
+                                mood = BotMood.Happy,
+                                still = false,
+                                container = MaterialTheme.colorScheme.primaryContainer,
+                                motion = ShapeMotion.Spin,
+                                label = "Your avatar, ${avatarName(avatar)}. Tap to change.",
+                                modifier = Modifier
+                                    .expressivePress(0.9f)
+                                    .clickable(
+                                        interactionSource = remember { MutableInteractionSource() },
+                                        indication = null,
+                                        role = Role.Button,
+                                    ) { haptics.click(); showAvatarPicker = true },
+                            )
+                            Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                                Text(account?.name?.takeIf(String::isNotBlank) ?: "Your account", style = MaterialTheme.typography.titleLarge, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                                Text(account?.email.orEmpty(), style = MaterialTheme.typography.bodySmall, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                                StatusPill(if (account?.isPro == true) "Pro · ${account.planType}" else "${account?.credits ?: 0} credits", active = account?.isPro == true)
                             }
-                            Column(horizontalAlignment = Alignment.End) {
-                                TextButton(onClick = { haptics.click(); pendingMascot = mascotType; showMascotPicker = true }) { Text("Avatar") }
-                                TextButton(onClick = { haptics.click(); if (account == null) onSignIn() else onSignOut() }) { Text(if (account == null) "Sign in" else "Sign out") }
-                            }
+                        }
+                        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            // Dark ink on the coral card, the same pairing as the floating toolbar.
+                            Button(
+                                onClick = { haptics.click(); showAvatarPicker = true },
+                                shapes = ButtonDefaults.shapes(),
+                                colors = ButtonDefaults.buttonColors(
+                                    containerColor = MaterialTheme.colorScheme.onSecondaryContainer,
+                                    contentColor = MaterialTheme.colorScheme.secondaryContainer,
+                                ),
+                                modifier = Modifier.weight(1f),
+                            ) { Text("Change avatar") }
+                            OutlinedButton(
+                                onClick = { haptics.click(); confirmSignOut = true },
+                                shapes = ButtonDefaults.shapes(),
+                                border = androidx.compose.foundation.BorderStroke(2.dp, MaterialTheme.colorScheme.onSecondaryContainer),
+                                colors = ButtonDefaults.outlinedButtonColors(contentColor = MaterialTheme.colorScheme.onSecondaryContainer),
+                                modifier = Modifier.weight(1f),
+                            ) { Text("Sign out") }
                         }
                     }
                 }
-                item {
-                    ElevatedCard(onClick = { haptics.click(); onPro() }, modifier = Modifier.fillMaxWidth().expressivePress(), shape = MaterialTheme.shapes.large, colors = CardDefaults.elevatedCardColors(containerColor = MaterialTheme.colorScheme.secondaryContainer)) {
-                        Row(Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                            BotAvatar(type = "star", mood = BotMood.Happy, size = 40.dp, still = true)
-                            Column(Modifier.weight(1f)) {
-                                Text(if (account?.isPro == true) "Rewordium Pro" else "Credits & Rewordium Pro", style = MaterialTheme.typography.titleMedium)
-                                Text(if (account?.isPro == true) "${account.planType.replaceFirstChar(Char::uppercase)} plan · active" else "${account?.credits ?: 0} credits available", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSecondaryContainer)
+            }
+
+            // 1 · Look & feel
+            item(key = "look") {
+                Column(Modifier.enterStagger(1), verticalArrangement = Arrangement.spacedBy(3.dp)) {
+                    SectionLabel("Look & feel", Modifier.padding(bottom = 6.dp))
+                    Surface(shape = com.noxquill.rewordium.app.ui.segmentShape(0, 3), color = MaterialTheme.colorScheme.surfaceContainer) {
+                        Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                            Text("Appearance", style = MaterialTheme.typography.titleSmall)
+                            ThemeModePicker(themeMode) { haptics.tick(); AppSettings.setThemeMode(it) }
+                        }
+                    }
+                    Surface(shape = com.noxquill.rewordium.app.ui.segmentShape(1, 3), color = MaterialTheme.colorScheme.surfaceContainer) {
+                        Column(Modifier.padding(vertical = 16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                            Text("Colours", style = MaterialTheme.typography.titleSmall, modifier = Modifier.padding(horizontal = 16.dp))
+                            PalettePicker(palette) { haptics.tick(); AppSettings.setPalette(it) }
+                        }
+                    }
+                    SettingSwitchRow(Icons.Filled.TouchApp, "Touch feedback", "Little vibrations when you tap around the app", hapticsOn, com.noxquill.rewordium.app.ui.segmentShape(2, 3), Tone.Tertiary) {
+                        AppSettings.setHaptics(it)
+                    }
+                }
+            }
+
+            // 2 · Jade & writing
+            item(key = "jade") {
+                SegmentedSection(
+                    title = "Jade & writing",
+                    modifier = Modifier.enterStagger(2),
+                    rows = listOf(
+                        { shape -> SettingRow(Icons.Filled.AutoAwesome, "Ask Jade to tune things", "Change any setting just by asking", shape, Tone.Primary, onClick = onAskJade) },
+                        { shape -> SettingRow(Icons.Filled.RecordVoiceOver, "Writing personas", "The voice the keyboard’s AI rewrite uses", shape, Tone.Secondary, onClick = onPersonas) },
+                        { shape -> SettingSwitchRow(Icons.Filled.Keyboard, "AI tools in the keyboard", "Show Rewordium’s writing tools while you type", keyboardAi, shape, Tone.Tertiary) { AppSettings.setKeyboardAiRewrite(it) } },
+                        { shape -> SettingRow(Icons.Filled.Key, "AI provider", "Use Rewordium’s AI or your own API key", shape, Tone.Primary, onClick = onAiSettings) },
+                        { shape -> SettingRow(Icons.Filled.DeleteSweep, "Clear Jade chats", "Delete conversations saved on this device", shape, Tone.Neutral) { confirmClearChats = true } },
+                    ),
+                )
+            }
+
+            // 3 · Keyboard: one card into the Keyboard tab.
+            item(key = "keyboard") {
+                Column(Modifier.enterStagger(3), verticalArrangement = Arrangement.spacedBy(3.dp)) {
+                    SectionLabel("Keyboard", Modifier.padding(bottom = 6.dp))
+                    Surface(
+                        onClick = { haptics.click(); onOpenKeyboard() },
+                        shape = MaterialTheme.shapes.extraLarge,
+                        color = MaterialTheme.colorScheme.tertiaryContainer,
+                        contentColor = MaterialTheme.colorScheme.onTertiaryContainer,
+                        modifier = Modifier.fillMaxWidth().expressivePress(0.97f),
+                    ) {
+                        Row(Modifier.padding(18.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(14.dp)) {
+                            AvatarBadge(
+                                type = "droid",
+                                size = 62.dp,
+                                mood = if (status.keyboardSelected) BotMood.Happy else BotMood.NeedsYou,
+                                container = MaterialTheme.colorScheme.primaryContainer,
+                                motion = ShapeMotion.Shift,
+                            )
+                            Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(5.dp)) {
+                                Text("keyboard_", style = Heading.Mono.style(MaterialTheme.typography.titleLarge))
+                                Text("Languages, looks, typing and feel", style = MaterialTheme.typography.bodySmall)
+                                StatusPill(
+                                    when {
+                                        status.keyboardSelected -> "On and selected"
+                                        status.keyboardEnabled -> "On · not selected"
+                                        else -> "Not turned on"
+                                    },
+                                    status.keyboardSelected,
+                                )
                             }
                             Icon(Icons.Filled.ChevronRight, null)
                         }
                     }
                 }
-                item {
-                    SettingsSection("Writing preferences") {
-                        SettingsRow(Icons.Filled.Key, "AI preferences", "Provider, model, and your API key", onAiSettings)
-                        SettingsDivider()
-                        SettingsRow(Icons.Filled.AutoAwesome, "Writing personas", "Choose the voice used when text is rewritten", onPersonas)
-                    }
-                }
-                item {
-                    SettingsSection("About Rewordium") {
-                        SettingsRow(Icons.Filled.Policy, "Privacy policy", "How account and writing data are handled", onPrivacy)
-                        SettingsDivider()
-                        SettingsRow(Icons.Filled.Policy, "Terms of service", "Terms for using Rewordium", onTerms)
-                        SettingsDivider()
-                        SettingsRow(Icons.Filled.OpenInNew, "Open-source licenses", "Libraries, credits, and notices", onLicenses)
-                        SettingsDivider()
-                        val version = remember { runCatching { context.packageManager.getPackageInfo(context.packageName, 0).versionName }.getOrNull() ?: "" }
-                        SettingsRow(Icons.Filled.AutoAwesome, "Rewordium for Android", "Version $version", {})
-                    }
-                }
-                if (account != null) item {
-                    SettingsSection("Account") {
-                        SettingsRow(Icons.Filled.DeleteForever, "Delete account", "Permanently remove your account", { confirmDelete = true }, destructive = true)
-                    }
-                }
             }
-        } else {
-            LazyColumn(contentPadding = PaddingValues(horizontal = 16.dp, vertical = 16.dp), verticalArrangement = Arrangement.spacedBy(18.dp)) {
-                item {
-                    SettingsSection("Accessibility") {
-                        Column(Modifier.padding(horizontal = 16.dp, vertical = 14.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                            Text("Use Rewordium’s writing actions in other apps when you choose. Android shows permission details before you enable the service.", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                            Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.SpaceBetween) {
-                                StatusText(if (status.accessibilityEnabled) "Enabled" else "Not enabled", status.accessibilityEnabled)
-                                Button(onClick = { haptics.click(); onAccessibility() }) { Text(if (status.accessibilityEnabled) "Review access" else "Open settings") }
+
+            // 4 · Accessibility
+            item(key = "accessibility") {
+                SegmentedSection(
+                    title = "Accessibility assistant",
+                    modifier = Modifier.enterStagger(4),
+                    rows = listOf { shape ->
+                        SettingRow(
+                            Icons.Filled.AccessibilityNew,
+                            if (status.accessibilityEnabled) "Assistant is on" else "Turn on the assistant",
+                            if (status.accessibilityEnabled) "Rewrite and reply inside other apps · manage in Android settings"
+                            else "Rewrite and reply inside other apps. We’ll explain what it accesses first.",
+                            shape,
+                            if (status.accessibilityEnabled) Tone.Primary else Tone.Tertiary,
+                            onClick = onAccessibility,
+                            trailing = { StatusPill(if (status.accessibilityEnabled) "On" else "Off", status.accessibilityEnabled) },
+                        )
+                    },
+                )
+            }
+
+            // 5 · Plan
+            item(key = "plan") {
+                SegmentedSection(
+                    title = "Plan",
+                    modifier = Modifier.enterStagger(5),
+                    rows = listOf { shape ->
+                        SettingRow(
+                            Icons.Filled.Stars,
+                            if (account?.isPro == true) "Rewordium Pro" else "Credits & Pro",
+                            if (account?.isPro == true) "${account.planType.replaceFirstChar(Char::uppercase)} plan · active" else "${account?.credits ?: 0} credits left · see plans",
+                            shape, Tone.Tertiary, onClick = onPro,
+                        )
+                    },
+                )
+            }
+
+            // 6 · Backup & restore: everything in one file on the phone.
+            item(key = "backup") {
+                BackupSection(modifier = Modifier.enterStagger(6), onRestored = onBackupRestored)
+            }
+
+            // 7 · About & legal
+            item(key = "about") {
+                SegmentedSection(
+                    title = "About & legal",
+                    modifier = Modifier.enterStagger(7),
+                    rows = listOf(
+                        { shape -> SettingRow(Icons.Filled.Policy, "Privacy policy", "What we collect and how it’s used", shape, Tone.Neutral, onClick = onPrivacy) },
+                        { shape -> SettingRow(Icons.Filled.Gavel, "Terms of service", "The rules for using Rewordium", shape, Tone.Neutral, onClick = onTerms) },
+                        { shape -> SettingRow(Icons.Filled.Shield, "Data safety", "What’s collected, why, and what’s shared", shape, Tone.Neutral) { onOpenLink(RewordiumLinks.DATA_SAFETY) } },
+                        { shape -> SettingRow(Icons.Filled.Description, "Open-source licenses", "The projects Rewordium is built on", shape, Tone.Neutral, onClick = onLicenses) },
+                        { shape ->
+                            SettingRow(Icons.Filled.Email, "Contact support", RewordiumLinks.SUPPORT_EMAIL, shape, Tone.Neutral) {
+                                runCatching {
+                                    context.startActivity(
+                                        android.content.Intent(android.content.Intent.ACTION_SENDTO, android.net.Uri.parse("mailto:${RewordiumLinks.SUPPORT_EMAIL}"))
+                                            .putExtra(android.content.Intent.EXTRA_SUBJECT, "Rewordium support"),
+                                    )
+                                }.onFailure { onOpenLink(RewordiumLinks.WEBSITE) }
                             }
-                        }
-                    }
-                }
-                item {
-                    SettingsSection("Keyboard") {
-                        Column(Modifier.padding(horizontal = 16.dp, vertical = 14.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                            StatusText(when { status.keyboardSelected -> "Enabled and selected"; status.keyboardEnabled -> "Enabled · choose as default"; else -> "Not enabled yet" }, status.keyboardSelected)
-                            Text("Set it up once, then write in the apps you already use.", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                                OutlinedButton(onClick = { haptics.click(); onEnableKeyboard() }) { Text(if (status.keyboardEnabled) "Keyboard settings" else "Enable keyboard") }
-                                if (status.keyboardEnabled && !status.keyboardSelected) Button(onClick = { haptics.click(); onChooseKeyboard() }) { Text("Choose keyboard") }
-                            }
-                        }
-                    }
-                }
-                item {
-                    SettingsSection("ReBoard control center") {
-                        KeyboardControlCard(onOpen = onKeyboard)
-                        SettingsDivider()
-                        SettingsRow(Icons.Filled.AutoAwesome, "Typing & suggestions", "Glide typing, corrections, candidates, and personal learning", { onKeyboardSection("typing") })
-                        SettingsDivider()
-                        SettingsRow(Icons.Filled.Edit, "Dictionary & language", "Private words, language tools, and spelling", { onKeyboardSection("dictionary") })
-                        SettingsDivider()
-                        SettingsRow(Icons.Filled.Bolt, "Gestures & shortcuts", "Swipe actions, cursor controls, and smartbar behavior", { onKeyboardSection("gestures") })
-                        SettingsDivider()
-                        SettingsRow(Icons.Filled.Keyboard, "Keyboard layout & feel", "Keys, themes, input feedback, and display choices", { onKeyboardSection("keyboard") })
-                        SettingsDivider()
-                        SettingsRow(Icons.Filled.Shield, "Private backup & restore", "Keep a local copy of your settings and learned words", { onKeyboardSection("other/backup") })
-                    }
-                }
-                item {
-                    SettingsSection("Writing in the keyboard") {
-                        SettingsRow(Icons.Filled.AutoAwesome, "Writing personas", "Pick the voice Rewordium uses", onPersonas)
-                        SettingsDivider()
-                        SettingsSwitchRow("AI rewrite in keyboard", "Show writing tools while you type", keyboardAiEnabled) {
-                            keyboardAiEnabled = it
-                            keyboardPrefs.edit().putBoolean("ai_rewrite_enabled", it).apply()
-                            haptics.toggle(it)
-                        }
-                    }
-                }
-                item {
-                    SettingsSection("Feel") {
-                        SettingsSwitchRow("Touch feedback", "Small haptic responses to taps and actions", hapticsEnabled) {
-                            hapticsEnabled = it
-                            keyboardPrefs.edit().putBoolean(KeyboardConstants.KEY_HAPTIC_FEEDBACK, it).apply()
-                            haptics.toggle(it)
-                        }
-                    }
-                }
-                item { Text("Android controls accessibility permission and the active keyboard. You can change either at any time.", Modifier.padding(horizontal = 4.dp), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant) }
+                        },
+                        { shape -> SettingRow(Icons.Filled.Info, "Rewordium for Android", "Version $version", shape, Tone.Neutral) },
+                    ),
+                )
+            }
+
+            // 8 · Account
+            item(key = "account") {
+                SegmentedSection(
+                    title = "Account",
+                    modifier = Modifier.enterStagger(8),
+                    rows = listOf(
+                        { shape -> SettingRow(Icons.AutoMirrored.Filled.Logout, "Sign out", account?.email ?: "Sign out of Rewordium on this phone", shape, Tone.Neutral) { confirmSignOut = true } },
+                        { shape -> SettingRow(Icons.Filled.DeleteForever, "Delete account", "Permanently remove your account and data", shape, Tone.Error) { showDelete = true } },
+                    ),
+                )
             }
         }
     }
 
-    if (confirmDelete) AlertDialog(
-        onDismissRequest = { confirmDelete = false },
-        icon = { Icon(Icons.Filled.DeleteForever, null, tint = MaterialTheme.colorScheme.error) },
-        title = { Text("Delete your account?") },
-        text = { Text("Your Rewordium profile and account data will be permanently removed. This can’t be undone. You may need to sign in again before deletion completes.") },
-        confirmButton = { TextButton(onClick = { confirmDelete = false; haptics.reject(); onDelete() }) { Text("Delete account", color = MaterialTheme.colorScheme.error) } },
-        dismissButton = { TextButton(onClick = { confirmDelete = false }) { Text("Keep account") } },
+    if (showAvatarPicker) AvatarPickerSheet(
+        current = avatar,
+        onDismiss = { showAvatarPicker = false },
+        onConfirm = { AppSettings.setAvatar(it); showAvatarPicker = false },
     )
 
-    if (showMascotPicker) Dialog(onDismissRequest = { showMascotPicker = false }) {
-        Surface(shape = MaterialTheme.shapes.extraLarge, color = MaterialTheme.colorScheme.surfaceContainerHigh) {
-            Column(Modifier.fillMaxWidth().padding(20.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
-                Column(verticalArrangement = Arrangement.spacedBy(3.dp)) {
-                    Text("Choose your mascot", style = MaterialTheme.typography.headlineSmall)
-                    Text("Every Rewordium bot has its own shape and expression.", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                }
-                LazyVerticalGrid(
-                    columns = GridCells.Fixed(4),
-                    modifier = Modifier.height(320.dp),
-                    contentPadding = PaddingValues(4.dp),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
-                    verticalArrangement = Arrangement.spacedBy(8.dp),
+    if (confirmSignOut) AlertDialog(
+        onDismissRequest = { confirmSignOut = false },
+        icon = { Icon(Icons.AutoMirrored.Filled.Logout, null) },
+        title = { Text("Sign out?") },
+        text = { Text("You’ll need to sign in again to use Jade and your credits.") },
+        confirmButton = { TextButton(onClick = { confirmSignOut = false; haptics.confirm(); onSignOut() }) { Text("Sign out") } },
+        dismissButton = { TextButton(onClick = { confirmSignOut = false }) { Text("Stay signed in") } },
+    )
+
+    if (confirmClearChats) AlertDialog(
+        onDismissRequest = { confirmClearChats = false },
+        icon = { Icon(Icons.Filled.DeleteSweep, null) },
+        title = { Text("Clear Jade chats?") },
+        text = { Text("Every Jade conversation saved on this device will be deleted. This can’t be undone.") },
+        confirmButton = { TextButton(onClick = { confirmClearChats = false; haptics.reject(); onClearJadeHistory() }) { Text("Clear chats", color = MaterialTheme.colorScheme.error) } },
+        dismissButton = { TextButton(onClick = { confirmClearChats = false }) { Text("Keep") } },
+    )
+
+    if (showDelete) DeleteAccountDialog(
+        isPro = account?.isPro == true,
+        onDismiss = { showDelete = false },
+        onDelete = onDeleteAccount,
+        onDeleteOnWeb = { onOpenLink(RewordiumLinks.DELETE_ACCOUNT) },
+    )
+}
+
+
+@OptIn(ExperimentalMaterial3ExpressiveApi::class)
+@Composable
+private fun ThemeModePicker(current: AppSettings.ThemeMode, onSelect: (AppSettings.ThemeMode) -> Unit) {
+    val modes = AppSettings.ThemeMode.entries
+    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(ButtonGroupDefaults.ConnectedSpaceBetween)) {
+        modes.forEachIndexed { index, mode ->
+            ToggleButton(
+                checked = mode == current,
+                onCheckedChange = { onSelect(mode) },
+                modifier = Modifier.weight(1f).semantics { role = Role.RadioButton },
+                colors = com.noxquill.rewordium.app.ui.segmentColors(),
+                shapes = when (index) {
+                    0 -> ButtonGroupDefaults.connectedLeadingButtonShapes()
+                    modes.lastIndex -> ButtonGroupDefaults.connectedTrailingButtonShapes()
+                    else -> ButtonGroupDefaults.connectedMiddleButtonShapes()
+                },
+                // The default 24dp side padding leaves "System" too little room on a phone.
+                contentPadding = PaddingValues(horizontal = 8.dp, vertical = 10.dp),
+            ) {
+                Icon(
+                    when (mode) {
+                        AppSettings.ThemeMode.SYSTEM -> Icons.Filled.Smartphone
+                        AppSettings.ThemeMode.LIGHT -> Icons.Filled.LightMode
+                        AppSettings.ThemeMode.DARK -> Icons.Filled.DarkMode
+                    },
+                    null,
+                    Modifier.size(18.dp),
+                )
+                Spacer(Modifier.width(6.dp))
+                Text(
+                    mode.label,
+                    maxLines = 1,
+                    softWrap = false,
+                    autoSize = TextAutoSize.StepBased(minFontSize = 11.sp, maxFontSize = 14.sp, stepSize = 0.5.sp),
+                )
+            }
+        }
+    }
+}
+
+@OptIn(ExperimentalMaterial3ExpressiveApi::class)
+@Composable
+private fun PalettePicker(current: String, onSelect: (String) -> Unit) {
+    val context = LocalContext.current
+    val dark = isSystemInDarkTheme()
+    val palettes = remember { AppSettings.palettes.filter { it.id != "dynamic" || Build.VERSION.SDK_INT >= Build.VERSION_CODES.S } }
+    val previews = remember(dark) { palettes.associate { it.id to colorSchemeFor(context, it.id, dark) } }
+    val cookie = MaterialShapes.Cookie9Sided.toShape()
+    LazyRow(contentPadding = PaddingValues(horizontal = 16.dp), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+        items(palettes, key = { it.id }) { palette ->
+            val selected = palette.id == current
+            val scheme = previews.getValue(palette.id)
+            val spin by animateFloatAsState(if (selected) 0f else -60f, spring(dampingRatio = 0.5f, stiffness = Spring.StiffnessLow), label = "palette-spin")
+            val grow by animateFloatAsState(if (selected) 1f else 0.86f, spring(dampingRatio = 0.5f, stiffness = Spring.StiffnessMediumLow), label = "palette-grow")
+            Column(
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.spacedBy(6.dp),
+                modifier = Modifier.semantics {
+                    contentDescription = "${palette.label} colours"
+                    this.selected = selected
+                },
+            ) {
+                Surface(
+                    onClick = { onSelect(palette.id) },
+                    shape = if (selected) cookie else CircleShape,
+                    color = scheme.primary,
+                    modifier = Modifier.size(64.dp).graphicsLayer { scaleX = grow; scaleY = grow; rotationZ = spin },
                 ) {
-                    items(mascotTypes, key = { it }) { type ->
-                        val selected = type == pendingMascot
-                        ElevatedCard(
-                            onClick = { haptics.tick(); pendingMascot = type },
-                            modifier = Modifier.fillMaxWidth().expressivePress(0.9f),
-                            shape = MaterialTheme.shapes.medium,
-                            colors = CardDefaults.elevatedCardColors(containerColor = if (selected) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surfaceContainerLow),
-                        ) {
-                            Column(Modifier.fillMaxWidth().padding(vertical = 8.dp), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                                BotAvatar(type = type, mood = if (selected) BotMood.Happy else BotMood.Idle, size = 48.dp, interactive = false, still = true, label = "$type mascot")
-                                Text(type.replaceFirstChar(Char::uppercase), style = MaterialTheme.typography.labelSmall, color = if (selected) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSurfaceVariant)
+                    Box {
+                        Column(Modifier.fillMaxSize()) {
+                            Box(Modifier.weight(1f).fillMaxWidth().background(scheme.primary))
+                            Row(Modifier.weight(1f).fillMaxWidth()) {
+                                Box(Modifier.weight(1f).fillMaxSize().background(scheme.tertiaryContainer))
+                                Box(Modifier.weight(1f).fillMaxSize().background(scheme.secondaryContainer))
                             }
                         }
+                        if (palette.id == "dynamic") Icon(Icons.Filled.Wallpaper, null, Modifier.align(Alignment.Center).size(22.dp), tint = scheme.onPrimary)
+                        else if (selected) Icon(Icons.Filled.Check, null, Modifier.align(Alignment.Center).size(24.dp).graphicsLayer { rotationZ = -spin }, tint = scheme.onPrimary)
                     }
                 }
-                Button(
-                    onClick = {
-                        haptics.success()
-                        onMascotSelected(pendingMascot)
-                        showMascotPicker = false
-                    },
-                    modifier = Modifier.fillMaxWidth().expressivePress(),
-                ) { Text("Use ${pendingMascot.replaceFirstChar(Char::uppercase)} mascot") }
-                TextButton(onClick = { showMascotPicker = false }, modifier = Modifier.align(Alignment.End)) { Text("Cancel") }
+                Text(palette.label, style = MaterialTheme.typography.labelMedium, color = if (selected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant)
             }
         }
     }
 }
 
+/**
+ * Deleting an account is permanent, so it's confirmed twice and Firebase may
+ * ask the user to prove it's them (password or Google) right before.
+ */
+@OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable
-private fun SettingsSection(title: String, content: @Composable ColumnScope.() -> Unit) {
-    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-        Text(title, style = MaterialTheme.typography.titleSmall, color = MaterialTheme.colorScheme.primary, modifier = Modifier.padding(start = 4.dp))
-        Surface(shape = MaterialTheme.shapes.large, color = MaterialTheme.colorScheme.surfaceContainerLow) {
-            Column(content = content)
-        }
-    }
-}
-
-@Composable
-private fun SettingsDivider() {
-    HorizontalDivider(Modifier.padding(start = 54.dp), color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.55f))
-}
-
-@Composable
-private fun KeyboardControlCard(onOpen: () -> Unit) {
+private fun DeleteAccountDialog(isPro: Boolean, onDismiss: () -> Unit, onDelete: suspend (String?, String?) -> Unit, onDeleteOnWeb: () -> Unit) {
+    val context = LocalContext.current
+    val scope = rememberCoroutineScope()
     val haptics = LocalHaptics.current
-    Surface(
-        onClick = { haptics.click(); onOpen() },
-        modifier = Modifier.fillMaxWidth().padding(10.dp).expressivePress(),
-        shape = MaterialTheme.shapes.medium,
-        color = MaterialTheme.colorScheme.primaryContainer,
-    ) {
-        Row(
-            Modifier.fillMaxWidth().padding(14.dp),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(12.dp),
-        ) {
-            MorphBadge(
-                phase = 2.22f,
-                color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.14f),
-                modifier = Modifier.size(52.dp),
-            ) {
-                BotAvatar(type = "droid", mood = BotMood.Happy, size = 46.dp, still = true, label = "ReBoard settings", modifier = Modifier.align(Alignment.Center))
+    val needsProof = remember { RewordiumRepository.needsFreshSignIn() }
+    val google = remember { RewordiumRepository.signedInWithGoogle }
+    var password by remember { mutableStateOf("") }
+    var busy by remember { mutableStateOf(false) }
+    var error by remember { mutableStateOf<String?>(null) }
+
+    fun run(password: String?, token: String?) {
+        scope.launch {
+            busy = true
+            error = null
+            runCatching { onDelete(password, token) }
+                .onFailure { error = it.message ?: "Couldn’t delete your account. Try again."; haptics.reject() }
+            busy = false
+        }
+    }
+
+    val googleLauncher = rememberLauncherForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
+        if (result.resultCode == Activity.RESULT_OK) {
+            val token = runCatching {
+                GoogleSignIn.getSignedInAccountFromIntent(result.data).getResult(ApiException::class.java).idToken
+            }.getOrNull()
+            if (!token.isNullOrBlank()) run(null, token) else error = "Google didn’t confirm your account. Try again."
+        }
+    }
+
+    AlertDialog(
+        onDismissRequest = { if (!busy) onDismiss() },
+        icon = { Icon(Icons.Filled.DeleteForever, null, tint = MaterialTheme.colorScheme.error) },
+        title = { Text("Delete your account?") },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                Text("This permanently deletes your Rewordium account, profile, credits and plan records, and the Jade chats on this phone. It can’t be undone.")
+                if (isPro) Text(
+                    "Deleting your account doesn’t cancel Rewordium Pro. Cancel it in Google Play → Subscriptions so you aren’t charged again.",
+                    color = MaterialTheme.colorScheme.error,
+                    style = MaterialTheme.typography.bodyMedium,
+                )
+                if (needsProof && !google) {
+                    OutlinedTextField(
+                        value = password,
+                        onValueChange = { password = it },
+                        label = { Text("Your password") },
+                        singleLine = true,
+                        visualTransformation = PasswordVisualTransformation(),
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
+                        shape = MaterialTheme.shapes.medium,
+                        modifier = Modifier.fillMaxWidth(),
+                    )
+                }
+                if (needsProof && google) Text("Google will ask you to confirm it’s you.", style = MaterialTheme.typography.bodySmall)
+                error?.let { Text(it, color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodySmall) }
+                if (busy) LoadingIndicator(Modifier.size(40.dp).align(Alignment.CenterHorizontally))
+                TextButton(onClick = onDeleteOnWeb, contentPadding = PaddingValues(0.dp), enabled = !busy) {
+                    Text("Can’t sign in? Request deletion on the web", style = MaterialTheme.typography.labelLarge)
+                }
             }
-            Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
-                Text("All ReBoard settings", style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.onPrimaryContainer)
-                Text("Every keyboard customization in one place", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onPrimaryContainer)
-            }
-            Icon(Icons.Filled.OpenInNew, "Open ReBoard settings", tint = MaterialTheme.colorScheme.onPrimaryContainer)
-        }
-    }
-}
-
-@Composable
-private fun SettingsRow(
-    icon: androidx.compose.ui.graphics.vector.ImageVector,
-    title: String,
-    subtitle: String,
-    onClick: () -> Unit,
-    destructive: Boolean = false,
-) {
-    val haptics = LocalHaptics.current
-    Row(
-        Modifier.fillMaxWidth().clickable { haptics.click(); onClick() }.expressivePress().padding(horizontal = 16.dp, vertical = 13.dp),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(12.dp),
-    ) {
-        MorphBadge(
-            phase = (title.length % 5) + 0.22f,
-            color = if (destructive) MaterialTheme.colorScheme.errorContainer else MaterialTheme.colorScheme.primaryContainer,
-            modifier = Modifier.size(36.dp),
-        ) {
-            Icon(icon, null, Modifier.align(Alignment.Center).size(20.dp), tint = if (destructive) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onPrimaryContainer)
-        }
-        Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
-            Text(title, style = MaterialTheme.typography.titleSmall, color = if (destructive) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurface)
-            Text(subtitle, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-        }
-        Icon(Icons.Filled.ChevronRight, null, Modifier.size(18.dp), tint = MaterialTheme.colorScheme.onSurfaceVariant)
-    }
-}
-
-private val mascotTypes = listOf("clover", "flower", "triangle", "square", "blob", "ghost", "circle", "drop", "star", "droid", "mech", "alien", "hexagon", "cat", "cloud", "pill", "pebble", "puddle")
-
-@Composable
-private fun SettingsSwitchRow(title: String, subtitle: String, checked: Boolean, onCheckedChange: (Boolean) -> Unit) {
-    Row(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 12.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-        MorphBadge(
-            phase = 3.22f,
-            color = MaterialTheme.colorScheme.primaryContainer,
-            modifier = Modifier.size(36.dp),
-        ) {
-            Icon(Icons.Filled.Bolt, null, Modifier.align(Alignment.Center).size(20.dp), tint = MaterialTheme.colorScheme.onPrimaryContainer)
-        }
-        Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
-            Text(title, style = MaterialTheme.typography.titleSmall)
-            Text(subtitle, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-        }
-        Switch(checked = checked, onCheckedChange = onCheckedChange)
-    }
-}
-
-@Composable
-private fun StatusText(text: String, active: Boolean) {
-    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(7.dp)) {
-        Icon(if (active) Icons.Filled.CheckCircle else Icons.Filled.Shield, null, Modifier.size(17.dp), tint = if (active) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.tertiary)
-        Text(text, style = MaterialTheme.typography.labelLarge)
-    }
+        },
+        confirmButton = {
+            TextButton(
+                enabled = !busy && (!needsProof || google || password.isNotBlank()),
+                onClick = {
+                    haptics.reject()
+                    when {
+                        !needsProof -> run(null, null)
+                        google -> {
+                            val options = GoogleSignInOptions.Builder(GoogleSignInOptions.DEFAULT_SIGN_IN)
+                                .requestIdToken(context.getString(R.string.default_web_client_id))
+                                .requestEmail()
+                                .build()
+                            googleLauncher.launch(GoogleSignIn.getClient(context, options).signInIntent)
+                        }
+                        else -> run(password, null)
+                    }
+                },
+            ) { Text(if (needsProof && google) "Confirm with Google" else "Delete forever", color = MaterialTheme.colorScheme.error) }
+        },
+        dismissButton = { TextButton(onClick = onDismiss, enabled = !busy) { Text("Keep account") } },
+    )
 }

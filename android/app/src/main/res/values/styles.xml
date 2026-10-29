@@ -1,15 +1,21 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <style name="Theme.Rewordium" parent="Theme.Material3.DayNight.NoActionBar">
-        <item name="colorPrimary">#176B51</item>
-        <item name="colorSecondary">#48645B</item>
-        <item name="android:windowBackground">#FAF8F3</item>
-        <item name="android:statusBarColor">#FAF8F3</item>
-        <item name="android:navigationBarColor">#FAF8F3</item>
+        <item name="colorPrimary">#7A2BE0</item>
+        <item name="colorSecondary">#9C4A43</item>
+        <item name="android:windowBackground">@color/rewordium_window_background</item>
+        <item name="android:statusBarColor">@color/rewordium_window_background</item>
+        <item name="android:navigationBarColor">@color/rewordium_window_background</item>
         <item name="android:windowLightStatusBar">true</item>
         <item name="android:windowLightNavigationBar">true</item>
         <item name="android:windowActionModeOverlay">true</item>
         <item name="android:windowLayoutInDisplayCutoutMode">shortEdges</item>
+    </style>
+    <!-- The launch screen (AndroidX SplashScreen): Jade on a Material shape, in the app's palette. -->
+    <style name="Theme.Rewordium.Starting" parent="Theme.SplashScreen">
+        <item name="windowSplashScreenBackground">@color/rewordium_splash_background</item>
+        <item name="windowSplashScreenAnimatedIcon">@drawable/splash_jade_static</item>
+        <item name="postSplashScreenTheme">@style/Theme.Rewordium</item>
     </style>
     <style name="LaunchTheme" parent="Theme.Rewordium">
         <item name="android:windowBackground">@drawable/launch_background</item>

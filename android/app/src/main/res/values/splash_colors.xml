@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- The launch screen speaks the app's Electric palette: lilac page, purple shape. -->
+    <color name="rewordium_splash_background">#EFE5FF</color>
+    <color name="rewordium_splash_shape">#C68CFA</color>
+    <color name="rewordium_window_background">#EFE5FF</color>
+</resources>

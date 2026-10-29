@@ -71,6 +71,7 @@ import androidx.compose.material.icons.rounded.Bolt
 import androidx.compose.material.icons.rounded.BusinessCenter
 import androidx.compose.material.icons.rounded.Check
 import androidx.compose.material.icons.rounded.ContentCopy
+import androidx.compose.material.icons.rounded.OutlinedFlag
 import androidx.compose.material.icons.rounded.EditNote
 import androidx.compose.material.icons.rounded.EmojiEmotions
 import androidx.compose.material.icons.rounded.ErrorOutline
@@ -450,6 +451,7 @@ fun AiInputLayout(
                             onCopy = { feedback.keyPress(); copy(current.text) },
                             onRetry = { feedback.keyPress(); run(current.tool) },
                             onRefine = { tool -> feedback.keyPress(); run(tool, refineInput = current.text) },
+                            onReport = { feedback.keyPress(); AiContentReports.report(context, "keyboard", current.tool.name, current.text) },
                         )
                         is PanelState.Failed -> FailedView(
                             message = current.message,
@@ -874,6 +876,7 @@ private fun ResultView(
     onCopy: () -> Unit,
     onRetry: () -> Unit,
     onRefine: (AiTool) -> Unit,
+    onReport: () -> Unit,
 ) {
     Column(
         modifier = Modifier
@@ -905,6 +908,7 @@ private fun ResultView(
                     )
                     SmallIconButton(Icons.Rounded.ContentCopy, "Copy", muted, onCopy)
                     SmallIconButton(Icons.Rounded.Refresh, "Try again", muted, onRetry)
+                    SmallIconButton(Icons.Rounded.OutlinedFlag, "Report this result", muted, onReport)
                 }
                 Text(
                     text,

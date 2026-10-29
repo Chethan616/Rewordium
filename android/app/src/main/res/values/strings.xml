@@ -2,7 +2,7 @@
 <resources>
     <string name="app_name">Rewordium</string>
     
-    <string name="accessibility_service_description">Rewordium helps you communicate more effectively across all your messaging and email apps.\n\nMake messaging and emailing simple 😉\n\nEnhance your typing experience with AI assistance, including smart replies, grammar correction, and tone adjustments. Your privacy is respected - all processing happens on your device.</string>
+    <string name="accessibility_service_description">Rewordium\'s writing assistant helps you rewrite, fix grammar, change tone and draft smart replies inside your other apps.\n\nWhat it accesses: it notices when you\'re in a text field so it can show the floating assistant. When you use the assistant, it reads the text in that field and, for smart replies, the recent messages visible in that conversation.\n\nHow it\'s used: only the text you ask it to work on is sent to Rewordium\'s AI provider to write the suggestion, and the result is placed back in the field when you choose it. It isn\'t used for ads or sold, and Rewordium doesn\'t keep the text after your request.\n\nYou can turn this service off at any time.</string>
     <string name="keyboard_key">Keyboard key</string>
     <string name="ai_button">AI Button</string>
     <string name="tap_ai_to_paraphrase">Tap AI to paraphrase</string>

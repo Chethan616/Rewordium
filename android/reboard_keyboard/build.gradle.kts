@@ -124,7 +124,7 @@ android {
 
         buildConfigField("String", "BUILD_COMMIT_HASH", "\"${getGitCommitHash().get()}\"")
         buildConfigField("String", "FLADDONS_API_VERSION", "\"v~draft2\"")
-        buildConfigField("String", "FLADDONS_STORE_URL", "\"www.rewordium.tech/extensions\"")
+        buildConfigField("String", "FLADDONS_STORE_URL", "\"chethan616.github.io/Rewordium\"")
         buildConfigField("String", "GROQ_API_KEY", "\"${getApiKey("GROQ_API_KEY")}\"")
 
         // Feature flags — toggle here for gradual rollout; true = enabled in all builds.

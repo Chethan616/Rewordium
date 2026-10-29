@@ -2053,7 +2053,20 @@ class MyAccessibilityService : AccessibilityService(), BubbleInteractionListener
                 textView.maxLines = 20
                 textView.minLines = 3
             }
-            
+
+            // Google Play's AI-generated content policy: results can be flagged in place.
+            suggestionItemView.setOnLongClickListener {
+                it.performHapticFeedback(android.view.HapticFeedbackConstants.LONG_PRESS)
+                com.noxquill.rewordium.keyboard.ime.ai.AiContentReports.report(this, "accessibility", "suggestion", suggestionText)
+                true
+            }
+            androidx.core.view.ViewCompat.replaceAccessibilityAction(
+                suggestionItemView,
+                androidx.core.view.accessibility.AccessibilityNodeInfoCompat.AccessibilityActionCompat.ACTION_LONG_CLICK,
+                "Report this suggestion",
+                null,
+            )
+
             suggestionItemView.setOnClickListener {
                 // *** THE CRITICAL FIX ***
                 // The user's click signifies the end of this specific interaction flow.

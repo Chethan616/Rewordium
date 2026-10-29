@@ -232,3 +232,21 @@
 
 # Keep QuickSettingsHelper
 -keep class com.noxquill.rewordium.keyboard.app.QuickSettingsHelper { *; }
+
+# ─── Host-app API ────────────────────────────────────────────────────────────
+# The Rewordium app reads and writes keyboard settings directly (its in-app
+# keyboard page and Jade's settings tools). This library minifies itself in
+# release, so anything only the app uses must be kept by name, members included.
+-keep class com.noxquill.rewordium.keyboard.app.ReboardSettingsBridge { *; }
+-keep class com.noxquill.rewordium.keyboard.app.ReboardSettingsBridge$* { *; }
+-keep class com.noxquill.rewordium.keyboard.app.ReboardLanguages { *; }
+-keep class com.noxquill.rewordium.keyboard.app.ReboardLanguages$* { *; }
+-keep class com.noxquill.rewordium.keyboard.app.ReboardBackup { *; }
+-keep class com.noxquill.rewordium.keyboard.app.ReboardBackup$* { *; }
+-keep class com.noxquill.rewordium.keyboard.app.FlorisPreferenceModel { *; }
+-keep class com.noxquill.rewordium.keyboard.app.FlorisPreferenceModel$* { *; }
+-keep class com.noxquill.rewordium.keyboard.app.AppPrefsKt { *; }
+-keep class com.noxquill.rewordium.keyboard.lib.ext.ExtensionComponentName { *; }
+-keep class com.noxquill.rewordium.keyboard.lib.ext.ExtensionComponentName$* { *; }
+-keep class com.noxquill.rewordium.keyboard.FlorisApplication { *; }
+-keep class com.noxquill.rewordium.keyboard.FlorisApplication$* { *; }

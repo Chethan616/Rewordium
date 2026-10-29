@@ -1,17 +1,60 @@
 package com.noxquill.rewordium.app
 
 import android.content.Intent
+import android.database.ContentObserver
 import android.net.Uri
+import android.os.Handler
+import android.os.Looper
+import android.provider.Settings
 import android.widget.Toast
+import androidx.activity.compose.BackHandler
+import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.slideInVertically
+import androidx.compose.animation.slideOutVertically
+import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.layout.BoxWithConstraints
+import androidx.compose.foundation.layout.padding
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.VolumeOff
+import androidx.compose.material.icons.filled.AutoAwesome
+import androidx.compose.material.icons.filled.DarkMode
+import androidx.compose.material.icons.filled.EditNote
+import androidx.compose.material.icons.filled.Height
+import androidx.compose.material.icons.filled.Home
+import androidx.compose.material.icons.filled.Keyboard
+import androidx.compose.material.icons.filled.Language
+import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material.icons.filled.Spellcheck
+import androidx.compose.material.icons.filled.Translate
+import androidx.compose.material.icons.filled.Tune
+import androidx.compose.material.icons.outlined.AutoAwesome
+import androidx.compose.material.icons.outlined.Home
+import androidx.compose.material.icons.outlined.Keyboard
+import androidx.compose.material.icons.outlined.Settings
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.unit.dp
+import com.noxquill.rewordium.app.screens.KeyboardScreen
+import com.noxquill.rewordium.app.ui.ExpressiveFabMenu
+import com.noxquill.rewordium.app.ui.FabAction
+import com.noxquill.rewordium.app.ui.FloatingNavBar
+import com.noxquill.rewordium.app.ui.NavTab
+import com.noxquill.rewordium.data.jade.JadeSkills
 import androidx.compose.animation.core.CubicBezierEasing
-import androidx.compose.animation.EnterExitState
+import androidx.compose.animation.core.Spring
+import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
+import androidx.compose.animation.scaleIn
+import androidx.compose.animation.scaleOut
 import androidx.compose.animation.slideInHorizontally
 import androidx.compose.animation.slideOutHorizontally
-import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.safeDrawingPadding
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
@@ -19,51 +62,65 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.unit.IntOffset
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.navigation.NavType
-import androidx.navigation.navArgument
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
+import androidx.navigation.navArgument
 import com.google.firebase.auth.FirebaseAuth
+import com.google.firebase.auth.FirebaseAuthInvalidCredentialsException
+import com.google.firebase.auth.FirebaseAuthInvalidUserException
+import com.google.firebase.auth.FirebaseAuthRecentLoginRequiredException
+import com.google.firebase.auth.FirebaseAuthUserCollisionException
+import com.google.firebase.auth.FirebaseAuthWeakPasswordException
+import com.google.firebase.auth.FirebaseUser
 import com.noxquill.rewordium.MainActivity
-import com.noxquill.rewordium.app.model.toolFor
-import com.noxquill.rewordium.app.model.writingTools
+import com.noxquill.rewordium.app.jade.JadeController
+import com.noxquill.rewordium.app.screens.AccessibilityDisclosureDialog
 import com.noxquill.rewordium.app.screens.AiSettingsScreen
 import com.noxquill.rewordium.app.screens.AuthScreen
 import com.noxquill.rewordium.app.screens.HomeScreen
 import com.noxquill.rewordium.app.screens.InfoScreen
-import com.noxquill.rewordium.app.screens.JadeMessage
+import com.noxquill.rewordium.app.screens.JADE_FLIGHT
 import com.noxquill.rewordium.app.screens.JadeScreen
 import com.noxquill.rewordium.app.screens.LicensesScreen
 import com.noxquill.rewordium.app.screens.OnboardingScreen
+import com.noxquill.rewordium.app.screens.PersonaScreen
 import com.noxquill.rewordium.app.screens.ProScreen
 import com.noxquill.rewordium.app.screens.SettingsScreen
-import com.noxquill.rewordium.app.screens.ToolsScreen
-import com.noxquill.rewordium.app.screens.WritingToolScreen
-import com.noxquill.rewordium.app.ui.haptics.LocalHaptics
-import com.noxquill.rewordium.app.ui.haptics.rememberHaptics
+import com.noxquill.rewordium.app.screens.recordAccessibilityConsent
+import com.noxquill.rewordium.app.ui.AvatarPickerSheet
 import com.noxquill.rewordium.app.ui.avatar.BotFlight
 import com.noxquill.rewordium.app.ui.avatar.BotFlightLayer
 import com.noxquill.rewordium.app.ui.avatar.LocalBotFlight
+import com.noxquill.rewordium.app.ui.haptics.LocalHaptics
+import com.noxquill.rewordium.app.ui.haptics.rememberHaptics
 import com.noxquill.rewordium.billing.BillingUiState
 import com.noxquill.rewordium.billing.PlayBillingManager
 import com.noxquill.rewordium.data.AccountInfo
+import com.noxquill.rewordium.data.AppSettings
 import com.noxquill.rewordium.data.RewordiumRepository
-import com.noxquill.rewordium.data.WritingRepository
-import com.noxquill.rewordium.util.KeyboardConstants
-import kotlinx.coroutines.launch
+import com.noxquill.rewordium.keyboard.ime.ai.AIConfigProvider
+import com.noxquill.rewordium.app.ui.warmColorSchemes
+import com.noxquill.rewordium.data.KeyboardEngine
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
+
+private enum class Stage { Onboarding, SignIn, App }
 
 @Composable
 fun RewordiumRoot(
@@ -71,9 +128,7 @@ fun RewordiumRoot(
     routeRequest: String?,
     onRouteConsumed: () -> Unit,
 ) {
-    val context = LocalContext.current
-    val prefs = remember(context) { context.getSharedPreferences(KeyboardConstants.PREFS_NAME, 0) }
-    val haptics = rememberHaptics { prefs.getBoolean(KeyboardConstants.KEY_HAPTIC_FEEDBACK, true) }
+    val haptics = rememberHaptics { AppSettings.haptics.value }
     CompositionLocalProvider(LocalHaptics provides haptics) {
         RewordiumRootContent(activity, routeRequest, onRouteConsumed)
     }
@@ -89,90 +144,55 @@ private fun RewordiumRootContent(
     val scope = rememberCoroutineScope()
     val appPrefs = remember { context.getSharedPreferences("rewordium_app", 0) }
     var onboardingDone by remember { mutableStateOf(appPrefs.getBoolean("onboarding_complete", false)) }
-    val navController = rememberNavController()
-    val botFlight = remember { BotFlight() }
-    val currentEntry by navController.currentBackStackEntryAsState()
-    var openToolRoute by remember { mutableStateOf<String?>(null) }
-    var activeToolId by rememberSaveable { mutableStateOf("paraphraser") }
-    var mascotType by remember { mutableStateOf(appPrefs.getString("mascot_type", "flower") ?: "flower") }
-    var recentToolIds by remember {
-        mutableStateOf(
-            appPrefs.getString("recent_tool_ids", "")
-                .orEmpty().split(',').filter(String::isNotBlank).distinct().take(5),
-        )
-    }
+    var firebaseUser by remember { mutableStateOf<FirebaseUser?>(RewordiumRepository.currentUser) }
     var account by remember { mutableStateOf<AccountInfo?>(null) }
     var platformStatus by remember { mutableStateOf(activity.setupStatus()) }
-    var busy by remember { mutableStateOf(false) }
-    var authError by remember { mutableStateOf<String?>(null) }
-    var requireSignInAfterLogout by rememberSaveable {
-        mutableStateOf(appPrefs.getBoolean("require_sign_in_after_logout", false))
-    }
     var billingState by remember { mutableStateOf(BillingUiState()) }
+    var showDisclosure by rememberSaveable { mutableStateOf(false) }
+    var showAvatarSheet by rememberSaveable { mutableStateOf(false) }
+    val avatar by AppSettings.avatar.collectAsState()
 
-    fun selectMascot(type: String) {
-        mascotType = type
-        appPrefs.edit().putString("mascot_type", type).apply()
+    suspend fun refreshAccount(): AccountInfo? =
+        runCatching { RewordiumRepository.refreshAccount(context) }.getOrNull().also { account = it }
+
+    fun usesOwnKey() = AIConfigProvider.getConfig(context).isAdvancedEnabled
+
+    val jade = remember {
+        JadeController(
+            context = context,
+            scope = scope,
+            owner = { RewordiumRepository.currentUser?.uid ?: "guest" },
+            userName = { account?.name?.trim()?.substringBefore(' ') },
+            beforeRequest = {
+                if (RewordiumRepository.currentUser == null) throw IllegalStateException("Sign in to chat with Jade.")
+                if (!usesOwnKey() && account?.isPro != true) {
+                    val credits = account?.credits ?: refreshAccount()?.credits ?: 0
+                    if (credits <= 0) throw IllegalStateException("You’re out of credits. Rewordium Pro gives you unlimited Jade.")
+                }
+            },
+            afterSuccess = {
+                if (!usesOwnKey() && account?.isPro != true) {
+                    RewordiumRepository.consumeCredit(context, "jade")
+                    refreshAccount()
+                }
+                activity.onAiGenerationSuccess()
+            },
+        )
     }
-
-    LaunchedEffect(currentEntry) {
-        val toolId = currentEntry
-            ?.takeIf { it.destination.route == "tool/{toolId}" }
-            ?.arguments?.getString("toolId")
-        val previousToolId = openToolRoute
-        if (toolId != null && toolId != previousToolId) botFlight.chatOpened(toolId)
-        if (previousToolId != null && toolId == null && currentEntry?.destination?.route == "home") {
-            botFlight.toHome(previousToolId)
-        }
-        openToolRoute = toolId
-    }
-
-    fun recordRecent(id: String) {
-        if (writingTools.none { it.id == id }) return
-        recentToolIds = (listOf(id) + recentToolIds.filterNot { it == id }).take(5)
-        appPrefs.edit().putString("recent_tool_ids", recentToolIds.joinToString(",")).apply()
-    }
-
-    fun navigateTo(id: String) {
-        if (requireSignInAfterLogout && id != "auth") return
-        when (id) {
-            "home", "tools", "jade", "settings", "settings/access", "pro", "auth", "ai_settings", "licenses", "privacy", "terms", "personas" ->
-                navController.navigate(id)
-            "keyboard_settings" -> navController.navigate("settings/access")
-            else -> {
-                activeToolId = id
-                recordRecent(id)
-                navController.navigate("tool/$id")
-            }
-        }
-    }
-
-    LaunchedEffect(routeRequest) {
-        routeRequest?.let { requested ->
-            when (requested) {
-                "home", "tools", "settings", "jade", "pro", "ai_settings", "licenses", "privacy", "terms", "personas" -> navigateTo(requested)
-                "keyboard_settings" -> navigateTo("settings/access")
-                "settings/access" -> navigateTo("settings/access")
-                "auth" -> navigateTo("auth")
-                else -> navigateTo(requested)
-            }
-            onRouteConsumed()
-        }
-    }
-
-    suspend fun refreshAccount() {
-        account = runCatching { RewordiumRepository.refreshAccount(context) }.getOrNull()
-    }
-
-    LaunchedEffect(Unit) { refreshAccount() }
 
     val authListener = remember {
-        FirebaseAuth.AuthStateListener { _ -> scope.launch { refreshAccount() } }
+        FirebaseAuth.AuthStateListener { auth ->
+            val previousUid = firebaseUser?.uid
+            firebaseUser = auth.currentUser
+            if (auth.currentUser?.uid != previousUid) jade.accountChanged()
+            scope.launch { refreshAccount() }
+        }
     }
     DisposableEffect(activity) {
         runCatching { FirebaseAuth.getInstance().addAuthStateListener(authListener) }
         onDispose { runCatching { FirebaseAuth.getInstance().removeAuthStateListener(authListener) } }
     }
+    LaunchedEffect(Unit) { refreshAccount() }
 
     DisposableEffect(activity) {
         val observer = LifecycleEventObserver { _, event ->
@@ -180,6 +200,22 @@ private fun RewordiumRootContent(
         }
         activity.lifecycle.addObserver(observer)
         onDispose { activity.lifecycle.removeObserver(observer) }
+    }
+    // Switching keyboards in Android's picker (or turning the assistant on) doesn't pause the app, so
+    // watch the system settings themselves: the keyboard status updates the moment the user switches.
+    DisposableEffect(activity) {
+        val settingsObserver = object : ContentObserver(Handler(Looper.getMainLooper())) {
+            override fun onChange(selfChange: Boolean) {
+                platformStatus = activity.setupStatus()
+            }
+        }
+        val resolver = activity.contentResolver
+        listOf(
+            Settings.Secure.DEFAULT_INPUT_METHOD,
+            Settings.Secure.ENABLED_INPUT_METHODS,
+            Settings.Secure.ENABLED_ACCESSIBILITY_SERVICES,
+        ).forEach { key -> runCatching { resolver.registerContentObserver(Settings.Secure.getUriFor(key), false, settingsObserver) } }
+        onDispose { resolver.unregisterContentObserver(settingsObserver) }
     }
 
     val billingManager = remember(activity) {
@@ -196,252 +232,506 @@ private fun RewordiumRootContent(
     LaunchedEffect(billingManager) { billingManager.connect() }
     DisposableEffect(billingManager) { onDispose { billingManager.close() } }
 
-    fun goToAuth() {
-        authError = null
-        navigateTo("auth")
-    }
-
-    fun signOutAndRequireAuth() {
-        RewordiumRepository.signOut(context)
-        account = null
-        authError = null
-        requireSignInAfterLogout = true
-        appPrefs.edit().putBoolean("require_sign_in_after_logout", true).apply()
-        navController.navigate("auth") {
-            popUpTo(navController.graph.startDestinationId) { inclusive = true }
-            launchSingleTop = true
-        }
-    }
-
-    fun runAuth(action: suspend () -> Unit) {
-        scope.launch {
-            busy = true
-            authError = null
-            runCatching { action() }
-                .onSuccess {
-                    refreshAccount()
-                    if (requireSignInAfterLogout) {
-                        requireSignInAfterLogout = false
-                        appPrefs.edit().putBoolean("require_sign_in_after_logout", false).apply()
-                        navController.navigate("home") {
-                            popUpTo("auth") { inclusive = true }
-                            launchSingleTop = true
-                        }
-                    } else if (!navController.popBackStack()) {
-                        navController.navigate("home") { launchSingleTop = true }
-                    }
-                }
-                .onFailure { authError = authMessage(it) }
-            busy = false
-        }
-    }
-
     fun openLink(url: String) {
         runCatching { activity.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(url))) }
             .onFailure { Toast.makeText(context, "Couldn’t open this link.", Toast.LENGTH_SHORT).show() }
     }
 
-    suspend fun requestWriting(text: String, tone: String, language: String): String {
-        if (RewordiumRepository.currentUser == null) throw IllegalStateException("Sign in to use Jade and keep your credits with your account.")
-        if (account?.isPro != true) {
-            val allowed = RewordiumRepository.consumeCredit(context, "writing_$activeToolId")
-            if (!allowed) throw IllegalStateException("You’re out of credits. Explore Rewordium Pro for more room to write.")
-            refreshAccount()
-        }
-        val toolId = if (activeToolId in setOf("paraphraser", "grammar", "summarizer", "translator", "tone", "detector", "document", "humanizer")) activeToolId else toolFor(activeToolId).id
-        return WritingRepository.generate(context, toolId, text, tone, language).also { activity.onAiGenerationSuccess() }
+    fun requestAccessibility() {
+        if (platformStatus.accessibilityEnabled) activity.openAccessibilitySettings() else showDisclosure = true
     }
 
-    suspend fun requestJade(prompt: String, history: List<JadeMessage>): String {
-        if (RewordiumRepository.currentUser == null) throw IllegalStateException("Sign in to chat with Jade and keep your credits with your account.")
-        if (account?.isPro != true) {
-            val allowed = RewordiumRepository.consumeCredit(context, "jade_chat")
-            if (!allowed) throw IllegalStateException("You’re out of credits. Explore Rewordium Pro for more room to write.")
-            refreshAccount()
-        }
-        val conversation = history.map { (if (it.fromJade) "Jade" else "Writer") to it.text }
-        return WritingRepository.chat(context, prompt, conversation).also { activity.onAiGenerationSuccess() }
-    }
-
-    if (!onboardingDone) {
-        Surface(Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
-            OnboardingScreen(
-                mascotType = mascotType,
-                onMascotSelected = ::selectMascot,
-            ) {
-                appPrefs.edit().putBoolean("onboarding_complete", true).apply()
-                onboardingDone = true
-            }
-        }
-        return
+    val stage = when {
+        !onboardingDone -> Stage.Onboarding
+        firebaseUser == null -> Stage.SignIn
+        else -> Stage.App
     }
 
     Surface(Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
-      Box(Modifier.fillMaxSize().safeDrawingPadding()) {
-      CompositionLocalProvider(LocalBotFlight provides botFlight) {
-      NavHost(
-          navController = navController,
-          startDestination = if (requireSignInAfterLogout) "auth" else "home",
-          enterTransition = { fadeIn(tween(180)) + slideInHorizontally(NavSlide) { it / 8 } },
-          exitTransition = { fadeOut(tween(140)) + slideOutHorizontally(NavSlide) { -it / 12 } },
-          popEnterTransition = { fadeIn(tween(180)) + slideInHorizontally(NavSlide) { -it / 10 } },
-          popExitTransition = { fadeOut(tween(140)) + slideOutHorizontally(NavSlide) { it / 8 } },
-          predictivePopEnterTransition = { fadeIn(tween(180)) + slideInHorizontally(NavSlide) { -it / 10 } },
-          predictivePopExitTransition = { fadeOut(tween(140)) + slideOutHorizontally(NavSlide) { it / 8 } },
-      ) {
-        composable("home") {
-            HomeScreen(
-                account = account,
-                platformStatus = platformStatus,
-                recentTools = recentToolIds.mapNotNull { id -> writingTools.firstOrNull { it.id == id } },
-                onClearRecents = {
-                    recentToolIds = emptyList()
-                    appPrefs.edit().remove("recent_tool_ids").apply()
+        Box(Modifier.fillMaxSize().safeDrawingPadding()) {
+            AnimatedContent(
+                targetState = stage,
+                transitionSpec = {
+                    (fadeIn(tween(320)) + scaleIn(spring(dampingRatio = 0.8f, stiffness = Spring.StiffnessMediumLow), initialScale = 0.92f))
+                        .togetherWith(fadeOut(tween(180)) + scaleOut(targetScale = 1.04f))
                 },
-                mascotType = mascotType,
-                onOpenTool = ::navigateTo,
-                onOpenRecentTool = { id ->
-                    activeToolId = id
-                    navController.navigate("tool/$id")
+                label = "stage",
+            ) { current ->
+                when (current) {
+                    Stage.Onboarding -> OnboardingScreen(onFinish = {
+                        appPrefs.edit().putBoolean("onboarding_complete", true).apply()
+                        onboardingDone = true
+                    })
+                    Stage.SignIn -> SignInGate(onOpenLink = ::openLink, onSignedIn = { scope.launch { refreshAccount() } })
+                    Stage.App -> MainApp(
+                        activity = activity,
+                        account = account,
+                        avatar = avatar,
+                        platformStatus = platformStatus,
+                        billingState = billingState,
+                        billingManager = billingManager,
+                        jade = jade,
+                        routeRequest = routeRequest,
+                        onRouteConsumed = onRouteConsumed,
+                        onOpenLink = ::openLink,
+                        onRequestAccessibility = ::requestAccessibility,
+                        onChangeAvatar = { showAvatarSheet = true },
+                        onSignOut = {
+                            RewordiumRepository.signOut(context)
+                            account = null
+                        },
+                        onDeleteAccount = { password, token ->
+                            try {
+                                if (password != null) RewordiumRepository.reauthenticateWithPassword(password)
+                                if (token != null) RewordiumRepository.reauthenticateWithGoogle(token)
+                                RewordiumRepository.deleteAccount()
+                            } catch (e: Exception) {
+                                throw IllegalStateException(authMessage(e))
+                            }
+                            jade.clearHistory()
+                            RewordiumRepository.signOut(context)
+                            account = null
+                            Toast.makeText(context, "Your account was deleted", Toast.LENGTH_LONG).show()
+                        },
+                    )
+                }
+            }
+        }
+    }
+
+    if (showDisclosure) AccessibilityDisclosureDialog(
+        onAgree = {
+            showDisclosure = false
+            recordAccessibilityConsent(context)
+            activity.openAccessibilitySettings()
+        },
+        onDecline = { showDisclosure = false },
+    )
+
+    if (showAvatarSheet) AvatarPickerSheet(
+        current = avatar,
+        onDismiss = { showAvatarSheet = false },
+        onConfirm = { AppSettings.setAvatar(it); showAvatarSheet = false },
+    )
+}
+
+/** Sign-in gate with in-place Terms and Privacy pages (back returns to the form). */
+@Composable
+private fun SignInGate(onOpenLink: (String) -> Unit, onSignedIn: () -> Unit) {
+    val scope = rememberCoroutineScope()
+    var busy by remember { mutableStateOf(false) }
+    var error by remember { mutableStateOf<String?>(null) }
+    var notice by remember { mutableStateOf<String?>(null) }
+    var legal by rememberSaveable { mutableStateOf<String?>(null) }
+
+    fun run(action: suspend () -> Unit, success: () -> Unit = onSignedIn) {
+        scope.launch {
+            busy = true
+            error = null
+            notice = null
+            runCatching { action() }
+                .onSuccess { success() }
+                .onFailure { error = authMessage(it) }
+            busy = false
+        }
+    }
+
+    BackHandler(enabled = legal != null) { legal = null }
+    AnimatedContent(
+        targetState = legal,
+        transitionSpec = {
+            if (targetState != null) {
+                (slideInHorizontally(NavSpring) { it / 4 } + fadeIn()).togetherWith(fadeOut(tween(150)))
+            } else {
+                fadeIn(tween(220)).togetherWith(slideOutHorizontally(NavSpring) { it / 4 } + fadeOut())
+            }
+        },
+        label = "auth-legal",
+    ) { page ->
+        if (page != null) {
+            InfoScreen(privacy = page == "privacy", onBack = { legal = null }, onOpenLink = onOpenLink)
+        } else {
+            AuthScreen(
+                busy = busy,
+                error = error,
+                notice = notice,
+                onSignIn = { email, password -> run({ RewordiumRepository.signIn(email, password) }) },
+                onSignUp = { name, email, password, news -> run({ RewordiumRepository.signUp(name, email, password, news) }) },
+                onGoogleToken = { token -> run({ RewordiumRepository.signInWithGoogleIdToken(token) }) },
+                onResetPassword = { email ->
+                    run({ RewordiumRepository.sendPasswordReset(email) }) {
+                        notice = "We sent a password reset link to ${email.trim()}."
+                    }
                 },
-                onOpenSettings = { navigateTo("settings") },
-                onOpenJade = { navigateTo("jade") },
-                onOpenPro = { navigateTo("pro") },
+                onTerms = { legal = "terms" },
+                onPrivacy = { legal = "privacy" },
             )
         }
-        composable("tools") {
-            StagedDestination("tools", settled = transition.currentState == EnterExitState.Visible && transition.targetState == EnterExitState.Visible) {
-                ToolsScreen(onOpenTool = ::navigateTo, onBack = { navController.popBackStack() })
-            }
-        }
-        composable("settings") {
-            StagedDestination("settings", settled = transition.currentState == EnterExitState.Visible && transition.targetState == EnterExitState.Visible) { SettingsScreen(
-                account = account, status = platformStatus,
-                onBack = { navController.popBackStack() },
-                mascotType = mascotType,
-                onMascotSelected = ::selectMascot,
-                onSignIn = ::goToAuth,
-                onSignOut = ::signOutAndRequireAuth,
-                onDelete = {
-                    scope.launch {
-                        runCatching { RewordiumRepository.deleteAccount() }
-                            .onSuccess { signOutAndRequireAuth(); Toast.makeText(context, "Account deleted", Toast.LENGTH_SHORT).show() }
-                            .onFailure { Toast.makeText(context, authMessage(it), Toast.LENGTH_LONG).show() }
-                    }
-                },
-                onPro = { navigateTo("pro") },
-                onKeyboard = { activity.openKeyboardPreferences() },
-                onKeyboardSection = { section -> activity.openKeyboardPreferences(section) },
-                onAccessibility = activity::openAccessibilitySettings,
-                onEnableKeyboard = activity::openKeyboardActivationSettings,
-                onChooseKeyboard = activity::chooseKeyboard,
-                onAiSettings = { navigateTo("ai_settings") },
-                onLicenses = { navigateTo("licenses") },
-                onPersonas = { navigateTo("personas") },
-                onPrivacy = { navigateTo("privacy") },
-                onTerms = { navigateTo("terms") },
-            ) }
-        }
-        composable("settings/access") {
-            StagedDestination("settings/access", settled = transition.currentState == EnterExitState.Visible && transition.targetState == EnterExitState.Visible) { SettingsScreen(
-                account = account, status = platformStatus,
-                onBack = { navController.popBackStack() }, initialTab = 1,
-                mascotType = mascotType,
-                onMascotSelected = ::selectMascot,
-                onSignIn = ::goToAuth,
-                onSignOut = ::signOutAndRequireAuth,
-                onDelete = {
-                    scope.launch {
-                        runCatching { RewordiumRepository.deleteAccount() }
-                            .onSuccess { signOutAndRequireAuth(); Toast.makeText(context, "Account deleted", Toast.LENGTH_SHORT).show() }
-                            .onFailure { Toast.makeText(context, authMessage(it), Toast.LENGTH_LONG).show() }
-                    }
-                },
-                onPro = { navigateTo("pro") },
-                onKeyboard = { activity.openKeyboardPreferences() },
-                onKeyboardSection = { section -> activity.openKeyboardPreferences(section) },
-                onAccessibility = activity::openAccessibilitySettings,
-                onEnableKeyboard = activity::openKeyboardActivationSettings,
-                onChooseKeyboard = activity::chooseKeyboard,
-                onAiSettings = { navigateTo("ai_settings") },
-                onLicenses = { navigateTo("licenses") },
-                onPersonas = { navigateTo("personas") },
-                onPrivacy = { navigateTo("privacy") },
-                onTerms = { navigateTo("terms") },
-            ) }
-        }
-        composable("jade") { StagedDestination("jade", settled = transition.currentState == EnterExitState.Visible && transition.targetState == EnterExitState.Visible) { JadeScreen(::requestJade, onBack = { navController.popBackStack() }, onOpenKeyboardSettings = { activity.openKeyboardPreferences() }) } }
-        composable("auth") {
-            StagedDestination("auth", settled = transition.currentState == EnterExitState.Visible && transition.targetState == EnterExitState.Visible) { AuthScreen(
-                onBack = { navController.popBackStack() },
-                showBack = !requireSignInAfterLogout,
-                onSignIn = { email, password -> runAuth { RewordiumRepository.signIn(email, password) } },
-                onSignUp = { name, email, password, news -> runAuth { RewordiumRepository.signUp(name, email, password, news) } },
-                onGoogleToken = { token -> runAuth { RewordiumRepository.signInWithGoogleIdToken(token) } },
-                onResetPassword = { email -> runAuth { RewordiumRepository.sendPasswordReset(email) } },
-                mascotType = mascotType,
-                onMascotSelected = ::selectMascot,
-                busy = busy, error = authError,
-            ) }
-        }
-        composable("pro") {
-            StagedDestination("pro", settled = transition.currentState == EnterExitState.Visible && transition.targetState == EnterExitState.Visible) { ProScreen(
-                account = account, billing = billingState,
-                onBack = { navController.popBackStack() },
-                onSignIn = ::goToAuth,
-                onPurchase = { id -> if (account == null) goToAuth() else billingManager.purchase(activity, id) },
-                onRestore = { if (account == null) goToAuth() else billingManager.restorePurchases() },
-            ) }
-        }
-        composable("ai_settings") { StagedDestination("ai_settings", settled = transition.currentState == EnterExitState.Visible && transition.targetState == EnterExitState.Visible) { AiSettingsScreen(onBack = { navController.popBackStack() }) } }
-        composable("personas") { StagedDestination("personas", settled = transition.currentState == EnterExitState.Visible && transition.targetState == EnterExitState.Visible) { com.noxquill.rewordium.app.screens.PersonaScreen(onBack = { navController.popBackStack() }) } }
-        composable("licenses") { StagedDestination("licenses", settled = transition.currentState == EnterExitState.Visible && transition.targetState == EnterExitState.Visible) { LicensesScreen(onBack = { navController.popBackStack() }, onOpenLink = ::openLink) } }
-        composable("privacy") { StagedDestination("privacy", settled = transition.currentState == EnterExitState.Visible && transition.targetState == EnterExitState.Visible) { InfoScreen("Privacy policy", onBack = { navController.popBackStack() }, onOpenLink = ::openLink) } }
-        composable("terms") { StagedDestination("terms", settled = transition.currentState == EnterExitState.Visible && transition.targetState == EnterExitState.Visible) { InfoScreen("Terms of service", onBack = { navController.popBackStack() }, onOpenLink = ::openLink) } }
-        composable("tool/{toolId}", arguments = listOf(navArgument("toolId") { type = NavType.StringType })) { entry ->
-            val toolId = entry.arguments?.getString("toolId") ?: "paraphraser"
-            activeToolId = toolId
-            StagedDestination("tool/$toolId", settled = transition.currentState == EnterExitState.Visible && transition.targetState == EnterExitState.Visible) { WritingToolScreen(
-                toolId = toolId,
-                onBack = { if (!navController.popBackStack()) navigateTo("tools") },
-                onUpgrade = { navigateTo("pro") },
-                onGenerate = ::requestWriting,
-            ) }
-        }
-      }
-      BotFlightLayer(botFlight)
-      }
-      }
     }
 }
 
-private val NavSlide = tween<androidx.compose.ui.unit.IntOffset>(
-    durationMillis = 240,
-    easing = CubicBezierEasing(0.05f, 0.7f, 0.1f, 1f),
+@Composable
+private fun MainApp(
+    activity: MainActivity,
+    account: AccountInfo?,
+    avatar: String,
+    platformStatus: com.noxquill.rewordium.PlatformSetupStatus,
+    billingState: BillingUiState,
+    billingManager: PlayBillingManager,
+    jade: JadeController,
+    routeRequest: String?,
+    onRouteConsumed: () -> Unit,
+    onOpenLink: (String) -> Unit,
+    onRequestAccessibility: () -> Unit,
+    onChangeAvatar: () -> Unit,
+    onSignOut: () -> Unit,
+    onDeleteAccount: suspend (String?, String?) -> Unit,
+) {
+    val navController = rememberNavController()
+    val botFlight = remember { BotFlight() }
+    val currentEntry by navController.currentBackStackEntryAsState()
+    val route = currentEntry?.destination?.route
+    var jadeWasOpen by remember { mutableStateOf(false) }
+    var fabExpanded by rememberSaveable { mutableStateOf(false) }
+
+    // Warm what the tabs need once the first screen is up, so Settings and Keys open without a stall:
+    // the palette previews (generated off the main thread) and the keyboard engine with its themes.
+    LaunchedEffect(Unit) {
+        launch(Dispatchers.Default) { warmColorSchemes(activity) }
+        delay(500)
+        KeyboardEngine.ensure(activity)
+        KeyboardEngine.refreshThemes(activity)
+    }
+
+    LaunchedEffect(currentEntry) {
+        val jadeOpen = route == "jade"
+        if (jadeOpen && !jadeWasOpen) botFlight.chatOpened(JADE_FLIGHT)
+        if (jadeWasOpen && route == "home") botFlight.toHome(JADE_FLIGHT)
+        jadeWasOpen = jadeOpen
+        fabExpanded = false
+    }
+
+    fun go(target: String) = navController.navigate(target) { launchSingleTop = true }
+
+    /** Top-level tabs keep their own scroll and state, like a bottom bar. */
+    fun selectTab(tab: String) {
+        if (tab == "jade") { go("jade"); return }
+        navController.navigate(tab) {
+            popUpTo("home") { saveState = true }
+            launchSingleTop = true
+            restoreState = true
+        }
+    }
+
+    fun openJade(skill: String? = null) {
+        if (skill != null) jade.skill = skill
+        go("jade")
+    }
+
+    fun askJade(prompt: String) {
+        jade.ask(prompt)
+        go("jade")
+    }
+
+    fun handleRoute(requested: String) {
+        when (requested) {
+            "home" -> navController.popBackStack("home", inclusive = false)
+            "settings" -> selectTab("settings")
+            "keyboard_settings" -> selectTab("keyboard")
+            "pro", "ai_settings", "licenses", "privacy", "terms", "personas" -> go(requested)
+            "jade", "tools" -> openJade()
+            "paraphraser" -> openJade("rewrite")
+            "summarizer" -> openJade("summarize")
+            "translator" -> openJade("translate")
+            "detector" -> openJade("detector")
+            "document" -> openJade("polish")
+            "grammar", "tone", "humanizer", "rewrite" -> openJade(if (requested == "humanizer") "humanize" else requested)
+            else -> Unit
+        }
+    }
+
+    LaunchedEffect(routeRequest) {
+        routeRequest?.let { handleRoute(it); onRouteConsumed() }
+    }
+
+    val tabs = remember {
+        listOf(
+            NavTab("home", "HOME", Icons.Outlined.Home, Icons.Filled.Home),
+            NavTab("jade", "JADE", Icons.Outlined.AutoAwesome, Icons.Filled.AutoAwesome),
+            NavTab("keyboard", "KEYS", Icons.Outlined.Keyboard, Icons.Filled.Keyboard),
+            NavTab("settings", "SETTINGS", Icons.Outlined.Settings, Icons.Filled.Settings),
+        )
+    }
+    val showNav = route == "home" || route == "keyboard" || route == "settings"
+    val fabActions: List<FabAction>? = when (route) {
+        "home" -> listOf(
+            FabAction("Chat with Jade", Icons.Filled.AutoAwesome) { openJade(JadeSkills.CHAT) },
+            FabAction("Rewrite", Icons.Filled.EditNote) { openJade("rewrite") },
+            FabAction("Fix grammar", Icons.Filled.Spellcheck) { openJade("grammar") },
+            FabAction("Translate", Icons.Filled.Translate) { openJade("translate") },
+            FabAction("Change tone", Icons.Filled.Tune) { openJade("tone") },
+        )
+        "keyboard" -> listOf(
+            FabAction("Taller keys", Icons.Filled.Height) { askJade("Make my keyboard a little taller") },
+            FabAction("Dark keyboard", Icons.Filled.DarkMode) { askJade("Switch my keyboard to a dark theme") },
+            FabAction("Quiet typing", Icons.AutoMirrored.Filled.VolumeOff) { askJade("Turn off key press sounds") },
+            FabAction("Add a language", Icons.Filled.Language) { askJade("Help me add another language to my keyboard") },
+        )
+        else -> null
+    }
+    BackHandler(enabled = fabExpanded) { fabExpanded = false }
+
+    CompositionLocalProvider(LocalBotFlight provides botFlight) {
+        BoxWithConstraints(Modifier.fillMaxSize()) {
+            // Wide screens fit the toolbar and FAB side by side; on phones the FAB floats above the toolbar.
+            val sideBySide = maxWidth >= 420.dp
+            val tabInset = if (fabActions != null && !sideBySide) 172.dp else 104.dp
+
+            NavHost(
+                navController = navController,
+                startDestination = "home",
+                // Three kinds of move, each with its own motion:
+                //  · tab ↔ tab: a fade-through (the old page dips out, the new one settles in);
+                //  · into Jade: Jade rises over the page, and sinks back down when you go back;
+                //  · any other page: a shared-axis slide in from the side, and back out the same way.
+                enterTransition = {
+                    val from = initialState.destination.route
+                    val to = targetState.destination.route
+                    when {
+                        isTabSwitch(from, to) -> TabEnter
+                        to == "jade" -> JadeRise
+                        else -> PushEnter
+                    }
+                },
+                exitTransition = {
+                    val from = initialState.destination.route
+                    val to = targetState.destination.route
+                    when {
+                        isTabSwitch(from, to) -> TabExit
+                        to == "jade" -> UnderRecede
+                        else -> PushExit
+                    }
+                },
+                popEnterTransition = {
+                    val from = initialState.destination.route
+                    val to = targetState.destination.route
+                    when {
+                        isTabSwitch(from, to) -> TabEnter
+                        from == "jade" -> UnderReturn
+                        else -> PopEnter
+                    }
+                },
+                popExitTransition = {
+                    val from = initialState.destination.route
+                    val to = targetState.destination.route
+                    when {
+                        isTabSwitch(from, to) -> TabExit
+                        from == "jade" -> JadeSink
+                        else -> PopExit
+                    }
+                },
+                // The back gesture scrubs the same moves (tween-based, so they follow the finger).
+                predictivePopEnterTransition = {
+                    if (initialState.destination.route == "jade") fadeIn(tween(300)) + scaleIn(tween(300, easing = EmphasizedDecelerate), initialScale = 0.94f)
+                    else slideInHorizontally(tween(300, easing = EmphasizedDecelerate)) { -it / 8 } + fadeIn(tween(300))
+                },
+                predictivePopExitTransition = {
+                    if (initialState.destination.route == "jade") slideOutVertically(tween(300, easing = EmphasizedDecelerate)) { it / 4 } + fadeOut(tween(300)) + scaleOut(tween(300), targetScale = 0.92f)
+                    else slideOutHorizontally(tween(300, easing = EmphasizedDecelerate)) { it / 4 } + fadeOut(tween(300)) + scaleOut(tween(300), targetScale = 0.94f)
+                },
+            ) {
+                composable("home") {
+                    Screen {
+                        HomeScreen(
+                            account = account,
+                            avatar = avatar,
+                            status = platformStatus,
+                            recentChats = jade.chats,
+                            jadeCanTune = jade.canUseTools,
+                            bottomInset = tabInset,
+                            onOpenJade = { openJade() },
+                            onAskJade = ::askJade,
+                            onUseSkill = { skill -> openJade(skill) },
+                            onOpenChat = { id -> jade.openChat(id); go("jade") },
+                            onOpenKeyboard = { selectTab("keyboard") },
+                            onEnableKeyboard = { if (platformStatus.keyboardEnabled) activity.chooseKeyboard() else activity.openKeyboardActivationSettings() },
+                            onEnableAccessibility = onRequestAccessibility,
+                            onOpenPro = { go("pro") },
+                            onChangeAvatar = onChangeAvatar,
+                        )
+                    }
+                }
+                composable("jade") {
+                    Screen {
+                        JadeScreen(
+                            controller = jade,
+                            userAvatar = avatar,
+                            userName = account?.name?.trim()?.substringBefore(' '),
+                            isPro = account?.isPro == true,
+                            onBack = { navController.popBackStack() },
+                            onOpenKeyboardScreen = { path -> if (path == null) selectTab("keyboard") else activity.openReboardPath(path) },
+                            onUpgrade = { go("pro") },
+                        )
+                    }
+                }
+                composable("keyboard") {
+                    Screen {
+                        KeyboardScreen(
+                            status = platformStatus,
+                            bottomInset = tabInset,
+                            onEnableKeyboard = activity::openKeyboardActivationSettings,
+                            onChooseKeyboard = activity::chooseKeyboard,
+                            onAskJade = { openJade(JadeSkills.CHAT) },
+                            onOpenAdvanced = { activity.openKeyboardPreferences() },
+                        )
+                    }
+                }
+                composable("settings") {
+                    Screen {
+                        SettingsScreen(
+                            account = account,
+                            status = platformStatus,
+                            bottomInset = tabInset,
+                            onPro = { go("pro") },
+                            onAiSettings = { go("ai_settings") },
+                            onPersonas = { go("personas") },
+                            onPrivacy = { go("privacy") },
+                            onTerms = { go("terms") },
+                            onLicenses = { go("licenses") },
+                            onOpenLink = onOpenLink,
+                            onOpenKeyboard = { selectTab("keyboard") },
+                            onAccessibility = onRequestAccessibility,
+                            onAskJade = { openJade(JadeSkills.CHAT) },
+                            onClearJadeHistory = { jade.clearHistory() },
+                            onBackupRestored = { jade.reloadChats() },
+                            onSignOut = onSignOut,
+                            onDeleteAccount = onDeleteAccount,
+                        )
+                    }
+                }
+                composable("pro") {
+                    Screen {
+                        ProScreen(
+                            account = account,
+                            billing = billingState,
+                            packageName = activity.packageName,
+                            onBack = { navController.popBackStack() },
+                            onPurchase = { id -> billingManager.purchase(activity, id) },
+                            onRestore = { billingManager.restorePurchases() },
+                            onOpenLink = onOpenLink,
+                            onTerms = { go("terms") },
+                            onPrivacy = { go("privacy") },
+                        )
+                    }
+                }
+                composable("ai_settings") { Screen { AiSettingsScreen(onBack = { navController.popBackStack() }) } }
+                composable("personas") { Screen { PersonaScreen(onBack = { navController.popBackStack() }) } }
+                composable("licenses") { Screen { LicensesScreen(onBack = { navController.popBackStack() }, onOpenLink = onOpenLink) } }
+                composable("privacy") { Screen { InfoScreen(privacy = true, onBack = { navController.popBackStack() }, onOpenLink = onOpenLink) } }
+                composable("terms") { Screen { InfoScreen(privacy = false, onBack = { navController.popBackStack() }, onOpenLink = onOpenLink) } }
+            }
+
+            // Scrim behind the open FAB menu; a tap anywhere closes it.
+            AnimatedVisibility(visible = fabExpanded, enter = fadeIn(), exit = fadeOut()) {
+                Box(
+                    Modifier
+                        .fillMaxSize()
+                        .background(MaterialTheme.colorScheme.scrim.copy(alpha = 0.38f))
+                        .clickable(interactionSource = remember { MutableInteractionSource() }, indication = null) { fabExpanded = false },
+                )
+            }
+
+            AnimatedVisibility(
+                visible = showNav,
+                enter = slideInVertically(NavBarSpring) { it * 2 } + fadeIn(),
+                exit = slideOutVertically { it * 2 } + fadeOut(),
+                modifier = Modifier
+                    .align(if (sideBySide && fabActions != null) Alignment.BottomStart else Alignment.BottomCenter)
+                    .padding(16.dp),
+            ) {
+                FloatingNavBar(tabs = tabs, selected = route, onSelect = ::selectTab)
+            }
+
+            AnimatedVisibility(
+                visible = fabActions != null,
+                enter = scaleIn(NavScale, initialScale = 0.4f) + fadeIn(),
+                exit = scaleOut(targetScale = 0.4f) + fadeOut(),
+                modifier = Modifier
+                    .align(Alignment.BottomEnd)
+                    .padding(end = 4.dp, bottom = if (sideBySide) 4.dp else 76.dp),
+            ) {
+                ExpressiveFabMenu(
+                    expanded = fabExpanded,
+                    onExpandedChange = { fabExpanded = it },
+                    icon = if (route == "keyboard") Icons.Filled.Tune else Icons.Filled.AutoAwesome,
+                    label = if (route == "keyboard") "Quick keyboard asks" else "Write with Jade",
+                    actions = fabActions.orEmpty(),
+                )
+            }
+
+            BotFlightLayer(botFlight)
+        }
+    }
+}
+
+private val TabRoutes = setOf("home", "keyboard", "settings")
+
+private fun isTabSwitch(from: String?, to: String?) = from in TabRoutes && to in TabRoutes
+
+private val NavBarSpring = spring(
+    dampingRatio = 0.7f,
+    stiffness = Spring.StiffnessMediumLow,
+    visibilityThreshold = IntOffset(1, 1),
 )
 
-/**
- * A route's opaque surface travels first. Delaying the heavy controls until
- * that short slide has settled removes the half-built-card effect that caused
- * dropped frames on device while keeping predictive back fully native.
- */
+/** Every route travels on its own opaque surface, so screens never show through each other mid-slide. */
 @Composable
-private fun StagedDestination(
-    route: String,
-    settled: Boolean,
-    content: @Composable () -> Unit,
-) {
-    // Compose the destination as it enters so the user never sees a blank
-    // route followed by a late card-build. Keep the route surface stable while
-    // the shorter motion runs.
-    Surface(Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
-        content()
-    }
+private fun Screen(content: @Composable () -> Unit) {
+    Surface(Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) { content() }
 }
 
-private fun authMessage(error: Throwable): String = when {
-    error.message?.contains("email", ignoreCase = true) == true -> error.message.orEmpty()
-    error.message?.contains("password", ignoreCase = true) == true -> error.message.orEmpty()
-    error.message?.contains("network", ignoreCase = true) == true -> "Check your connection and try again."
-    else -> error.message ?: "Something went wrong. Please try again."
+private val NavSpring = spring(
+    dampingRatio = 0.86f,
+    stiffness = Spring.StiffnessMediumLow,
+    visibilityThreshold = IntOffset(1, 1),
+)
+private val NavScale = spring<Float>(dampingRatio = 0.8f, stiffness = Spring.StiffnessMediumLow)
+
+// ── Screen transitions (Material 3 emphasized easing and expressive springs) ──
+private val EmphasizedDecelerate = CubicBezierEasing(0.05f, 0.7f, 0.1f, 1f)
+private val EmphasizedAccelerate = CubicBezierEasing(0.3f, 0f, 0.8f, 0.15f)
+private val SlideSpring = spring(dampingRatio = 1f, stiffness = 420f, visibilityThreshold = IntOffset(1, 1))
+private val SettleSpring = spring<Float>(dampingRatio = 0.9f, stiffness = 420f)
+
+/** Tabs: the old page dips out quickly, then the new one fades and settles in (fade-through). */
+private val TabExit = fadeOut(tween(90, easing = EmphasizedAccelerate)) + scaleOut(tween(90), targetScale = 0.98f)
+private val TabEnter = fadeIn(tween(210, delayMillis = 70, easing = EmphasizedDecelerate)) +
+    scaleIn(tween(300, delayMillis = 70, easing = EmphasizedDecelerate), initialScale = 0.95f)
+
+/** Jade rises over the page from just below, and the page behind recedes a touch… */
+private val JadeRise = slideInVertically(SlideSpring) { it / 6 } + fadeIn(tween(220, easing = EmphasizedDecelerate)) +
+    scaleIn(SettleSpring, initialScale = 0.96f)
+private val UnderRecede = fadeOut(tween(260, delayMillis = 40)) + scaleOut(tween(300, easing = EmphasizedDecelerate), targetScale = 0.95f)
+
+/** …and on the way back Jade sinks away while the page comes forward again. */
+private val JadeSink = slideOutVertically(tween(260, easing = EmphasizedAccelerate)) { it / 5 } +
+    fadeOut(tween(200, delayMillis = 40)) + scaleOut(tween(260, easing = EmphasizedAccelerate), targetScale = 0.94f)
+private val UnderReturn = fadeIn(tween(220)) + scaleIn(SettleSpring, initialScale = 0.95f)
+
+/** Other pages: a shared-axis slide — in from the right, the page beneath shifting left, and the reverse on back. */
+private val PushEnter = slideInHorizontally(SlideSpring) { it / 4 } + fadeIn(tween(200, easing = EmphasizedDecelerate))
+private val PushExit = slideOutHorizontally(SlideSpring) { -it / 10 } + fadeOut(tween(200, delayMillis = 60))
+private val PopEnter = slideInHorizontally(SlideSpring) { -it / 10 } + fadeIn(tween(220))
+private val PopExit = slideOutHorizontally(SlideSpring) { it / 4 } + fadeOut(tween(160, easing = EmphasizedAccelerate))
+
+private fun authMessage(error: Throwable): String = when (error) {
+    is FirebaseAuthWeakPasswordException -> "Pick a stronger password — at least 6 characters."
+    is FirebaseAuthUserCollisionException -> "There’s already an account with that email. Try signing in instead."
+    is FirebaseAuthInvalidUserException -> "We couldn’t find an account with that email."
+    is FirebaseAuthInvalidCredentialsException -> "That email or password isn’t right."
+    is FirebaseAuthRecentLoginRequiredException -> "For your security, sign out and sign in again, then try once more."
+    else -> when {
+        error.message?.contains("network", ignoreCase = true) == true -> "Check your connection and try again."
+        else -> error.message ?: "Something went wrong. Please try again."
+    }
 }

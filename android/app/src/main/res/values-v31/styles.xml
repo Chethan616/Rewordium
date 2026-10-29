@@ -1,5 +1,12 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
+    <!-- Android 12+: the launch icon animates — a Material circle springs into Cookie9Sided and Jade pops on. -->
+    <style name="Theme.Rewordium.Starting" parent="Theme.SplashScreen">
+        <item name="windowSplashScreenBackground">@color/rewordium_splash_background</item>
+        <item name="windowSplashScreenAnimatedIcon">@drawable/splash_jade</item>
+        <item name="windowSplashScreenAnimationDuration">1000</item>
+        <item name="postSplashScreenTheme">@style/Theme.Rewordium</item>
+    </style>
     <!-- Theme applied to the Android Window while the process is starting when the OS's Dark Mode setting is off -->
     <style name="LaunchTheme" parent="@android:style/Theme.Light.NoTitleBar">
         <item name="android:windowBackground">@drawable/launch_background</item>

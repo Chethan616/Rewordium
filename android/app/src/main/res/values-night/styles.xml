@@ -1,11 +1,11 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <style name="Theme.Rewordium" parent="Theme.Material3.DayNight.NoActionBar">
-        <item name="colorPrimary">#94D6B7</item>
-        <item name="colorSecondary">#B5D0C4</item>
-        <item name="android:windowBackground">#101512</item>
-        <item name="android:statusBarColor">#101512</item>
-        <item name="android:navigationBarColor">#101512</item>
+        <item name="colorPrimary">#D0AEFF</item>
+        <item name="colorSecondary">#FFB4AB</item>
+        <item name="android:windowBackground">@color/rewordium_window_background</item>
+        <item name="android:statusBarColor">@color/rewordium_window_background</item>
+        <item name="android:navigationBarColor">@color/rewordium_window_background</item>
         <item name="android:windowLightStatusBar">false</item>
         <item name="android:windowLightNavigationBar">false</item>
         <item name="android:windowActionModeOverlay">true</item>

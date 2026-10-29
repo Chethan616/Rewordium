@@ -249,9 +249,11 @@ abstract class FlorisPreferenceModel : PreferenceModel() {
 
     val emoji = Emoji()
     inner class Emoji {
+        // The emoji key always opens on emoji: a trip to GIFs or stickers isn't remembered unless the user
+        // picks "Last used" for this setting.
         val panelOpensTo = enum(
             key = "emoji__panel_opens_to",
-            default = MediaPanelTab.LAST_USED,
+            default = MediaPanelTab.EMOJI,
         )
         // Internal: tab the media panel was last left on.
         val lastPanelTab = string(

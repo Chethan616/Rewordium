@@ -55,6 +55,7 @@ import androidx.compose.ui.res.vectorResource
 import androidx.compose.ui.unit.dp
 import com.noxquill.rewordium.keyboard.R
 import com.noxquill.rewordium.keyboard.app.FlorisPreferenceStore
+import com.noxquill.rewordium.keyboard.ime.input.LocalInputFeedbackController
 import com.noxquill.rewordium.keyboard.ime.keyboard.FlorisImeSizing
 import com.noxquill.rewordium.keyboard.ime.nlp.NlpInlineAutofill
 import com.noxquill.rewordium.keyboard.ime.smartbar.quickaction.QuickActionButton
@@ -158,12 +159,15 @@ private fun SmartbarMainRow(modifier: Modifier = Modifier) {
     val extendedActionsExpanded by prefs.smartbar.extendedActionsExpanded.observeAsState()
 
     val shouldAnimate by prefs.smartbar.sharedActionsExpandWithAnimation.observeAsState()
+    // The toggles give the same key-press sound and vibration as the keys, following the user's settings.
+    val inputFeedbackController = LocalInputFeedbackController.current
 
     @Composable
     fun SharedActionsToggle() {
         SnyggIconButton(
             elementName = FlorisImeUi.SmartbarSharedActionsToggle.elementName,
             onClick = {
+                inputFeedbackController.keyPress()
                 if (/* was */ sharedActionsExpanded) {
                     keyboardManager.activeState.isActionsOverflowVisible = false
                 }
@@ -246,6 +250,7 @@ private fun SmartbarMainRow(modifier: Modifier = Modifier) {
         SnyggIconButton(
             FlorisImeUi.SmartbarExtendedActionsToggle.elementName,
             onClick = {
+                inputFeedbackController.keyPress()
                 if (/* was */ extendedActionsExpanded) {
                     keyboardManager.activeState.isActionsOverflowVisible = false
                 }
