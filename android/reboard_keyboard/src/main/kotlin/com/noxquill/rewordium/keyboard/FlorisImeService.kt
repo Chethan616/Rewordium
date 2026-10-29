@@ -41,7 +41,6 @@ import android.widget.LinearLayout
 import android.widget.inline.InlinePresentationSpec
 import androidx.annotation.RequiresApi
 import androidx.compose.foundation.background
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.ui.draw.clip
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -58,12 +57,21 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.geometry.CornerRadius
+import androidx.compose.ui.geometry.Rect
+import androidx.compose.ui.geometry.RoundRect
+import androidx.compose.ui.graphics.Outline
+import androidx.compose.ui.graphics.Path
+import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.graphics.toArgb
+import androidx.compose.ui.unit.Density
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.input.pointer.pointerInteropFilter
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.platform.AbstractComposeView
@@ -120,7 +128,6 @@ import com.noxquill.rewordium.keyboard.lib.util.debugSummarize
 import com.noxquill.rewordium.keyboard.lib.util.launchActivity
 import dev.patrickgold.jetpref.datastore.model.observeAsState
 import java.lang.ref.WeakReference
-import kotlinx.coroutines.flow.update
 import org.florisboard.lib.android.AndroidInternalR
 import org.florisboard.lib.android.AndroidVersion
 import org.florisboard.lib.android.isOrientationLandscape
@@ -383,7 +390,7 @@ class FlorisImeService : LifecycleInputMethodService() {
 
     override fun onConfigurationChanged(newConfig: Configuration) {
         super.onConfigurationChanged(newConfig)
-        themeManager.configurationChangeCounter.update { it + 1 }
+        themeManager.onConfigurationChanged(newConfig)
     }
 
     override fun onDestroy() {
@@ -771,8 +778,10 @@ class FlorisImeService : LifecycleInputMethodService() {
                             }
                             val roundedSmartbar by prefs.keyboard.experimentalRoundedSmartbar.observeAsState()
                             val roundedSmartbarRadius by prefs.keyboard.experimentalRoundedSmartbarRadius.observeAsState()
+                            // Rounds the top corners without clipping the space above the keyboard: the top
+                            // row's key popups rise past its top edge and were being cut off.
                             val keyboardShape = if (roundedSmartbar) {
-                                RoundedCornerShape(topStart = roundedSmartbarRadius.dp, topEnd = roundedSmartbarRadius.dp)
+                                remember(roundedSmartbarRadius) { OpenTopRoundedShape(roundedSmartbarRadius.dp) }
                             } else null
                             Column(
                                 modifier = Modifier
@@ -1155,5 +1164,29 @@ class FlorisImeService : LifecycleInputMethodService() {
                 flogError { e.message.toString() }
             }
         }
+    }
+}
+
+/**
+ * The keyboard's rounded top corners as a clip that stays open above the keyboard: the union of the rounded
+ * keyboard and everything above its top edge, so key popups that rise past the top still draw.
+ */
+private class OpenTopRoundedShape(private val radius: Dp) : Shape {
+    override fun createOutline(size: androidx.compose.ui.geometry.Size, layoutDirection: LayoutDirection, density: Density): Outline {
+        val r = with(density) { radius.toPx() }.coerceAtMost(minOf(size.width, size.height) / 2f)
+        val path = Path().apply {
+            addRoundRect(
+                RoundRect(
+                    left = 0f,
+                    top = 0f,
+                    right = size.width,
+                    bottom = size.height,
+                    topLeftCornerRadius = CornerRadius(r),
+                    topRightCornerRadius = CornerRadius(r),
+                ),
+            )
+            addRect(Rect(0f, -size.height * 8f, size.width, 0f))
+        }
+        return Outline.Generic(path)
     }
 }

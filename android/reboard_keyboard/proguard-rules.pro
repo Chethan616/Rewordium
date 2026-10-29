@@ -250,3 +250,6 @@
 -keep class com.noxquill.rewordium.keyboard.lib.ext.ExtensionComponentName$* { *; }
 -keep class com.noxquill.rewordium.keyboard.FlorisApplication { *; }
 -keep class com.noxquill.rewordium.keyboard.FlorisApplication$* { *; }
+
+# Rewordium bots (mascots): drawn by both the app and the keyboard.
+-keep class com.noxquill.rewordium.app.ui.avatar.** { *; }

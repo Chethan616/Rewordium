@@ -14,556 +14,515 @@
  * limitations under the License.
  */
 
+@file:OptIn(ExperimentalMaterial3ExpressiveApi::class)
+
 package com.noxquill.rewordium.keyboard.ime.media.sticker
 
-import android.content.ContentUris
+import android.content.Context
 import android.content.Intent
 import android.net.Uri
 import android.widget.Toast
+import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
-import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.ui.draw.alpha
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.grid.GridCells
+import androidx.compose.foundation.lazy.grid.LazyGridScope
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
-import androidx.compose.foundation.lazy.items
-import androidx.compose.animation.AnimatedContent
-import androidx.compose.animation.core.animateFloatAsState
-import androidx.compose.animation.core.tween
-import androidx.compose.animation.fadeIn
-import androidx.compose.animation.fadeOut
-import androidx.compose.animation.togetherWith
+import androidx.compose.foundation.lazy.grid.itemsIndexed
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Star
-import androidx.compose.material.icons.outlined.Add
-import androidx.compose.material.icons.outlined.Collections
-import androidx.compose.material.icons.outlined.Delete
-import androidx.compose.material.icons.outlined.Schedule
-import androidx.compose.material.icons.outlined.StarBorder
-import androidx.compose.material.icons.outlined.ContentPasteGo
-import org.florisboard.lib.compose.rippleClickable
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.Icon
+import androidx.compose.material3.MaterialShapes
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
-import com.noxquill.rewordium.keyboard.ime.media.CustomChip
-import com.noxquill.rewordium.keyboard.keyboardManager
-import com.noxquill.rewordium.keyboard.ime.media.StickerSearchResults
-import com.noxquill.rewordium.keyboard.ime.theme.FlorisImeUi
-import org.florisboard.lib.snygg.ui.SnyggColumn
+import androidx.compose.material3.toShape
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
-import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.lerp
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.vector.ImageVector
-import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
-import com.noxquill.rewordium.keyboard.ime.clipboard.provider.ClipboardFileStorage
-import com.noxquill.rewordium.keyboard.ime.clipboard.provider.ClipboardMediaProvider
+import com.noxquill.rewordium.keyboard.FlorisImeService
+import com.noxquill.rewordium.keyboard.ime.media.MediaCommit
+import com.noxquill.rewordium.keyboard.ime.media.StickerSearchResults
 import com.noxquill.rewordium.keyboard.ime.media.gif.KlipyClient
+import com.noxquill.rewordium.keyboard.ime.media.ui.MediaAction
+import com.noxquill.rewordium.keyboard.ime.media.ui.MediaActionSheet
+import com.noxquill.rewordium.keyboard.ime.media.ui.MediaChip
+import com.noxquill.rewordium.keyboard.ime.media.ui.MediaEmptyState
+import com.noxquill.rewordium.keyboard.ime.media.ui.MediaLoading
+import com.noxquill.rewordium.keyboard.ime.media.ui.MediaTile
+import com.noxquill.rewordium.keyboard.ime.media.ui.TileBadge
+import com.noxquill.rewordium.keyboard.ime.media.ui.TileBusy
+import com.noxquill.rewordium.keyboard.ime.media.ui.MediaShapes
+import com.noxquill.rewordium.keyboard.ime.media.ui.ShapeTile
+import com.noxquill.rewordium.keyboard.ime.media.ui.Symbols
+import com.noxquill.rewordium.keyboard.ime.media.ui.at
+import com.noxquill.rewordium.keyboard.ime.media.ui.rememberTones
+import com.noxquill.rewordium.keyboard.ime.media.ui.rememberMediaFeedback
+import com.noxquill.rewordium.keyboard.ime.keyboard.KeyboardManager
+import com.noxquill.rewordium.keyboard.keyboardManager
 import com.noxquill.rewordium.keyboard.lib.devtools.flogDebug
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-import okhttp3.OkHttpClient
-import okhttp3.Request
-import java.util.concurrent.TimeUnit
 
 /**
- * Sticker picker — horizontal pack-tab strip ("User", then each installed
- * WhatsApp pack), grid of stickers below. Long-press on a user sticker
- * deletes it; the "+" tile in the User pack opens an image picker.
+ * The sticker panel: a chip strip (recents, favourites, your own stickers, KLIPY's community stickers, the
+ * bundled set and every WhatsApp pack, each with its own icon or tray picture) above a grid of pressable
+ * tiles. Every sticker is copied into the keyboard's clipboard provider before it is sent, so the receiving
+ * app gets a URI the keyboard can grant. A long press opens the sticker's actions; the "new sticker" tile
+ * opens Sticker Studio.
  *
- * On commit, every sticker (regardless of source) is cloned into
- * [ClipboardFileStorage] so the receiving editor gets a content URI from
- * the keyboard's own provider — avoids permission issues forwarding
- * WhatsApp's content URIs to third-party editors.
- *
- * Note: The image picker uses [Intent.ACTION_GET_CONTENT] launched via
- * [Context.startActivity] with [Intent.FLAG_ACTIVITY_NEW_TASK] because
- * the keyboard runs as an [InputMethodService], not an Activity. The
- * result is handled by [StickerImportActivity] which writes the selected
- * image into the user sticker store.
- *
- * @param onStickerPicked Called with the clipboard-provider content URI,
- *                        the sticker's MIME type, and a short description.
- *                        The caller is responsible for invoking
- *                        `EditorInstance.commitMedia`.
+ * @param onStickerPicked called with the provider URI, the MIME type and a short description; the caller
+ *   commits it.
  */
 @Composable
 fun StickerPanel(
-    fg: Color,
-    accent: Color,
     onStickerPicked: (Uri, String, String) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
+    val feedback = rememberMediaFeedback()
+    val tones = rememberTones()
     val userStore = remember { UserStickerStore.get(context) }
     val whatsapp = remember { WhatsAppStickerReader(context) }
     val recentsStore = remember { StickerCollectionStore.recents(context) }
     val favoritesStore = remember { StickerCollectionStore.favorites(context) }
+    val klipy = remember { KlipyClient() }
+    val keyboardManager by context.keyboardManager()
+    val panelSearch by keyboardManager.panelSearch.collectAsState()
+    val searchedQuery = panelSearch?.takeIf { it.mode == KeyboardManager.MediaSearchMode.STICKER }?.query
 
-    // Subscribe to the singleton stores so imports / recents / favorites
-    // changes anywhere in the IME show up instantly here.
-    val rawEntries by userStore.entriesFlow.collectAsState()
-    val userEntries = remember(rawEntries) { rawEntries.sortedByDescending { it.t } }
+    val rawUserEntries by userStore.entriesFlow.collectAsState()
+    val userEntries = remember(rawUserEntries) { rawUserEntries.sortedByDescending { it.t } }
     val recentEntries by recentsStore.entriesFlow.collectAsState()
     val favoriteEntries by favoritesStore.entriesFlow.collectAsState()
     val favoriteKeys = remember(favoriteEntries) { favoriteEntries.map { it.ref.key }.toSet() }
 
-    val keyboardManager by context.keyboardManager()
-    val mediaSearchQuery by keyboardManager.mediaSearchQuery.collectAsState()
-    var waPacks by remember { mutableStateOf<List<WhatsAppStickerReader.Pack>>(emptyList()) }
-    var premadeIndex by remember { mutableStateOf<List<PremadeEntry>>(emptyList()) }
-    var selectedTab by remember { mutableStateOf(0) }
-    var lastLaunchTime by remember { mutableStateOf(0L) }
-    val dim = fg.copy(alpha = 0.55f)
-
-    var popupSticker by remember { mutableStateOf<Pair<StickerRef, ResolvedSticker>?>(null) }
-
-    // Community stickers (KLIPY API)
-    val klipyClient = remember { KlipyClient() }
-    var communityStickers by remember { mutableStateOf<List<KlipyClient.StickerResult>>(emptyList()) }
+    var packs by remember { mutableStateOf<List<WhatsAppStickerReader.Pack>>(emptyList()) }
+    var premade by remember { mutableStateOf<List<PremadeEntry>>(emptyList()) }
+    var community by remember { mutableStateOf<List<KlipyClient.StickerResult>>(emptyList()) }
+    var communityLoading by remember { mutableStateOf(false) }
+    var selectedTab by remember { mutableIntStateOf(0) }
+    var sendingKey by remember { mutableStateOf<String?>(null) }
+    var actionsFor by remember { mutableStateOf<PanelSticker?>(null) }
+    var lastStudioLaunch by remember { mutableLongStateOf(0L) }
 
     LaunchedEffect(Unit) {
         userStore.ensureLoaded()
         recentsStore.ensureLoaded()
         favoritesStore.ensureLoaded()
-        waPacks = whatsapp.packs()
-        premadeIndex = withContext(Dispatchers.IO) { loadPremadeIndex(context) }
-        if (klipyClient.isConfigured) {
-            communityStickers = klipyClient.stickerTrending()
+        packs = whatsapp.packs()
+        premade = withContext(Dispatchers.IO) { loadPremadeIndex(context) }
+    }
+
+    val tabs = remember(packs, premade, klipy.isConfigured) {
+        buildList {
+            add(StickerTab.Recents)
+            add(StickerTab.Favorites)
+            add(StickerTab.Mine)
+            if (klipy.isConfigured) add(StickerTab.Community)
+            if (premade.isNotEmpty()) add(StickerTab.Premade)
+            packs.forEach { add(StickerTab.Pack(it)) }
+        }
+    }
+    val activeTab = tabs.getOrNull(selectedTab) ?: StickerTab.Recents
+    LaunchedEffect(activeTab is StickerTab.Community) {
+        if (activeTab is StickerTab.Community && community.isEmpty()) {
+            communityLoading = true
+            community = klipy.stickerTrending()
+            communityLoading = false
         }
     }
 
-    // Build the tab strip. Recents + Favorites pin at the start (Gboard
-    // style); then "User", "Premade" (bundled Fluent UI Emoji), then each
-    // installed WhatsApp pack.
-    val tabs by remember(userEntries, waPacks, premadeIndex, klipyClient.isConfigured) {
-        derivedStateOf { buildList {
-            add(TabSpec.Recents)
-            add(TabSpec.Favorites)
-            add(TabSpec.User)
-            if (klipyClient.isConfigured) add(TabSpec.Community)
-            if (premadeIndex.isNotEmpty()) add(TabSpec.Premade)
-            waPacks.forEachIndexed { i, pack -> add(TabSpec.WhatsApp(i, pack)) }
-        } }
-    }
-
-    // Helper: resolve a StickerRef back into something the grid can render
-    // and commit. Returns null if the source got deleted/uninstalled
-    // (eg. user sticker removed or WhatsApp pack gone).
-    fun resolveRef(ref: StickerRef): ResolvedSticker? = when (ref) {
-        is StickerRef.User -> {
-            val entry = userEntries.firstOrNull { it.id == ref.id }
-            entry?.let {
-                ResolvedSticker(
-                    ref = ref,
-                    model = Uri.fromFile(userStore.fileFor(it)),
-                    mime = it.mime,
-                    description = "Sticker",
-                )
-            }
+    /** Turns a stored reference back into something the grid can draw and send; null if it's gone. */
+    fun resolve(ref: StickerRef): PanelSticker? = when (ref) {
+        is StickerRef.User -> userEntries.firstOrNull { it.id == ref.id }?.let { entry ->
+            PanelSticker(ref, Uri.fromFile(userStore.fileFor(entry)), entry.mime, "Sticker")
         }
-        is StickerRef.WhatsApp -> ResolvedSticker(
-            ref = ref,
-            model = Uri.parse(ref.uri),
-            mime = "image/webp",
-            description = ref.emojis.ifBlank { "Sticker" },
-        )
-        is StickerRef.Premade -> {
-            val entry = premadeIndex.firstOrNull { it.slug == ref.slug }
-            entry?.let {
-                ResolvedSticker(
-                    ref = ref,
-                    // file:///android_asset/ is Coil's canonical way to
-                    // address bundled assets; we re-encode at commit time
-                    // (cloneAssetAsWebP) because the IME's clipboard
-                    // provider expects a content:// URI it can serve from.
-                    model = Uri.parse("file:///android_asset/sticker/fluent_flat/${it.slug}.png"),
-                    mime = "image/webp",
-                    description = entry.name.ifBlank { entry.slug },
-                )
-            }
+        is StickerRef.WhatsApp -> PanelSticker(ref, Uri.parse(ref.uri), "image/webp", ref.emojis.ifBlank { "Sticker" })
+        is StickerRef.Premade -> premade.firstOrNull { it.slug == ref.slug }?.let { entry ->
+            PanelSticker(ref, Uri.parse("file:///android_asset/$PREMADE_DIR/${entry.slug}.png"), "image/webp", entry.name.ifBlank { entry.slug })
         }
     }
 
-    val onCommit: (StickerRef, ResolvedSticker) -> Unit = { ref, resolved ->
+    fun send(sticker: PanelSticker) {
+        if (sendingKey != null) return
+        feedback.tap()
+        sendingKey = sticker.key
         scope.launch {
-            recentsStore.add(ref)
-            val uri = withContext(Dispatchers.IO) {
-                if (ref is StickerRef.Premade) {
-                    // Premade assets live in the APK — contentResolver
-                    // can't open `file:///android_asset/…`, so we read
-                    // via `context.assets.open` and re-encode as WebP
-                    // into ClipboardFileStorage.
-                    clonePremadeAssetToClipboardStore(context, ref.slug)
-                } else {
-                    cloneToClipboardStore(context, resolved.model, resolved.mime)
-                }
-            } ?: return@launch
-            onStickerPicked(uri, resolved.mime, resolved.description)
-        }
-    }
-
-    val onToggleFavorite: (StickerRef) -> Unit = { ref ->
-        scope.launch {
-            val nowFavorited = favoritesStore.toggle(ref)
-            Toast.makeText(
-                context,
-                if (nowFavorited) "Added to favorites" else "Removed from favorites",
-                Toast.LENGTH_SHORT,
-            ).show()
-        }
-    }
-
-    val onRemoveRecent: (StickerRef) -> Unit = { ref ->
-        scope.launch { recentsStore.remove(ref) }
-    }
-
-    val onDeleteUser: (UserStickerStore.Entry) -> Unit = { entry ->
-        scope.launch { userStore.remove(entry) }
-    }
-
-    Box(modifier = modifier.fillMaxSize()) {
-        val mainAlpha by animateFloatAsState(targetValue = if (popupSticker != null) 0.12f else 1f)
-
-        Column(modifier = Modifier.fillMaxSize().alpha(mainAlpha)) {
-            if (mediaSearchQuery.isNotEmpty()) {
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 12.dp, vertical = 8.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                ) {
-                    Text(
-                        text = "Search results for \"$mediaSearchQuery\"",
-                        color = fg,
-                        fontSize = 14.sp,
-                        fontWeight = FontWeight.SemiBold,
-                    )
-                    CustomChip(
-                        selected = true,
-                        onClick = { keyboardManager.endMediaSearch() },
-                        fg = fg,
-                        accent = accent
-                    ) {
-                        Text(text = "Clear ✕")
-                    }
-                }
-                Box(modifier = Modifier.weight(1f)) {
-                    StickerSearchResults(
-                        query = mediaSearchQuery,
-                        fg = fg,
-                        accent = accent,
-                        onStickerPicked = onStickerPicked,
-                        onLongPress = { ref, model, mime, description ->
-                            popupSticker = ref to ResolvedSticker(ref, model, mime, description)
-                        }
-                    )
-                }
+            val ref = sticker.ref
+            when (ref) {
+                is StickerRef.User -> userEntries.firstOrNull { it.id == ref.id }?.let { userStore.touch(it) }
+                else -> Unit
+            }
+            if (sticker.remoteUrl == null) recentsStore.add(ref)
+            val uri = when {
+                sticker.remoteUrl != null -> MediaCommit.download(context, sticker.remoteUrl, "image/webp")
+                ref is StickerRef.Premade -> MediaCommit.cloneAsset(context, "$PREMADE_DIR/${ref.slug}.png")
+                else -> MediaCommit.clone(context, sticker.model, sticker.mime)
+            }
+            sendingKey = null
+            if (uri != null) {
+                onStickerPicked(uri, sticker.mime, sticker.description)
             } else {
-                // M3 chip strip. Recents + Favorites are FilterChip icon-only tabs
-                // at the start, then "User" + each WhatsApp pack as labeled chips.
-                // FilterChip handles the selected surface tint, label tint, and
-                // ripple uniformly so all the chips read as one M3 tab strip.
+                Toast.makeText(context, "Couldn’t send that sticker.", Toast.LENGTH_SHORT).show()
+            }
+        }
+    }
+
+    fun openStudio() {
+        val now = System.currentTimeMillis()
+        if (now - lastStudioLaunch < 1500L) return
+        lastStudioLaunch = now
+        feedback.tap()
+        try {
+            FlorisImeService.shouldPreserveMediaUiModeOnce = true
+            context.startActivity(
+                Intent(Intent.ACTION_VIEW, Uri.parse("ui://ReBoard/settings/sticker-studio"))
+                    .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK),
+            )
+        } catch (e: Exception) {
+            flogDebug { "StickerPanel: couldn't open Sticker Studio: ${e.message}" }
+            Toast.makeText(context, "Couldn’t open Sticker Studio", Toast.LENGTH_SHORT).show()
+        }
+    }
+
+    val onLongPress: (PanelSticker) -> Unit = {
+        feedback.reveal()
+        actionsFor = it
+    }
+
+    Box(modifier.fillMaxSize()) {
+        Column(Modifier.fillMaxSize()) {
+            if (searchedQuery != null) {
+                // A search run with the Search key; the panel's search bar shows it and clears it.
+                StickerSearchResults(
+                    query = searchedQuery,
+                    onStickerPicked = onStickerPicked,
+                    modifier = Modifier.fillMaxWidth().weight(1f),
+                )
+            } else {
                 LazyRow(
-                    modifier = Modifier.fillMaxWidth().padding(horizontal = 8.dp, vertical = 6.dp),
+                    contentPadding = PaddingValues(horizontal = 10.dp, vertical = 6.dp),
                     horizontalArrangement = Arrangement.spacedBy(6.dp),
                 ) {
-                    items(tabs) { tab ->
-                        val idx = tabs.indexOf(tab)
-                        val isActive = idx == selectedTab
-                        CustomChip(
-                            selected = isActive,
-                            onClick = { selectedTab = idx },
-                            fg = fg,
-                            accent = accent
-                        ) {
-                            when (tab) {
-                                TabSpec.Recents -> {
-                                    Icon(
-                                        imageVector = Icons.Outlined.Schedule,
-                                        contentDescription = "Recents",
-                                        modifier = Modifier.size(18.dp),
-                                    )
-                                }
-                                TabSpec.Favorites -> {
-                                    Icon(
-                                        imageVector = if (isActive) Icons.Filled.Star else Icons.Outlined.StarBorder,
-                                        contentDescription = "Favorites",
-                                        modifier = Modifier.size(18.dp),
-                                    )
-                                }
-                                else -> {
-                                    Text(text = tab.label())
-                                }
-                            }
+                    itemsIndexed(tabs, key = { _, tab -> tab.key }) { index, tab ->
+                        val selected = tab.key == activeTab.key
+                        val onClick = {
+                            feedback.tick()
+                            selectedTab = index
+                        }
+                        when (tab) {
+                            is StickerTab.Pack -> MediaChip(
+                                selected = selected,
+                                onClick = onClick,
+                                label = tab.pack.name.ifBlank { "Pack ${index + 1}" },
+                                iconContent = tab.pack.trayUri?.let { tray ->
+                                    {
+                                        AsyncImage(
+                                            model = tray,
+                                            contentDescription = null,
+                                            modifier = Modifier.size(20.dp).clip(CircleShape),
+                                        )
+                                    }
+                                },
+                                icon = Symbols.Sticker,
+                            )
+                            StickerTab.Recents, StickerTab.Favorites -> MediaChip(
+                                selected = selected,
+                                onClick = onClick,
+                                tone = tones.at(index),
+                                icon = tab.icon(selected),
+                                contentDescription = tab.title,
+                            )
+                            else -> MediaChip(selected = selected, onClick = onClick, label = tab.title, icon = tab.icon(selected), tone = tones.at(index))
                         }
                     }
                 }
 
-                val active = tabs.getOrNull(selectedTab) ?: TabSpec.Recents
+                val motion = MaterialTheme.motionScheme
                 AnimatedContent(
-                    targetState = active,
-                    transitionSpec = { fadeIn(tween(180)) togetherWith fadeOut(tween(120)) },
-                    contentKey = { tabs.indexOf(it) },
+                    targetState = activeTab,
+                    contentKey = { it.key },
+                    transitionSpec = {
+                        fadeIn(motion.defaultEffectsSpec()) togetherWith
+                            fadeOut(motion.fastEffectsSpec())
+                    },
+                    modifier = Modifier.fillMaxWidth().weight(1f),
                     label = "sticker-tab",
-                ) { tabContent ->
-                    when (tabContent) {
-                        TabSpec.Recents -> CollectionGrid(
-                            refs = recentEntries.map { it.ref },
-                            emptyKind = EmptyKind.Recents,
-                            fg = fg,
-                            accent = accent,
-                            favoriteKeys = favoriteKeys,
-                            resolve = ::resolveRef,
-                            onPick = { ref, resolved -> onCommit(ref, resolved) },
-                            onLongPress = { ref, resolved -> popupSticker = ref to resolved },
-                        )
-                        TabSpec.Favorites -> CollectionGrid(
-                            refs = favoriteEntries.map { it.ref },
-                            emptyKind = EmptyKind.Favorites,
-                            fg = fg,
-                            accent = accent,
-                            favoriteKeys = favoriteKeys,
-                            resolve = ::resolveRef,
-                            onPick = { ref, resolved -> onCommit(ref, resolved) },
-                            onLongPress = { ref, resolved -> popupSticker = ref to resolved },
-                        )
-                        TabSpec.User -> UserGrid(
-                            entries = userEntries,
-                            fg = fg, accent = accent,
-                            favoriteKeys = favoriteKeys,
-                            onAddClick = {
-                                val now = System.currentTimeMillis()
-                                if (now - lastLaunchTime > 1500L) {
-                                    lastLaunchTime = now
-                                    try {
-                                        com.noxquill.rewordium.keyboard.FlorisImeService.shouldPreserveMediaUiModeOnce = true
-                                        val intent = Intent(Intent.ACTION_VIEW, Uri.parse("ui://ReBoard/settings/sticker-studio"))
-                                        intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-                                        context.startActivity(intent)
-                                    } catch (e: Exception) {
-                                        flogDebug { "StickerPanel: Failed to launch Sticker Studio: ${e.message}" }
-                                        Toast.makeText(context, "Cannot open Sticker Studio", Toast.LENGTH_SHORT).show()
+                ) { tab ->
+                    when (tab) {
+                        StickerTab.Recents -> {
+                            val items = remember(recentEntries, userEntries, premade) { recentEntries.mapNotNull { resolve(it.ref) } }
+                            if (items.isEmpty()) {
+                                MediaEmptyState(Symbols.History, "No recent stickers yet", "Stickers you send show up here, newest first.", shape = MaterialShapes.Clover4Leaf)
+                            } else {
+                                StickerGrid { stickerItems(items, favoriteKeys, sendingKey, ::send, onLongPress) }
+                            }
+                        }
+                        StickerTab.Favorites -> {
+                            val items = remember(favoriteEntries, userEntries, premade) { favoriteEntries.mapNotNull { resolve(it.ref) } }
+                            if (items.isEmpty()) {
+                                MediaEmptyState(Symbols.KidStar, "No favourites yet", "Long-press a sticker and add it to your favourites.", shape = MaterialShapes.Sunny)
+                            } else {
+                                StickerGrid { stickerItems(items, favoriteKeys, sendingKey, ::send, onLongPress) }
+                            }
+                        }
+                        StickerTab.Mine -> {
+                            val items = remember(userEntries) {
+                                userEntries.map { PanelSticker(StickerRef.User(it.id), Uri.fromFile(userStore.fileFor(it)), it.mime, "Sticker") }
+                            }
+                            if (items.isEmpty()) {
+                                MediaEmptyState(
+                                    icon = Symbols.StickerAdd,
+                                    title = "Make your first sticker",
+                                    message = "Turn any photo into a sticker in Sticker Studio. Long-press one to favourite or delete it.",
+                                    shape = MaterialShapes.Cookie12Sided,
+                                ) {
+                                    Button(onClick = ::openStudio, shapes = ButtonDefaults.shapes()) {
+                                        Icon(Symbols.StickerAdd, null, Modifier.size(18.dp))
+                                        Spacer(Modifier.size(8.dp))
+                                        Text("New sticker")
                                     }
                                 }
-                            },
-                            onPick = { entry ->
-                                val ref = StickerRef.User(entry.id)
-                                scope.launch {
-                                    userStore.touch(entry)
-                                    recentsStore.add(ref)
-                                    val file = userStore.fileFor(entry)
-                                    if (!file.exists()) return@launch
-                                    val uri = withContext(Dispatchers.IO) {
-                                        cloneToClipboardStore(context, Uri.fromFile(file), entry.mime)
-                                    } ?: return@launch
-                                    onStickerPicked(uri, entry.mime, "Sticker")
+                            } else {
+                                StickerGrid {
+                                    item(key = "new") { NewStickerTile(::openStudio) }
+                                    stickerItems(items, favoriteKeys, sendingKey, ::send, onLongPress)
                                 }
-                            },
-                            onLongPress = { ref, resolved -> popupSticker = ref to resolved },
-                        )
-                        TabSpec.Premade -> CollectionGrid(
-                            refs = premadeIndex.map { StickerRef.Premade(it.slug) },
-                            emptyKind = EmptyKind.Recents, // never visible — we hide
-                            fg = fg,
-                            accent = accent,
-                            favoriteKeys = favoriteKeys,
-                            resolve = ::resolveRef,
-                            onPick = { ref, resolved -> onCommit(ref, resolved) },
-                            onLongPress = { ref, resolved -> popupSticker = ref to resolved },
-                        )
-                        is TabSpec.WhatsApp -> WhatsAppGrid(
-                            pack = tabContent.pack,
-                            fg = fg,
-                            favoriteKeys = favoriteKeys,
-                            accent = accent,
-                            onPick = { sticker ->
-                                val ref = StickerRef.WhatsApp(sticker.uri.toString(), sticker.emojis)
-                                scope.launch {
-                                    recentsStore.add(ref)
-                                    val uri = withContext(Dispatchers.IO) {
-                                        cloneToClipboardStore(context, sticker.uri, "image/webp")
-                                    } ?: return@launch
-                                    onStickerPicked(uri, "image/webp", sticker.emojis.ifBlank { "Sticker" })
-                                }
-                            },
-                            onLongPress = { ref, resolved -> popupSticker = ref to resolved },
-                        )
-                        TabSpec.Community -> CommunityGrid(
-                            stickers = communityStickers,
-                            fg = fg,
-                            accent = accent,
-                            onPick = { sticker ->
-                                scope.launch {
-                                    val uri = withContext(Dispatchers.IO) {
-                                        downloadStickerAndStore(context, sticker.stickerUrl)
-                                    } ?: return@launch
-                                    onStickerPicked(uri, "image/webp", sticker.contentDescription.ifBlank { "Sticker" })
-                                }
-                            },
-                            onLongPress = { ref, resolved -> popupSticker = ref to resolved },
-                            onSearch = { query ->
-                                scope.launch {
-                                    communityStickers = if (query.isBlank()) {
-                                        klipyClient.stickerTrending()
-                                    } else {
-                                        klipyClient.stickerSearch(query)
+                            }
+                        }
+                        StickerTab.Community -> when {
+                            communityLoading && community.isEmpty() -> MediaLoading()
+                            community.isEmpty() -> MediaEmptyState(Symbols.CloudOff, "No community stickers right now", "Check your connection and try again.", shape = MaterialShapes.SoftBurst)
+                            else -> {
+                                val items = remember(community) {
+                                    community.map {
+                                        PanelSticker(
+                                            ref = StickerRef.WhatsApp(it.stickerUrl, it.contentDescription),
+                                            model = Uri.parse(it.previewUrl),
+                                            mime = "image/webp",
+                                            description = it.contentDescription.ifBlank { "Sticker" },
+                                            remoteUrl = it.stickerUrl,
+                                        )
                                     }
                                 }
-                            },
-                        )
+                                StickerGrid { stickerItems(items, favoriteKeys, sendingKey, ::send, onLongPress, favouritable = false) }
+                            }
+                        }
+                        StickerTab.Premade -> {
+                            val items = remember(premade) { premade.mapNotNull { resolve(StickerRef.Premade(it.slug)) } }
+                            StickerGrid { stickerItems(items, favoriteKeys, sendingKey, ::send, onLongPress) }
+                        }
+                        is StickerTab.Pack -> {
+                            val items = remember(tab.pack) {
+                                tab.pack.stickers.map {
+                                    PanelSticker(StickerRef.WhatsApp(it.uri.toString(), it.emojis), it.uri, "image/webp", it.emojis.ifBlank { "Sticker" })
+                                }
+                            }
+                            if (items.isEmpty()) {
+                                MediaEmptyState(Symbols.Sticker, "This pack is empty", "Add stickers to it in WhatsApp.")
+                            } else {
+                                StickerGrid { stickerItems(items, favoriteKeys, sendingKey, ::send, onLongPress) }
+                            }
+                        }
                     }
                 }
             }
         }
 
-        // Fullscreen overlay UI matching the clipboard's style
-        if (popupSticker != null) {
-            val (ref, sticker) = popupSticker!!
-            val isFavorited = ref.key in favoriteKeys
-
-            Row(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .pointerInput(Unit) {
-                        detectTapGestures { popupSticker = null }
-                    },
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.SpaceAround,
-            ) {
-                Column(
-                    modifier = Modifier
-                        .weight(0.5f)
-                        .padding(horizontal = 8.dp),
-                    horizontalAlignment = Alignment.CenterHorizontally
-                ) {
-                    SnyggColumn(
-                        elementName = com.noxquill.rewordium.keyboard.ime.theme.FlorisImeUi.ClipboardItemPopup.elementName,
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalAlignment = Alignment.CenterHorizontally
-                    ) {
-                        Box(
-                            modifier = Modifier
-                                .size(112.dp)
-                                .clip(RoundedCornerShape(12.dp)),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            AsyncImage(
-                                model = sticker.model,
-                                contentDescription = null,
-                                modifier = Modifier.fillMaxSize().padding(6.dp),
-                            )
-                        }
+        val selected = actionsFor
+        MediaActionSheet(
+            visible = selected != null,
+            onDismiss = { actionsFor = null },
+            actions = selected?.let { sticker ->
+                val favourite = sticker.ref.key in favoriteKeys
+                buildList {
+                    add(MediaAction(Symbols.Send, "Send sticker", primary = true) {
+                        actionsFor = null
+                        send(sticker)
+                    })
+                    if (sticker.remoteUrl == null) {
+                        add(MediaAction(if (favourite) Symbols.KidStarFilled else Symbols.KidStar, if (favourite) "Remove from favourites" else "Add to favourites") {
+                            feedback.tick()
+                            actionsFor = null
+                            scope.launch { favoritesStore.toggle(sticker.ref) }
+                        })
+                    }
+                    if (recentEntries.any { it.ref.key == sticker.ref.key }) {
+                        add(MediaAction(Symbols.History, "Remove from recents") {
+                            feedback.tick()
+                            actionsFor = null
+                            scope.launch { recentsStore.remove(sticker.ref) }
+                        })
+                    }
+                    val ref = sticker.ref
+                    val entry = if (ref is StickerRef.User) userEntries.firstOrNull { it.id == ref.id } else null
+                    if (entry != null) {
+                        add(MediaAction(Symbols.Delete, "Delete sticker") {
+                            feedback.tick()
+                            actionsFor = null
+                            scope.launch {
+                                userStore.remove(entry)
+                                recentsStore.remove(ref)
+                                if (favoritesStore.contains(ref)) favoritesStore.toggle(ref)
+                            }
+                        })
                     }
                 }
-                Column(
-                    modifier = Modifier
-                        .weight(0.5f)
-                        .padding(horizontal = 8.dp),
-                    verticalArrangement = Arrangement.Center
-                ) {
-                    SnyggColumn(
-                        elementName = com.noxquill.rewordium.keyboard.ime.theme.FlorisImeUi.ClipboardItemActions.elementName,
-                        modifier = Modifier.fillMaxWidth()
-                    ) {
-                        PopupAction(
-                            icon = if (isFavorited) Icons.Filled.Star else Icons.Outlined.StarBorder,
-                            text = if (isFavorited) "Remove from favorites" else "Add to favorites",
-                            accent = accent,
-                            fg = fg,
-                            onClick = {
-                                onToggleFavorite(ref)
-                                popupSticker = null
-                            }
-                        )
-                        val isRecent = recentEntries.any { it.ref.key == ref.key }
-                        if (isRecent) {
-                            PopupAction(
-                                icon = Icons.Outlined.Schedule,
-                                text = "Remove from recents",
-                                accent = accent,
-                                fg = fg,
-                                onClick = {
-                                    onRemoveRecent(ref)
-                                    popupSticker = null
-                                }
-                            )
-                        }
-                        val userEntry = userEntries.firstOrNull { ref is StickerRef.User && it.id == ref.id }
-                        if (userEntry != null) {
-                            PopupAction(
-                                icon = Icons.Outlined.Delete,
-                                text = "Delete sticker",
-                                accent = accent,
-                                fg = fg,
-                                onClick = {
-                                    onDeleteUser(userEntry)
-                                    popupSticker = null
-                                }
-                            )
-                        }
-                        PopupAction(
-                            icon = Icons.Outlined.ContentPasteGo,
-                            text = "Send sticker",
-                            accent = accent,
-                            fg = fg,
-                            onClick = {
-                                onCommit(ref, sticker)
-                                popupSticker = null
-                            }
-                        )
-                    }
-                }
-            }
+            }.orEmpty(),
+        ) {
+            selected?.let { AsyncImage(model = it.model, contentDescription = it.description, modifier = Modifier.fillMaxSize().padding(10.dp)) }
         }
     }
 }
 
-private enum class EmptyKind { Recents, Favorites }
+/** A sticker as the panel shows it: where it's stored, how to draw it, and (for KLIPY) where to fetch it. */
+internal data class PanelSticker(
+    val ref: StickerRef,
+    val model: Uri,
+    val mime: String,
+    val description: String,
+    val remoteUrl: String? = null,
+) {
+    val key: String get() = remoteUrl?.let { "c:$it" } ?: ref.key
+}
 
-private sealed interface TabSpec {
-    fun label(): String
-    object Recents : TabSpec { override fun label() = "Recents" }
-    object Favorites : TabSpec { override fun label() = "Favorites" }
-    object Community : TabSpec { override fun label() = "Community" }
-    object User : TabSpec { override fun label() = "User" }
-    object Premade : TabSpec { override fun label() = "Premade" }
-    data class WhatsApp(val index: Int, val pack: WhatsAppStickerReader.Pack) : TabSpec {
-        override fun label(): String = pack.name.ifBlank { "Pack ${index + 1}" }
+private sealed interface StickerTab {
+    val key: String
+    val title: String
+    fun icon(selected: Boolean) = when (this) {
+        Recents -> if (selected) Symbols.HistoryFilled else Symbols.History
+        Favorites -> if (selected) Symbols.KidStarFilled else Symbols.KidStar
+        Mine -> if (selected) Symbols.FaceFilled else Symbols.Face
+        Community -> if (selected) Symbols.PublicFilled else Symbols.Public
+        Premade -> if (selected) Symbols.AutoAwesomeFilled else Symbols.AutoAwesome
+        is Pack -> if (selected) Symbols.StickerFilled else Symbols.Sticker
+    }
+
+    data object Recents : StickerTab { override val key = "recents"; override val title = "Recent stickers" }
+    data object Favorites : StickerTab { override val key = "favorites"; override val title = "Favourite stickers" }
+    data object Mine : StickerTab { override val key = "mine"; override val title = "Mine" }
+    data object Community : StickerTab { override val key = "community"; override val title = "Community" }
+    data object Premade : StickerTab { override val key = "premade"; override val title = "Fluent" }
+    data class Pack(val pack: WhatsAppStickerReader.Pack) : StickerTab {
+        override val key: String get() = "pack:${pack.identifier}"
+        override val title: String get() = pack.name
+    }
+}
+
+@Composable
+private fun StickerGrid(content: LazyGridScope.() -> Unit) {
+    LazyVerticalGrid(
+        columns = GridCells.Adaptive(minSize = 84.dp),
+        modifier = Modifier.fillMaxSize(),
+        contentPadding = PaddingValues(start = 10.dp, end = 10.dp, bottom = 10.dp),
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+        verticalArrangement = Arrangement.spacedBy(8.dp),
+        content = content,
+    )
+}
+
+private fun LazyGridScope.stickerItems(
+    items: List<PanelSticker>,
+    favoriteKeys: Set<String>,
+    sendingKey: String?,
+    onClick: (PanelSticker) -> Unit,
+    onLongClick: (PanelSticker) -> Unit,
+    favouritable: Boolean = true,
+    offset: Int = 0,
+) {
+    itemsIndexed(items, key = { _, it -> it.key }) { index, sticker ->
+        StickerTile(
+            model = sticker.model,
+            favorite = favouritable && sticker.ref.key in favoriteKeys,
+            sending = sendingKey == sticker.key,
+            label = sticker.description,
+            onClick = { onClick(sticker) },
+            onLongClick = { onLongClick(sticker) },
+            slot = index + offset,
+        )
+    }
+}
+
+/**
+ * A sticker on its own MaterialShape cushion. Neighbouring stickers get different shapes and tones from the
+ * keyboard theme, so a pack reads like a playful sheet rather than a grid of grey squares.
+ */
+@Composable
+internal fun StickerTile(
+    model: Any,
+    favorite: Boolean,
+    sending: Boolean,
+    label: String,
+    onClick: () -> Unit,
+    onLongClick: (() -> Unit)?,
+    modifier: Modifier = Modifier,
+    slot: Int = 0,
+) {
+    val tone = rememberTones().at(slot)
+    Box(modifier.aspectRatio(1f)) {
+        ShapeTile(
+            onClick = onClick,
+            onLongClick = onLongClick,
+            shape = MediaShapes.blob(slot * 5 + 1),
+            color = lerp(MaterialTheme.colorScheme.surfaceContainerHigh, tone.container, 0.75f),
+            label = label,
+            modifier = Modifier.fillMaxSize(),
+        ) {
+            AsyncImage(model = model, contentDescription = null, modifier = Modifier.fillMaxSize())
+        }
+        if (favorite) TileBadge(Symbols.KidStarFilled, contentDescription = "Favourite")
+        TileBusy(sending)
+    }
+}
+
+/** The way into Sticker Studio: the official sticker_add symbol on a turning MaterialShape. */
+@Composable
+private fun NewStickerTile(onClick: () -> Unit) {
+    Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.aspectRatio(1f)) {
+        ShapeTile(
+            onClick = onClick,
+            shape = MaterialShapes.Cookie12Sided,
+            color = MaterialTheme.colorScheme.primary,
+            label = "New sticker",
+            modifier = Modifier.weight(1f),
+        ) {
+            Icon(Symbols.StickerAdd, null, tint = MaterialTheme.colorScheme.onPrimary, modifier = Modifier.size(28.dp))
+        }
+        Text("New", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.primary)
     }
 }
 
@@ -577,465 +536,13 @@ private data class PremadeEntry(
 private const val PREMADE_DIR = "sticker/fluent_flat"
 private const val PREMADE_INDEX = "$PREMADE_DIR/index.json"
 
-private fun loadPremadeIndex(context: android.content.Context): List<PremadeEntry> {
-    return try {
-        context.assets.open(PREMADE_INDEX).bufferedReader().use { reader ->
-            kotlinx.serialization.json.Json { ignoreUnknownKeys = true }
-                .decodeFromString(
-                    kotlinx.serialization.builtins.ListSerializer(PremadeEntry.serializer()),
-                    reader.readText(),
-                )
-        }
-    } catch (e: Exception) {
-        emptyList()
-    }
-}
-
-private suspend fun clonePremadeAssetToClipboardStore(
-    context: android.content.Context,
-    slug: String,
-): Uri? = withContext(Dispatchers.IO) {
-    try {
-        val bitmap = context.assets.open("$PREMADE_DIR/$slug.png")
-            .use { android.graphics.BitmapFactory.decodeStream(it) }
-            ?: return@withContext null
-        val cache = java.io.File(context.cacheDir, "premade_${slug}_${System.nanoTime()}.webp")
-        java.io.FileOutputStream(cache).use { out ->
-            bitmap.compress(android.graphics.Bitmap.CompressFormat.WEBP_LOSSLESS, 100, out)
-        }
-        val cloned = cloneToClipboardStore(context, Uri.fromFile(cache), "image/webp")
-        cache.delete()
-        cloned
-    } catch (e: Exception) {
-        flogDebug { "clonePremadeAssetToClipboardStore failed: ${e.message}" }
-        null
-    }
-}
-
-private data class ResolvedSticker(
-    val ref: StickerRef,
-    val model: Uri,
-    val mime: String,
-    val description: String,
-)
-
-
-@Composable
-private fun CollectionGrid(
-    refs: List<StickerRef>,
-    emptyKind: EmptyKind,
-    fg: Color,
-    accent: Color,
-    favoriteKeys: Set<String>,
-    resolve: (StickerRef) -> ResolvedSticker?,
-    onPick: (StickerRef, ResolvedSticker) -> Unit,
-    onLongPress: (StickerRef, ResolvedSticker) -> Unit,
-) {
-    val resolved = remember(refs) { refs.mapNotNull { resolve(it)?.let { r -> it to r } } }
-    if (resolved.isEmpty()) {
-        StickerEmptyState(kind = emptyKind, fg = fg, accent = accent)
-        return
-    }
-    LazyVerticalGrid(
-        columns = GridCells.Adaptive(88.dp),
-        modifier = Modifier.fillMaxSize().padding(horizontal = 8.dp),
-        verticalArrangement = Arrangement.spacedBy(8.dp),
-        horizontalArrangement = Arrangement.spacedBy(8.dp),
-        contentPadding = PaddingValues(vertical = 8.dp),
-    ) {
-        items(resolved, key = { it.first.key }) { (ref, sticker) ->
-            StickerTile(
-                model = sticker.model,
-                fg = fg,
-                accent = accent,
-                isFavorited = ref.key in favoriteKeys,
-                onTap = { onPick(ref, sticker) },
-                onLongPress = { onLongPress(ref, sticker) },
-            )
-        }
-    }
-}
-
-@Composable
-private fun StickerEmptyState(kind: EmptyKind, fg: Color, accent: Color) {
-    val (icon, headline, helper) = when (kind) {
-        EmptyKind.Recents -> Triple(
-            Icons.Outlined.Schedule,
-            "No recent stickers yet",
-            "Stickers you send appear here, newest first.",
-        )
-        EmptyKind.Favorites -> Triple(
-            Icons.Outlined.StarBorder,
-            "No favorites yet",
-            "Long-press a sticker and tap “Add to favorites.”",
+private fun loadPremadeIndex(context: Context): List<PremadeEntry> = try {
+    context.assets.open(PREMADE_INDEX).bufferedReader().use { reader ->
+        kotlinx.serialization.json.Json { ignoreUnknownKeys = true }.decodeFromString(
+            kotlinx.serialization.builtins.ListSerializer(PremadeEntry.serializer()),
+            reader.readText(),
         )
     }
-    Box(
-        modifier = Modifier.fillMaxSize().padding(24.dp),
-        contentAlignment = Alignment.Center,
-    ) {
-        Column(horizontalAlignment = Alignment.CenterHorizontally) {
-            Icon(
-                imageVector = icon,
-                contentDescription = null,
-                tint = accent,
-                modifier = Modifier.size(40.dp),
-            )
-            Spacer(modifier = Modifier.height(8.dp))
-            Text(
-                text = headline,
-                color = fg,
-                fontSize = 14.sp,
-                fontWeight = FontWeight.SemiBold,
-            )
-            Spacer(modifier = Modifier.height(2.dp))
-            Text(
-                text = helper,
-                color = fg.copy(alpha = 0.6f),
-                fontSize = 12.sp,
-                textAlign = TextAlign.Center,
-            )
-        }
-    }
+} catch (e: Exception) {
+    emptyList()
 }
-
-@Composable
-private fun StickerTile(
-    model: Any,
-    fg: Color,
-    accent: Color,
-    isFavorited: Boolean,
-    onTap: () -> Unit,
-    onLongPress: () -> Unit,
-) {
-    val inputFeedbackController = com.noxquill.rewordium.keyboard.ime.input
-        .LocalInputFeedbackController.current
-    Box(
-        modifier = Modifier
-            .aspectRatio(1f)
-            .clip(RoundedCornerShape(12.dp))
-            .background(fg.copy(alpha = 0.06f))
-            .pointerInput(model) {
-                detectTapGestures(
-                    onTap = {
-                        inputFeedbackController.keyPress(
-                            com.noxquill.rewordium.keyboard.ime.text.keyboard.TextKeyData.UNSPECIFIED,
-                        )
-                        onTap()
-                    },
-                    onLongPress = {
-                        inputFeedbackController.keyPress(
-                            com.noxquill.rewordium.keyboard.ime.text.keyboard.TextKeyData.UNSPECIFIED,
-                        )
-                        onLongPress()
-                    },
-                )
-            },
-    ) {
-        AsyncImage(
-            model = model,
-            contentDescription = null,
-            modifier = Modifier.fillMaxSize().padding(6.dp),
-        )
-        if (isFavorited) {
-            Box(
-                modifier = Modifier
-                    .align(Alignment.TopEnd)
-                    .padding(4.dp)
-                    .size(18.dp)
-                    .clip(CircleShape)
-                    .background(Color.Black.copy(alpha = 0.45f)),
-                contentAlignment = Alignment.Center,
-            ) {
-                Icon(
-                    imageVector = Icons.Filled.Star,
-                    contentDescription = "Favorited",
-                    tint = accent,
-                    modifier = Modifier.size(10.dp),
-                )
-            }
-        }
-    }
-}
-
-@Composable
-private fun UserGrid(
-    entries: List<UserStickerStore.Entry>,
-    fg: Color,
-    accent: Color,
-    favoriteKeys: Set<String>,
-    onAddClick: () -> Unit,
-    onPick: (UserStickerStore.Entry) -> Unit,
-    onLongPress: (StickerRef, ResolvedSticker) -> Unit,
-) {
-    val context = LocalContext.current
-    val dim = fg.copy(alpha = 0.55f)
-
-    // First-run / empty-state — show a single big "Add sticker" CTA and a
-    // short helper line so the user doesn't sit there wondering whether
-    // the panel is broken when the grid is empty.
-    if (entries.isEmpty()) {
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(horizontal = 24.dp, vertical = 16.dp),
-            verticalArrangement = Arrangement.Center,
-            horizontalAlignment = Alignment.CenterHorizontally,
-        ) {
-            Box(
-                modifier = Modifier
-                    .size(96.dp)
-                    .clip(RoundedCornerShape(20.dp))
-                    .background(accent.copy(alpha = 0.22f))
-                    .clickable(onClick = onAddClick),
-                contentAlignment = Alignment.Center,
-            ) {
-                Icon(
-                    imageVector = Icons.Outlined.Add,
-                    contentDescription = "Add sticker",
-                    tint = fg,
-                    modifier = Modifier.size(36.dp),
-                )
-            }
-            Spacer(modifier = Modifier.height(14.dp))
-            Text(
-                text = "No stickers yet",
-                color = fg,
-                fontSize = 15.sp,
-                fontWeight = FontWeight.SemiBold,
-            )
-            Spacer(modifier = Modifier.height(4.dp))
-            Text(
-                text = "Tap + to import an image. Long-press a sticker to favorite or remove it.",
-                color = dim,
-                fontSize = 12.sp,
-                textAlign = TextAlign.Center,
-            )
-        }
-        return
-    }
-
-    Column(modifier = Modifier.fillMaxSize()) {
-        LazyVerticalGrid(
-            columns = GridCells.Adaptive(88.dp),
-            modifier = Modifier.weight(1f).padding(horizontal = 8.dp),
-            verticalArrangement = Arrangement.spacedBy(8.dp),
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
-            contentPadding = PaddingValues(vertical = 8.dp),
-        ) {
-            item {
-                Box(
-                    modifier = Modifier
-                        .aspectRatio(1f)
-                        .clip(RoundedCornerShape(12.dp))
-                        .background(accent.copy(alpha = 0.20f))
-                        .clickable(onClick = onAddClick),
-                    contentAlignment = Alignment.Center,
-                ) {
-                    Icon(
-                        imageVector = Icons.Outlined.Add,
-                        contentDescription = "Add sticker",
-                        tint = fg,
-                        modifier = Modifier.size(28.dp),
-                    )
-                }
-            }
-            items(entries, key = { it.id }) { entry ->
-                val store = remember { UserStickerStore.get(context) }
-                val file = store.fileFor(entry)
-                val refKey = StickerRef.User(entry.id).key
-                val ref = StickerRef.User(entry.id)
-                val resolved = ResolvedSticker(ref, Uri.fromFile(file), entry.mime, "Sticker")
-                StickerTile(
-                    model = Uri.fromFile(file),
-                    fg = fg,
-                    accent = accent,
-                    isFavorited = refKey in favoriteKeys,
-                    onTap = { onPick(entry) },
-                    onLongPress = { onLongPress(ref, resolved) },
-                )
-            }
-        }
-    }
-}
-
-@Composable
-private fun WhatsAppGrid(
-    pack: WhatsAppStickerReader.Pack,
-    fg: Color,
-    accent: Color,
-    favoriteKeys: Set<String>,
-    onPick: (WhatsAppStickerReader.Sticker) -> Unit,
-    onLongPress: (StickerRef, ResolvedSticker) -> Unit,
-) {
-    val dim = fg.copy(alpha = 0.55f)
-    if (pack.stickers.isEmpty()) {
-        Box(
-            modifier = Modifier.fillMaxSize().padding(24.dp),
-            contentAlignment = Alignment.Center,
-        ) {
-            Text(
-                text = "This pack is empty.",
-                color = dim,
-                fontSize = 13.sp,
-            )
-        }
-        return
-    }
-    LazyVerticalGrid(
-        columns = GridCells.Adaptive(88.dp),
-        modifier = Modifier.fillMaxSize().padding(horizontal = 8.dp),
-        verticalArrangement = Arrangement.spacedBy(8.dp),
-        horizontalArrangement = Arrangement.spacedBy(8.dp),
-        contentPadding = PaddingValues(vertical = 8.dp),
-    ) {
-        items(pack.stickers, key = { it.uri.toString() }) { sticker ->
-            val refKey = StickerRef.WhatsApp(sticker.uri.toString(), sticker.emojis).key
-            val ref = StickerRef.WhatsApp(sticker.uri.toString(), sticker.emojis)
-            val resolved = ResolvedSticker(ref, sticker.uri, "image/webp", sticker.emojis.ifBlank { "Sticker" })
-            StickerTile(
-                model = sticker.uri,
-                fg = fg,
-                accent = accent,
-                isFavorited = refKey in favoriteKeys,
-                onTap = { onPick(sticker) },
-                onLongPress = { onLongPress(ref, resolved) },
-            )
-        }
-    }
-}
-
-@Composable
-private fun CommunityGrid(
-    stickers: List<KlipyClient.StickerResult>,
-    fg: Color,
-    accent: Color,
-    onPick: (KlipyClient.StickerResult) -> Unit,
-    onLongPress: (StickerRef, ResolvedSticker) -> Unit,
-    onSearch: (String) -> Unit,
-) {
-    val dim = fg.copy(alpha = 0.55f)
-    if (stickers.isEmpty()) {
-        Box(
-            modifier = Modifier.fillMaxSize().padding(24.dp),
-            contentAlignment = Alignment.Center,
-        ) {
-            Text(
-                text = "No community stickers found.",
-                color = dim,
-                fontSize = 13.sp,
-            )
-        }
-        return
-    }
-    LazyVerticalGrid(
-        columns = GridCells.Adaptive(88.dp),
-        modifier = Modifier.fillMaxSize().padding(horizontal = 8.dp),
-        verticalArrangement = Arrangement.spacedBy(8.dp),
-        horizontalArrangement = Arrangement.spacedBy(8.dp),
-        contentPadding = PaddingValues(vertical = 8.dp),
-    ) {
-        items(stickers, key = { it.id }) { sticker ->
-            val ref = StickerRef.WhatsApp(sticker.stickerUrl, sticker.contentDescription)
-            val resolved = ResolvedSticker(ref, Uri.parse(sticker.previewUrl), "image/webp", sticker.contentDescription)
-            StickerTile(
-                model = sticker.previewUrl,
-                fg = fg,
-                accent = accent,
-                isFavorited = false,
-                onTap = { onPick(sticker) },
-                onLongPress = { onLongPress(ref, resolved) },
-            )
-        }
-    }
-}
-
-private val stickerDownloadClient = OkHttpClient.Builder()
-    .callTimeout(10, TimeUnit.SECONDS)
-    .connectTimeout(4, TimeUnit.SECONDS)
-    .readTimeout(8, TimeUnit.SECONDS)
-    .build()
-
-private suspend fun downloadStickerAndStore(
-    context: android.content.Context,
-    url: String,
-): Uri? = withContext(Dispatchers.IO) {
-    try {
-        val response = stickerDownloadClient.newCall(Request.Builder().url(url).build()).execute()
-        response.use { r ->
-            if (!r.isSuccessful) return@withContext null
-            val body = r.body ?: return@withContext null
-            val cache = java.io.File(context.cacheDir, "sticker_dl_${System.nanoTime()}.tmp")
-            cache.outputStream().use { out -> body.byteStream().copyTo(out) }
-            val values = android.content.ContentValues(3).apply {
-                put(ClipboardMediaProvider.Columns.MediaUri, Uri.fromFile(cache).toString())
-                put(ClipboardMediaProvider.Columns.MimeTypes, "image/webp")
-                put(android.provider.OpenableColumns.DISPLAY_NAME, "sticker")
-            }
-            val result = context.contentResolver.insert(ClipboardMediaProvider.IMAGE_CLIPS_URI, values)
-            cache.delete()
-            result
-        }
-    } catch (e: Exception) {
-        flogDebug { "downloadStickerAndStore failed: ${e.message}" }
-        null
-    }
-}
-
-/**
- * Copies a file/content URI's bytes into [ClipboardFileStorage] **and**
- * registers the entry with [ClipboardMediaProvider] so that `getType(uri)`
- * returns the correct MIME type. Without this registration, apps like
- * WhatsApp reject the content because `getType()` returns null.
- */
-private suspend fun cloneToClipboardStore(
-    context: android.content.Context,
-    source: Uri,
-    mimeType: String = "image/webp",
-): Uri? = withContext(Dispatchers.IO) {
-    try {
-        val values = android.content.ContentValues(3).apply {
-            put(ClipboardMediaProvider.Columns.MediaUri, source.toString())
-            put(ClipboardMediaProvider.Columns.MimeTypes, mimeType)
-            put(android.provider.OpenableColumns.DISPLAY_NAME, "sticker")
-        }
-        context.contentResolver.insert(ClipboardMediaProvider.IMAGE_CLIPS_URI, values)
-    } catch (e: Exception) {
-        flogDebug { "cloneToClipboardStore failed: ${e.message}" }
-        null
-    }
-}
-
-@Composable
-private fun PopupAction(
-    icon: ImageVector,
-    text: String,
-    accent: Color,
-    fg: Color,
-    modifier: Modifier = Modifier,
-    onClick: () -> Unit,
-) {
-    Row(
-        modifier = modifier
-            .fillMaxWidth()
-            .rippleClickable(onClick = onClick)
-            .padding(vertical = 12.dp, horizontal = 16.dp),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        Icon(
-            imageVector = icon,
-            contentDescription = null,
-            tint = accent,
-            modifier = Modifier.size(20.dp),
-        )
-        Spacer(modifier = Modifier.width(12.dp))
-        Text(
-            text = text,
-            color = fg,
-            fontSize = 14.sp,
-            fontWeight = FontWeight.Medium,
-            modifier = Modifier.weight(1f),
-        )
-    }
-}
-

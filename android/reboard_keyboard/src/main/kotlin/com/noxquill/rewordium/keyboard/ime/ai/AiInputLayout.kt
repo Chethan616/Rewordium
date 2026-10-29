@@ -14,6 +14,8 @@
  * limitations under the License.
  */
 
+@file:OptIn(ExperimentalMaterial3ExpressiveApi::class)
+
 package com.noxquill.rewordium.keyboard.ime.ai
 
 import android.content.ClipData
@@ -22,18 +24,13 @@ import android.content.Context
 import android.content.Intent
 import android.widget.Toast
 import androidx.compose.animation.AnimatedContent
-import androidx.compose.animation.core.LinearEasing
-import androidx.compose.animation.core.RepeatMode
-import androidx.compose.animation.core.animateFloat
-import androidx.compose.animation.core.infiniteRepeatable
-import androidx.compose.animation.core.rememberInfiniteTransition
-import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
+import androidx.compose.animation.scaleIn
+import androidx.compose.animation.slideInHorizontally
+import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.animation.togetherWith
-import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -51,47 +48,31 @@ import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
-import androidx.compose.foundation.lazy.grid.items
-import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.grid.itemsIndexed
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.outlined.Backspace
-import androidx.compose.material.icons.automirrored.rounded.ArrowBack
-import androidx.compose.material.icons.automirrored.rounded.FormatListBulleted
-import androidx.compose.material.icons.automirrored.rounded.Notes
-import androidx.compose.material.icons.automirrored.rounded.ShortText
-import androidx.compose.material.icons.automirrored.rounded.Undo
-import androidx.compose.material.icons.rounded.AutoAwesome
-import androidx.compose.material.icons.rounded.AutoFixHigh
-import androidx.compose.material.icons.rounded.AutoStories
-import androidx.compose.material.icons.rounded.Bolt
-import androidx.compose.material.icons.rounded.BusinessCenter
-import androidx.compose.material.icons.rounded.Check
-import androidx.compose.material.icons.rounded.ContentCopy
-import androidx.compose.material.icons.rounded.OutlinedFlag
-import androidx.compose.material.icons.rounded.EditNote
-import androidx.compose.material.icons.rounded.EmojiEmotions
-import androidx.compose.material.icons.rounded.ErrorOutline
-import androidx.compose.material.icons.rounded.LocalCafe
-import androidx.compose.material.icons.rounded.Quickreply
-import androidx.compose.material.icons.rounded.Refresh
-import androidx.compose.material.icons.rounded.School
-import androidx.compose.material.icons.rounded.SentimentSatisfiedAlt
-import androidx.compose.material.icons.rounded.Spellcheck
-import androidx.compose.material.icons.rounded.Summarize
-import androidx.compose.material.icons.rounded.TheaterComedy
-import androidx.compose.material.icons.rounded.Translate
-import androidx.compose.material.icons.rounded.Tune
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
+import androidx.compose.material3.FilledTonalButton
+import androidx.compose.material3.FilledTonalIconButton
 import androidx.compose.material3.Icon
-import androidx.compose.material3.LinearProgressIndicator
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.IconButtonDefaults
+import androidx.compose.material3.LinearWavyProgressIndicator
+import androidx.compose.material3.MaterialShapes
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.toShape
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
@@ -101,32 +82,44 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.graphicsLayer
-import androidx.compose.ui.graphics.luminance
+import androidx.compose.ui.graphics.lerp
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
+import com.noxquill.rewordium.app.ui.avatar.BOT_TYPES
+import com.noxquill.rewordium.app.ui.avatar.BotAvatar
+import com.noxquill.rewordium.app.ui.avatar.BotMood
 import com.noxquill.rewordium.keyboard.aiManager
+import com.noxquill.rewordium.keyboard.app.FlorisPreferenceStore
 import com.noxquill.rewordium.keyboard.editorInstance
 import com.noxquill.rewordium.keyboard.ime.ImeUiMode
 import com.noxquill.rewordium.keyboard.ime.editor.AiTextSnapshot
-import com.noxquill.rewordium.keyboard.ime.input.LocalInputFeedbackController
 import com.noxquill.rewordium.keyboard.ime.keyboard.FlorisImeSizing
-import com.noxquill.rewordium.keyboard.ime.media.KeyboardLikeButton
+import com.noxquill.rewordium.keyboard.ime.media.ui.MediaAbcButton
+import com.noxquill.rewordium.keyboard.ime.media.ui.MediaChip
+import com.noxquill.rewordium.keyboard.ime.media.ui.MediaExpressiveTheme
+import com.noxquill.rewordium.keyboard.ime.media.ui.MediaShapes
+import com.noxquill.rewordium.keyboard.ime.media.ui.MediaTile
+import com.noxquill.rewordium.keyboard.ime.media.ui.MorphBlob
+import com.noxquill.rewordium.keyboard.ime.media.ui.RepeatingDeleteButton
+import com.noxquill.rewordium.keyboard.ime.media.ui.SpinningShape
+import com.noxquill.rewordium.keyboard.ime.media.ui.Symbols
+import com.noxquill.rewordium.keyboard.ime.media.ui.Tone
+import com.noxquill.rewordium.keyboard.ime.media.ui.at
+import com.noxquill.rewordium.keyboard.ime.media.ui.rememberMediaFeedback
+import com.noxquill.rewordium.keyboard.ime.media.ui.rememberTones
 import com.noxquill.rewordium.keyboard.ime.text.keyboard.TextKeyData
-import com.noxquill.rewordium.keyboard.ime.theme.FlorisImeUi
 import com.noxquill.rewordium.keyboard.keyboardManager
+import dev.patrickgold.jetpref.datastore.model.observeAsState
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
-import org.florisboard.lib.snygg.ui.rememberSnyggThemeQuery
 
 /** The panel's screens: pick a tool → (language) → working → result → applied. */
 private sealed interface PanelState {
@@ -169,63 +162,60 @@ private val LANGUAGES = listOf(
 )
 
 private fun AiTool.icon(): ImageVector = when (this) {
-    AiTool.PROOFREAD -> Icons.Rounded.Spellcheck
-    AiTool.REWRITE -> Icons.Rounded.AutoFixHigh
-    AiTool.SHORTEN -> Icons.AutoMirrored.Rounded.ShortText
-    AiTool.EXPAND -> Icons.AutoMirrored.Rounded.Notes
-    AiTool.SUMMARIZE -> Icons.Rounded.Summarize
-    AiTool.BULLETS -> Icons.AutoMirrored.Rounded.FormatListBulleted
-    AiTool.PROFESSIONAL -> Icons.Rounded.BusinessCenter
-    AiTool.FRIENDLY -> Icons.Rounded.SentimentSatisfiedAlt
-    AiTool.CASUAL -> Icons.Rounded.LocalCafe
-    AiTool.CONFIDENT -> Icons.Rounded.Bolt
-    AiTool.FUNNY -> Icons.Rounded.TheaterComedy
-    AiTool.ACADEMIC -> Icons.Rounded.School
-    AiTool.POETIC -> Icons.Rounded.AutoStories
-    AiTool.EMOJIFY -> Icons.Rounded.EmojiEmotions
-    AiTool.TRANSLATE -> Icons.Rounded.Translate
-    AiTool.CONTINUE -> Icons.Rounded.EditNote
-    AiTool.ENHANCE_PROMPT -> Icons.Rounded.AutoAwesome
-    AiTool.REPLY -> Icons.Rounded.Quickreply
-    AiTool.CUSTOM -> Icons.Rounded.Tune
+    AiTool.PROOFREAD -> Symbols.Spellcheck
+    AiTool.REWRITE -> Symbols.AutoFixHigh
+    AiTool.SHORTEN -> Symbols.ShortText
+    AiTool.EXPAND -> Symbols.Notes
+    AiTool.SUMMARIZE -> Symbols.Summarize
+    AiTool.BULLETS -> Symbols.FormatListBulleted
+    AiTool.PROFESSIONAL -> Symbols.BusinessCenter
+    AiTool.FRIENDLY -> Symbols.SentimentSatisfied
+    AiTool.CASUAL -> Symbols.LocalCafe
+    AiTool.CONFIDENT -> Symbols.Bolt
+    AiTool.FUNNY -> Symbols.TheaterComedy
+    AiTool.ACADEMIC -> Symbols.School
+    AiTool.POETIC -> Symbols.AutoStories
+    AiTool.EMOJIFY -> Symbols.EmojiEmotions
+    AiTool.TRANSLATE -> Symbols.Translate
+    AiTool.CONTINUE -> Symbols.EditNote
+    AiTool.ENHANCE_PROMPT -> Symbols.AutoAwesome
+    AiTool.REPLY -> Symbols.Quickreply
+    AiTool.CUSTOM -> Symbols.Tune
 }
 
 private fun String.wordCount(): Int = trim().split(Regex("\\s+")).count { it.isNotBlank() }
 
+/** How the mascot feels about each screen. */
+private fun PanelState.mood(): BotMood = when (this) {
+    PanelState.Tools -> BotMood.Idle
+    PanelState.Languages -> BotMood.Thinking
+    is PanelState.Working -> BotMood.Working
+    is PanelState.Done -> BotMood.Happy
+    is PanelState.Failed -> if (kind == AIException.Kind.NO_TEXT || kind == AIException.Kind.TOO_LONG) BotMood.NeedsYou else BotMood.Sad
+    is PanelState.Applied -> BotMood.Happy
+}
+
 /**
- * The keyboard's AI panel ("Writing tools"). One tap on a tool rewrites the
- * selection, or the whole message when nothing is selected; the result can
- * be refined, copied or applied, and applying can be undone. Inside AI chat
- * apps a prompt-enhancer banner leads the grid. Colors follow the active
- * keyboard theme.
+ * The keyboard's AI panel ("Writing tools"), on the same Material 3 Expressive kit as the media panels and
+ * coloured by the keyboard theme. The keyboard's mascot sits in the header and reacts: it thinks while a
+ * tool runs, hops when a result lands, and looks sad when something fails. One tap on a tool rewrites the
+ * selection, or the whole message when nothing is selected; the result can be refined, copied or applied,
+ * and applying can be undone. Inside AI chat apps a prompt-enhancer card leads the grid.
  */
 @Composable
 fun AiInputLayout(
     modifier: Modifier = Modifier,
-) {
+) = MediaExpressiveTheme {
     val context = LocalContext.current
     val keyboardManager by context.keyboardManager()
     val editorInstance by context.editorInstance()
     val aiManager by context.aiManager()
-    val feedback = LocalInputFeedbackController.current
+    val feedback = rememberMediaFeedback()
     val scope = rememberCoroutineScope()
 
     val packageName = editorInstance.activeInfo.packageName
     val isInAiApp = remember(packageName) { PromptEnhancerDetector.isAiApp(packageName) }
     val aiAppName = remember(packageName) { PromptEnhancerDetector.getAiAppName(packageName) }
-
-    // ── Theme ──
-    val windowStyle = rememberSnyggThemeQuery(FlorisImeUi.Window.elementName)
-    val keyStyle = rememberSnyggThemeQuery(FlorisImeUi.Key.elementName)
-    val smartbarStyle = rememberSnyggThemeQuery(FlorisImeUi.Smartbar.elementName)
-    val bgColor = windowStyle.background()
-    val tileColor = keyStyle.background()
-    val onSurface = keyStyle.foreground()
-    val accent = smartbarStyle.foreground().takeIf { it.alpha > 0f } ?: onSurface
-    val onAccent = if (accent.luminance() > 0.5f) Color.Black else Color.White
-    val muted = onSurface.copy(alpha = 0.62f)
-    val outline = onSurface.copy(alpha = 0.12f)
-    val errorColor = Color(0xFFE5484D)
 
     // ── State ──
     val prefs = remember { context.getSharedPreferences(PANEL_PREFS, Context.MODE_PRIVATE) }
@@ -370,149 +360,124 @@ fun AiInputLayout(
     }
 
     val panelHeight = FlorisImeSizing.keyboardRowBaseHeight * 5 + FlorisImeSizing.smartbarHeight
+    // The mascot hops whenever a result or an applied edit lands.
+    var hops by remember { mutableIntStateOf(0) }
+    LaunchedEffect(state::class) {
+        if (state is PanelState.Done || state is PanelState.Applied) hops++
+    }
 
     CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Ltr) {
         Column(
             modifier = modifier
                 .fillMaxWidth()
                 .height(panelHeight)
-                .background(bgColor),
+                .background(MaterialTheme.colorScheme.surface),
         ) {
-            // ════════ Header ════════
             PanelHeader(
                 state = state,
                 isInAiApp = isInAiApp,
                 selectedText = content.selectedText,
                 fieldEmpty = content.text.isBlank(),
                 account = account,
-                fg = onSurface,
-                muted = muted,
-                accent = accent,
-                outline = outline,
-                errorColor = errorColor,
-                onBack = { feedback.keyPress(); backToTools() },
-                onAccountClick = { openApp() },
+                hops = hops,
+                onBack = { feedback.tick(); backToTools() },
+                onAccountClick = { feedback.tap(); openApp() },
             )
 
-            // ════════ Body ════════
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
                     .weight(1f)
                     .padding(horizontal = 8.dp),
             ) {
+                val motion = MaterialTheme.motionScheme
                 AnimatedContent(
                     targetState = state,
                     contentKey = { it::class },
-                    transitionSpec = { fadeIn(tween(180)) togetherWith fadeOut(tween(120)) },
+                    transitionSpec = {
+                        // Forward through the flow slides in from the end, back to the tools from the start.
+                        val back = targetState == PanelState.Tools
+                        (slideInHorizontally(motion.defaultSpatialSpec()) { if (back) -it / 5 else it / 5 } +
+                            fadeIn(motion.defaultEffectsSpec()) +
+                            scaleIn(motion.defaultSpatialSpec(), initialScale = 0.94f)) togetherWith
+                            (slideOutHorizontally(motion.fastSpatialSpec()) { if (back) it / 6 else -it / 6 } +
+                                fadeOut(motion.fastEffectsSpec()))
+                    },
                     label = "ai_panel_body",
                 ) { current ->
                     when (current) {
                         PanelState.Tools -> ToolGrid(
                             isInAiApp = isInAiApp,
                             aiAppName = aiAppName,
-                            tileColor = tileColor,
-                            fg = onSurface,
-                            accent = accent,
                             onTool = { tool ->
-                                feedback.keyPress()
+                                feedback.tap()
                                 if (tool == AiTool.TRANSLATE) state = PanelState.Languages else run(tool)
                             },
                         )
                         PanelState.Languages -> LanguageGrid(
                             selected = language,
-                            tileColor = tileColor,
-                            fg = onSurface,
-                            accent = accent,
                             onPick = { picked ->
-                                feedback.keyPress()
+                                feedback.tap()
                                 language = picked
                                 prefs.edit().putString(KEY_LANGUAGE, picked).apply()
                                 run(AiTool.TRANSLATE)
                             },
                         )
-                        is PanelState.Working -> WorkingView(
-                            tool = current.tool,
-                            sourcePreview = source?.text.orEmpty(),
-                            fg = onSurface,
-                            muted = muted,
-                            accent = accent,
-                            outline = outline,
-                        )
+                        is PanelState.Working -> WorkingView(tool = current.tool, sourcePreview = source?.text.orEmpty())
                         is PanelState.Done -> ResultView(
                             tool = current.tool,
                             text = current.text,
                             sourceWords = source?.text?.wordCount() ?: 0,
-                            tileColor = tileColor,
-                            fg = onSurface,
-                            muted = muted,
-                            accent = accent,
-                            outline = outline,
-                            onCopy = { feedback.keyPress(); copy(current.text) },
-                            onRetry = { feedback.keyPress(); run(current.tool) },
-                            onRefine = { tool -> feedback.keyPress(); run(tool, refineInput = current.text) },
-                            onReport = { feedback.keyPress(); AiContentReports.report(context, "keyboard", current.tool.name, current.text) },
+                            onCopy = { feedback.tick(); copy(current.text) },
+                            onRetry = { feedback.tick(); run(current.tool) },
+                            onRefine = { tool -> feedback.tap(); run(tool, refineInput = current.text) },
+                            onReport = { feedback.tick(); AiContentReports.report(context, "keyboard", current.tool.name, current.text) },
                         )
                         is PanelState.Failed -> FailedView(
                             message = current.message,
                             kind = current.kind,
-                            fg = onSurface,
-                            muted = muted,
-                            accent = accent,
-                            outline = outline,
-                            errorColor = errorColor,
-                            onRetry = { feedback.keyPress(); run(current.tool, current.retryInput) },
-                            onOpenApp = { feedback.keyPress(); openApp() },
+                            onRetry = { feedback.tap(); run(current.tool, current.retryInput) },
+                            onOpenApp = { feedback.tap(); openApp() },
                         )
                         is PanelState.Applied -> AppliedView(
                             tool = current.tool,
-                            fg = onSurface,
-                            muted = muted,
-                            accent = accent,
-                            outline = outline,
-                            onUndo = { feedback.keyPress(); undo(current.edit) },
+                            onUndo = { feedback.tap(); undo(current.edit) },
                         )
                     }
                 }
             }
 
-            // ════════ Bottom row: ABC | primary | Backspace ════════
+            // ABC | the screen's main action | delete
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(FlorisImeSizing.keyboardRowBaseHeight)
-                    .padding(horizontal = 8.dp, vertical = 4.dp),
+                    .padding(horizontal = 8.dp, vertical = 5.dp),
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
             ) {
-                KeyboardLikeButton(
-                    inputEventDispatcher = keyboardManager.inputEventDispatcher,
-                    keyData = TextKeyData.IME_UI_MODE_TEXT,
-                    elementName = FlorisImeUi.MediaBottomRowButton.elementName,
-                    modifier = Modifier
-                        .weight(1f)
-                        .fillMaxHeight(0.84f),
-                ) {
-                    Text("ABC", fontWeight = FontWeight.Bold, fontSize = 14.sp, maxLines = 1, softWrap = false)
-                }
-
-                val primaryModifier = Modifier
-                    .weight(2.8f)
-                    .fillMaxHeight(0.84f)
+                MediaAbcButton(
+                    onClick = {
+                        feedback.tap()
+                        keyboardManager.activeState.imeUiMode = ImeUiMode.TEXT
+                    },
+                    modifier = Modifier.weight(1f).fillMaxHeight(),
+                )
+                val primaryModifier = Modifier.weight(2.8f).fillMaxHeight()
                 when (val current = state) {
                     PanelState.Tools -> {
                         val quick = if (isInAiApp) AiTool.ENHANCE_PROMPT else AiTool.PROOFREAD
-                        PrimaryButton(quick.icon(), quick.label, accent, onAccent, primaryModifier) {
-                            feedback.keyPress()
+                        PrimaryButton(quick.icon(), quick.label, primaryModifier) {
+                            feedback.tap()
                             run(quick)
                         }
                     }
-                    PanelState.Languages -> SecondaryButton("Back", outline, onSurface, primaryModifier) {
-                        feedback.keyPress()
+                    PanelState.Languages -> SecondaryButton(Symbols.ArrowBack, "Back", primaryModifier) {
+                        feedback.tick()
                         backToTools()
                     }
-                    is PanelState.Working -> SecondaryButton("Cancel", outline, onSurface, primaryModifier) {
-                        feedback.keyPress()
+                    is PanelState.Working -> SecondaryButton(Symbols.Close, "Cancel", primaryModifier) {
+                        feedback.tick()
                         backToTools()
                     }
                     is PanelState.Done -> {
@@ -521,41 +486,58 @@ fun AiInputLayout(
                             AiTool.ENHANCE_PROMPT -> "Use prompt"
                             else -> "Replace"
                         }
-                        PrimaryButton(Icons.Rounded.Check, label, accent, onAccent, primaryModifier) {
-                            feedback.keyPress()
+                        PrimaryButton(Symbols.Check, label, primaryModifier) {
+                            feedback.tap()
                             apply(current.tool, current.text)
                         }
                     }
-                    is PanelState.Failed -> SecondaryButton("Back to tools", outline, onSurface, primaryModifier) {
-                        feedback.keyPress()
+                    is PanelState.Failed -> SecondaryButton(Symbols.ArrowBack, "Back to tools", primaryModifier) {
+                        feedback.tick()
                         backToTools()
                     }
-                    is PanelState.Applied -> PrimaryButton(Icons.Rounded.Check, "Done", accent, onAccent, primaryModifier) {
-                        feedback.keyPress()
+                    is PanelState.Applied -> PrimaryButton(Symbols.Check, "Done", primaryModifier) {
+                        feedback.tap()
                         source = null
                         state = PanelState.Tools
                         keyboardManager.activeState.imeUiMode = ImeUiMode.TEXT
                     }
                 }
-
-                KeyboardLikeButton(
-                    inputEventDispatcher = keyboardManager.inputEventDispatcher,
-                    keyData = TextKeyData.DELETE,
-                    elementName = FlorisImeUi.MediaBottomRowButton.elementName,
-                    modifier = Modifier
-                        .weight(1f)
-                        .fillMaxHeight(0.84f),
-                ) {
-                    Icon(Icons.AutoMirrored.Outlined.Backspace, null, modifier = Modifier.size(24.dp))
-                }
+                RepeatingDeleteButton(
+                    onDelete = {
+                        feedback.delete()
+                        keyboardManager.inputEventDispatcher.sendDownUp(TextKeyData.DELETE)
+                    },
+                    onRepeat = {
+                        feedback.deleteRepeat()
+                        keyboardManager.inputEventDispatcher.sendDownUp(TextKeyData.DELETE)
+                    },
+                    modifier = Modifier.weight(1f).fillMaxHeight(),
+                )
             }
         }
     }
 }
 
-// ──────────────────────────────────────────────
-// Header
-// ──────────────────────────────────────────────
+// ── Mascot ───────────────────────────────────────────────────────────────────
+
+/** The keyboard's mascot (the theme shop's pick, a star by default), wearing [mood]. */
+@Composable
+private fun PanelMascot(mood: BotMood, size: Dp, hops: Int, modifier: Modifier = Modifier) {
+    val prefs by FlorisPreferenceStore
+    val chosen by prefs.theme.mascot.observeAsState()
+    BotAvatar(
+        type = chosen.takeIf { it in BOT_TYPES } ?: "star",
+        mood = mood,
+        size = size,
+        modifier = modifier,
+        // Alive (breathing, blinking) only while it has something to show; still otherwise, to save frames.
+        still = mood == BotMood.Idle || mood == BotMood.Sleeping,
+        hopSignal = hops,
+        label = "Jade",
+    )
+}
+
+// ── Header ───────────────────────────────────────────────────────────────────
 
 @Composable
 private fun PanelHeader(
@@ -564,14 +546,11 @@ private fun PanelHeader(
     selectedText: String,
     fieldEmpty: Boolean,
     account: AiAccount,
-    fg: Color,
-    muted: Color,
-    accent: Color,
-    outline: Color,
-    errorColor: Color,
+    hops: Int,
     onBack: () -> Unit,
     onAccountClick: () -> Unit,
 ) {
+    val tones = rememberTones()
     val title = when (state) {
         PanelState.Tools -> if (isInAiApp) "Prompt tools" else "Writing tools"
         PanelState.Languages -> "Translate to"
@@ -580,139 +559,136 @@ private fun PanelHeader(
         is PanelState.Failed -> state.tool.label
         is PanelState.Applied -> state.tool.label
     }
+    // Each screen has its own shape behind the mascot; moving between screens morphs it.
+    val stageShape = when (state) {
+        PanelState.Tools -> MaterialShapes.Cookie9Sided
+        PanelState.Languages -> MaterialShapes.Clover4Leaf
+        is PanelState.Working -> MaterialShapes.SoftBurst
+        is PanelState.Done -> MaterialShapes.Sunny
+        is PanelState.Failed -> MaterialShapes.Cookie6Sided
+        is PanelState.Applied -> MaterialShapes.Flower
+    }
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .height(40.dp)
-            .padding(start = 6.dp, end = 10.dp),
+            .height(52.dp)
+            .padding(start = 8.dp, end = 10.dp),
         verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(6.dp),
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
     ) {
-        if (state == PanelState.Tools) {
-            Icon(Icons.Rounded.AutoAwesome, null, tint = accent, modifier = Modifier.padding(start = 6.dp).size(18.dp))
-        } else {
-            Box(
-                modifier = Modifier
-                    .size(32.dp)
-                    .clip(CircleShape)
-                    .clickable(onClick = onBack),
-                contentAlignment = Alignment.Center,
-            ) {
-                Icon(Icons.AutoMirrored.Rounded.ArrowBack, "Back", tint = fg, modifier = Modifier.size(20.dp))
+        if (state != PanelState.Tools) {
+            FilledTonalIconButton(onClick = onBack, shapes = IconButtonDefaults.shapes(), modifier = Modifier.size(40.dp)) {
+                Icon(Symbols.ArrowBack, "Back", modifier = Modifier.size(22.dp))
             }
         }
-        Text(title, color = fg, fontSize = 15.sp, fontWeight = FontWeight.SemiBold, maxLines = 1)
-        Spacer(Modifier.weight(1f))
+        MorphBlob(stageShape, MaterialTheme.colorScheme.primaryContainer, Modifier.size(44.dp)) {
+            PanelMascot(state.mood(), 32.dp, hops)
+        }
+        Text(
+            title,
+            style = MaterialTheme.typography.titleMedium,
+            fontWeight = FontWeight.SemiBold,
+            color = MaterialTheme.colorScheme.onSurface,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+            modifier = Modifier.weight(1f),
+        )
         if (state == PanelState.Tools || state == PanelState.Languages) {
             val sourceLabel = when {
-                selectedText.isNotBlank() -> "Selection · ${selectedText.wordCount()} words"
-                fieldEmpty -> "Empty field"
-                else -> "Whole message"
+                selectedText.isNotBlank() -> "${selectedText.wordCount()} words"
+                fieldEmpty -> "Empty"
+                else -> "Message"
             }
-            Pill(sourceLabel, muted, outline)
+            StatusPill(sourceLabel, if (selectedText.isNotBlank()) Symbols.FormatListBulleted else Symbols.Notes, tones.at(1))
         }
         when {
             account.ownKey -> Unit
-            !account.loggedIn -> Pill("Log in", errorColor, errorColor.copy(alpha = 0.4f), onClick = onAccountClick)
-            account.pro -> Pill("PRO", accent, accent.copy(alpha = 0.4f))
-            else -> {
-                val color = if (account.credits > 0) muted else errorColor
-                Pill(if (account.credits == 1) "1 credit" else "${account.credits} credits", color, color.copy(alpha = 0.35f), onClick = onAccountClick)
-            }
+            !account.loggedIn -> StatusPill("Log in", Symbols.Lock, errorTone(), onAccountClick)
+            account.pro -> StatusPill("PRO", Symbols.StarShine, tones.at(0))
+            else -> StatusPill(
+                if (account.credits == 1) "1 credit" else "${account.credits}",
+                Symbols.Bolt,
+                if (account.credits > 0) tones.at(2) else errorTone(),
+                onAccountClick,
+            )
         }
     }
 }
 
 @Composable
-private fun Pill(text: String, color: Color, border: Color, onClick: (() -> Unit)? = null) {
+private fun errorTone() = Tone(MaterialTheme.colorScheme.errorContainer, MaterialTheme.colorScheme.onErrorContainer)
+
+@Composable
+private fun StatusPill(text: String, icon: ImageVector, tone: Tone, onClick: (() -> Unit)? = null) {
     Surface(
-        color = Color.Transparent,
-        shape = RoundedCornerShape(50),
-        border = BorderStroke(1.dp, border),
-        modifier = Modifier
-            .clip(RoundedCornerShape(50))
-            .then(if (onClick != null) Modifier.clickable(onClick = onClick) else Modifier),
+        onClick = onClick ?: {},
+        enabled = onClick != null,
+        shape = CircleShape,
+        color = tone.container,
+        contentColor = tone.content,
     ) {
-        Text(
-            text,
-            color = color,
-            fontSize = 11.sp,
-            fontWeight = FontWeight.Medium,
-            maxLines = 1,
-            overflow = TextOverflow.Ellipsis,
-            modifier = Modifier
-                .widthIn(max = 150.dp)
-                .padding(horizontal = 9.dp, vertical = 3.dp),
-        )
+        Row(Modifier.padding(start = 8.dp, end = 10.dp, top = 4.dp, bottom = 4.dp), verticalAlignment = Alignment.CenterVertically) {
+            Icon(icon, null, modifier = Modifier.size(14.dp))
+            Spacer(Modifier.width(4.dp))
+            Text(
+                text,
+                style = MaterialTheme.typography.labelMedium,
+                fontWeight = FontWeight.SemiBold,
+                maxLines = 1,
+                modifier = Modifier.widthIn(max = 110.dp),
+            )
+        }
     }
 }
 
-// ──────────────────────────────────────────────
-// Tools
-// ──────────────────────────────────────────────
+// ── Tools ────────────────────────────────────────────────────────────────────
 
 @Composable
-private fun ToolGrid(
-    isInAiApp: Boolean,
-    aiAppName: String?,
-    tileColor: Color,
-    fg: Color,
-    accent: Color,
-    onTool: (AiTool) -> Unit,
-) {
+private fun ToolGrid(isInAiApp: Boolean, aiAppName: String?, onTool: (AiTool) -> Unit) {
+    val tones = rememberTones()
     val rows = if (isInAiApp) TOOL_GRID.take(3) else TOOL_GRID
     Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .padding(vertical = 2.dp),
+        modifier = Modifier.fillMaxSize().padding(vertical = 2.dp),
         verticalArrangement = Arrangement.spacedBy(6.dp),
     ) {
         if (isInAiApp) {
-            Surface(
-                color = accent.copy(alpha = 0.16f),
-                shape = RoundedCornerShape(14.dp),
-                border = BorderStroke(1.dp, accent.copy(alpha = 0.35f)),
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .weight(1f)
-                    .clip(RoundedCornerShape(14.dp))
-                    .clickable { onTool(AiTool.ENHANCE_PROMPT) },
+            MediaTile(
+                onClick = { onTool(AiTool.ENHANCE_PROMPT) },
+                modifier = Modifier.fillMaxWidth().weight(1f),
+                color = MaterialTheme.colorScheme.primary,
+                corner = 20.dp,
+                pressedCorner = 30.dp,
+                label = "Enhance prompt",
             ) {
-                Row(
-                    modifier = Modifier.padding(horizontal = 14.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.Center,
-                ) {
-                    Icon(Icons.Rounded.AutoAwesome, null, tint = accent, modifier = Modifier.size(20.dp))
-                    Spacer(Modifier.width(8.dp))
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    MorphBlob(MaterialShapes.SoftBurst, MaterialTheme.colorScheme.onPrimary, Modifier.size(30.dp)) {
+                        Icon(Symbols.AutoAwesome, null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(17.dp))
+                    }
+                    Spacer(Modifier.width(10.dp))
                     Text(
                         if (aiAppName != null) "Enhance prompt for $aiAppName" else "Enhance prompt",
-                        color = fg,
-                        fontSize = 14.sp,
-                        fontWeight = FontWeight.SemiBold,
+                        style = MaterialTheme.typography.titleSmall,
+                        color = MaterialTheme.colorScheme.onPrimary,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis,
                     )
                 }
             }
         }
-        rows.forEach { row ->
+        rows.forEachIndexed { rowIndex, row ->
+            // Each row is a family (fix, tone of voice, shape, play) and wears its own tone.
+            val tone = tones.at(rowIndex)
             Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .weight(1f),
+                modifier = Modifier.fillMaxWidth().weight(1f),
                 horizontalArrangement = Arrangement.spacedBy(6.dp),
             ) {
-                row.forEach { tool ->
+                row.forEachIndexed { column, tool ->
                     ToolTile(
                         tool = tool,
-                        tileColor = tileColor,
-                        fg = fg,
-                        accent = accent,
+                        tone = tone,
+                        shapeSlot = rowIndex * 4 + column,
                         onClick = { onTool(tool) },
-                        modifier = Modifier
-                            .weight(1f)
-                            .fillMaxHeight(),
+                        modifier = Modifier.weight(1f).fillMaxHeight(),
                     )
                 }
             }
@@ -721,33 +697,32 @@ private fun ToolGrid(
 }
 
 @Composable
-private fun ToolTile(
-    tool: AiTool,
-    tileColor: Color,
-    fg: Color,
-    accent: Color,
-    onClick: () -> Unit,
-    modifier: Modifier = Modifier,
-) {
-    Surface(
-        color = tileColor,
-        shape = RoundedCornerShape(12.dp),
-        modifier = modifier
-            .clip(RoundedCornerShape(12.dp))
-            .clickable(onClick = onClick),
+private fun ToolTile(tool: AiTool, tone: Tone, shapeSlot: Int, onClick: () -> Unit, modifier: Modifier = Modifier) {
+    MediaTile(
+        onClick = onClick,
+        modifier = modifier,
+        color = lerp(MaterialTheme.colorScheme.surfaceContainerHigh, tone.container, 0.5f),
+        corner = 18.dp,
+        pressedCorner = 30.dp,
+        label = tool.label,
     ) {
         Column(
             modifier = Modifier.padding(horizontal = 2.dp),
-            verticalArrangement = Arrangement.Center,
+            verticalArrangement = Arrangement.spacedBy(3.dp, Alignment.CenterVertically),
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
-            Icon(tool.icon(), null, tint = accent, modifier = Modifier.size(19.dp))
-            Spacer(Modifier.height(3.dp))
+            Box(
+                Modifier
+                    .size(26.dp)
+                    .background(tone.content, MediaShapes.blob(shapeSlot).toShape()),
+                contentAlignment = Alignment.Center,
+            ) {
+                Icon(tool.icon(), null, tint = tone.container, modifier = Modifier.size(15.dp))
+            }
             Text(
                 tool.label,
-                color = fg,
-                fontSize = 11.sp,
-                fontWeight = FontWeight.Medium,
+                style = MaterialTheme.typography.labelMedium,
+                color = MaterialTheme.colorScheme.onSurface,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
                 textAlign = TextAlign.Center,
@@ -757,13 +732,8 @@ private fun ToolTile(
 }
 
 @Composable
-private fun LanguageGrid(
-    selected: String?,
-    tileColor: Color,
-    fg: Color,
-    accent: Color,
-    onPick: (String) -> Unit,
-) {
+private fun LanguageGrid(selected: String?, onPick: (String) -> Unit) {
+    val tones = rememberTones()
     val ordered = remember(selected) {
         if (selected != null && selected in LANGUAGES) listOf(selected) + (LANGUAGES - selected) else LANGUAGES
     }
@@ -774,23 +744,30 @@ private fun LanguageGrid(
         horizontalArrangement = Arrangement.spacedBy(6.dp),
         verticalArrangement = Arrangement.spacedBy(6.dp),
     ) {
-        items(ordered) { lang ->
+        itemsIndexed(ordered, key = { _, lang -> lang }) { index, lang ->
             val isSelected = lang == selected
-            Surface(
-                color = if (isSelected) accent.copy(alpha = 0.16f) else tileColor,
-                shape = RoundedCornerShape(12.dp),
-                border = if (isSelected) BorderStroke(1.dp, accent.copy(alpha = 0.5f)) else null,
-                modifier = Modifier
-                    .height(38.dp)
-                    .clip(RoundedCornerShape(12.dp))
-                    .clickable { onPick(lang) },
+            MediaTile(
+                onClick = { onPick(lang) },
+                modifier = Modifier.height(42.dp),
+                color = if (isSelected) {
+                    MaterialTheme.colorScheme.primary
+                } else {
+                    lerp(MaterialTheme.colorScheme.surfaceContainerHigh, tones.at(index).container, 0.4f)
+                },
+                corner = 21.dp,
+                pressedCorner = 12.dp,
+                label = lang,
             ) {
-                Box(contentAlignment = Alignment.Center) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    if (isSelected) {
+                        Icon(Symbols.Check, null, tint = MaterialTheme.colorScheme.onPrimary, modifier = Modifier.size(16.dp))
+                        Spacer(Modifier.width(4.dp))
+                    }
                     Text(
                         lang,
-                        color = if (isSelected) accent else fg,
-                        fontSize = 13.sp,
-                        fontWeight = if (isSelected) FontWeight.SemiBold else FontWeight.Medium,
+                        style = MaterialTheme.typography.labelLarge,
+                        color = if (isSelected) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurface,
+                        fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
                         maxLines = 1,
                     )
                 }
@@ -799,62 +776,36 @@ private fun LanguageGrid(
     }
 }
 
-// ──────────────────────────────────────────────
-// Working / result / error / applied
-// ──────────────────────────────────────────────
+// ── Working / result / error / applied ───────────────────────────────────────
 
+/** While a tool runs: its symbol on a shape that keeps morphing, a wavy progress line and the text it's reading. */
 @Composable
-private fun WorkingView(
-    tool: AiTool,
-    sourcePreview: String,
-    fg: Color,
-    muted: Color,
-    accent: Color,
-    outline: Color,
-) {
-    val transition = rememberInfiniteTransition(label = "ai_working")
-    val pulse by transition.animateFloat(
-        initialValue = 0.55f,
-        targetValue = 1f,
-        animationSpec = infiniteRepeatable(tween(700, easing = LinearEasing), RepeatMode.Reverse),
-        label = "ai_pulse",
-    )
+private fun WorkingView(tool: AiTool, sourcePreview: String) {
+    var step by remember { mutableIntStateOf(0) }
+    LaunchedEffect(Unit) {
+        while (true) {
+            delay(650)
+            step++
+        }
+    }
     Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .padding(horizontal = 16.dp),
+        modifier = Modifier.fillMaxSize().padding(horizontal = 16.dp),
         verticalArrangement = Arrangement.Center,
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
-        Icon(
-            tool.icon(),
-            null,
-            tint = accent,
-            modifier = Modifier
-                .size(30.dp)
-                .graphicsLayer {
-                    alpha = pulse
-                    scaleX = 0.9f + pulse * 0.1f
-                    scaleY = 0.9f + pulse * 0.1f
-                },
-        )
+        MorphBlob(MediaShapes.blob(step), MaterialTheme.colorScheme.primaryContainer, Modifier.size(72.dp), turnPerChange = 60f) {
+            Icon(tool.icon(), null, tint = MaterialTheme.colorScheme.onPrimaryContainer, modifier = Modifier.size(30.dp))
+        }
+        Spacer(Modifier.height(12.dp))
+        Text("${tool.progressLabel}…", style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.onSurface)
         Spacer(Modifier.height(10.dp))
-        Text("${tool.progressLabel}…", color = fg, fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
-        Spacer(Modifier.height(10.dp))
-        LinearProgressIndicator(
-            modifier = Modifier
-                .fillMaxWidth(0.4f)
-                .height(3.dp)
-                .clip(RoundedCornerShape(2.dp)),
-            color = accent,
-            trackColor = outline,
-        )
+        LinearWavyProgressIndicator(Modifier.fillMaxWidth(0.5f))
         if (sourcePreview.isNotBlank()) {
             Spacer(Modifier.height(12.dp))
             Text(
                 sourcePreview,
-                color = muted,
-                fontSize = 12.sp,
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
                 maxLines = 2,
                 overflow = TextOverflow.Ellipsis,
                 textAlign = TextAlign.Center,
@@ -868,82 +819,68 @@ private fun ResultView(
     tool: AiTool,
     text: String,
     sourceWords: Int,
-    tileColor: Color,
-    fg: Color,
-    muted: Color,
-    accent: Color,
-    outline: Color,
     onCopy: () -> Unit,
     onRetry: () -> Unit,
     onRefine: (AiTool) -> Unit,
     onReport: () -> Unit,
 ) {
+    val tones = rememberTones()
     Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .padding(vertical = 2.dp),
+        modifier = Modifier.fillMaxSize().padding(vertical = 2.dp),
         verticalArrangement = Arrangement.spacedBy(6.dp),
     ) {
         Surface(
-            color = tileColor,
-            shape = RoundedCornerShape(14.dp),
-            border = BorderStroke(1.dp, outline),
-            modifier = Modifier
-                .fillMaxWidth()
-                .weight(1f),
+            color = MaterialTheme.colorScheme.surfaceContainerHigh,
+            shape = RoundedCornerShape(26.dp),
+            modifier = Modifier.fillMaxWidth().weight(1f),
         ) {
             Column {
                 Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(start = 12.dp, end = 4.dp, top = 2.dp),
+                    modifier = Modifier.fillMaxWidth().padding(start = 12.dp, end = 4.dp, top = 4.dp),
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
+                    Box(
+                        Modifier
+                            .size(24.dp)
+                            .background(MaterialTheme.colorScheme.primary, MaterialShapes.Sunny.toShape()),
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        Icon(tool.icon(), null, tint = MaterialTheme.colorScheme.onPrimary, modifier = Modifier.size(14.dp))
+                    }
+                    Spacer(Modifier.width(8.dp))
                     val words = text.wordCount()
                     Text(
                         if (tool.insertsAfter || sourceWords == 0) "$words words" else "$sourceWords → $words words",
-                        color = muted,
-                        fontSize = 11.sp,
+                        style = MaterialTheme.typography.labelMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
                         modifier = Modifier.weight(1f),
                     )
-                    SmallIconButton(Icons.Rounded.ContentCopy, "Copy", muted, onCopy)
-                    SmallIconButton(Icons.Rounded.Refresh, "Try again", muted, onRetry)
-                    SmallIconButton(Icons.Rounded.OutlinedFlag, "Report this result", muted, onReport)
+                    CardIconButton(Symbols.ContentCopy, "Copy", onCopy)
+                    CardIconButton(Symbols.Refresh, "Try again", onRetry)
+                    CardIconButton(Symbols.Flag, "Report this result", onReport)
                 }
                 Text(
                     text,
-                    color = fg,
-                    fontSize = 14.sp,
-                    lineHeight = 20.sp,
+                    style = MaterialTheme.typography.bodyLarge,
+                    color = MaterialTheme.colorScheme.onSurface,
                     modifier = Modifier
                         .fillMaxWidth()
                         .weight(1f)
                         .verticalScroll(rememberScrollState())
-                        .padding(start = 12.dp, end = 12.dp, bottom = 10.dp),
+                        .padding(start = 14.dp, end = 14.dp, bottom = 10.dp),
                 )
             }
         }
         if (tool != AiTool.ENHANCE_PROMPT && tool != AiTool.TRANSLATE) {
             LazyRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                items(REFINE_TOOLS.filter { it != tool }) { refine ->
-                    Surface(
-                        color = Color.Transparent,
-                        shape = RoundedCornerShape(50),
-                        border = BorderStroke(1.dp, outline),
-                        modifier = Modifier
-                            .height(30.dp)
-                            .clip(RoundedCornerShape(50))
-                            .clickable { onRefine(refine) },
-                    ) {
-                        Row(
-                            modifier = Modifier.padding(horizontal = 10.dp),
-                            verticalAlignment = Alignment.CenterVertically,
-                        ) {
-                            Icon(refine.icon(), null, tint = accent, modifier = Modifier.size(14.dp))
-                            Spacer(Modifier.width(4.dp))
-                            Text(refine.label, color = fg, fontSize = 12.sp, maxLines = 1)
-                        }
-                    }
+                itemsIndexed(REFINE_TOOLS.filter { it != tool }, key = { _, t -> t.name }) { index, refine ->
+                    MediaChip(
+                        selected = false,
+                        onClick = { onRefine(refine) },
+                        label = refine.label,
+                        icon = refine.icon(),
+                        tone = tones.at(index),
+                    )
                 }
             }
         }
@@ -951,14 +888,16 @@ private fun ResultView(
 }
 
 @Composable
+private fun CardIconButton(icon: ImageVector, description: String, onClick: () -> Unit) {
+    IconButton(onClick = onClick, shapes = IconButtonDefaults.shapes(), modifier = Modifier.size(38.dp)) {
+        Icon(icon, description, tint = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.size(19.dp))
+    }
+}
+
+@Composable
 private fun FailedView(
     message: String,
     kind: AIException.Kind,
-    fg: Color,
-    muted: Color,
-    accent: Color,
-    outline: Color,
-    errorColor: Color,
     onRetry: () -> Unit,
     onOpenApp: () -> Unit,
 ) {
@@ -967,20 +906,24 @@ private fun FailedView(
         kind == AIException.Kind.SERVICE || kind == AIException.Kind.EMPTY || kind == AIException.Kind.OTHER
     val isHint = kind == AIException.Kind.NO_TEXT || kind == AIException.Kind.TOO_LONG
     Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .padding(horizontal = 20.dp),
+        modifier = Modifier.fillMaxSize().padding(horizontal = 20.dp),
         verticalArrangement = Arrangement.Center,
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
-        Icon(
-            if (isHint) Icons.Rounded.EditNote else Icons.Rounded.ErrorOutline,
-            null,
-            tint = if (isHint) muted else errorColor,
-            modifier = Modifier.size(28.dp),
-        )
-        Spacer(Modifier.height(8.dp))
-        Text(message, color = fg, fontSize = 14.sp, textAlign = TextAlign.Center)
+        SpinningShape(
+            if (isHint) MaterialShapes.Clover4Leaf else MaterialShapes.Cookie6Sided,
+            if (isHint) MaterialTheme.colorScheme.secondaryContainer else MaterialTheme.colorScheme.errorContainer,
+            Modifier.size(60.dp),
+        ) {
+            Icon(
+                if (isHint) Symbols.EditNote else Symbols.Error,
+                null,
+                tint = if (isHint) MaterialTheme.colorScheme.onSecondaryContainer else MaterialTheme.colorScheme.onErrorContainer,
+                modifier = Modifier.size(28.dp),
+            )
+        }
+        Spacer(Modifier.height(10.dp))
+        Text(message, style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.onSurface, textAlign = TextAlign.Center)
         Spacer(Modifier.height(12.dp))
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             if (needsApp) {
@@ -989,150 +932,67 @@ private fun FailedView(
                     AIException.Kind.LOGIN -> "Log in"
                     else -> "Open settings"
                 }
-                ChipButton(label, accent, accent.copy(alpha = 0.16f), accent.copy(alpha = 0.4f), onOpenApp)
+                Button(onClick = onOpenApp, shapes = ButtonDefaults.shapes()) { Text(label) }
             }
             if (canRetry) {
-                ChipButton("Try again", fg, Color.Transparent, outline, onRetry)
+                OutlinedButton(onClick = onRetry, shapes = ButtonDefaults.shapes()) {
+                    Icon(Symbols.Refresh, null, Modifier.size(18.dp))
+                    Spacer(Modifier.width(6.dp))
+                    Text("Try again")
+                }
             }
         }
     }
 }
 
 @Composable
-private fun AppliedView(
-    tool: AiTool,
-    fg: Color,
-    muted: Color,
-    accent: Color,
-    outline: Color,
-    onUndo: () -> Unit,
-) {
+private fun AppliedView(tool: AiTool, onUndo: () -> Unit) {
     Column(
         modifier = Modifier.fillMaxSize(),
         verticalArrangement = Arrangement.Center,
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
-        Box(
-            modifier = Modifier
-                .size(44.dp)
-                .clip(CircleShape)
-                .background(accent.copy(alpha = 0.16f)),
-            contentAlignment = Alignment.Center,
-        ) {
-            Icon(Icons.Rounded.Check, null, tint = accent, modifier = Modifier.size(24.dp))
+        SpinningShape(MaterialShapes.Sunny, MaterialTheme.colorScheme.tertiaryContainer, Modifier.size(64.dp)) {
+            Icon(Symbols.CheckCircleFilled, null, tint = MaterialTheme.colorScheme.onTertiaryContainer, modifier = Modifier.size(30.dp))
         }
         Spacer(Modifier.height(10.dp))
         Text(
             if (tool.insertsAfter) "Added to your text" else "Text updated",
-            color = fg,
-            fontSize = 15.sp,
-            fontWeight = FontWeight.SemiBold,
+            style = MaterialTheme.typography.titleMedium,
+            color = MaterialTheme.colorScheme.onSurface,
         )
         Spacer(Modifier.height(4.dp))
-        Text("Not what you wanted? You can undo it.", color = muted, fontSize = 12.sp)
-        Spacer(Modifier.height(12.dp))
-        Surface(
-            color = Color.Transparent,
-            shape = RoundedCornerShape(50),
-            border = BorderStroke(1.dp, outline),
-            modifier = Modifier
-                .clip(RoundedCornerShape(50))
-                .clickable(onClick = onUndo),
-        ) {
-            Row(
-                modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                Icon(Icons.AutoMirrored.Rounded.Undo, null, tint = fg, modifier = Modifier.size(16.dp))
-                Spacer(Modifier.width(6.dp))
-                Text("Undo", color = fg, fontSize = 13.sp, fontWeight = FontWeight.Medium)
-            }
-        }
-    }
-}
-
-// ──────────────────────────────────────────────
-// Buttons
-// ──────────────────────────────────────────────
-
-@Composable
-private fun PrimaryButton(
-    icon: ImageVector,
-    label: String,
-    accent: Color,
-    onAccent: Color,
-    modifier: Modifier,
-    onClick: () -> Unit,
-) {
-    Surface(
-        color = accent,
-        shape = RoundedCornerShape(22.dp),
-        modifier = modifier
-            .clip(RoundedCornerShape(22.dp))
-            .clickable(onClick = onClick),
-    ) {
-        Row(
-            horizontalArrangement = Arrangement.Center,
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            Icon(icon, null, tint = onAccent, modifier = Modifier.size(18.dp))
-            Spacer(Modifier.width(6.dp))
-            Text(label, color = onAccent, fontSize = 14.sp, fontWeight = FontWeight.SemiBold, maxLines = 1)
-        }
-    }
-}
-
-@Composable
-private fun SecondaryButton(
-    label: String,
-    outline: Color,
-    fg: Color,
-    modifier: Modifier,
-    onClick: () -> Unit,
-) {
-    Surface(
-        color = Color.Transparent,
-        shape = RoundedCornerShape(22.dp),
-        border = BorderStroke(1.dp, outline),
-        modifier = modifier
-            .clip(RoundedCornerShape(22.dp))
-            .clickable(onClick = onClick),
-    ) {
-        Box(contentAlignment = Alignment.Center) {
-            Text(label, color = fg, fontSize = 14.sp, fontWeight = FontWeight.Medium, maxLines = 1)
-        }
-    }
-}
-
-@Composable
-private fun ChipButton(label: String, fg: Color, bg: Color, border: Color, onClick: () -> Unit) {
-    Surface(
-        color = bg,
-        shape = RoundedCornerShape(50),
-        border = BorderStroke(1.dp, border),
-        modifier = Modifier
-            .clip(RoundedCornerShape(50))
-            .clickable(onClick = onClick),
-    ) {
         Text(
-            label,
-            color = fg,
-            fontSize = 13.sp,
-            fontWeight = FontWeight.Medium,
-            modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
+            "Not what you wanted? You can undo it.",
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
+        Spacer(Modifier.height(12.dp))
+        OutlinedButton(onClick = onUndo, shapes = ButtonDefaults.shapes()) {
+            Icon(Symbols.Undo, null, Modifier.size(18.dp))
+            Spacer(Modifier.width(6.dp))
+            Text("Undo")
+        }
+    }
+}
+
+// ── Buttons ──────────────────────────────────────────────────────────────────
+
+/** The screen's main action: a filled expressive button that squares up when pressed. */
+@Composable
+private fun PrimaryButton(icon: ImageVector, label: String, modifier: Modifier, onClick: () -> Unit) {
+    Button(onClick = onClick, shapes = ButtonDefaults.shapes(), modifier = modifier, contentPadding = PaddingValues(horizontal = 12.dp)) {
+        Icon(icon, null, Modifier.size(20.dp))
+        Spacer(Modifier.width(6.dp))
+        Text(label, style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.Bold, maxLines = 1, overflow = TextOverflow.Ellipsis)
     }
 }
 
 @Composable
-private fun SmallIconButton(icon: ImageVector, description: String, tint: Color, onClick: () -> Unit) {
-    Box(
-        modifier = Modifier
-            .size(32.dp)
-            .clip(CircleShape)
-            .clickable(onClick = onClick),
-        contentAlignment = Alignment.Center,
-    ) {
-        Icon(icon, description, tint = tint, modifier = Modifier.size(16.dp))
+private fun SecondaryButton(icon: ImageVector, label: String, modifier: Modifier, onClick: () -> Unit) {
+    FilledTonalButton(onClick = onClick, shapes = ButtonDefaults.shapes(), modifier = modifier, contentPadding = PaddingValues(horizontal = 12.dp)) {
+        Icon(icon, null, Modifier.size(18.dp))
+        Spacer(Modifier.width(6.dp))
+        Text(label, style = MaterialTheme.typography.labelLarge, maxLines = 1, overflow = TextOverflow.Ellipsis)
     }
 }

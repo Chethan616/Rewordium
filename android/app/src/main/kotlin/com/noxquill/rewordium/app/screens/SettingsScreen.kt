@@ -51,6 +51,7 @@ import androidx.compose.material.icons.filled.RecordVoiceOver
 import androidx.compose.material.icons.filled.Smartphone
 import androidx.compose.material.icons.filled.Stars
 import androidx.compose.material.icons.filled.TouchApp
+import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material.icons.filled.Vibration
 import androidx.compose.material.icons.automirrored.filled.ViewQuilt
 import androidx.compose.material.icons.filled.Wallpaper
@@ -233,21 +234,22 @@ fun SettingsScreen(
             item(key = "look") {
                 Column(Modifier.enterStagger(1), verticalArrangement = Arrangement.spacedBy(3.dp)) {
                     SectionLabel("Look & feel", Modifier.padding(bottom = 6.dp))
-                    Surface(shape = com.noxquill.rewordium.app.ui.segmentShape(0, 3), color = MaterialTheme.colorScheme.surfaceContainer) {
+                    Surface(shape = com.noxquill.rewordium.app.ui.segmentShape(0, 4), color = MaterialTheme.colorScheme.surfaceContainer) {
                         Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
                             Text("Appearance", style = MaterialTheme.typography.titleSmall)
                             ThemeModePicker(themeMode) { haptics.tick(); AppSettings.setThemeMode(it) }
                         }
                     }
-                    Surface(shape = com.noxquill.rewordium.app.ui.segmentShape(1, 3), color = MaterialTheme.colorScheme.surfaceContainer) {
+                    Surface(shape = com.noxquill.rewordium.app.ui.segmentShape(1, 4), color = MaterialTheme.colorScheme.surfaceContainer) {
                         Column(Modifier.padding(vertical = 16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
                             Text("Colours", style = MaterialTheme.typography.titleSmall, modifier = Modifier.padding(horizontal = 16.dp))
                             PalettePicker(palette) { haptics.tick(); AppSettings.setPalette(it) }
                         }
                     }
-                    SettingSwitchRow(Icons.Filled.TouchApp, "Touch feedback", "Little vibrations when you tap around the app", hapticsOn, com.noxquill.rewordium.app.ui.segmentShape(2, 3), Tone.Tertiary) {
+                    SettingSwitchRow(Icons.Filled.TouchApp, "Touch feedback", "Little vibrations when you tap around the app", hapticsOn, com.noxquill.rewordium.app.ui.segmentShape(2, 4), Tone.Tertiary) {
                         AppSettings.setHaptics(it)
                     }
+                    NotificationsRow(com.noxquill.rewordium.app.ui.segmentShape(3, 4))
                 }
             }
 
@@ -590,4 +592,40 @@ private fun DeleteAccountDialog(isPro: Boolean, onDismiss: () -> Unit, onDelete:
         },
         dismissButton = { TextButton(onClick = onDismiss, enabled = !busy) { Text("Keep account") } },
     )
+}
+
+/**
+ * One switch for everything Rewordium sends: push notifications (new features, release notes, offers),
+ * Firebase in-app campaigns and the in-app announcements. Turning it on asks Android for permission
+ * where needed (13+); if the user said no before, it opens the app's notification settings instead.
+ */
+@Composable
+private fun NotificationsRow(shape: androidx.compose.ui.graphics.Shape) {
+    val context = androidx.compose.ui.platform.LocalContext.current
+    val enabled by com.noxquill.rewordium.notifications.RewordiumNotifications.enabled.collectAsState()
+    var granted by remember { mutableStateOf(com.noxquill.rewordium.notifications.RewordiumNotifications.hasPermission(context)) }
+    val launcher = androidx.activity.compose.rememberLauncherForActivityResult(
+        androidx.activity.result.contract.ActivityResultContracts.RequestPermission(),
+    ) { ok ->
+        granted = ok
+        if (!ok) {
+            runCatching {
+                context.startActivity(
+                    android.content.Intent(android.provider.Settings.ACTION_APP_NOTIFICATION_SETTINGS)
+                        .putExtra(android.provider.Settings.EXTRA_APP_PACKAGE, context.packageName),
+                )
+            }
+        }
+    }
+    val subtitle = when {
+        !enabled -> "Off — no updates, release notes or offers"
+        !granted -> "On in the app · tap to allow on this phone"
+        else -> "New features, release notes and offers"
+    }
+    SettingSwitchRow(Icons.Filled.Notifications, "Notifications", subtitle, enabled && granted, shape, Tone.Secondary) { on ->
+        com.noxquill.rewordium.notifications.RewordiumNotifications.setEnabled(context, on)
+        if (on && !granted && android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.TIRAMISU) {
+            launcher.launch(android.Manifest.permission.POST_NOTIFICATIONS)
+        }
+    }
 }

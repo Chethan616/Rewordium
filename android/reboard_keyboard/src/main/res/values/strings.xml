@@ -121,6 +121,7 @@
     <string name="quick_action__ai_panel__tooltip">Open AI writing assistant panel</string>
     <string name="quick_actions_overflow__customize_actions_button">Reorder actions</string>
     <string name="quick_actions_editor__header">Customize action order</string>
+    <string name="quick_actions_editor__hint">Long-press a tile and drag it to move it</string>
     <string name="quick_actions_editor__subheader_sticky_action">Sticky action ({n})</string>
     <string name="quick_actions_editor__subheader_dynamic_actions">Dynamic actions ({n})</string>
     <string name="quick_actions_editor__subheader_hidden_actions">Hidden actions ({n})</string>

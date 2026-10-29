@@ -162,5 +162,5 @@ internal val BOT_SHAPES: Map<String, BotShape> = mapOf(
     ),
 )
 
-internal val BOT_TYPES: List<String> = listOf("clover", "flower", "triangle", "square", "blob", "ghost", "circle", "drop", "star", "droid", "mech", "alien", "hexagon", "cat", "cloud", "pill", "pebble", "puddle")
+val BOT_TYPES: List<String> = listOf("clover", "flower", "triangle", "square", "blob", "ghost", "circle", "drop", "star", "droid", "mech", "alien", "hexagon", "cat", "cloud", "pill", "pebble", "puddle")
 

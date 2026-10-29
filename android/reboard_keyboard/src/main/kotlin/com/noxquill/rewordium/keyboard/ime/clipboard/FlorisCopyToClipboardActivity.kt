@@ -17,12 +17,14 @@
 package com.noxquill.rewordium.keyboard.ime.clipboard
 
 import android.content.ClipData
+import android.content.ContentValues
 import android.content.Intent
 import android.graphics.Bitmap
+import android.graphics.BitmapFactory
 import android.graphics.ImageDecoder
 import android.net.Uri
 import android.os.Bundle
-import android.provider.MediaStore
+import android.provider.OpenableColumns
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.Image
@@ -49,6 +51,8 @@ import androidx.compose.ui.unit.dp
 import com.noxquill.rewordium.keyboard.R
 import com.noxquill.rewordium.keyboard.app.FlorisPreferenceStore
 import com.noxquill.rewordium.keyboard.app.apptheme.FlorisAppTheme
+import com.noxquill.rewordium.keyboard.ime.clipboard.provider.ClipboardMediaProvider
+import com.noxquill.rewordium.keyboard.lib.devtools.flogError
 import dev.patrickgold.jetpref.datastore.model.observeAsState
 import org.florisboard.lib.android.AndroidClipboardManager
 import org.florisboard.lib.android.AndroidVersion
@@ -59,6 +63,10 @@ import org.florisboard.lib.compose.stringRes
 import org.florisboard.lib.kotlin.mimeTypeFilterOf
 
 class FlorisCopyToClipboardActivity : ComponentActivity() {
+    companion object {
+        private const val PREVIEW_MAX_PX = 1080
+    }
+
     private var error: CopyToClipboardError? = null
     private var bitmap: Bitmap? = null
     private val clipboardManager by lazy { systemService(AndroidClipboardManager::class) }
@@ -118,20 +126,59 @@ class FlorisCopyToClipboardActivity : ComponentActivity() {
             error = CopyToClipboardError.TYPE_NOT_SUPPORTED_ERROR
             return
         }
-        bitmap = uriToBitmap(uri)
+        runCatching { copyImageToClipboard(uri, type) }
+            .onSuccess { bitmap = it }
+            .onFailure { e ->
+                flogError { "Copy to clipboard failed: $e" }
+                error = CopyToClipboardError.UNKNOWN_ERROR
+            }
     }
 
-    private fun uriToBitmap(uri: Uri): Bitmap {
-        val clip = ClipData.newUri(contentResolver, "image", uri)
-        clipboardManager.setPrimaryClip(clip)
-        return if (AndroidVersion.ATLEAST_API28_P) {
-            val source = ImageDecoder.createSource(contentResolver, uri)
-            ImageDecoder.decodeBitmap(source)
-        } else {
-            @Suppress("DEPRECATION")
-            MediaStore.Images.Media.getBitmap(contentResolver, uri)
+    /**
+     * Copies the shared image into the keyboard's own clipboard provider and puts that URI on the clipboard.
+     * The sender's URI can't go there directly: the share only lent us read access, which the system refuses
+     * to pass on ("UID … does not have permission to content://media/…").
+     *
+     * @return a small preview of the image, or null when it can't be decoded (the copy still worked).
+     */
+    private fun copyImageToClipboard(source: Uri, sharedType: String): Bitmap? {
+        val mimeType = runCatching { contentResolver.getType(source) }.getOrNull()
+            ?.takeIf { filter.matches(it) && !it.endsWith("/*") }
+            ?: sharedType.takeIf { !it.endsWith("/*") }
+            ?: "image/png"
+        val values = ContentValues(3).apply {
+            put(ClipboardMediaProvider.Columns.MediaUri, source.toString())
+            put(ClipboardMediaProvider.Columns.MimeTypes, mimeType)
+            put(OpenableColumns.DISPLAY_NAME, "image")
         }
+        val ownUri = contentResolver.insert(ClipboardMediaProvider.IMAGE_CLIPS_URI, values)
+        check(ownUri != null && ownUri.lastPathSegment != "0") { "Couldn't copy the shared image" }
+        clipboardManager.setPrimaryClip(ClipData.newUri(contentResolver, "image", ownUri))
+        return decodePreview(ownUri)
     }
+
+    /** Decodes [uri] scaled down to at most [PREVIEW_MAX_PX] on its long side, so huge photos can't run us out of memory. */
+    private fun decodePreview(uri: Uri): Bitmap? = runCatching {
+        if (AndroidVersion.ATLEAST_API28_P) {
+            ImageDecoder.decodeBitmap(ImageDecoder.createSource(contentResolver, uri)) { decoder, info, _ ->
+                val longest = maxOf(info.size.width, info.size.height)
+                if (longest > PREVIEW_MAX_PX) {
+                    val scale = PREVIEW_MAX_PX.toFloat() / longest
+                    decoder.setTargetSize(
+                        (info.size.width * scale).toInt().coerceAtLeast(1),
+                        (info.size.height * scale).toInt().coerceAtLeast(1),
+                    )
+                }
+            }
+        } else {
+            val bounds = BitmapFactory.Options().apply { inJustDecodeBounds = true }
+            contentResolver.openInputStream(uri)?.use { BitmapFactory.decodeStream(it, null, bounds) }
+            var sample = 1
+            while (maxOf(bounds.outWidth, bounds.outHeight) / (sample * 2) >= PREVIEW_MAX_PX) sample *= 2
+            val options = BitmapFactory.Options().apply { inSampleSize = sample }
+            contentResolver.openInputStream(uri)?.use { BitmapFactory.decodeStream(it, null, options) }
+        }
+    }.getOrNull()
 
     @Composable
     private fun Content() {

@@ -1237,7 +1237,7 @@ fun StickerEditorScreen(sourceUri: String?, gifMode: Boolean = false) = FlorisSc
                                 ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded)
                             },
                             modifier = Modifier
-                                .menuAnchor(MenuAnchorType.PrimaryEditable, enabled = true)
+                                .menuAnchor(ExposedDropdownMenuAnchorType.PrimaryEditable, enabled = true)
                                 .fillMaxWidth()
                         )
                         ExposedDropdownMenu(

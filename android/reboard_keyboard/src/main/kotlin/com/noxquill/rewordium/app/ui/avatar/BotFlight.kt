@@ -41,15 +41,15 @@ import kotlinx.coroutines.withTimeoutOrNull
 @Stable
 class BotFlight {
   /** The layer the flight is drawn in (it fills the window, like the screens). */
-  internal var stage: LayoutCoordinates? = null
+  var stage: LayoutCoordinates? = null
 
   /** Where the chat's top-bar bot sits when its screen is at rest. The same for every chat. */
-  internal var chatSpot: Rect? by mutableStateOf(null)
+  var chatSpot: Rect? by mutableStateOf(null)
 
   /** The open chat's screen and its top-bar bot, live: the flight back starts wherever it is. */
-  internal var chatScreen: LayoutCoordinates? = null
-  internal var chatBot: LayoutCoordinates? = null
-  internal var chatLook: Pair<String, BotMood>? = null
+  var chatScreen: LayoutCoordinates? = null
+  var chatBot: LayoutCoordinates? = null
+  var chatLook: Pair<String, BotMood>? = null
 
   /** Where each task's bot sat on Home when you opened it. */
   private val homeSpots = HashMap<String, Rect>()
@@ -84,7 +84,7 @@ class BotFlight {
   }
 
   /** The chat's top-bar bot was laid out: remember its resting place. */
-  internal fun chatBotPlaced(bot: LayoutCoordinates, type: String, mood: BotMood) {
+  fun chatBotPlaced(bot: LayoutCoordinates, type: String, mood: BotMood) {
     chatBot = bot
     chatLook = type to mood
     val screen = chatScreen?.takeIf { it.isAttached } ?: return
@@ -98,7 +98,7 @@ class BotFlight {
     if (flight?.sessionId != sessionId) homeSpots.remove(sessionId)
   }
 
-  internal fun land(f: Flight) {
+  fun land(f: Flight) {
     if (flight === f) flight = null
   }
 
@@ -113,7 +113,7 @@ class BotFlight {
 @Stable
 class Flight(val sessionId: String, val type: String, val mood: BotMood, val from: Rect, val to: Rect?, val toChat: Boolean) {
   /** Its double has been drawn in the air (from the flight's second frame). */
-  internal var airborne by mutableStateOf(false)
+  var airborne by mutableStateOf(false)
 }
 
 val LocalBotFlight = staticCompositionLocalOf<BotFlight?> { null }
@@ -173,7 +173,7 @@ fun BotFlightLayer(flight: BotFlight) {
 
 /** A Home row's bot: where it is right now, for the flight to start from. */
 class FlightSpot {
-  internal var coords: LayoutCoordinates? = null
+  var coords: LayoutCoordinates? = null
 }
 
 @Composable

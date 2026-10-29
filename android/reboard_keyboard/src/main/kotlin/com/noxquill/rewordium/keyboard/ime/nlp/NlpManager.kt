@@ -304,15 +304,28 @@ class NlpManager(context: Context) {
         return latin?.nativeDictionary?.handle ?: 0L
     }
 
+    /**
+     * Serialises preloads without holding [providers]. A dictionary load takes seconds (longer right after
+     * the keyboard process starts), and the typing path reads [providers] on the main thread — holding that
+     * lock for the whole load froze typing until Android killed the keyboard (ANR). The Latin provider is
+     * safe to query while it loads; it answers from what's ready.
+     */
+    private val preloadGuard = Mutex()
+
     fun preload(subtype: Subtype) {
         scope.launch {
             emojiSuggestionProvider.preload(subtype)
-            providers.withLock { providers ->
-                subtype.nlpProviders.forEach { _, providerId ->
-                    providers[providerId]?.let { provider ->
-                        provider.createIfNecessary()
-                        provider.preload(subtype)
+            val wrappers = providers.withLock { providers ->
+                buildList {
+                    subtype.nlpProviders.forEach { _, providerId ->
+                        providers[providerId]?.let { if (it !in this) add(it) }
                     }
+                }
+            }
+            preloadGuard.withLock {
+                wrappers.forEach { provider ->
+                    provider.createIfNecessary()
+                    provider.preload(subtype)
                 }
             }
         }

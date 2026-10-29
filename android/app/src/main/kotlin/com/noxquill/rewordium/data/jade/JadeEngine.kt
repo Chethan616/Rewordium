@@ -3,6 +3,7 @@ package com.noxquill.rewordium.data.jade
 import android.content.Context
 import android.util.Log
 import com.google.gson.JsonArray
+import com.noxquill.rewordium.keyboard.ime.theme.studio.KeyboardThemeSpec
 import com.google.gson.JsonElement
 import com.google.gson.JsonObject
 import com.google.gson.JsonParser
@@ -100,6 +101,29 @@ class JadeEngine(context: Context) {
         }
         val answer = completeWithFallback(config, modelsFor(config).toMutableList(), messages, withTools = false, maxTokens = 1600)
         clean(answer.get("content").asText()) ?: throw JadeException("Jade didn't return anything usable. Try again.", retryable = true)
+    }
+
+    /**
+     * A keyboard theme for [description] ("cozy autumn café", "my football club"): Jade picks the palette,
+     * shape, typeface and mascot. The result is cleaned and made readable before anyone installs it.
+     */
+    suspend fun designTheme(description: String): KeyboardThemeSpec = withContext(Dispatchers.IO) {
+        require(description.isNotBlank()) { "Describe the look you want." }
+        val config = readyConfig()
+        val user = description.take(300)
+        val raw = if (config.isClaude() || config.isGemini()) {
+            plainCompletion(config, THEME_PROMPT, listOf(JadeTurn(true, user)), 500)
+        } else {
+            val messages = JsonArray().apply {
+                add(msg("system", THEME_PROMPT))
+                add(msg("user", user))
+            }
+            completeWithFallback(config, modelsFor(config).toMutableList(), messages, withTools = false, maxTokens = 500).get("content").asText().orEmpty()
+        }
+        val jsonText = raw.substringAfter('{', "").substringBeforeLast('}', "")
+        val spec = KeyboardThemeSpec.fromJson("{$jsonText}")
+            ?: throw JadeException("Jade's theme didn't come out right. Try again.", retryable = true)
+        spec.readable().copy(author = "Jade", style = spec.style.ifBlank { "jade" })
     }
 
     private fun readyConfig(): AIConfigProvider.AIConfig {
@@ -320,6 +344,26 @@ class JadeEngine(context: Context) {
     private fun JsonElement?.asText(): String? = this?.takeIf { it.isJsonPrimitive }?.asString
 
     companion object {
+        private val THEME_PROMPT = """
+            You design keyboard themes for a phone keyboard. Reply with ONE JSON object and nothing else:
+            {"name": short catchy name (max 3 words),
+             "night": true for a dark theme, false for light,
+             "background": "#RRGGBB" behind the keys,
+             "keys": "#RRGGBB" letter keys,
+             "letters": "#RRGGBB" text on the keys (must contrast strongly with keys),
+             "accent": "#RRGGBB" enter key and highlights (vivid),
+             "special": "#RRGGBB" shift/delete/symbol keys (between keys and accent),
+             "shape": one of SQUARE, ROUNDED, SOFT, PILL, BUBBLE, LEAF, CUT, TICKET,
+             "pressed_shape": one of the same shapes (what a key morphs into when pressed),
+             "font": one of SYSTEM, ROUNDED (playful), SOFT (friendly), MONO (techy), SERIF (elegant),
+             "bold": true or false,
+             "outline": true or false,
+             "shadow": 0 to 4,
+             "mascot": one of clover, flower, triangle, square, blob, ghost, circle, drop, star, droid, mech, alien, hexagon, cat, cloud, pill, pebble, puddle, or null for none,
+             "style": one of playful, expressive, professional, clean}
+            Match the mood the user describes. Keep it readable: letters vs keys contrast at least 4.5:1.
+        """.trimIndent()
+
         private const val TAG = "JadeEngine"
         private const val MAX_TOOL_ROUNDS = 6
         private const val MAX_HISTORY = 12

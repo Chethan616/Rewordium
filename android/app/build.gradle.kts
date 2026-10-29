@@ -22,8 +22,9 @@ if (localPropertiesFile.exists()) {
     localProperties.load(localPropertiesFile.inputStream())
 }
 
-val projectVersionCode: String = localProperties.getProperty("projectVersionCode") ?: "124"
-val projectVersionName: String = localProperties.getProperty("projectVersionName") ?: "3.1.0"
+// One version for the app and the keyboard module: gradle.properties (local.properties can override it).
+val projectVersionCode: String = localProperties.getProperty("projectVersionCode") ?: providers.gradleProperty("projectVersionCode").get()
+val projectVersionName: String = localProperties.getProperty("projectVersionName") ?: providers.gradleProperty("projectVersionName").get()
 
 // A helper function to get other properties (like your API key)
 fun getProperty(key: String): String {

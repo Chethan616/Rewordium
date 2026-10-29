@@ -53,6 +53,7 @@ import androidx.compose.ui.input.pointer.PointerInputChange
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.sp
 import com.noxquill.rewordium.keyboard.app.ContactsPermissionActivity
 import com.noxquill.rewordium.keyboard.app.FlorisPreferenceStore
@@ -342,6 +343,8 @@ private fun CandidateItem(
                 attributes = attributes,
                 selector = selector,
                 text = candidate.text.toString(),
+                // Emoji read at emoji size, like Gboard's and FUTO's strips, not at word size.
+                fontSize = if (candidate is EmojiSuggestionCandidate) 24.sp else TextUnit.Unspecified,
             )
             if (candidate.secondaryText != null) {
                 SnyggText(

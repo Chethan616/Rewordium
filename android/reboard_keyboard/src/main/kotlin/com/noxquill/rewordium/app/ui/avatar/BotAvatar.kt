@@ -39,7 +39,7 @@ import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
-import com.noxquill.rewordium.app.ui.haptics.LocalHaptics
+import androidx.compose.runtime.staticCompositionLocalOf
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlin.math.PI
@@ -61,6 +61,12 @@ import kotlin.random.Random
  * The face is BotFace.kt, the same rig as the desktop's.
  */
 enum class BotMood { Idle, Thinking, Working, NeedsYou, Happy, Sad, Sleeping }
+
+/**
+ * What a bot does to the phone when it hops (the app plays a haptic). The bots live in the keyboard module
+ * so the keyboard can show them too; each host provides its own feedback.
+ */
+val LocalBotHop = staticCompositionLocalOf<() -> Unit> { {} }
 
 /**
  * Same mapping as the desktop's AgentAvatar: every task gets its own bot, a
@@ -120,6 +126,8 @@ fun BotAvatar(
    * A tap still makes it jump.
    */
   still: Boolean = false,
+  /** Changing this makes the bot hop (a reaction, e.g. to a key press); 0 does nothing. */
+  hopSignal: Int = 0,
 ) {
   val shape = BOT_SHAPES[type] ?: BOT_SHAPES.getValue("flower")
   val body = remember(type) { PathParser().parsePathString(shape.path).toPath() }
@@ -129,7 +137,7 @@ fun BotAvatar(
   val base = color ?: Color(shape.color)
   val bodyColor = lerp(base, Color(0xFF8C9199), grey)
   val ink = inkFor(base)
-  val haptics = LocalHaptics.current
+  val hopFeedback = LocalBotHop.current
   val scope = rememberCoroutineScope()
   val seed = remember(type) { Random(type.hashCode()) }
 
@@ -187,6 +195,10 @@ fun BotAvatar(
     hop.animateTo(0f, tween(240, easing = FastOutSlowInEasing))
     squash.animateTo(0.9f, tween(70))
     squash.animateTo(1f, spring(dampingRatio = Spring.DampingRatioMediumBouncy, stiffness = Spring.StiffnessMedium))
+  }
+
+  LaunchedEffect(hopSignal) {
+    if (hopSignal != 0) jump(14f)
   }
 
   if (still) {
@@ -276,7 +288,7 @@ fun BotAvatar(
   val tapModifier = if (interactive) {
     Modifier.pointerInput(type) {
       detectTapGestures {
-        haptics.hop()
+        hopFeedback()
         scope.launch { jump(18f) }
       }
     }

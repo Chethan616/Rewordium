@@ -14,23 +14,16 @@
  * limitations under the License.
  */
 
+@file:OptIn(ExperimentalMaterial3ExpressiveApi::class)
+
 package com.noxquill.rewordium.keyboard.ime.media
 
-import android.os.Build
-import androidx.compose.animation.core.LinearEasing
-import androidx.compose.animation.core.RepeatMode
-import androidx.compose.animation.core.animateFloat
-import androidx.compose.animation.core.infiniteRepeatable
-import androidx.compose.animation.core.rememberInfiniteTransition
-import androidx.compose.animation.core.tween
-import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
-import androidx.compose.foundation.gestures.detectTapGestures
+import android.net.Uri
+import android.widget.Toast
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxHeight
@@ -40,24 +33,19 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
-import androidx.compose.foundation.lazy.grid.items
-import androidx.compose.foundation.lazy.staggeredgrid.LazyVerticalStaggeredGrid
-import androidx.compose.foundation.lazy.staggeredgrid.StaggeredGridCells
-import androidx.compose.foundation.lazy.staggeredgrid.items
-import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.lazy.grid.itemsIndexed
+import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.outlined.Close
-import androidx.compose.material.icons.outlined.Search
-import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.FilledIconButton
+import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
-import androidx.compose.material3.IconButtonDefaults
+import androidx.compose.material3.LoadingIndicator
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -69,602 +57,395 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.alpha
-import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
-import coil.ImageLoader
 import coil.compose.AsyncImage
-import coil.decode.GifDecoder
-import coil.decode.ImageDecoderDecoder
 import coil.request.ImageRequest
 import com.noxquill.rewordium.keyboard.editorInstance
-import com.noxquill.rewordium.keyboard.ime.input.LocalInputFeedbackController
-import androidx.compose.ui.input.pointer.pointerInput
 import com.noxquill.rewordium.keyboard.ime.keyboard.KeyboardManager
 import com.noxquill.rewordium.keyboard.ime.media.gif.GifCollectionStore
 import com.noxquill.rewordium.keyboard.ime.media.gif.KlipyClient
 import com.noxquill.rewordium.keyboard.ime.media.sticker.StickerCollectionStore
 import com.noxquill.rewordium.keyboard.ime.media.sticker.StickerRef
+import com.noxquill.rewordium.keyboard.ime.media.sticker.StickerTile
 import com.noxquill.rewordium.keyboard.ime.media.sticker.UserStickerStore
 import com.noxquill.rewordium.keyboard.ime.media.sticker.WhatsAppStickerReader
-import com.noxquill.rewordium.keyboard.ime.text.key.KeyCode
-import com.noxquill.rewordium.keyboard.ime.text.keyboard.TextKeyData
+import com.noxquill.rewordium.keyboard.ime.media.ui.MediaChip
+import com.noxquill.rewordium.keyboard.ime.media.ui.MediaExpressiveTheme
+import com.noxquill.rewordium.keyboard.ime.media.ui.MediaSearchField
+import com.noxquill.rewordium.keyboard.ime.media.ui.MediaShapes
+import com.noxquill.rewordium.keyboard.ime.media.ui.MediaTile
+import com.noxquill.rewordium.keyboard.ime.media.ui.SpinningShape
+import com.noxquill.rewordium.keyboard.ime.media.ui.Symbols
+import com.noxquill.rewordium.keyboard.ime.media.ui.TileBusy
+import com.noxquill.rewordium.keyboard.ime.media.ui.at
+import com.noxquill.rewordium.keyboard.ime.media.ui.rememberMediaFeedback
+import com.noxquill.rewordium.keyboard.ime.media.ui.rememberTones
 import com.noxquill.rewordium.keyboard.ime.theme.FlorisImeUi
 import com.noxquill.rewordium.keyboard.keyboardManager
-import com.noxquill.rewordium.keyboard.ime.clipboard.provider.ClipboardFileStorage
-import com.noxquill.rewordium.keyboard.ime.clipboard.provider.ClipboardMediaProvider
-import com.noxquill.rewordium.keyboard.lib.devtools.flogDebug
-import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
-import okhttp3.OkHttpClient
-import okhttp3.Request
-import java.util.concurrent.TimeUnit
 import org.florisboard.lib.snygg.ui.SnyggBox
-import org.florisboard.lib.snygg.ui.rememberSnyggThemeQuery
+
+/** How long typing has to pause before a network search goes out (KLIPY's free tier is shared). */
+private const val SEARCH_DEBOUNCE_MS = 350L
+
+/** Height of the results strip above the search bar. */
+private val SEARCH_STRIP_HEIGHT = 112.dp
+
+private val GifSuggestions = listOf("happy dance", "thank you", "lol", "mind blown", "good morning", "hug", "yes", "sorry", "birthday", "cat")
+private val StickerSuggestions = listOf("love", "hello", "lol", "thanks", "wow", "sad", "party", "cat")
 
 /**
- * Overlay that stacks above the QWERTY when the user activates search from
- * the GIF or sticker panel. Mirrors [EmojiSearchOverlay] visually so the
- * experience feels uniform across emoji / GIF / sticker — same back chip,
- * same blinking-caret pill, same M3 surfaces. The grid below the pill flips
- * between a KLIPY-backed GIF grid and a user+WhatsApp sticker grid based on
- * [KeyboardManager.mediaSearchMode].
- *
- * The QWERTY keyboard rendered below this overlay (by FlorisImeService) is
- * what feeds keystrokes into [KeyboardManager.mediaSearchQuery] — same path
- * that the emoji overlay uses.
+ * GIF and sticker search, Gboard style: it sits above the full keyboard, which types the query. A strip of
+ * results live-updates as you type (trending while the query is empty), recent and suggested searches sit
+ * under it, and the search bar carries the back arrow. Sending keeps the search, so you can send another;
+ * the Search key opens all the results in the panel.
  */
 @Composable
-fun MediaSearchOverlay() {
+fun MediaSearchOverlay() = MediaExpressiveTheme {
     val context = LocalContext.current
     val keyboardManager by context.keyboardManager()
     val editorInstance by context.editorInstance()
-    val scope = rememberCoroutineScope()
-    val inputFeedbackController = LocalInputFeedbackController.current
-
+    val feedback = rememberMediaFeedback()
     val mode by keyboardManager.mediaSearchMode.collectAsState()
     val query by keyboardManager.mediaSearchQuery.collectAsState()
+    var loading by remember { mutableStateOf(false) }
+    val kind = if (mode == KeyboardManager.MediaSearchMode.STICKER) "sticker" else "gif"
 
-    val containerStyle = rememberSnyggThemeQuery(FlorisImeUi.Smartbar.elementName)
-    val pillStyle = rememberSnyggThemeQuery(FlorisImeUi.SmartbarActionTile.elementName)
-    val keyStyle = rememberSnyggThemeQuery(FlorisImeUi.Key.elementName)
-    val enterKeyStyle = rememberSnyggThemeQuery(
-        elementName = FlorisImeUi.Key.elementName,
-        attributes = mapOf(FlorisImeUi.Attr.Code to KeyCode.ENTER.toString()),
-    )
-    val pillBg = pillStyle.background(default = MaterialTheme.colorScheme.surfaceContainerHigh)
-    val pillFg = keyStyle.foreground(default = MaterialTheme.colorScheme.onSurface)
-    val accent = enterKeyStyle.background(default = MaterialTheme.colorScheme.primary)
-    val cardBg = pillBg.copy(alpha = 0.85f)
-    val dividerColor = pillFg.copy(alpha = 0.10f)
+    fun recordQuery(query: String) = MediaMemory.recordSearch(context, kind, query, keyboardManager.activeState.isIncognitoMode)
 
-    val titleText = when (mode) {
-        KeyboardManager.MediaSearchMode.GIF -> "Search on KLIPY"
-        KeyboardManager.MediaSearchMode.STICKER -> "Search on KLIPY"
-        else -> "Search"
-    }
-
-    SnyggBox(
-        elementName = FlorisImeUi.Smartbar.elementName,
-        modifier = Modifier.fillMaxWidth(),
-    ) {
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 8.dp, vertical = 6.dp),
-            verticalArrangement = Arrangement.spacedBy(6.dp),
+    SnyggBox(elementName = FlorisImeUi.Smartbar.elementName, modifier = Modifier.fillMaxWidth()) {
+        Surface(
+            shape = RoundedCornerShape(30.dp),
+            color = MaterialTheme.colorScheme.surfaceContainer,
+            modifier = Modifier.fillMaxWidth().padding(horizontal = 8.dp, vertical = 6.dp),
         ) {
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(40.dp)
-                    .padding(start = 4.dp),
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                FilledIconButton(
-                    onClick = {
-                        inputFeedbackController.keyPress(TextKeyData.UNSPECIFIED)
-                        keyboardManager.endMediaSearch()
-                    },
-                    modifier = Modifier.size(36.dp),
-                    colors = IconButtonDefaults.filledIconButtonColors(
-                        containerColor = pillBg,
-                        contentColor = pillFg,
-                    ),
-                ) {
-                    Icon(
-                        imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                        contentDescription = "Back to media panel",
-                        modifier = Modifier.size(18.dp),
-                    )
-                }
-                Spacer(modifier = Modifier.width(12.dp))
-                Text(
-                    text = titleText,
-                    color = pillFg,
-                    fontSize = 16.sp,
-                    fontWeight = FontWeight.SemiBold,
-                )
-            }
-
-            Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .clip(RoundedCornerShape(16.dp))
-                    .background(cardBg)
-                    .padding(vertical = 6.dp),
-            ) {
-                Box(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(140.dp)
-                        .padding(horizontal = 6.dp),
-                ) {
+            Column(Modifier.padding(6.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                Box(Modifier.fillMaxWidth().height(SEARCH_STRIP_HEIGHT)) {
                     when (mode) {
                         KeyboardManager.MediaSearchMode.GIF -> GifSearchResults(
                             query = query,
-                            fg = pillFg,
-                            accent = accent,
+                            onLoading = { loading = it },
                             onGifPicked = { uri, description ->
-                                inputFeedbackController.keyPress(TextKeyData.UNSPECIFIED)
-                                editorInstance.commitMedia(
-                                    uri = uri,
-                                    mimeType = "image/gif",
-                                    description = description.ifBlank { "GIF" },
-                                )
-                                keyboardManager.clearEmojiSearch()
+                                recordQuery(query)
+                                editorInstance.commitMedia(uri = uri, mimeType = "image/gif", description = description.ifBlank { "GIF" })
                             },
                         )
                         KeyboardManager.MediaSearchMode.STICKER -> StickerSearchResults(
                             query = query,
-                            fg = pillFg,
-                            accent = accent,
+                            strip = true,
+                            onLoading = { loading = it },
                             onStickerPicked = { uri, mime, description ->
-                                inputFeedbackController.keyPress(TextKeyData.UNSPECIFIED)
-                                editorInstance.commitMedia(
-                                    uri = uri,
-                                    mimeType = mime,
-                                    description = description.ifBlank { "Sticker" },
-                                )
-                                keyboardManager.clearEmojiSearch()
+                                recordQuery(query)
+                                editorInstance.commitMedia(uri = uri, mimeType = mime, description = description.ifBlank { "Sticker" })
                             },
                         )
                         else -> Unit
                     }
                 }
-
-                Spacer(
-                    modifier = Modifier
-                        .padding(horizontal = 12.dp)
-                        .padding(vertical = 4.dp)
-                        .fillMaxWidth()
-                        .height(1.dp)
-                        .background(dividerColor),
-                )
-
-                SearchPill(
+                SearchSuggestions(
+                    kind = kind,
                     query = query,
-                    mode = mode,
-                    pillBg = pillBg,
-                    pillFg = pillFg,
-                    accent = accent,
-                    onClear = {
-                        inputFeedbackController.keyPress(TextKeyData.DELETE)
-                        keyboardManager.clearEmojiSearch()
+                    suggestions = if (kind == "sticker") StickerSuggestions else GifSuggestions,
+                    onPick = {
+                        feedback.tick()
+                        keyboardManager.setMediaSearchQuery(it)
                     },
                 )
-            }
-        }
-    }
-}
-
-@Composable
-private fun SearchPill(
-    query: String,
-    mode: KeyboardManager.MediaSearchMode,
-    pillBg: Color,
-    pillFg: Color,
-    accent: Color,
-    onClear: () -> Unit,
-) {
-    val infiniteTransition = rememberInfiniteTransition(label = "caret")
-    val caretAlpha by infiniteTransition.animateFloat(
-        initialValue = 1f,
-        targetValue = 0f,
-        animationSpec = infiniteRepeatable(
-            animation = tween(durationMillis = 500, easing = LinearEasing),
-            repeatMode = RepeatMode.Reverse,
-        ),
-        label = "caret-alpha",
-    )
-
-    Box(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(horizontal = 8.dp)
-            .padding(top = 2.dp, bottom = 4.dp),
-    ) {
-        Box(
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(40.dp)
-                .clip(RoundedCornerShape(50))
-                .background(pillBg)
-                .padding(horizontal = 12.dp),
-        ) {
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                modifier = Modifier.fillMaxHeight(),
-            ) {
-                Icon(
-                    imageVector = Icons.Outlined.Search,
-                    contentDescription = null,
-                    tint = pillFg.copy(alpha = 0.6f),
-                    modifier = Modifier.size(18.dp),
+                MediaSearchField(
+                    query = query,
+                    hints = listOf(if (kind == "sticker") "Search stickers" else "Search GIFs on KLIPY"),
+                    shape = MediaShapes.blob(query.length),
+                    active = true,
+                    busy = loading,
+                    onBack = {
+                        feedback.tick()
+                        keyboardManager.endMediaSearch()
+                    },
+                    onClear = {
+                        feedback.delete()
+                        keyboardManager.clearEmojiSearch()
+                    },
+                    modifier = Modifier.fillMaxWidth(),
                 )
-                Spacer(modifier = Modifier.width(10.dp))
-                if (query.isEmpty()) {
-                    Box(contentAlignment = Alignment.CenterStart) {
-                        Text(
-                            text = if (mode == KeyboardManager.MediaSearchMode.GIF || mode == KeyboardManager.MediaSearchMode.STICKER) "Search on KLIPY" else "Search",
-                            color = pillFg.copy(alpha = 0.55f),
-                            fontSize = 14.sp,
-                        )
-                        Box(
-                            modifier = Modifier
-                                .width(2.dp)
-                                .height(18.dp)
-                                .alpha(caretAlpha)
-                                .background(accent),
-                        )
-                    }
-                } else {
-                    Text(text = query, color = pillFg, fontSize = 14.sp)
-                    Spacer(modifier = Modifier.width(1.dp))
-                    Box(
-                        modifier = Modifier
-                            .width(2.dp)
-                            .height(18.dp)
-                            .alpha(caretAlpha)
-                            .background(accent),
-                    )
-                }
-            }
-            if (query.isNotEmpty()) {
-                IconButton(
-                    onClick = onClear,
-                    modifier = Modifier
-                        .align(Alignment.CenterEnd)
-                        .size(32.dp),
-                ) {
-                    Icon(
-                        imageVector = Icons.Outlined.Close,
-                        contentDescription = "Clear search",
-                        tint = pillFg.copy(alpha = 0.7f),
-                        modifier = Modifier.size(16.dp),
-                    )
-                }
             }
         }
     }
 }
 
+/**
+ * One tap fills the search: recent searches first (newest first), then suggestions, each with its own
+ * symbol and tone. While typing, only the ones that still match stay.
+ */
 @Composable
-private fun GifSearchResults(
+internal fun SearchSuggestions(
+    kind: String,
     query: String,
-    fg: Color,
-    accent: Color,
-    onGifPicked: (android.net.Uri, String) -> Unit,
+    suggestions: List<String>,
+    onPick: (String) -> Unit,
+    iconFor: (String) -> androidx.compose.ui.graphics.vector.ImageVector = { MediaCommit.tagIcon(it) },
 ) {
+    val context = LocalContext.current
+    val tones = rememberTones()
+    val version by MediaMemory.version.collectAsState()
+    val recent = remember(kind, version) { MediaMemory.recentSearches(context, kind) }
+    val q = query.trim().lowercase()
+    val shown = remember(recent, suggestions, q) {
+        val all = recent.map { it to true } + suggestions.filterNot { s -> recent.any { it.equals(s, ignoreCase = true) } }.map { it to false }
+        val others = all.filterNot { (text, _) -> text.equals(q, ignoreCase = true) }
+        // Narrow to what still matches while typing; with no match, keep offering the rest rather than a gap.
+        others.filter { (text, _) -> text.lowercase().startsWith(q) }.ifEmpty { others }
+    }
+    LazyRow(
+        modifier = Modifier.fillMaxWidth().height(38.dp),
+        contentPadding = PaddingValues(horizontal = 2.dp),
+        horizontalArrangement = Arrangement.spacedBy(6.dp),
+    ) {
+        items(shown, key = { it.first }) { (text, isRecent) ->
+            MediaChip(
+                selected = false,
+                onClick = { onPick(text) },
+                label = text,
+                icon = if (isRecent) Symbols.History else iconFor(text),
+                tone = tones.at(text.length),
+                modifier = Modifier.animateItem(),
+            )
+        }
+    }
+}
+
+@Composable
+private fun SearchMessage(text: String) {
+    Column(Modifier.fillMaxSize(), verticalArrangement = Arrangement.Center, horizontalAlignment = Alignment.CenterHorizontally) {
+        SpinningShape(MediaShapes.blob(text.length), MaterialTheme.colorScheme.primaryContainer, Modifier.size(52.dp)) {
+            Icon(Symbols.SearchOff, null, tint = MaterialTheme.colorScheme.onPrimaryContainer, modifier = Modifier.size(24.dp))
+        }
+        Spacer(Modifier.height(8.dp))
+        Text(text, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+    }
+}
+
+@Composable
+private fun SearchLoading() {
+    Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { LoadingIndicator(Modifier.size(48.dp)) }
+}
+
+@Composable
+private fun GifSearchResults(query: String, onLoading: (Boolean) -> Unit, onGifPicked: (Uri, String) -> Unit) {
     val context = LocalContext.current
     val client = remember { KlipyClient() }
     val scope = rememberCoroutineScope()
-    val recentsStore = remember { GifCollectionStore.recents(context) }
-    val imageLoader = remember {
-        ImageLoader.Builder(context)
-            .components {
-                if (Build.VERSION.SDK_INT >= 28) add(ImageDecoderDecoder.Factory())
-                else add(GifDecoder.Factory())
-            }
-            .build()
-    }
+    val feedback = rememberMediaFeedback()
+    val tones = rememberTones()
+    val recents = remember { GifCollectionStore.recents(context) }
+    val imageLoader = remember { MediaCommit.imageLoader(context) }
     var results by remember { mutableStateOf<List<KlipyClient.GifResult>>(emptyList()) }
-    var loading by remember { mutableStateOf(false) }
-    val dim = fg.copy(alpha = 0.55f)
+    var loading by remember { mutableStateOf(true) }
+    var sendingId by remember { mutableStateOf<String?>(null) }
 
     if (!client.isConfigured) {
-        Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-            Text("KLIPY_API_KEY not set", color = dim, fontSize = 13.sp)
-        }
+        SearchMessage("GIF search isn’t set up in this build")
         return
     }
-    LaunchedEffect(Unit) { recentsStore.ensureLoaded() }
+    LaunchedEffect(Unit) { recents.ensureLoaded() }
     LaunchedEffect(query) {
+        // Typing restarts this effect, so only a pause actually searches.
+        if (query.isNotEmpty()) delay(SEARCH_DEBOUNCE_MS)
         loading = true
+        onLoading(true)
         results = client.search(query)
         loading = false
+        onLoading(false)
     }
+    val stripState = rememberLazyListState()
+    LaunchedEffect(results) { stripState.scrollToItem(0) }
     when {
-        loading && results.isEmpty() -> Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-            CircularProgressIndicator(color = accent, strokeWidth = 2.dp, modifier = Modifier.size(24.dp))
-        }
-        results.isEmpty() -> Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-            Text(
-                text = if (query.isEmpty()) "Type to search GIFs" else "No GIFs",
-                color = dim,
-                fontSize = 13.sp,
-            )
-        }
-        else -> LazyVerticalStaggeredGrid(
-            columns = StaggeredGridCells.Fixed(3),
+        loading && results.isEmpty() -> SearchLoading()
+        results.isEmpty() -> SearchMessage(if (query.isEmpty()) "Type to search GIFs" else "No GIFs for “$query”")
+        else -> LazyRow(
+            state = stripState,
             modifier = Modifier.fillMaxSize(),
-            verticalItemSpacing = 4.dp,
             horizontalArrangement = Arrangement.spacedBy(4.dp),
+            contentPadding = PaddingValues(horizontal = 2.dp),
         ) {
-            items(results, key = { it.id }) { gif ->
-                val aspect = if (gif.width > 0 && gif.height > 0) {
-                    gif.width.toFloat() / gif.height.toFloat()
-                } else 1f
-                Box(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .aspectRatio(aspect.coerceIn(0.5f, 2.0f))
-                        .clip(RoundedCornerShape(8.dp))
-                        .background(fg.copy(alpha = 0.05f))
-                        .clickable {
+            itemsIndexed(results, key = { _, gif -> gif.id }) { index, gif ->
+                val aspect = if (gif.width > 0 && gif.height > 0) gif.width.toFloat() / gif.height else 1f
+                MediaTile(
+                    onClick = {
+                        if (sendingId == null) {
+                            feedback.tap()
+                            sendingId = gif.id
                             scope.launch {
-                                recentsStore.add(gif)
-                                val uri = downloadAndStore(context, gif.gifUrl)
+                                recents.add(gif)
+                                val uri = MediaCommit.download(context, gif.gifUrl, "image/gif")
+                                sendingId = null
                                 if (uri != null) onGifPicked(uri, gif.contentDescription)
+                                else Toast.makeText(context, "Couldn’t send that GIF. Check your connection.", Toast.LENGTH_SHORT).show()
                             }
-                        },
+                        }
+                    },
+                    modifier = Modifier.fillMaxHeight().aspectRatio(aspect.coerceIn(0.6f, 1.9f)),
+                    color = tones.at(index).container,
+                    corner = 16.dp,
+                    pressedCorner = 26.dp,
+                    label = gif.contentDescription.ifBlank { "GIF" },
                 ) {
                     AsyncImage(
-                        model = ImageRequest.Builder(context)
-                            .data(gif.previewUrl)
-                            .crossfade(true)
-                            .build(),
+                        model = ImageRequest.Builder(context).data(gif.previewUrl).build(),
                         imageLoader = imageLoader,
-                        contentDescription = gif.contentDescription,
+                        contentDescription = null,
                         modifier = Modifier.fillMaxSize(),
                     )
+                    TileBusy(sendingId == gif.id)
                 }
             }
         }
     }
 }
 
+/**
+ * Sticker search: your own stickers and installed WhatsApp packs (matched on their emoji and pack name)
+ * first, then KLIPY's community stickers.
+ */
 @Composable
 internal fun StickerSearchResults(
     query: String,
-    fg: Color,
-    accent: Color,
-    onStickerPicked: (android.net.Uri, String, String) -> Unit,
-    onLongPress: ((StickerRef, android.net.Uri, String, String) -> Unit)? = null,
+    onStickerPicked: (Uri, String, String) -> Unit,
+    modifier: Modifier = Modifier,
+    strip: Boolean = false,
+    onLoading: (Boolean) -> Unit = {},
 ) {
     val context = LocalContext.current
-    val inputFeedbackController = LocalInputFeedbackController.current
+    val scope = rememberCoroutineScope()
+    val feedback = rememberMediaFeedback()
     val store = remember { UserStickerStore.get(context) }
     val whatsapp = remember { WhatsAppStickerReader(context) }
-    val recentsStore = remember { StickerCollectionStore.recents(context) }
-    val klipyClient = remember { KlipyClient() }
-    val scope = rememberCoroutineScope()
+    val recents = remember { StickerCollectionStore.recents(context) }
+    val klipy = remember { KlipyClient() }
     val userEntries by store.entriesFlow.collectAsState()
-    var waPacks by remember { mutableStateOf<List<WhatsAppStickerReader.Pack>>(emptyList()) }
-    var klipyResults by remember { mutableStateOf<List<KlipyClient.StickerResult>>(emptyList()) }
+    var packs by remember { mutableStateOf<List<WhatsAppStickerReader.Pack>>(emptyList()) }
+    var community by remember { mutableStateOf<List<KlipyClient.StickerResult>>(emptyList()) }
     var loading by remember { mutableStateOf(false) }
-    val dim = fg.copy(alpha = 0.55f)
+    var sendingKey by remember { mutableStateOf<String?>(null) }
 
     LaunchedEffect(Unit) {
         store.ensureLoaded()
-        recentsStore.ensureLoaded()
-        waPacks = whatsapp.packs()
+        recents.ensureLoaded()
+        packs = whatsapp.packs()
     }
-
     LaunchedEffect(query) {
-        if (!klipyClient.isConfigured) return@LaunchedEffect
+        if (!klipy.isConfigured) return@LaunchedEffect
+        if (query.isNotEmpty()) delay(SEARCH_DEBOUNCE_MS)
         loading = true
-        klipyResults = if (query.isBlank()) {
-            klipyClient.stickerTrending()
-        } else {
-            klipyClient.stickerSearch(query)
-        }
+        onLoading(true)
+        community = if (query.isBlank()) klipy.stickerTrending() else klipy.stickerSearch(query)
         loading = false
+        onLoading(false)
     }
 
-    // Combined sticker list: user stickers first (most recently touched),
-    // then every WhatsApp sticker the user has installed, followed by
-    // community stickers from KLIPY.
-    val flatStickers = remember(userEntries, waPacks, klipyResults, query) {
+    val items = remember(userEntries, packs, community, query) {
         val q = query.trim().lowercase()
-        val out = mutableListOf<StickerSearchItem>()
-        val sortedUser = userEntries.sortedByDescending { it.t }
-        if (q.isEmpty()) {
-            sortedUser.forEach { out += StickerSearchItem.User(it) }
-            waPacks.forEach { pack ->
-                pack.stickers.forEach { sticker -> out += StickerSearchItem.WhatsApp(sticker) }
-            }
-        } else {
-            // User stickers: match by id substring (best we have).
-            sortedUser
-                .filter { it.id.lowercase().contains(q) || it.mime.lowercase().contains(q) }
-                .forEach { out += StickerSearchItem.User(it) }
-            waPacks.forEach { pack ->
+        buildList {
+            userEntries.sortedByDescending { it.t }
+                .filter { q.isEmpty() || it.id.lowercase().contains(q) }
+                .forEach { add(SearchSticker.User(it)) }
+            packs.forEach { pack ->
                 pack.stickers
-                    .filter { it.emojis.lowercase().contains(q) }
-                    .forEach { sticker -> out += StickerSearchItem.WhatsApp(sticker) }
+                    .filter { q.isEmpty() || it.emojis.lowercase().contains(q) || pack.name.lowercase().contains(q) }
+                    .forEach { add(SearchSticker.WhatsApp(it)) }
             }
+            community.forEach { add(SearchSticker.Community(it)) }
         }
-        klipyResults.forEach { sticker -> out += StickerSearchItem.Community(sticker) }
-        out
     }
 
-    if (flatStickers.isEmpty() && !loading) {
-        Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-            Text(
-                text = if (query.isEmpty()) "No stickers yet" else "No stickers match",
-                color = dim,
-                fontSize = 13.sp,
-            )
+    fun send(item: SearchSticker) {
+        if (sendingKey != null) return
+        feedback.tap()
+        sendingKey = item.key
+        scope.launch {
+            val picked: Triple<Uri?, String, String> = when (item) {
+                is SearchSticker.User -> {
+                    store.touch(item.entry)
+                    recents.add(StickerRef.User(item.entry.id))
+                    Triple(MediaCommit.clone(context, Uri.fromFile(store.fileFor(item.entry)), item.entry.mime), item.entry.mime, "Sticker")
+                }
+                is SearchSticker.WhatsApp -> {
+                    recents.add(StickerRef.WhatsApp(item.sticker.uri.toString(), item.sticker.emojis))
+                    Triple(MediaCommit.clone(context, item.sticker.uri, "image/webp"), "image/webp", item.sticker.emojis.ifBlank { "Sticker" })
+                }
+                is SearchSticker.Community -> Triple(
+                    MediaCommit.download(context, item.sticker.stickerUrl, "image/webp"),
+                    "image/webp",
+                    item.sticker.contentDescription.ifBlank { "Sticker" },
+                )
+            }
+            sendingKey = null
+            val uri = picked.first
+            if (uri != null) onStickerPicked(uri, picked.second, picked.third)
+            else Toast.makeText(context, "Couldn’t send that sticker.", Toast.LENGTH_SHORT).show()
         }
-        return
     }
 
-    Box(modifier = Modifier.fillMaxSize()) {
-        if (loading && flatStickers.isEmpty()) {
-            Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                CircularProgressIndicator(color = accent, strokeWidth = 2.dp, modifier = Modifier.size(24.dp))
-            }
-        } else {
-            LazyVerticalGrid(
-                columns = GridCells.Adaptive(72.dp),
+    @Composable
+    fun tile(index: Int, item: SearchSticker, modifier: Modifier) = StickerTile(
+        model = when (item) {
+            is SearchSticker.User -> Uri.fromFile(store.fileFor(item.entry))
+            is SearchSticker.WhatsApp -> item.sticker.uri
+            is SearchSticker.Community -> item.sticker.previewUrl
+        },
+        favorite = false,
+        sending = sendingKey == item.key,
+        label = "Sticker",
+        onClick = { send(item) },
+        onLongClick = null,
+        modifier = modifier,
+        slot = index,
+    )
+
+    val stripState = rememberLazyListState()
+    LaunchedEffect(query) { stripState.scrollToItem(0) }
+    Box(modifier.fillMaxSize()) {
+        when {
+            items.isEmpty() && loading -> SearchLoading()
+            items.isEmpty() -> SearchMessage(if (query.isEmpty()) "No stickers yet" else "No stickers for “$query”")
+            strip -> LazyRow(
+                state = stripState,
                 modifier = Modifier.fillMaxSize(),
                 horizontalArrangement = Arrangement.spacedBy(4.dp),
-                verticalArrangement = Arrangement.spacedBy(4.dp),
-                contentPadding = PaddingValues(0.dp),
+                contentPadding = PaddingValues(horizontal = 2.dp),
             ) {
-                items(flatStickers, key = { it.key }) { item ->
-                    Box(
-                        modifier = Modifier
-                            .aspectRatio(1f)
-                            .clip(RoundedCornerShape(8.dp))
-                            .background(fg.copy(alpha = 0.05f))
-                            .pointerInput(item.key) {
-                                detectTapGestures(
-                                    onTap = {
-                                        inputFeedbackController.keyPress(TextKeyData.UNSPECIFIED)
-                                        scope.launch {
-                                            when (item) {
-                                                is StickerSearchItem.User -> {
-                                                    store.touch(item.entry)
-                                                    recentsStore.add(StickerRef.User(item.entry.id))
-                                                    val file = store.fileFor(item.entry)
-                                                    if (!file.exists()) return@launch
-                                                    val uri = withContext(Dispatchers.IO) {
-                                                        cloneToClipboardStore(context, android.net.Uri.fromFile(file), item.entry.mime)
-                                                    } ?: return@launch
-                                                    onStickerPicked(uri, item.entry.mime, "Sticker")
-                                                }
-                                                is StickerSearchItem.WhatsApp -> {
-                                                    recentsStore.add(
-                                                        StickerRef.WhatsApp(item.sticker.uri.toString(), item.sticker.emojis),
-                                                    )
-                                                    val uri = withContext(Dispatchers.IO) {
-                                                        cloneToClipboardStore(context, item.sticker.uri, "image/webp")
-                                                    } ?: return@launch
-                                                    onStickerPicked(uri, "image/webp", item.sticker.emojis.ifBlank { "Sticker" })
-                                                }
-                                                is StickerSearchItem.Community -> {
-                                                    val uri = withContext(Dispatchers.IO) {
-                                                        downloadAndStore(context, item.sticker.stickerUrl, "image/webp")
-                                                    } ?: return@launch
-                                                    onStickerPicked(uri, "image/webp", item.sticker.contentDescription.ifBlank { "Sticker" })
-                                                }
-                                            }
-                                        }
-                                    },
-                                    onLongPress = {
-                                        inputFeedbackController.keyPress(TextKeyData.UNSPECIFIED)
-                                        if (onLongPress != null) {
-                                            when (item) {
-                                                is StickerSearchItem.User -> {
-                                                    val ref = StickerRef.User(item.entry.id)
-                                                    onLongPress(ref, android.net.Uri.fromFile(store.fileFor(item.entry)), item.entry.mime, "Sticker")
-                                                }
-                                                is StickerSearchItem.WhatsApp -> {
-                                                    val ref = StickerRef.WhatsApp(item.sticker.uri.toString(), item.sticker.emojis)
-                                                    onLongPress(ref, item.sticker.uri, "image/webp", item.sticker.emojis.ifBlank { "Sticker" })
-                                                }
-                                                is StickerSearchItem.Community -> {
-                                                    val ref = StickerRef.WhatsApp(item.sticker.stickerUrl, item.sticker.contentDescription)
-                                                    onLongPress(ref, android.net.Uri.parse(item.sticker.previewUrl), "image/webp", item.sticker.contentDescription)
-                                                }
-                                            }
-                                        }
-                                    }
-                                )
-                            },
-                    ) {
-                        val model: Any = when (item) {
-                            is StickerSearchItem.User -> android.net.Uri.fromFile(store.fileFor(item.entry))
-                            is StickerSearchItem.WhatsApp -> item.sticker.uri
-                            is StickerSearchItem.Community -> item.sticker.previewUrl
-                        }
-                        AsyncImage(model = model, contentDescription = null, modifier = Modifier.fillMaxSize())
-                    }
+                itemsIndexed(items, key = { _, it -> it.key }) { index, item ->
+                    tile(index, item, Modifier.fillMaxHeight())
+                }
+            }
+            else -> LazyVerticalGrid(
+                columns = GridCells.Adaptive(minSize = 72.dp),
+                modifier = Modifier.fillMaxSize(),
+                horizontalArrangement = Arrangement.spacedBy(6.dp),
+                verticalArrangement = Arrangement.spacedBy(6.dp),
+                contentPadding = PaddingValues(6.dp),
+            ) {
+                itemsIndexed(items, key = { _, it -> it.key }) { index, item ->
+                    tile(index, item, Modifier)
                 }
             }
         }
     }
 }
 
-internal sealed interface StickerSearchItem {
+private sealed interface SearchSticker {
     val key: String
-    data class User(val entry: UserStickerStore.Entry) : StickerSearchItem {
+
+    data class User(val entry: UserStickerStore.Entry) : SearchSticker {
         override val key: String get() = "u:${entry.id}"
     }
-    data class WhatsApp(val sticker: WhatsAppStickerReader.Sticker) : StickerSearchItem {
+
+    data class WhatsApp(val sticker: WhatsAppStickerReader.Sticker) : SearchSticker {
         override val key: String get() = "w:${sticker.uri}"
     }
-    data class Community(val sticker: KlipyClient.StickerResult) : StickerSearchItem {
+
+    data class Community(val sticker: KlipyClient.StickerResult) : SearchSticker {
         override val key: String get() = "c:${sticker.id}"
-    }
-}
-
-private val sharedDownloadClient = OkHttpClient.Builder()
-    .callTimeout(10, TimeUnit.SECONDS)
-    .connectTimeout(4, TimeUnit.SECONDS)
-    .readTimeout(8, TimeUnit.SECONDS)
-    .build()
-
-internal suspend fun downloadAndStore(
-    context: android.content.Context,
-    url: String,
-    mimeType: String = "image/gif",
-): android.net.Uri? = withContext(Dispatchers.IO) {
-    try {
-        val response = sharedDownloadClient.newCall(Request.Builder().url(url).build()).execute()
-        response.use { r ->
-            if (!r.isSuccessful) return@withContext null
-            val body = r.body ?: return@withContext null
-            // Write to a temp cache file first, then register via contentResolver.insert
-            val cache = java.io.File(context.cacheDir, "dl_${System.nanoTime()}.tmp")
-            cache.outputStream().use { out -> body.byteStream().copyTo(out) }
-            val values = android.content.ContentValues(3).apply {
-                put(ClipboardMediaProvider.Columns.MediaUri, android.net.Uri.fromFile(cache).toString())
-                put(ClipboardMediaProvider.Columns.MimeTypes, mimeType)
-                put(android.provider.OpenableColumns.DISPLAY_NAME, "media")
-            }
-            val result = context.contentResolver.insert(ClipboardMediaProvider.IMAGE_CLIPS_URI, values)
-            cache.delete()
-            result
-        }
-    } catch (e: Exception) {
-        flogDebug { "MediaSearchOverlay.downloadAndStore failed: ${e.message}" }
-        null
-    }
-}
-
-internal suspend fun cloneToClipboardStore(
-    context: android.content.Context,
-    source: android.net.Uri,
-    mimeType: String = "image/webp",
-): android.net.Uri? = withContext(Dispatchers.IO) {
-    try {
-        val values = android.content.ContentValues(3).apply {
-            put(ClipboardMediaProvider.Columns.MediaUri, source.toString())
-            put(ClipboardMediaProvider.Columns.MimeTypes, mimeType)
-            put(android.provider.OpenableColumns.DISPLAY_NAME, "sticker")
-        }
-        context.contentResolver.insert(ClipboardMediaProvider.IMAGE_CLIPS_URI, values)
-    } catch (e: Exception) {
-        flogDebug { "MediaSearchOverlay.cloneToClipboardStore failed: ${e.message}" }
-        null
     }
 }

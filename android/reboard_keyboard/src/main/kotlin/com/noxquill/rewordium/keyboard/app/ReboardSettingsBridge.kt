@@ -114,6 +114,7 @@ object ReboardSettingsBridge {
         r(0, 10, 0.5, "keyboard__key_spacing_vertical", "keyboard__key_spacing_horizontal")
         r(0, 60, 1, "keyboard__bottom_offset_portrait", "keyboard__bottom_offset_landscape")
         r(100, 700, 10, "keyboard__long_press_delay")
+        r(25, 150, 5, "theme__key_press_strength")
         r(4, 48, 1, "devtools__experimental_rounded_smartbar_radius")
         r(1, 5, 1, "emoji__suggestion_query_min_length")
         r(1, 10, 1, "emoji__suggestion_candidate_max_count")
@@ -206,9 +207,11 @@ object ReboardSettingsBridge {
         if (!awaitReady(context)) return emptyList()
         // The theme manager observes LiveData on creation, which Android only allows on the main thread.
         val manager = withContext(Dispatchers.Main) { context.themeManager().value }
-        return manager.indexedThemeConfigs.value.first.map { (id, theme) ->
-            ThemeOption(id.toString(), theme.label, theme.isNightTheme)
-        }.sortedWith(compareBy({ it.night }, { it.label }))
+        return manager.indexedThemeConfigs.value.first
+            // The theme shop's try-on archive is rewritten by every preview; it is never a theme to pick.
+            .filterKeys { it.extensionId != com.noxquill.rewordium.keyboard.ime.theme.studio.ThemeStudio.PREVIEW_ID }
+            .map { (id, theme) -> ThemeOption(id.toString(), theme.label, theme.isNightTheme) }
+            .sortedWith(compareBy({ it.night }, { it.label }))
     }
 
     private fun find(key: String): PreferenceData<*>? {

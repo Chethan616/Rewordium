@@ -152,9 +152,27 @@ class EmojiSuggestionProvider(private val context: Context) : SuggestionProvider
                 val learnedTop = learnedAssociations.topEmojisFor(
                     subtype.primaryLocale, previousWord, effectiveMax,
                 )
-                if (learnedTop.isEmpty()) return emptyList()
+                // Like Gboard's emoji predictions: right after a word that clearly names an emoji ("pizza ",
+                // "love ", "lol "), offer it, even before the user has picked any emoji after that word.
+                // Only confident matches (exact name, keyword or slang alias), and not one the user just used
+                // or passed over while typing.
+                val suppressedNow = synchronized(recentlyCommitted) { recentlyCommitted.toSet() } +
+                    synchronized(sessionRejected) { sessionRejected.toSet() }
+                val word = previousWord.lowercase()
+                val keywordTop = if (word.length >= MIN_PREDICTION_WORD && learnedTop.size < effectiveMax) {
+                    emojis.asSequence()
+                        .filter { it.value !in suppressedNow && it.value !in learnedTop }
+                        .map { it to scoreFor(it, word) }
+                        .filter { (_, s) -> s >= MIN_CONFIDENCE }
+                        .sortedByDescending { (_, s) -> s }
+                        .take(effectiveMax - learnedTop.size)
+                        .map { (emoji, _) -> emoji.value }
+                        .toList()
+                } else emptyList()
+                val top = learnedTop + keywordTop
+                if (top.isEmpty()) return emptyList()
                 val byValue = emojis.associateBy { it.value }
-                val predictions = learnedTop.mapNotNull { value ->
+                val predictions = top.mapNotNull { value ->
                     byValue[value]?.let { emoji ->
                         EmojiSuggestionCandidate(
                             emoji = emoji,
@@ -295,6 +313,8 @@ class EmojiSuggestionProvider(private val context: Context) : SuggestionProvider
 
     private companion object {
         const val MAX_QUERY_LENGTH = 20
+        // Emoji predictions after a finished word only for words at least this long ("a", "is" never fire).
+        const val MIN_PREDICTION_WORD = 3
 
         private val EMOJI_ALIASES = mapOf(
             "lol" to "😂",

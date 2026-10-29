@@ -730,7 +730,10 @@ private fun ChangesCard(item: JadeItem.Changes, onUndo: () -> Unit, onOpenSettin
             }
             if (item.changes.size > 8) Text("+${item.changes.size - 8} more", style = MaterialTheme.typography.labelMedium)
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End, verticalAlignment = Alignment.CenterVertically) {
-                TextButton(onClick = onOpenSettings) { Text("Keyboard settings") }
+                TextButton(
+                    onClick = onOpenSettings,
+                    colors = ButtonDefaults.textButtonColors(contentColor = androidx.compose.material3.LocalContentColor.current),
+                ) { Text("Keyboard settings", fontWeight = androidx.compose.ui.text.font.FontWeight.SemiBold) }
                 Spacer(Modifier.width(6.dp))
                 FilledTonalButton(onClick = onUndo, enabled = !item.undone, shapes = ButtonDefaults.shapes()) {
                     Icon(Icons.AutoMirrored.Filled.Undo, null, Modifier.size(18.dp))

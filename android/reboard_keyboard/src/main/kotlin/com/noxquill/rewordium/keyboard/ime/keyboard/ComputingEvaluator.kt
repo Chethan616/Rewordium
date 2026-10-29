@@ -57,6 +57,7 @@ import com.noxquill.rewordium.keyboard.ime.text.key.KeyCode
 import com.noxquill.rewordium.keyboard.ime.text.key.KeyType
 import com.noxquill.rewordium.keyboard.lib.FlorisLocale
 import com.noxquill.rewordium.keyboard.lib.compose.vectorResource
+import com.noxquill.rewordium.keyboard.keyboardManager
 import org.florisboard.lib.compose.icons.ForwardDelete
 
 interface ComputingEvaluator {
@@ -187,6 +188,13 @@ fun ComputingEvaluator.computeLabel(data: KeyData): String? {
     }
 }
 
+/** True while the keys type into the media panel's search instead of the app. */
+private fun ComputingEvaluator.isMediaSearching(): Boolean {
+    val context = context() ?: return false
+    val keyboardManager by context.keyboardManager()
+    return keyboardManager.mediaSearchMode.value != KeyboardManager.MediaSearchMode.NONE
+}
+
 fun ComputingEvaluator.computeImageVector(data: KeyData): ImageVector? {
     val evaluator = this
     val packageName = evaluator.editorInfo.packageName
@@ -242,7 +250,10 @@ fun ComputingEvaluator.computeImageVector(data: KeyData): ImageVector? {
         KeyCode.ENTER -> {
             val imeOptions = evaluator.editorInfo.imeOptions
             val inputAttributes = evaluator.editorInfo.inputAttributes
-            if (imeOptions.flagNoEnterAction || inputAttributes.flagTextMultiLine) {
+            if (isMediaSearching()) {
+                // Typing an emoji/GIF/sticker search: Enter runs it, so it says so.
+                context()?.vectorResource(id = R.drawable.ic_custom_search)
+            } else if (imeOptions.flagNoEnterAction || inputAttributes.flagTextMultiLine) {
                 context()?.vectorResource(id = R.drawable.ic_custom_return)
             } else {
                 when (imeOptions.action) {
@@ -264,8 +275,8 @@ fun ComputingEvaluator.computeImageVector(data: KeyData): ImageVector? {
             Icons.Outlined.Mood
         }
         KeyCode.IME_UI_MODE_GIF -> {
-            // Same GIF glyph as the emoji panel's bottom bar.
-            context()?.vectorResource(id = R.drawable.ic_custom_gif)
+            // Same GIF glyph as the media panel's bottom bar.
+            com.noxquill.rewordium.keyboard.ime.media.ui.Symbols.Gif2
         }
         KeyCode.KEYBOARD_RESIZE -> {
             Icons.Outlined.Height

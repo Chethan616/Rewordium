@@ -128,6 +128,46 @@ service cloud.firestore {
       allow write: if isAdmin();
     }
 
+    // In-app announcements, campaigns and release notes published from the admin panel.
+    match /in_app_messages/{messageId} {
+      allow read: if isSignedIn();
+      allow write: if isAdmin();
+    }
+
+    // Community keyboard themes: signed-in users publish themes they designed; everyone signed in can
+    // browse and download them. Only the theme's own fields can be written, within size limits.
+    function validThemeContent(data) {
+      return data.name is string && data.name.size() >= 1 && data.name.size() <= 40
+        && data.spec is string && data.spec.size() >= 2 && data.spec.size() <= 4000
+        && data.night is bool
+        && data.style is string && data.style.size() <= 20;
+    }
+
+    match /keyboard_themes/{themeId} {
+      allow get: if isSignedIn();
+      allow list: if isSignedIn() && request.query.limit <= 50;
+
+      allow create: if isSignedIn()
+        && request.resource.data.keys().hasOnly(['name', 'spec', 'night', 'style', 'authorName', 'authorUid', 'createdAt', 'downloads'])
+        && request.resource.data.keys().hasAll(['name', 'spec', 'night', 'style', 'authorName', 'authorUid', 'createdAt', 'downloads'])
+        && validThemeContent(request.resource.data)
+        && request.resource.data.authorName is string && request.resource.data.authorName.size() <= 40
+        && request.resource.data.authorUid == request.auth.uid
+        && request.resource.data.createdAt == request.time
+        && request.resource.data.downloads == 0;
+
+      // The author may edit the theme itself; anyone signed in may count one download.
+      allow update: if isSignedIn() && (
+        (resource.data.authorUid == request.auth.uid
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['name', 'spec', 'night', 'style'])
+          && validThemeContent(request.resource.data))
+        || (request.resource.data.diff(resource.data).affectedKeys().hasOnly(['downloads'])
+          && request.resource.data.downloads == resource.data.downloads + 1)
+      );
+
+      allow delete: if isAdmin() || (isSignedIn() && resource.data.authorUid == request.auth.uid);
+    }
+
     // Admin panel collections - only admin access
     match /admin/{document} {
       allow read, write: if isAdmin();

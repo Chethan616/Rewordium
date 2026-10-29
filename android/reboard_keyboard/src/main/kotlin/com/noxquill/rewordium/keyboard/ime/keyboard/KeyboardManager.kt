@@ -74,6 +74,9 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.collectLatest
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
@@ -94,6 +97,9 @@ private val DoubleSpacePeriodMatcher = """([^.!?‽\s]\s)""".toRegex()
  * "name@") and must never trigger a correction of the partial word.
  */
 private val AutoCorrectSeparators = setOf(".", ",", "!", "?", ";", ":", ")", "]", "}", "\"", "…", "‽")
+
+/** Longest media search query; anything past this is a message, not a search. */
+private const val MAX_MEDIA_SEARCH_LENGTH = 64
 
 class KeyboardManager(context: Context) : InputKeyEventReceiver {
     private val prefs by FlorisPreferenceStore
@@ -139,6 +145,19 @@ class KeyboardManager(context: Context) : InputKeyEventReceiver {
     private val _mediaSearchQuery = MutableStateFlow("")
     val mediaSearchQuery get() = _mediaSearchQuery.asStateFlow()
 
+    /**
+     * A search the user ran with the Search key: the panel of [mode] shows its full results and keeps the
+     * query in its search bar, the way Gboard does, until it's cleared, the tab changes or the panel closes.
+     */
+    data class PanelSearch(val mode: MediaSearchMode, val query: String)
+
+    private val _panelSearch = MutableStateFlow<PanelSearch?>(null)
+    val panelSearch get() = _panelSearch.asStateFlow()
+
+    fun clearPanelSearch() {
+        _panelSearch.value = null
+    }
+
     // Legacy API surface kept stable for EmojiSearchOverlay & friends:
     // returns null when search is not active, "" or query text otherwise.
     private val _emojiSearchQuery = MutableStateFlow<String?>(null)
@@ -178,14 +197,20 @@ class KeyboardManager(context: Context) : InputKeyEventReceiver {
             endMediaSearch()
             return
         }
+        // Tapping the bar over results reopens that search to edit it, like Gboard.
+        val prefill = _panelSearch.value?.takeIf { it.mode == mode }?.query.orEmpty()
         _mediaSearchMode.value = mode
-        _mediaSearchQuery.value = ""
+        _mediaSearchQuery.value = prefill
         // Mirror onto the legacy emoji-search flow so existing callers
         // (TextKeyboardLayout, EmojiSearchOverlay) that gate on null/non-null
         // continue to work — the emoji-search overlay still only renders
         // when mode == EMOJI (FlorisImeService branches on the mode), but
         // the keystroke router below reads this flow.
-        _emojiSearchQuery.value = ""
+        _emojiSearchQuery.value = prefill
+        // Searches start in lower case, whatever the app's field would capitalise.
+        if (activeState.inputShiftState != InputShiftState.CAPS_LOCK) {
+            activeState.inputShiftState = InputShiftState.UNSHIFTED
+        }
         refreshEmojiKeyVisibility()
     }
 
@@ -196,27 +221,37 @@ class KeyboardManager(context: Context) : InputKeyEventReceiver {
         refreshEmojiKeyVisibility()
     }
 
+    /**
+     * The Search key: back to the panel, which now shows the full results for the query (an empty query
+     * just goes back). The keyboard's search strip is only a preview, like Gboard's.
+     */
     fun commitMediaSearch() {
         val currentMode = _mediaSearchMode.value
-        if (currentMode == MediaSearchMode.GIF || currentMode == MediaSearchMode.STICKER) {
-            activeState.imeUiMode = com.noxquill.rewordium.keyboard.ime.ImeUiMode.MEDIA
-            if (currentMode == MediaSearchMode.GIF) {
-                activeState.activeMediaMode = "GIF"
-            } else {
-                activeState.activeMediaMode = "STICKER"
-            }
-            _mediaSearchMode.value = MediaSearchMode.NONE
-            _emojiSearchQuery.value = null
-            refreshEmojiKeyVisibility()
-        } else {
-            endMediaSearch()
-        }
+        if (currentMode == MediaSearchMode.NONE) return
+        val query = _mediaSearchQuery.value.trim()
+        _panelSearch.value = if (query.isNotEmpty()) PanelSearch(currentMode, query) else null
+        if (currentMode == MediaSearchMode.GIF) activeState.activeMediaMode = "GIF"
+        if (currentMode == MediaSearchMode.STICKER) activeState.activeMediaMode = "STICKER"
+        activeState.imeUiMode = ImeUiMode.MEDIA
+        endMediaSearch()
+    }
+
+    /** Replaces the whole search query (a tapped suggestion or recent search). */
+    fun setMediaSearchQuery(text: String) {
+        if (_mediaSearchMode.value == MediaSearchMode.NONE) return
+        _mediaSearchQuery.value = text
+        _emojiSearchQuery.value = text
     }
 
     fun appendToEmojiSearch(text: String) {
         if (text.isEmpty()) return
         if (_mediaSearchMode.value == MediaSearchMode.NONE) return
-        val next = _mediaSearchQuery.value + text
+        val current = _mediaSearchQuery.value
+        // No leading or doubled spaces, and a sane length: it's a search, not a message.
+        val addition = if (current.isEmpty() || current.endsWith(" ")) text.trimStart() else text
+        if (addition.isEmpty()) return
+        val next = (current + addition).take(MAX_MEDIA_SEARCH_LENGTH)
+        if (next == current) return
         _mediaSearchQuery.value = next
         _emojiSearchQuery.value = next
     }
@@ -340,14 +375,20 @@ class KeyboardManager(context: Context) : InputKeyEventReceiver {
                     _mediaSearchMode.value != MediaSearchMode.NONE) {
                     endMediaSearch()
                 }
+                // Results from a search don't outlive the media panel.
+                if (snapshot.imeUiMode != ImeUiMode.MEDIA && _panelSearch.value != null) {
+                    _panelSearch.value = null
+                }
                 updateActiveEvaluators()
             }
             // Re-evaluate key visibility whenever the search state flips —
             // otherwise the keyboard cache holds the previous isVisible
             // value until something else nudges it (a layout switch, etc.)
             // and the smiley reappears late.
-            _emojiSearchQuery.collectLatestIn(scope) {
-                updateActiveEvaluators()
+            scope.launch {
+                _emojiSearchQuery.map { it != null }.distinctUntilChanged().collectLatest {
+                    updateActiveEvaluators()
+                }
             }
             subtypeManager.subtypesFlow.collectLatestIn(scope) {
                 updateActiveEvaluators()
@@ -1032,6 +1073,10 @@ class KeyboardManager(context: Context) : InputKeyEventReceiver {
                     commitMediaSearch()
                     return@batchEdit
                 }
+                KeyCode.IME_UI_MODE_MEDIA -> {
+                    endMediaSearch()
+                    return@batchEdit
+                }
                 KeyCode.SHIFT,
                 KeyCode.CAPS_LOCK,
                 KeyCode.VIEW_CHARACTERS,
@@ -1043,7 +1088,6 @@ class KeyboardManager(context: Context) : InputKeyEventReceiver {
                 // the user can exit search by tapping the language/emoji
                 // icons or backing out via the system input switcher.
                 KeyCode.IME_UI_MODE_TEXT,
-                KeyCode.IME_UI_MODE_MEDIA,
                 KeyCode.IME_UI_MODE_CLIPBOARD,
                 KeyCode.IME_HIDE_UI,
                 KeyCode.IME_SHOW_UI,

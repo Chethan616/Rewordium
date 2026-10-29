@@ -18,6 +18,8 @@ package com.noxquill.rewordium.keyboard.ime.input
 
 import android.inputmethodservice.InputMethodService
 import android.media.AudioManager
+import android.os.SystemClock
+import android.os.VibrationEffect
 import android.provider.Settings
 import android.view.HapticFeedbackConstants
 import androidx.compose.runtime.staticCompositionLocalOf
@@ -43,6 +45,8 @@ val LocalInputFeedbackController = staticCompositionLocalOf<InputFeedbackControl
  */
 class InputFeedbackController private constructor(private val ims: InputMethodService) {
     companion object {
+        private const val MIN_STEP_TICK_GAP_MS = 14L
+
         fun new(ims: InputMethodService) = InputFeedbackController(ims)
     }
 
@@ -84,6 +88,85 @@ class InputFeedbackController private constructor(private val ims: InputMethodSe
     fun gestureMovingSwipe(data: KeyData = TextKeyData.UNSPECIFIED) {
         if (prefs.inputFeedback.audioFeatGestureMovingSwipe.get()) performAudioFeedback(data, 0.4)
         if (prefs.inputFeedback.hapticFeatGestureMovingSwipe.get()) performHapticFeedback(data, 0.05)
+    }
+
+    /**
+     * One step of a sliding gesture (the space bar moving the cursor, the delete key selecting): a crisp
+     * segment tick, the same feel as a Material 3 slider stepping in the app's settings.
+     */
+    fun gestureStep(data: KeyData = TextKeyData.UNSPECIFIED) {
+        if (prefs.inputFeedback.audioFeatGestureMovingSwipe.get()) performAudioFeedback(data, 0.4)
+        if (prefs.inputFeedback.hapticFeatGestureMovingSwipe.get()) performTick(Tick.STEP)
+    }
+
+    /** A sliding gesture took hold: the cursor starts following the finger. */
+    fun gestureEngaged() {
+        if (prefs.inputFeedback.hapticFeatGestureMovingSwipe.get()) performTick(Tick.ENGAGE)
+    }
+
+    /** A light tick for tabs, chips and segmented choices in the keyboard's panels. */
+    fun uiTick() {
+        if (prefs.inputFeedback.hapticFeatKeyPress.get()) performTick(Tick.UI)
+    }
+
+    /** A long press opened something in a panel (emoji variants, a sticker's actions). */
+    fun uiReveal() {
+        if (prefs.inputFeedback.hapticFeatKeyPress.get()) performTick(Tick.ENGAGE)
+    }
+
+    private enum class Tick { STEP, ENGAGE, UI }
+
+    @Volatile
+    private var lastStepTickAt = 0L
+
+    /**
+     * Ticks use the system's tuned effects when touch feedback is on (exactly what the settings sliders
+     * play), and the motor's own tick primitives otherwise, scaled by the vibration-strength setting.
+     */
+    private fun performTick(kind: Tick) {
+        val vibrator = vibrator ?: return
+        if (!prefs.inputFeedback.hapticEnabled.get()) return
+        if (prefs.inputFeedback.hapticActivationMode.get() ==
+            InputFeedbackActivationMode.RESPECT_SYSTEM_SETTINGS && !systemHapticEnabled) return
+        if (kind == Tick.STEP) {
+            // A fast slide can step many times a frame; the motor can't render ticks closer than this.
+            val now = SystemClock.uptimeMillis()
+            if (now - lastStepTickAt < MIN_STEP_TICK_GAP_MS) return
+            lastStepTickAt = now
+        }
+        scope.launch {
+            val view = ims.window?.window?.decorView
+            if (view != null && systemHapticEnabled && AndroidVersion.ATLEAST_API34_U) {
+                view.performHapticFeedback(
+                    if (kind == Tick.ENGAGE) {
+                        HapticFeedbackConstants.GESTURE_THRESHOLD_ACTIVATE
+                    } else {
+                        HapticFeedbackConstants.SEGMENT_TICK
+                    },
+                )
+                return@launch
+            }
+            val primitive = if (kind == Tick.ENGAGE) {
+                VibrationEffect.Composition.PRIMITIVE_CLICK
+            } else {
+                VibrationEffect.Composition.PRIMITIVE_TICK
+            }
+            val strength = (prefs.inputFeedback.hapticVibrationStrength.get() / 100f).coerceIn(0.3f, 1f)
+            val scale = if (kind == Tick.ENGAGE) strength else strength * 0.85f
+            when {
+                AndroidVersion.ATLEAST_API30_R && vibrator.areAllPrimitivesSupported(primitive) -> {
+                    vibrator.vibrate(VibrationEffect.startComposition().addPrimitive(primitive, scale).compose())
+                }
+                AndroidVersion.ATLEAST_API29_Q -> {
+                    vibrator.vibrate(
+                        VibrationEffect.createPredefined(
+                            if (kind == Tick.ENGAGE) VibrationEffect.EFFECT_CLICK else VibrationEffect.EFFECT_TICK,
+                        ),
+                    )
+                }
+                else -> vibrator.vibrate(duration = 8, strength = prefs.inputFeedback.hapticVibrationStrength.get())
+            }
+        }
     }
 
     private fun systemPref(id: String): Boolean {

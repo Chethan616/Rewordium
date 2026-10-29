@@ -8,6 +8,8 @@ import com.noxquill.rewordium.keyboard.app.ReboardLanguages
 import com.noxquill.rewordium.keyboard.app.ReboardSettingsBridge
 import com.noxquill.rewordium.keyboard.app.ReboardSettingsBridge.Kind
 import com.noxquill.rewordium.keyboard.app.ReboardSettingsBridge.Setting
+import com.noxquill.rewordium.keyboard.ime.theme.studio.KeyboardThemeSpec
+import com.noxquill.rewordium.keyboard.ime.theme.studio.ThemeStudio
 
 /** What the tools need from the conversation: progress, undo cards, approvals and links. */
 interface JadeToolHost {
@@ -36,6 +38,7 @@ class JadeTools(private val context: Context) {
                 "list_keyboard_themes" -> listThemes(host)
                 "manage_keyboard_languages" -> manageLanguages(args.str("action"), args.str("language"), host)
                 "open_settings_screen" -> openScreen(args.str("screen"), host)
+                "create_keyboard_theme" -> createTheme(args, host)
                 else -> "Unknown tool \"$name\"."
             }
         }.getOrElse { "Tool error: ${it.message ?: it.javaClass.simpleName}" }
@@ -172,6 +175,20 @@ class JadeTools(private val context: Context) {
         }
     }
 
+    /** Builds a keyboard theme from Jade's choices, installs it and switches the keyboard to it (undoable). */
+    private suspend fun createTheme(args: JsonObject, host: JadeToolHost): String {
+        host.status("Designing your keyboard theme…")
+        val spec = KeyboardThemeSpec.fromJson(args.toString())?.readable()?.copy(author = "Jade")
+            ?: return "Couldn't read that theme. Send name, night, background, keys, letters and accent as #RRGGBB."
+        val key = if (spec.night) "theme__night_theme_id" else "theme__day_theme_id"
+        val before = ReboardSettingsBridge.all(context).firstOrNull { it.key == key }
+        val id = ThemeStudio.installAndApply(context, spec).getOrElse { return "Couldn't install the theme: ${it.message}" }
+        if (before != null) {
+            host.applied(listOf(SettingChangeRecord(key, if (spec.night) "Dark keyboard theme" else "Light keyboard theme", before.value, spec.name, restore = before.value)))
+        }
+        return "Installed and applied \"${spec.name}\" (${if (spec.night) "dark" else "light"}, id $id). Tell the user it's on their keyboard now and that the Theme shop in the Keys tab has more."
+    }
+
     private fun openScreen(screen: String, host: JadeToolHost): String {
         val label = ReboardSettingsBridge.screens[screen]
             ?: return "Unknown screen. Options: ${ReboardSettingsBridge.screens.keys.joinToString()}."
@@ -294,6 +311,25 @@ class JadeTools(private val context: Context) {
               "action":{"type":"string","enum":["list","available","add","remove","switch"]},
               "language":{"type":"string","description":"Language name or tag, e.g. 'Hindi' or 'hi-IN'. For 'available' it filters the list."}
             },"required":["action"]}}},
+          {"type":"function","function":{
+            "name":"create_keyboard_theme",
+            "description":"Design a new keyboard theme and switch the keyboard to it. Use for 'make my keyboard look like…', 'a theme for…', colours, moods, brands or vibes. Pick harmonious colours with strong contrast between letters and keys.",
+            "parameters":{"type":"object","properties":{
+              "name":{"type":"string","description":"Short catchy theme name"},
+              "night":{"type":"boolean","description":"true for a dark theme"},
+              "background":{"type":"string","description":"#RRGGBB behind the keys"},
+              "keys":{"type":"string","description":"#RRGGBB letter keys"},
+              "letters":{"type":"string","description":"#RRGGBB text on keys, high contrast"},
+              "accent":{"type":"string","description":"#RRGGBB enter key and highlights"},
+              "special":{"type":"string","description":"#RRGGBB shift/delete/symbol keys"},
+              "shape":{"type":"string","enum":["SQUARE","ROUNDED","SOFT","PILL","BUBBLE","LEAF","CUT","TICKET"]},
+              "pressed_shape":{"type":"string","enum":["SQUARE","ROUNDED","SOFT","PILL","BUBBLE","LEAF","CUT","TICKET"]},
+              "font":{"type":"string","enum":["SYSTEM","ROUNDED","SOFT","MONO","SERIF"]},
+              "bold":{"type":"boolean"},
+              "outline":{"type":"boolean"},
+              "shadow":{"type":"integer","minimum":0,"maximum":4},
+              "mascot":{"type":"string","description":"A bot on the space bar: clover, flower, triangle, square, blob, ghost, circle, drop, star, droid, mech, alien, hexagon, cat, cloud, pill, pebble, puddle; omit for none"}
+            },"required":["name","night","background","keys","letters","accent"]}}},
           {"type":"function","function":{
             "name":"open_settings_screen",
             "description":"Show the user a button that opens a ReBoard settings screen, for things that need hands-on editing (adding languages, editing theme colours, dictionary words, backups, stickers).",

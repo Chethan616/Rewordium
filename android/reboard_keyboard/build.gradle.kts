@@ -256,7 +256,9 @@ android {
 }
 
 dependencies {
-    val composeBom = platform(libs.androidx.compose.bom)
+    // Same BOM as the host app (which already ships material3 1.5 at runtime), so the keyboard can use the
+    // Material 3 Expressive APIs (MaterialShapes, button groups, loading indicator, expressive motion).
+    val composeBom = platform("androidx.compose:compose-bom-beta:2026.10.01")
     implementation(composeBom)
     // testImplementation(composeBom)
     // androidTestImplementation(composeBom)

@@ -47,6 +47,24 @@ private const val KEY_AI_ENABLED = "ai_rewrite_enabled"
 
 internal val ToggleOverflowPanelAction = QuickAction.InsertKey(TextKeyData.TOGGLE_ACTIONS_OVERFLOW)
 
+/** Whether the AI Rewrite action is switched on in the app; while it's off the action is hidden everywhere. */
+@Composable
+internal fun rememberAiActionEnabled(): Boolean {
+    val context = LocalContext.current
+    val keyboardPrefs = remember {
+        context.getSharedPreferences(KEYBOARD_PREFS_NAME, Context.MODE_PRIVATE)
+    }
+    var isAiEnabled by remember { mutableStateOf(keyboardPrefs.getBoolean(KEY_AI_ENABLED, false)) }
+    DisposableEffect(keyboardPrefs) {
+        val listener = SharedPreferences.OnSharedPreferenceChangeListener { prefs, key ->
+            if (key == KEY_AI_ENABLED) isAiEnabled = prefs?.getBoolean(KEY_AI_ENABLED, false) ?: false
+        }
+        keyboardPrefs.registerOnSharedPreferenceChangeListener(listener)
+        onDispose { keyboardPrefs.unregisterOnSharedPreferenceChangeListener(listener) }
+    }
+    return isAiEnabled
+}
+
 @SuppressLint("UnusedBoxWithConstraintsScope")
 @Composable
 fun QuickActionsRow(
@@ -63,17 +81,7 @@ fun QuickActionsRow(
     val actionArrangement by prefs.smartbar.actionArrangement.observeAsState()
     val sharedActionsExpanded by prefs.smartbar.sharedActionsExpanded.observeAsState()
     
-    val keyboardPrefs = remember {
-        context.getSharedPreferences(KEYBOARD_PREFS_NAME, Context.MODE_PRIVATE)
-    }
-    var isAiEnabled by remember { mutableStateOf(keyboardPrefs.getBoolean(KEY_AI_ENABLED, false)) }
-    DisposableEffect(keyboardPrefs) {
-        val listener = SharedPreferences.OnSharedPreferenceChangeListener { prefs, key ->
-            if (key == KEY_AI_ENABLED) isAiEnabled = prefs?.getBoolean(KEY_AI_ENABLED, false) ?: false
-        }
-        keyboardPrefs.registerOnSharedPreferenceChangeListener(listener)
-        onDispose { keyboardPrefs.unregisterOnSharedPreferenceChangeListener(listener) }
-    }
+    val isAiEnabled = rememberAiActionEnabled()
 
     val dynamicActions = remember(smartbarLayout, actionArrangement, isAiEnabled) {
         val baseActions = if (smartbarLayout == SmartbarLayout.ACTIONS_ONLY && actionArrangement.stickyAction != null) {

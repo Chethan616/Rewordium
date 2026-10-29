@@ -14,51 +14,81 @@
  * limitations under the License.
  */
 
+@file:OptIn(ExperimentalMaterial3ExpressiveApi::class)
+
 package com.noxquill.rewordium.keyboard.ime.smartbar.quickaction
 
+import android.os.SystemClock
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.wrapContentWidth
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.GridItemSpan
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
-import androidx.compose.foundation.lazy.grid.items
+import androidx.compose.foundation.lazy.grid.itemsIndexed
+import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
+import androidx.compose.material3.FilledTonalButton
+import androidx.compose.material3.Icon
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.unit.dp
 import com.noxquill.rewordium.keyboard.R
 import com.noxquill.rewordium.keyboard.app.FlorisPreferenceStore
 import com.noxquill.rewordium.keyboard.ime.keyboard.FlorisImeSizing
+import com.noxquill.rewordium.keyboard.ime.media.ui.MediaExpressiveTheme
+import com.noxquill.rewordium.keyboard.ime.media.ui.Symbols
+import com.noxquill.rewordium.keyboard.ime.media.ui.rememberMediaFeedback
+import com.noxquill.rewordium.keyboard.ime.text.key.KeyCode
 import com.noxquill.rewordium.keyboard.ime.theme.FlorisImeUi
 import com.noxquill.rewordium.keyboard.keyboardManager
 import dev.patrickgold.jetpref.datastore.model.observeAsState
 import org.florisboard.lib.compose.stringRes
 import org.florisboard.lib.snygg.ui.SnyggBox
-import org.florisboard.lib.snygg.ui.SnyggButton
-import org.florisboard.lib.snygg.ui.SnyggText
 
+/** How long after opening the grid newly composed tiles still pop in (later ones are just scrolled into view). */
+private const val ENTRANCE_WINDOW_MS = 450L
+
+/**
+ * The actions that don't fit in the smartbar, as a grid of expressive tiles coloured by the keyboard
+ * theme. The tiles pop in one after another when the grid opens.
+ */
 @Composable
-fun QuickActionsOverflowPanel() {
+fun QuickActionsOverflowPanel() = MediaExpressiveTheme {
     val prefs by FlorisPreferenceStore
     val context = LocalContext.current
     val keyboardManager by context.keyboardManager()
+    val feedback = rememberMediaFeedback()
 
     val actionArrangement by prefs.smartbar.actionArrangement.observeAsState()
     val evaluator by keyboardManager.activeSmartbarEvaluator.collectAsState()
+    val isAiEnabled = rememberAiActionEnabled()
 
-    val dynamicActions = actionArrangement.dynamicActions
+    val dynamicActions = remember(actionArrangement, isAiEnabled) {
+        actionArrangement.dynamicActions.filter { isAiEnabled || it.keyData().code != KeyCode.AI_REWRITE }
+    }
     val dynamicActionsCountToShow = when {
         dynamicActions.isEmpty() -> 0
         else -> {
             (dynamicActions.size - keyboardManager.smartbarVisibleDynamicActionsCount).coerceIn(dynamicActions.indices)
         }
     }
-    val visibleActions = remember(actionArrangement, dynamicActionsCountToShow) {
-        actionArrangement.dynamicActions.takeLast(dynamicActionsCountToShow)
+    val visibleActions = remember(dynamicActions, dynamicActionsCountToShow) {
+        dynamicActions.takeLast(dynamicActionsCountToShow)
     }
+    val openedAt = remember { SystemClock.uptimeMillis() }
 
     SnyggBox(
         elementName = FlorisImeUi.SmartbarActionsOverflow.elementName,
@@ -67,27 +97,35 @@ fun QuickActionsOverflowPanel() {
             .height(FlorisImeSizing.keyboardUiHeight()),
     ) {
         LazyVerticalGrid(
-            modifier = Modifier
-                .fillMaxWidth(),
-            columns = GridCells.Adaptive(FlorisImeSizing.smartbarHeight * 2.2f),
+            modifier = Modifier.fillMaxWidth(),
+            columns = GridCells.Adaptive(FlorisImeSizing.smartbarHeight * 2.0f),
+            contentPadding = PaddingValues(horizontal = 10.dp, vertical = 8.dp),
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp),
         ) {
-            items(visibleActions) { action ->
+            itemsIndexed(visibleActions, key = { i, a -> a.hashCode() * 31 + i }) { index, action ->
+                val entering = SystemClock.uptimeMillis() - openedAt < ENTRANCE_WINDOW_MS
                 QuickActionButton(
                     action = action,
                     evaluator = evaluator,
                     type = QuickActionBarType.INTERACTIVE_TILE,
+                    toneIndex = index,
+                    enterDelayIndex = if (entering) index else -1,
                 )
             }
             item(span = { GridItemSpan(maxLineSpan) }) {
-                SnyggButton(
-                    elementName = FlorisImeUi.SmartbarActionsOverflowCustomizeButton.elementName,
-                    onClick = { keyboardManager.activeState.isActionsEditorVisible = true },
-                    modifier = Modifier
-                        .wrapContentWidth(),
-                ) {
-                    SnyggText(
-                        text = stringRes(R.string.quick_actions_overflow__customize_actions_button),
-                    )
+                Box(Modifier.fillMaxWidth().padding(top = 4.dp, bottom = 6.dp), contentAlignment = Alignment.Center) {
+                    FilledTonalButton(
+                        onClick = {
+                            feedback.tap()
+                            keyboardManager.activeState.isActionsEditorVisible = true
+                        },
+                        shapes = ButtonDefaults.shapes(),
+                    ) {
+                        Icon(Symbols.Tune, contentDescription = null, modifier = Modifier.size(18.dp))
+                        Spacer(Modifier.width(8.dp))
+                        Text(stringRes(R.string.quick_actions_overflow__customize_actions_button))
+                    }
                 }
             }
         }

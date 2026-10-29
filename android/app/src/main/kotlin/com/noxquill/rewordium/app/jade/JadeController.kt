@@ -121,6 +121,14 @@ class JadeController(
         }
     }
 
+    /** Jade designs a keyboard theme for [description]; counts as one Jade request. */
+    suspend fun designTheme(description: String): com.noxquill.rewordium.keyboard.ime.theme.studio.KeyboardThemeSpec {
+        beforeRequest()
+        val spec = engine.designTheme(description)
+        runCatching { afterSuccess() }
+        return spec
+    }
+
     fun stop() {
         job?.cancel()
     }

@@ -44,6 +44,7 @@ import com.noxquill.rewordium.keyboard.app.FlorisPreferenceStore
 import com.noxquill.rewordium.keyboard.appContext
 import com.noxquill.rewordium.keyboard.extensionManager
 import com.noxquill.rewordium.keyboard.ime.smartbar.CachedInlineSuggestionsChipStyleSet
+import com.noxquill.rewordium.keyboard.ime.theme.studio.ThemeStudio
 import com.noxquill.rewordium.keyboard.lib.devtools.flogInfo
 import com.noxquill.rewordium.keyboard.lib.ext.ExtensionComponentName
 import com.noxquill.rewordium.keyboard.lib.ext.ExtensionMeta
@@ -58,6 +59,10 @@ import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.drop
+import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.merge
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import org.florisboard.lib.kotlin.collectIn
@@ -88,6 +93,17 @@ class ThemeManager(context: Context) {
     val previewThemeInfo = MutableStateFlow<ThemeInfo?>(null)
     val configurationChangeCounter = MutableStateFlow(0)
 
+    /** The keyboard window's own night mode, from its latest configuration change (null until the first). */
+    @Volatile
+    var systemIsNight: Boolean? = null
+        private set
+
+    /** Called by the keyboard service with every new configuration, so "Auto" follows light/dark at once. */
+    fun onConfigurationChanged(newConfig: Configuration) {
+        systemIsNight = newConfig.uiMode and Configuration.UI_MODE_NIGHT_MASK == Configuration.UI_MODE_NIGHT_YES
+        configurationChangeCounter.update { it + 1 }
+    }
+
     private val cachedThemeInfos = mutableListOf<ThemeInfo>()
     private val activeThemeGuard = Mutex(locked = false)
     private val _activeThemeInfo = MutableStateFlow(ThemeInfo.DEFAULT)
@@ -106,6 +122,15 @@ class ThemeManager(context: Context) {
         }
         indexedThemeConfigs.collectIn(scope) {
             updateActiveTheme { cachedThemeInfos.clear() }
+        }
+        // A theme-shop preview ends the moment the user picks a mode or a theme themselves, so a preview
+        // that was never closed can't keep hiding their choice (light/dark "not taking effect").
+        merge(
+            prefs.theme.mode.asFlow().drop(1).map { },
+            prefs.theme.dayThemeId.asFlow().drop(1).map { },
+            prefs.theme.nightThemeId.asFlow().drop(1).map { },
+        ).collectIn(scope) {
+            if (previewThemeId.value?.extensionId == ThemeStudio.PREVIEW_ID) previewThemeId.value = null
         }
         combine(
             prefs.theme.mode.asFlow(),
@@ -169,8 +194,13 @@ class ThemeManager(context: Context) {
         )
     }
 
-    private fun evaluateActiveThemeName(): ExtensionComponentName {
+    private suspend fun evaluateActiveThemeName(): ExtensionComponentName {
         previewThemeId.value?.let { return it }
+        // A theme set to the shop's try-on archive (it used to be listed by mistake) would change with every
+        // preview; put the default back instead.
+        for (pref in listOf(prefs.theme.dayThemeId, prefs.theme.nightThemeId)) {
+            if (pref.get().extensionId == ThemeStudio.PREVIEW_ID) pref.reset()
+        }
         return when (prefs.theme.mode.get()) {
             ThemeMode.ALWAYS_DAY -> {
                 prefs.theme.dayThemeId.get()
@@ -178,8 +208,8 @@ class ThemeManager(context: Context) {
             ThemeMode.ALWAYS_NIGHT -> {
                 prefs.theme.nightThemeId.get()
             }
-            ThemeMode.FOLLOW_SYSTEM -> if (appContext.resources.configuration.uiMode and
-                Configuration.UI_MODE_NIGHT_MASK == Configuration.UI_MODE_NIGHT_YES
+            ThemeMode.FOLLOW_SYSTEM -> if (systemIsNight ?: (appContext.resources.configuration.uiMode and
+                    Configuration.UI_MODE_NIGHT_MASK == Configuration.UI_MODE_NIGHT_YES)
             ) {
                 prefs.theme.nightThemeId.get()
             } else {

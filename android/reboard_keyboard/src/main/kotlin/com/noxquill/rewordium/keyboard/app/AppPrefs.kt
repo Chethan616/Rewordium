@@ -842,6 +842,28 @@ abstract class FlorisPreferenceModel : PreferenceModel() {
             },
             serializer = ColorPreferenceSerializer,
         )
+        // How a key reacts when pressed (Theme shop → Customize).
+        val keyPressAnimation = enum(
+            key = "theme__key_press_animation",
+            default = com.noxquill.rewordium.keyboard.ime.theme.studio.KeyPressAnimation.BOUNCE,
+        )
+        val keyPressStrength = int(
+            key = "theme__key_press_strength",
+            default = 100,
+        )
+        // A Rewordium bot on the space bar ("" = none), see com.noxquill.rewordium.app.ui.avatar.BOT_TYPES.
+        val mascot = string(
+            key = "theme__mascot",
+            default = "",
+        )
+        val mascotReactions = boolean(
+            key = "theme__mascot_reactions",
+            default = true,
+        )
+        val mascotLively = boolean(
+            key = "theme__mascot_lively",
+            default = false,
+        )
         val sunriseTime = localTime(
             key = "theme__sunrise_time",
             default = LocalTime(6, 0),

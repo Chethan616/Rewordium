@@ -107,6 +107,8 @@ import com.noxquill.rewordium.app.ui.avatar.BotFlight
 import com.noxquill.rewordium.app.ui.avatar.BotFlightLayer
 import com.noxquill.rewordium.app.ui.avatar.LocalBotFlight
 import com.noxquill.rewordium.app.ui.haptics.LocalHaptics
+import com.noxquill.rewordium.app.ui.avatar.LocalBotHop
+import com.noxquill.rewordium.app.notifications.InAppMessageHost
 import com.noxquill.rewordium.app.ui.haptics.rememberHaptics
 import com.noxquill.rewordium.billing.BillingUiState
 import com.noxquill.rewordium.billing.PlayBillingManager
@@ -129,7 +131,7 @@ fun RewordiumRoot(
     onRouteConsumed: () -> Unit,
 ) {
     val haptics = rememberHaptics { AppSettings.haptics.value }
-    CompositionLocalProvider(LocalHaptics provides haptics) {
+    CompositionLocalProvider(LocalHaptics provides haptics, LocalBotHop provides { haptics.hop() }) {
         RewordiumRootContent(activity, routeRequest, onRouteConsumed)
     }
 }
@@ -146,6 +148,8 @@ private fun RewordiumRootContent(
     var onboardingDone by remember { mutableStateOf(appPrefs.getBoolean("onboarding_complete", false)) }
     var firebaseUser by remember { mutableStateOf<FirebaseUser?>(RewordiumRepository.currentUser) }
     var account by remember { mutableStateOf<AccountInfo?>(null) }
+    // TEMP local verification only (debug build + files/store_demo). Never committed.
+    val storeDemo = remember { (context.applicationInfo.flags and android.content.pm.ApplicationInfo.FLAG_DEBUGGABLE) != 0 && java.io.File(context.filesDir, "store_demo").exists() }
     var platformStatus by remember { mutableStateOf(activity.setupStatus()) }
     var billingState by remember { mutableStateOf(BillingUiState()) }
     var showDisclosure by rememberSaveable { mutableStateOf(false) }
@@ -153,7 +157,8 @@ private fun RewordiumRootContent(
     val avatar by AppSettings.avatar.collectAsState()
 
     suspend fun refreshAccount(): AccountInfo? =
-        runCatching { RewordiumRepository.refreshAccount(context) }.getOrNull().also { account = it }
+        if (storeDemo) AccountInfo("guest", "Maya Patel", "maya@example.com", 250, true, "pro").also { account = it }
+        else runCatching { RewordiumRepository.refreshAccount(context) }.getOrNull().also { account = it }
 
     fun usesOwnKey() = AIConfigProvider.getConfig(context).isAdvancedEnabled
 
@@ -243,7 +248,7 @@ private fun RewordiumRootContent(
 
     val stage = when {
         !onboardingDone -> Stage.Onboarding
-        firebaseUser == null -> Stage.SignIn
+        firebaseUser == null && !storeDemo -> Stage.SignIn
         else -> Stage.App
     }
 
@@ -438,7 +443,7 @@ private fun MainApp(
             "home" -> navController.popBackStack("home", inclusive = false)
             "settings" -> selectTab("settings")
             "keyboard_settings" -> selectTab("keyboard")
-            "pro", "ai_settings", "licenses", "privacy", "terms", "personas" -> go(requested)
+            "pro", "ai_settings", "licenses", "privacy", "terms", "personas", "theme_shop" -> go(requested)
             "jade", "tools" -> openJade()
             "paraphraser" -> openJade("rewrite")
             "summarizer" -> openJade("summarize")
@@ -583,6 +588,7 @@ private fun MainApp(
                             onChooseKeyboard = activity::chooseKeyboard,
                             onAskJade = { openJade(JadeSkills.CHAT) },
                             onOpenAdvanced = { activity.openKeyboardPreferences() },
+                            onOpenThemeShop = { go("theme_shop") },
                         )
                     }
                 }
@@ -626,10 +632,34 @@ private fun MainApp(
                 }
                 composable("ai_settings") { Screen { AiSettingsScreen(onBack = { navController.popBackStack() }) } }
                 composable("personas") { Screen { PersonaScreen(onBack = { navController.popBackStack() }) } }
+                composable("theme_shop") {
+                    Screen {
+                        com.noxquill.rewordium.app.screens.themes.ThemeShopScreen(
+                            jade = jade,
+                            authorName = account?.name?.trim()?.substringBefore(' '),
+                            onBack = { navController.popBackStack() },
+                            onOpenBuilder = { spec ->
+                                com.noxquill.rewordium.app.screens.themes.ThemeDraft.initial = spec
+                                go("theme_builder")
+                            },
+                        )
+                    }
+                }
+                composable("theme_builder") {
+                    Screen {
+                        com.noxquill.rewordium.app.screens.themes.ThemeBuilderScreen(
+                            onBack = { navController.popBackStack() },
+                            onSaved = { navController.popBackStack() },
+                        )
+                    }
+                }
                 composable("licenses") { Screen { LicensesScreen(onBack = { navController.popBackStack() }, onOpenLink = onOpenLink) } }
                 composable("privacy") { Screen { InfoScreen(privacy = true, onBack = { navController.popBackStack() }, onOpenLink = onOpenLink) } }
                 composable("terms") { Screen { InfoScreen(privacy = false, onBack = { navController.popBackStack() }, onOpenLink = onOpenLink) } }
             }
+
+            // Release notes, campaigns and announcements, once each.
+            InAppMessageHost(onOpenLink = onOpenLink)
 
             // Scrim behind the open FAB menu; a tap anywhere closes it.
             AnimatedVisibility(visible = fabExpanded, enter = fadeIn(), exit = fadeOut()) {

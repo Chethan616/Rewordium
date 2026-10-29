@@ -219,12 +219,16 @@ class MainActivity : ComponentActivity() {
     }
 
     private fun routeFromIntent(intent: Intent?): String? {
-        val uri = intent?.data ?: return null
-        val raw = uri.getQueryParameter("route") ?: uri.host ?: uri.lastPathSegment ?: return null
+        // A push tapped while the app was in the background: Android shows it itself and hands the
+        // campaign's custom data ("route") to the launch intent as extras, with no deep link.
+        val raw = intent?.getStringExtra("route")?.removePrefix("/")?.takeIf { it.isNotBlank() }
+            ?: intent?.data?.let { uri -> uri.getQueryParameter("route") ?: uri.host ?: uri.lastPathSegment }
+            ?: return null
         return when (raw.lowercase().replace('-', '_')) {
             "home" -> "home"
             "settings", "app_settings" -> "settings"
             "keyboard", "keyboard_settings" -> "keyboard_settings"
+            "theme_shop", "themes", "theme", "shop" -> "theme_shop"
             "ai", "jade", "jade_ai" -> "jade"
             "ai_settings" -> "ai_settings"
             "pro", "premium", "subscribe" -> "pro"

@@ -45,6 +45,16 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.BiasAlignment
 import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
+import org.florisboard.lib.snygg.value.SnyggPaddingValue
+import androidx.compose.ui.unit.LayoutDirection
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.shape.CutCornerShape
+import androidx.compose.foundation.shape.CornerBasedShape
+import androidx.compose.ui.graphics.Shape
+import kotlin.math.roundToInt
+import androidx.compose.ui.layout.AlignmentLine
+import androidx.compose.ui.layout.FirstBaseline
+import androidx.compose.ui.layout.Layout
 import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
@@ -76,6 +86,7 @@ import com.noxquill.rewordium.keyboard.ime.editor.OperationUnit
 import com.noxquill.rewordium.keyboard.ime.input.InputEventDispatcher
 import com.noxquill.rewordium.keyboard.ime.keyboard.ComputingEvaluator
 import com.noxquill.rewordium.keyboard.ime.keyboard.FlorisImeSizing
+import com.noxquill.rewordium.keyboard.ime.keyboard.KeyboardManager
 import com.noxquill.rewordium.keyboard.ime.keyboard.KeyboardMode
 import com.noxquill.rewordium.keyboard.ime.keyboard.SpaceBarMode
 import com.noxquill.rewordium.keyboard.ime.popup.ExceptionsForKeyCodes
@@ -104,6 +115,10 @@ import org.florisboard.lib.android.isOrientationLandscape
 import org.florisboard.lib.compose.DisposableLifecycleEffect
 import org.florisboard.lib.snygg.SnyggSelector
 import org.florisboard.lib.snygg.ui.SnyggBox
+import com.noxquill.rewordium.keyboard.ime.theme.studio.KeyMotion
+import com.noxquill.rewordium.keyboard.ime.theme.studio.MascotStyle
+import com.noxquill.rewordium.keyboard.ime.theme.studio.SpaceBarMascot
+import com.noxquill.rewordium.keyboard.ime.theme.studio.keyPressMotion
 import org.florisboard.lib.snygg.ui.SnyggIcon
 import org.florisboard.lib.snygg.ui.SnyggText
 import org.florisboard.lib.snygg.ui.rememberSnyggThemeQuery
@@ -328,10 +343,18 @@ fun TextKeyboardLayout(
         popupUiController.keyHintConfiguration = prefs.keyboard.keyHintConfiguration()
         controller.popupUiController = popupUiController
         val debugShowTouchBoundaries by prefs.devtools.showKeyTouchBoundaries.observeAsState()
+        val pressAnimation by prefs.theme.keyPressAnimation.observeAsState()
+        val pressStrength by prefs.theme.keyPressStrength.observeAsState()
+        val mascotType by prefs.theme.mascot.observeAsState()
+        val mascotReactions by prefs.theme.mascotReactions.observeAsState()
+        val mascotLively by prefs.theme.mascotLively.observeAsState()
+        val motion = remember(pressAnimation, pressStrength) { KeyMotion(pressAnimation, pressStrength / 100f) }
+        val mascot = remember(mascotType, mascotReactions, mascotLively) { MascotStyle(mascotType, mascotReactions, mascotLively) }
         for (textKey in keyboard.keys()) {
             TextKeyButton(
                 textKey, evaluator, desiredKey,
                 debugShowTouchBoundaries,
+                motion, mascot,
             )
         }
 
@@ -353,6 +376,8 @@ private fun TextKeyButton(
     evaluator: ComputingEvaluator,
     desiredKey: TextKey,
     debugShowTouchBoundaries: Boolean,
+    motion: KeyMotion,
+    mascot: MascotStyle,
 ) = with(LocalDensity.current) {
     val attributes = mapOf(
         FlorisImeUi.Attr.Code to key.computedData.code,
@@ -382,47 +407,84 @@ private fun TextKeyButton(
         selector = selector,
         modifier = Modifier
             .requiredSize(size)
-            .absoluteOffset { key.visibleBounds.topLeft.toIntOffset() },
+            .absoluteOffset { key.visibleBounds.topLeft.toIntOffset() }
+            .keyPressMotion(key.isPressed, motion),
     ) {
+        if (key.computedData.code == KeyCode.SPACE) SpaceBarMascot(mascot, key.isPressed, size.height)
         val isTelPadKey = key.computedData.type == KeyType.NUMERIC && evaluator.keyboard.mode == KeyboardMode.PHONE
-        key.label?.let { label ->
-            var customLabel = label
-            var customFontSize = TextUnit.Unspecified
-            if (key.computedData.code == KeyCode.SPACE) {
-                val prefs by FlorisPreferenceStore
-                val spaceBarMode by prefs.keyboard.spaceBarMode.observeAsState()
-                when (spaceBarMode) {
-                    SpaceBarMode.NOTHING -> return@let
-                    SpaceBarMode.CURRENT_LANGUAGE -> {}
-                    SpaceBarMode.SPACE_BAR_KEY -> customLabel = "␣"
-                    SpaceBarMode.CUSTOM_LABEL -> {
-                        val customText by prefs.keyboard.spaceBarCustomLabel.observeAsState()
-                        customLabel = customText
-                    }
-                }
-            } else if (key.computedData.code == KeyCode.VIEW_SYMBOLS) {
-                customFontSize = 14.sp
+        // A custom space-bar label shows on every layout (symbols, numbers, phone pad), not only on letters,
+        // where the key otherwise has no label (or just a space icon).
+        val spaceCustomLabel = if (key.computedData.code == KeyCode.SPACE) {
+            val prefs by FlorisPreferenceStore
+            val spaceBarMode by prefs.keyboard.spaceBarMode.observeAsState()
+            val customText by prefs.keyboard.spaceBarCustomLabel.observeAsState()
+            customText.takeIf { spaceBarMode == SpaceBarMode.CUSTOM_LABEL && it.isNotBlank() }
+        } else {
+            null
+        }
+        var labelText: String? = key.label ?: spaceCustomLabel
+        var labelFontSize = TextUnit.Unspecified
+        if (labelText != null && key.computedData.code == KeyCode.SPACE) {
+            val prefs by FlorisPreferenceStore
+            val spaceBarMode by prefs.keyboard.spaceBarMode.observeAsState()
+            when (spaceBarMode) {
+                SpaceBarMode.NOTHING -> labelText = null
+                SpaceBarMode.CURRENT_LANGUAGE -> {}
+                SpaceBarMode.SPACE_BAR_KEY -> labelText = "␣"
+                SpaceBarMode.CUSTOM_LABEL -> labelText = spaceCustomLabel ?: labelText
             }
-            SnyggText(
-                modifier = Modifier
-                    .wrapContentSize()
-                    .align(if (isTelPadKey) BiasAlignment(-0.5f, 0f) else Alignment.Center),
-                text = customLabel,
-                fontSize = customFontSize,
-            )
+        } else if (key.computedData.code == KeyCode.VIEW_SYMBOLS) {
+            labelFontSize = 14.sp
         }
-        key.hintedLabel?.let { hintedLabel ->
-            SnyggText(
-                elementName = FlorisImeUi.KeyHint.elementName,
-                attributes = boxAttributes,
-                selector = selector,
-                modifier = Modifier
-                    .wrapContentSize()
-                    .align(if (isTelPadKey) BiasAlignment(0.5f, 0f) else Alignment.TopEnd),
-                text = hintedLabel,
-            )
+        val hintedLabel = key.hintedLabel
+        val label: (@Composable () -> Unit)? = labelText?.let { text ->
+            if ('\n' in text && !isTelPadKey) {
+                // Multi-line labels ("1 2 / 3 4") sit on an even grid so their columns line up.
+                { KeyGridLabel(text, labelFontSize, Modifier.align(Alignment.Center)) }
+            } else {
+                {
+                    SnyggText(
+                        modifier = Modifier
+                            .wrapContentSize()
+                            .then(if (isTelPadKey) Modifier.align(BiasAlignment(-0.5f, 0f)) else Modifier.align(Alignment.Center)),
+                        text = text,
+                        fontSize = labelFontSize,
+                    )
+                }
+            }
         }
-        key.foregroundImageVector?.let { imageVector ->
+        val hint: (@Composable () -> Unit)? = hintedLabel?.let { text ->
+            {
+                SnyggText(
+                    elementName = FlorisImeUi.KeyHint.elementName,
+                    attributes = boxAttributes,
+                    selector = selector,
+                    modifier = Modifier
+                        .wrapContentSize()
+                        .then(if (isTelPadKey) Modifier.align(BiasAlignment(0.5f, 0f)) else Modifier.align(Alignment.TopEnd)),
+                    text = text,
+                )
+            }
+        }
+        if (label != null && hint != null && !isTelPadKey) {
+            // Lay the two out together so a big letter (caps, tall glyphs, round fonts) never runs into the hint,
+            // and the hint never hides behind a round key corner.
+            val keyShape = rememberSnyggThemeQuery(FlorisImeUi.Key.elementName, boxAttributes).shape()
+            val hintPadding = (rememberSnyggThemeQuery(FlorisImeUi.KeyHint.elementName, boxAttributes, selector).padding
+                as? SnyggPaddingValue)?.values
+            KeyLabelWithHint(
+                label = label,
+                hint = hint,
+                keyShape = keyShape,
+                hintPadding = hintPadding,
+                modifier = Modifier.matchParentSize(),
+            )
+        } else {
+            label?.invoke()
+            hint?.invoke()
+        }
+        // On the number pads the space key draws an icon; the custom label takes its place.
+        key.foregroundImageVector?.takeIf { spaceCustomLabel == null }?.let { imageVector ->
             val iconTint = Color.Unspecified
             SnyggIcon(
                 modifier = Modifier.align(Alignment.Center),
@@ -442,6 +504,104 @@ private fun TextKeyButton(
     }
 }
 
+/**
+ * A label written over several lines ("1 2" over "3 4"): every character gets a cell of the same width and
+ * the lines sit a little closer than text lines would, so the block reads as one even grid in any font.
+ */
+@Composable
+private fun KeyGridLabel(text: String, fontSize: TextUnit, modifier: Modifier = Modifier) {
+    val rows = remember(text) { text.split('\n').map { line -> line.split(' ').filter { it.isNotEmpty() } }.filter { it.isNotEmpty() } }
+    Layout(
+        content = { rows.flatten().forEach { cell -> SnyggText(text = cell, fontSize = fontSize) } },
+        modifier = modifier,
+    ) { measurables, constraints ->
+        val loose = constraints.copy(minWidth = 0, minHeight = 0)
+        val placeables = measurables.map { it.measure(loose) }
+        if (placeables.isEmpty()) return@Layout layout(0, 0) {}
+        val cellWidth = placeables.maxOf { it.width }
+        val textHeight = placeables.maxOf { it.height }
+        val rowStep = (textHeight * 0.82f).roundToInt()
+        val columns = rows.maxOf { it.size }
+        val width = cellWidth * columns
+        val height = rowStep * (rows.size - 1) + textHeight
+        layout(width, height) {
+            var index = 0
+            rows.forEachIndexed { r, row ->
+                val rowStart = (columns - row.size) * cellWidth / 2
+                row.indices.forEach { c ->
+                    val placeable = placeables[index++]
+                    placeable.place(rowStart + c * cellWidth + (cellWidth - placeable.width) / 2, r * rowStep)
+                }
+            }
+        }
+    }
+}
+
+/**
+ * A key's letter and its hint (the small symbol in the top-end corner), laid out together.
+ *
+ * The hint sits just inside the key's own top-end corner: far enough in that a round corner never cuts it
+ * off, no further (a theme's hint padding is folded into that, so every theme lands in the same place).
+ * The letter stays centred unless its ink would reach the hint's, in which case it moves down just enough,
+ * staying inside the key. Ink edges are estimated from each text's first baseline, which holds for any
+ * theme font and size.
+ */
+@Composable
+private fun KeyLabelWithHint(
+    label: @Composable () -> Unit,
+    hint: @Composable () -> Unit,
+    keyShape: Shape,
+    hintPadding: PaddingValues?,
+    modifier: Modifier = Modifier,
+) {
+    Layout(contents = listOf(label, hint), modifier = modifier) { (labelMeasurables, hintMeasurables), constraints ->
+        val loose = constraints.copy(minWidth = 0, minHeight = 0)
+        val labelPlaceable = labelMeasurables.first().measure(loose)
+        val hintPlaceable = hintMeasurables.first().measure(loose)
+        val width = constraints.maxWidth
+        val height = constraints.maxHeight
+        layout(width, height) {
+            val labelBaseline = labelPlaceable[FirstBaseline].takeIf { it != AlignmentLine.Unspecified }
+                ?: (labelPlaceable.height * 0.8f).toInt()
+            val hintBaseline = hintPlaceable[FirstBaseline].takeIf { it != AlignmentLine.Unspecified }
+                ?: (hintPlaceable.height * 0.8f).toInt()
+
+            // How far in from the top-end corner the hint's ink must start to stay inside the key's outline:
+            // a point on a rounded corner's diagonal is inside once it's ~0.3 r in (0.5 r for a cut corner).
+            val keySize = androidx.compose.ui.geometry.Size(width.toFloat(), height.toFloat())
+            val inset = when (keyShape) {
+                is CutCornerShape -> keyShape.topEnd.toPx(keySize, this@Layout) * 0.5f
+                is CornerBasedShape -> keyShape.topEnd.toPx(keySize, this@Layout) * 0.3f
+                else -> 0f
+            } + 1.5.dp.toPx()
+            val padTop = hintPadding?.calculateTopPadding()?.toPx() ?: 0f
+            val padEnd = hintPadding?.calculateRightPadding(LayoutDirection.Ltr)?.toPx() ?: 0f
+            // The hint's glyphs start about a fifth of the way down from its text top.
+            val hintInkTop = padTop + (hintBaseline - padTop) * 0.22f
+            val hintX = (width - hintPlaceable.width + padEnd - inset).roundToInt()
+            val hintY = (inset - hintInkTop).roundToInt()
+            hintPlaceable.place(hintX, hintY)
+
+            val labelX = (width - labelPlaceable.width) / 2
+            var labelY = (height - labelPlaceable.height) / 2
+            // Ascenders and capitals reach about a fifth of the baseline below the text's top; hint symbols
+            // like ( ) ; dip a little under their baseline.
+            val hintInkBottom = hintY + hintBaseline + (hintBaseline - padTop) * 0.12f
+            val hintInkLeft = hintX + hintPlaceable.width * 0.12f
+            val labelInkTop = labelY + labelBaseline * 0.2f
+            val gap = 2.dp.toPx()
+            val overlapsHorizontally = labelX + labelPlaceable.width * 0.92f > hintInkLeft
+            if (overlapsHorizontally && labelInkTop < hintInkBottom + gap) {
+                val wanted = labelY + (hintInkBottom + gap - labelInkTop)
+                // Keep descenders (g, j, p, y) inside the key.
+                val lowest = height - 2.dp.toPx() - labelBaseline * 1.22f
+                labelY = maxOf(labelY.toFloat(), minOf(wanted, lowest)).roundToInt()
+            }
+            labelPlaceable.place(labelX, labelY)
+        }
+    }
+}
+
 @Suppress("unused_parameter")
 private class TextKeyboardLayoutController(
     context: Context,
@@ -454,6 +614,12 @@ private class TextKeyboardLayoutController(
     private val inputFeedbackController get() = FlorisImeService.inputFeedbackController()
     private val keyHintConfiguration = prefs.keyboard.keyHintConfiguration()
     private val pointerMap: PointerMap<TouchPointer> = PointerMap { TouchPointer() }
+
+    /** The search query when a backspace slide began, so sliding back restores what it took off. */
+    private var searchSlideBase: String? = null
+
+    private fun isMediaSearching(): Boolean =
+        keyboardManager.mediaSearchMode.value != KeyboardManager.MediaSearchMode.NONE
     lateinit var popupUiController: PopupUiController
 
     private var initSelectionStart: Int = 0
@@ -567,7 +733,8 @@ private class TextKeyboardLayoutController(
                 if (pointer != null) {
                     pointer.index = pointerIndex
                     if (swipeGestureDetector.onTouchUp(event, pointer) || pointer.hasTriggeredGestureMove) {
-                        if (pointer.hasTriggeredGestureMove && pointer.initialKey?.computedData?.code == KeyCode.DELETE) {
+                        if (pointer.hasTriggeredGestureMove && pointer.initialKey?.computedData?.code == KeyCode.DELETE &&
+                            !isMediaSearching()) {
                             val selection = editorInstance.activeContent.selection
                             if (selection.isSelectionMode) {
                                 editorInstance.deleteBackwards(OperationUnit.CHARACTERS)
@@ -588,6 +755,7 @@ private class TextKeyboardLayoutController(
                         pointer.index = pointerIndex
                         if (swipeGestureDetector.onTouchUp(event, pointer) || pointer.hasTriggeredGestureMove) {
                             if (pointer.hasTriggeredGestureMove &&
+                                !isMediaSearching() &&
                                 pointer.initialKey?.computedData?.code == KeyCode.DELETE &&
                                 prefs.gestures.deleteKeySwipeLeft.get() != SwipeAction.SELECT_CHARACTERS_PRECISELY &&
                                 prefs.gestures.deleteKeySwipeLeft.get() != SwipeAction.SELECT_WORDS_PRECISELY) {
@@ -848,13 +1016,14 @@ private class TextKeyboardLayoutController(
     }
 
     private fun handleDeleteSwipe(event: SwipeGesture.Event): Boolean {
+        if (isMediaSearching()) return handleSearchDeleteSlide(event)
         if (editorInstance.activeInfo.isRawInputEditor) return false
 
         return when (event.type) {
             SwipeGesture.Type.TOUCH_MOVE -> when (prefs.gestures.deleteKeySwipeLeft.get()) {
                 SwipeAction.DELETE_CHARACTERS_PRECISELY, SwipeAction.SELECT_CHARACTERS_PRECISELY -> {
                     if (abs(event.relUnitCountX) > 0) {
-                        inputFeedbackController?.gestureMovingSwipe(TextKeyData.DELETE)
+                        inputFeedbackController?.gestureStep(TextKeyData.DELETE)
                     }
                     val activeSelection = editorInstance.activeContent.selection
                     if (activeSelection.isValid) {
@@ -878,7 +1047,7 @@ private class TextKeyboardLayoutController(
                 }
                 SwipeAction.DELETE_WORDS_PRECISELY, SwipeAction.SELECT_WORDS_PRECISELY -> {
                     if (abs(event.relUnitCountX) > 0) {
-                        inputFeedbackController?.gestureMovingSwipe(TextKeyData.DELETE)
+                        inputFeedbackController?.gestureStep(TextKeyData.DELETE)
                     }
                     val activeSelection = editorInstance.activeContent.selection
                     if (activeSelection.isValid) {
@@ -915,8 +1084,51 @@ private class TextKeyboardLayoutController(
         }
     }
 
+    /**
+     * Backspace slide while typing a media search: it trims the query (characters or words, per the
+     * gesture setting) and is reversible until the finger lifts, like the precise delete in the app. The
+     * app's text is never touched.
+     */
+    private fun handleSearchDeleteSlide(event: SwipeGesture.Event): Boolean {
+        val action = prefs.gestures.deleteKeySwipeLeft.get()
+        val words = action == SwipeAction.DELETE_WORDS_PRECISELY || action == SwipeAction.SELECT_WORDS_PRECISELY
+        val precise = words || action == SwipeAction.DELETE_CHARACTERS_PRECISELY || action == SwipeAction.SELECT_CHARACTERS_PRECISELY
+        return when (event.type) {
+            SwipeGesture.Type.TOUCH_MOVE -> {
+                if (!precise) return false
+                val pointer = pointerMap.findById(event.pointerId)
+                if (searchSlideBase == null || pointer?.hasTriggeredGestureMove != true) {
+                    searchSlideBase = keyboardManager.mediaSearchQuery.value
+                }
+                val base = searchSlideBase.orEmpty()
+                if (abs(event.relUnitCountX) > 0) inputFeedbackController?.gestureStep(TextKeyData.DELETE)
+                val units = if (words) -event.absUnitCountX / 2 else -event.absUnitCountX - 1
+                val trimmed = if (words) {
+                    var rest = base
+                    repeat(units.coerceAtLeast(0)) { rest = rest.trimEnd().substringBeforeLast(' ', "") }
+                    if (rest.isNotEmpty() && rest.length < base.length) "$rest " else rest
+                } else {
+                    base.dropLast(units.coerceIn(0, base.length))
+                }
+                keyboardManager.setMediaSearchQuery(trimmed)
+                true
+            }
+            SwipeGesture.Type.TOUCH_UP -> {
+                searchSlideBase = null
+                if (event.direction == SwipeGesture.Direction.LEFT && action == SwipeAction.DELETE_WORD) {
+                    keyboardManager.executeSwipeAction(action)
+                    true
+                } else {
+                    precise
+                }
+            }
+        }
+    }
+
     private fun handleSpaceSwipe(event: SwipeGesture.Event): Boolean {
         val pointer = pointerMap.findById(event.pointerId) ?: return false
+        // Typing a media search: sliding on space must not move the app's cursor (or switch anything).
+        if (isMediaSearching()) return true
 
         return when (event.type) {
             SwipeGesture.Type.TOUCH_MOVE -> when (event.direction) {
@@ -926,10 +1138,12 @@ private class TextKeyboardLayoutController(
                         abs(event.relUnitCountX).let {
                             val count = if (!pointer.hasTriggeredGestureMove) it - 1 else it
                             if (count > 0) {
-                                inputFeedbackController?.gestureMovingSwipe(TextKeyData.SPACE)
                                 if (!pointer.hasTriggeredMassSelection) {
                                     pointer.hasTriggeredMassSelection = true
                                     editorInstance.massSelection.begin()
+                                    inputFeedbackController?.gestureEngaged()
+                                } else {
+                                    inputFeedbackController?.gestureStep(TextKeyData.SPACE)
                                 }
                                 keyboardManager.handleArrow(KeyCode.ARROW_LEFT, count)
                             }
@@ -945,10 +1159,12 @@ private class TextKeyboardLayoutController(
                         abs(event.relUnitCountX).let {
                             val count = if (!pointer.hasTriggeredGestureMove) it - 1 else it
                             if (count > 0) {
-                                inputFeedbackController?.gestureMovingSwipe(TextKeyData.SPACE)
                                 if (!pointer.hasTriggeredMassSelection) {
                                     pointer.hasTriggeredMassSelection = true
                                     editorInstance.massSelection.begin()
+                                    inputFeedbackController?.gestureEngaged()
+                                } else {
+                                    inputFeedbackController?.gestureStep(TextKeyData.SPACE)
                                 }
                                 keyboardManager.handleArrow(KeyCode.ARROW_RIGHT, count)
                             }

@@ -151,7 +151,7 @@ import dev.patrickgold.jetpref.datastore.model.observeAsState
 import kotlinx.coroutines.launch
 import kotlin.math.roundToInt
 
-private val keyboardPrefs by FlorisPreferenceStore
+internal val keyboardPrefs by FlorisPreferenceStore
 
 /** Space above each section of the Keys page (on top of the 3dp gap between list items). */
 private val SectionGap = 23.dp
@@ -159,9 +159,9 @@ private val SectionGap = 23.dp
 /** Rows in the Features section, across both of its list items. */
 private const val FeatureSegments = 13
 
-private data class AccentSwatch(val label: String, val color: Color)
+internal data class AccentSwatch(val label: String, val color: Color)
 
-private val accentSwatches = listOf(
+internal val accentSwatches = listOf(
     AccentSwatch("Wallpaper", Color.Unspecified),
     AccentSwatch("Violet", Color(0xFF7A2BE0)),
     AccentSwatch("Coral", Color(0xFFFF6F61)),
@@ -186,6 +186,7 @@ fun KeyboardScreen(
     onChooseKeyboard: () -> Unit,
     onAskJade: () -> Unit,
     onOpenAdvanced: () -> Unit,
+    onOpenThemeShop: () -> Unit,
 ) {
     val context = LocalContext.current
     // Started once for the whole run (the app warms it at launch), so later visits draw immediately.
@@ -229,8 +230,7 @@ fun KeyboardScreen(
         ) {
             item(key = "status") { StatusCard(status, onEnableKeyboard, onChooseKeyboard, Modifier.enterStagger(0)) }
             item(key = "language") { LanguageSection(Modifier.padding(top = SectionGap).enterStagger(1)) }
-            item(key = "appearance") { AppearanceSection(Modifier.padding(top = SectionGap).enterStagger(2)) }
-            item(key = "appearance-more") { AppearanceMore(Modifier.enterStagger(2)) }
+            item(key = "appearance") { AppearanceSection(onOpenThemeShop, Modifier.padding(top = SectionGap).enterStagger(2)) }
             item(key = "features") { FeaturesSection(Modifier.padding(top = SectionGap).enterStagger(3)) }
             item(key = "features-more") { FeaturesMore(Modifier.enterStagger(3)) }
             item(key = "feel") { FeelSection(Modifier.padding(top = SectionGap).enterStagger(4)) }
@@ -461,7 +461,7 @@ private fun AddLanguageSheet(onDismiss: () -> Unit, onPick: (ReboardLanguages.Op
 
 @OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable
-private fun AppearanceSection(modifier: Modifier) {
+private fun AppearanceSection(onOpenThemeShop: () -> Unit, modifier: Modifier) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
     val haptics = LocalHaptics.current
@@ -475,7 +475,7 @@ private fun AppearanceSection(modifier: Modifier) {
 
     Column(modifier, verticalArrangement = Arrangement.spacedBy(3.dp)) {
         SectionLabel("Appearance", Modifier.padding(bottom = 6.dp))
-        Surface(shape = segmentShape(0, 8), color = MaterialTheme.colorScheme.surfaceContainer) {
+        Surface(shape = segmentShape(0, 2), color = MaterialTheme.colorScheme.surfaceContainer) {
             Column(Modifier.padding(vertical = 16.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
                 Text("Theme", style = MaterialTheme.typography.titleSmall, modifier = Modifier.padding(horizontal = 16.dp))
                 val modes = listOf(ThemeMode.FOLLOW_SYSTEM to "Auto", ThemeMode.ALWAYS_DAY to "Light", ThemeMode.ALWAYS_NIGHT to "Dark")
@@ -521,25 +521,46 @@ private fun AppearanceSection(modifier: Modifier) {
                 ) { id -> haptics.tick(); scope.launch { keyboardPrefs.theme.nightThemeId.set(ExtensionComponentName.from(id)) } }
             }
         }
-        Surface(shape = segmentShape(1, 8), color = MaterialTheme.colorScheme.surfaceContainer) {
-            Column(Modifier.padding(vertical = 16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                Text("Key colour", style = MaterialTheme.typography.titleSmall, modifier = Modifier.padding(horizontal = 16.dp))
-                AccentPicker(accent) { color -> haptics.tick(); scope.launch { keyboardPrefs.theme.accentColor.set(color) } }
-            }
-        }
+        ThemeShopEntry(segmentShape(1, 2), onOpenThemeShop)
     }
 }
 
-/** The rest of Appearance (segments 3–8), its own list item so it's only built once scrolled near. */
+/**
+ * The way into the Theme shop: everything about how the keyboard looks, moves and who sits on it
+ * (key colour, packs, community themes, the builder, motion, mascots, sizes) lives there.
+ */
+@OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable
-private fun AppearanceMore(modifier: Modifier) {
-    Column(modifier, verticalArrangement = Arrangement.spacedBy(3.dp)) {
-        SpaceBarCard(segmentShape(2, 8))
-        PrefSlider(keyboardPrefs.keyboard.heightFactorPortrait, Icons.Filled.Height, "Keyboard height", 50..150, 5, segmentShape(3, 8), Tone.Tertiary) { "$it%" }
-        PrefSlider(keyboardPrefs.keyboard.fontSizeMultiplierPortrait, Icons.Filled.FontDownload, "Key text size", 50..150, 5, segmentShape(4, 8), Tone.Secondary) { "$it%" }
-        PrefSwitch(keyboardPrefs.keyboard.numberRow, Icons.Filled.Pin, "Number row", "Numbers above the letters", segmentShape(5, 8), Tone.Primary)
-        PrefSwitch(keyboardPrefs.keyboard.popupEnabled, Icons.Filled.TouchApp, "Key pop-ups", "Show the letter as you tap it", segmentShape(6, 8), Tone.Tertiary)
-        PrefSwitch(keyboardPrefs.keyboard.oneHandedModeEnabled, Icons.Filled.PanTool, "One-handed mode", "Shrink the keyboard to one side", segmentShape(7, 8), Tone.Secondary)
+private fun ThemeShopEntry(shape: Shape, onOpen: () -> Unit) {
+    val haptics = LocalHaptics.current
+    val mascot by keyboardPrefs.theme.mascot.observeAsState()
+    Surface(
+        onClick = { haptics.confirm(); onOpen() },
+        shape = shape,
+        color = MaterialTheme.colorScheme.tertiaryContainer,
+        contentColor = MaterialTheme.colorScheme.onTertiaryContainer,
+        modifier = Modifier.fillMaxWidth().semantics { contentDescription = "Open the theme shop" },
+    ) {
+        Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
+            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(14.dp)) {
+                com.noxquill.rewordium.app.ui.avatar.BotAvatar(
+                    type = mascot.ifBlank { "star" },
+                    mood = com.noxquill.rewordium.app.ui.avatar.BotMood.Happy,
+                    size = 54.dp,
+                    label = null,
+                )
+                Column(Modifier.weight(1f)) {
+                    Text("Theme shop", style = MaterialTheme.typography.titleLarge)
+                    Text("Playful packs, community themes, Jade-made looks, key colour, bouncy keys and mascots", style = MaterialTheme.typography.bodyMedium)
+                }
+                Icon(Icons.AutoMirrored.Filled.OpenInNew, null)
+            }
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                com.noxquill.rewordium.keyboard.ime.theme.studio.ThemePacks.all.forEach { pack ->
+                    com.noxquill.rewordium.app.screens.themes.KeyboardMock(pack.themes.first(), Modifier.weight(1f), compact = true)
+                }
+            }
+        }
     }
 }
 
@@ -622,7 +643,7 @@ private fun ThemePreview(option: ReboardSettingsBridge.ThemeOption, selected: Bo
 
 @OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable
-private fun AccentPicker(current: Color, onPick: (Color) -> Unit) {
+internal fun AccentPicker(current: Color, onPick: (Color) -> Unit) {
     val cookie = MaterialShapes.Cookie9Sided.toShape()
     LazyRow(contentPadding = PaddingValues(horizontal = 16.dp), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
         items(accentSwatches, key = { it.label }) { swatch ->
@@ -780,7 +801,7 @@ private fun FeelSection(modifier: Modifier) {
 /** What the space bar says, with a live preview of the key. */
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
-private fun SpaceBarCard(shape: Shape) {
+internal fun SpaceBarCard(shape: Shape) {
     val scope = rememberCoroutineScope()
     val haptics = LocalHaptics.current
     val mode by keyboardPrefs.keyboard.spaceBarMode.observeAsState()
@@ -901,7 +922,7 @@ private fun SuggestionLayoutCard(shape: Shape) {
 // ── Building blocks ──────────────────────────────────────────────────────────
 
 @Composable
-private fun PrefSwitch(pref: PreferenceData<Boolean>, icon: ImageVector, title: String, subtitle: String, shape: Shape, tone: Tone) {
+internal fun PrefSwitch(pref: PreferenceData<Boolean>, icon: ImageVector, title: String, subtitle: String, shape: Shape, tone: Tone) {
     val scope = rememberCoroutineScope()
     val value by pref.observeAsState()
     SettingSwitchRow(icon, title, subtitle, value, shape, tone) { on -> scope.launch { pref.set(on) } }
@@ -909,7 +930,7 @@ private fun PrefSwitch(pref: PreferenceData<Boolean>, icon: ImageVector, title: 
 
 /** A slider that only writes when the finger lifts, with its value in Space Mono. */
 @Composable
-private fun PrefSlider(
+internal fun PrefSlider(
     pref: PreferenceData<Int>,
     icon: ImageVector,
     title: String,

@@ -58,7 +58,23 @@ fun QuickActionButton(
     evaluator: ComputingEvaluator,
     modifier: Modifier = Modifier,
     type: QuickActionBarType = QuickActionBarType.INTERACTIVE_BUTTON,
+    toneIndex: Int = 0,
+    enterDelayIndex: Int = -1,
+    lifted: Boolean = false,
 ) {
+    // Tiles (overflow grid, editor) are the expressive kind; the smartbar's own buttons stay theme-styled.
+    if (type != QuickActionBarType.INTERACTIVE_BUTTON) {
+        QuickActionTile(
+            action = action,
+            evaluator = evaluator,
+            interactive = type == QuickActionBarType.INTERACTIVE_TILE,
+            modifier = modifier,
+            toneIndex = toneIndex,
+            enterDelayIndex = enterDelayIndex,
+            lifted = lifted,
+        )
+        return
+    }
     val context = LocalContext.current
     // Get the inputFeedbackController through the FlorisImeService companion-object.
     val inputFeedbackController = FlorisImeService.inputFeedbackController()

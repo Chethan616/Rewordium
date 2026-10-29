@@ -67,7 +67,12 @@ fun TextInputLayout(
                     .fillMaxWidth()
                     .wrapContentHeight(),
             ) {
-                Smartbar()
+                // While a media search is open its own bar sits above the keys; word suggestions for the
+                // app's text would only get in the way (and tapping one would type into the app).
+                val mediaSearchMode by keyboardManager.mediaSearchMode.collectAsState()
+                if (mediaSearchMode == com.noxquill.rewordium.keyboard.ime.keyboard.KeyboardManager.MediaSearchMode.NONE) {
+                    Smartbar()
+                }
                 if (state.isActionsOverflowVisible) {
                     QuickActionsOverflowPanel()
                 } else {
