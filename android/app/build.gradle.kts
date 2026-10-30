@@ -136,6 +136,9 @@ android {
     // Configure page alignment for 16 KB support
     androidResources {
         noCompress += ""  // Forces proper alignment
+        // The app's screens are English; the keyboard's inherited translations still say "FlorisBoard" and describe
+        // FlorisBoard's behaviour, so ship English only. Typing languages and layouts come from assets, not these.
+        localeFilters += "en"
     }
 
     defaultConfig {
