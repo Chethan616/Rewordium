@@ -98,8 +98,11 @@ Data is encrypted in transit: **Yes**. Users can request deletion: **Yes** (in-a
 | App activity › App interactions | Yes | No | No | Analytics | Google Analytics for Firebase; no typed text |
 | App activity › In-app search history | Yes | No | Yes | App functionality | GIF/sticker search words sent to KLIPY at the user's request |
 | App activity › Other user-generated content | Yes | No | Yes | App functionality | Text the user sends to an AI tool (sent to Groq at the user's request, not stored by us); published themes; AI reply reports |
-| Device or other IDs | Yes | No | No | App functionality, Analytics | Anonymous Firebase user ID, Firebase installation/app-instance ID, FCM token |
+| Location › Approximate location | Yes | No | No | Analytics | Google Analytics for Firebase derives a coarse region from the IP address |
+| Personal info › User IDs | Yes | No | No | App functionality, Account management | Firebase user ID (anonymous until the user signs in) |
+| Messages › Other in-app messages | Yes | No | Yes | App functionality | Only when the optional writing assistant sends the visible conversation to an AI tool for reply suggestions |
+| Device or other IDs | Yes | No | No | App functionality, Analytics | Firebase installation ID, Analytics app-instance ID, FCM push token |
 
-Not collected: typed keystrokes, contacts (read on device only, when enabled), photos (on device only), location, advertising ID, financial info (the Play purchase is handled by Google Play).
+Not collected: typed keystrokes, contacts (read on device only, when enabled), photos (on device only), precise location, advertising ID, financial info (the Play purchase is handled by Google Play).
 
 "Shared" is **No** for the rows above because transfers to Groq and KLIPY happen at the user's request (user-initiated) and Google Firebase acts as a service provider. Review this if that changes.
