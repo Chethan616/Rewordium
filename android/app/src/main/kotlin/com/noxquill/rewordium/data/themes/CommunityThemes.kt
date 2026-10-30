@@ -13,8 +13,8 @@ import kotlinx.coroutines.withContext
 /**
  * Keyboard themes people made and shared: the `keyboard_themes` Firestore collection. Each document
  * holds the theme's spec as JSON (a few hundred bytes), so browsing downloads no images and a theme
- * previews and installs from that alone. Rules: anyone signed in reads; authors write their own;
- * downloads only ever go up by one.
+ * previews and installs from that alone. Rules: anyone can browse (no account needed); publishing needs
+ * a session, authors write their own; downloads only ever go up by one.
  */
 object CommunityThemes {
     private const val COLLECTION = "keyboard_themes"
@@ -35,7 +35,7 @@ object CommunityThemes {
     private val firestore by lazy { FirebaseFirestore.getInstance() }
 
     suspend fun list(sort: Sort): Result<List<Shared>> = io {
-        val uid = RewordiumRepository.currentUser?.uid ?: throw CommunityException("Sign in to see themes from the community.")
+        val uid = RewordiumRepository.currentUser?.uid
         val field = if (sort == Sort.Popular) "downloads" else "createdAt"
         val snapshot = Tasks.await(firestore.collection(COLLECTION).orderBy(field, Query.Direction.DESCENDING).limit(PAGE).get())
         snapshot.documents.mapNotNull { doc ->
@@ -45,7 +45,7 @@ object CommunityThemes {
                 spec = spec,
                 author = doc.getString("authorName").orEmpty().ifBlank { "Someone" },
                 downloads = doc.getLong("downloads") ?: 0L,
-                mine = doc.getString("authorUid") == uid,
+                mine = uid != null && doc.getString("authorUid") == uid,
             )
         }
     }

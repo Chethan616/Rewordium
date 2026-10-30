@@ -13,6 +13,7 @@ import com.android.billingclient.api.Purchase
 import com.android.billingclient.api.PurchasesUpdatedListener
 import com.android.billingclient.api.QueryProductDetailsParams
 import com.android.billingclient.api.QueryPurchasesParams
+import com.noxquill.rewordium.keyboard.app.ReleaseFlags
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -66,6 +67,11 @@ class PlayBillingManager(
         .build()
 
     fun connect() {
+        // No subscriptions on sale in this release: never talk to Google Play billing.
+        if (!ReleaseFlags.subscriptionsEnabled) {
+            publish(state.copy(loading = false, message = null))
+            return
+        }
         if (billingClient.isReady) {
             loadProducts()
             return
@@ -87,6 +93,7 @@ class PlayBillingManager(
     }
 
     fun restorePurchases() {
+        if (!ReleaseFlags.subscriptionsEnabled) return
         if (!billingClient.isReady) {
             connect()
             return
@@ -110,6 +117,7 @@ class PlayBillingManager(
     }
 
     fun purchase(activity: Activity, productId: String) {
+        if (!ReleaseFlags.subscriptionsEnabled) return
         val product = state.products.firstOrNull { it.productId == productId }
         if (product == null) {
             publish(state.copy(message = "Plan prices are still loading. Try again in a moment."))

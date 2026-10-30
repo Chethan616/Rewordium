@@ -509,8 +509,12 @@ class MyAccessibilityService : AccessibilityService(), BubbleInteractionListener
             element.scaleY = 0.98f
         }
 
+        // The sheet this call opened. It can be dismissed (and the field set to null) before the opening
+        // animation ends, so the end action only runs the cascade if this same sheet is still showing.
+        val sheet = bottomSheetView ?: return
+
         // Single coordinated animation sequence for 60 FPS smoothness
-        bottomSheetView?.animate()
+        sheet.animate()
             ?.alpha(1f)
             ?.scaleX(1f)
             ?.scaleY(1f)
@@ -527,7 +531,7 @@ class MyAccessibilityService : AccessibilityService(), BubbleInteractionListener
             }
             ?.withEndAction {
                 // Start cascade animation only after main animation completes
-                animateUIElementsCascade(bottomSheetView!!)
+                if (bottomSheetView === sheet && sheet.isAttachedToWindow) animateUIElementsCascade(sheet)
             }
             ?.start()
 
@@ -547,7 +551,7 @@ class MyAccessibilityService : AccessibilityService(), BubbleInteractionListener
             }
         }
 
-        setupPanelUI(bottomSheetView!!, originalText)
+        setupPanelUI(sheet, originalText)
         
         // Apply current theme to the bottom sheet based on saved preference, not system theme
         val prefs = getSharedPreferences("app_settings", Context.MODE_PRIVATE)
@@ -857,11 +861,12 @@ class MyAccessibilityService : AccessibilityService(), BubbleInteractionListener
             bottomSheetView?.alpha = 1f
         }
         
-        if (!creditManager.isUserLoggedIn()) {
+        // Only the built-in AI (its allowance is kept per user) needs a session; your own AI key doesn't.
+        if (!aiManager.usesOwnApiKey() && !creditManager.isUserLoggedIn()) {
             // Use custom overlay snackbar that displays above all WindowManager overlays
             showOverlaySnackbar(
-                message = "Please log in to use Rewordium",
-                actionText = "LOG IN",
+                message = "Open Rewordium once to use the built-in AI",
+                actionText = "OPEN",
                 onAction = {
                     try {
                         val intent = packageManager.getLaunchIntentForPackage(packageName)
@@ -944,15 +949,21 @@ class MyAccessibilityService : AccessibilityService(), BubbleInteractionListener
             suspend { aiManager.runToolVariants(tool, normalizedInput, AiOptions(instruction = customPersonaPrompt), count) }
         }
 
-        val btnRewrite = bottomSheetView!!.findViewById<Button>(R.id.button_rewrite)
-        val thinkingLayout = bottomSheetView!!.findViewById<LinearLayout>(R.id.thinking_layout)
-        val btnStop = bottomSheetView!!.findViewById<Button>(R.id.button_stop)
-        val thinkingText = bottomSheetView!!.findViewById<TextView>(R.id.thinking_text_view)
+        // The sheet this request belongs to; it can be closed while the AI is still working.
+        val sheet = bottomSheetView ?: run {
+            isGenerating = false
+            isPerformingManualTransition = false
+            return
+        }
+        val btnRewrite = sheet.findViewById<Button>(R.id.button_rewrite)
+        val thinkingLayout = sheet.findViewById<LinearLayout>(R.id.thinking_layout)
+        val btnStop = sheet.findViewById<Button>(R.id.button_stop)
+        val thinkingText = sheet.findViewById<TextView>(R.id.thinking_text_view)
         
         btnRewrite.visibility = View.GONE
         thinkingLayout.visibility = View.VISIBLE
-        bottomSheetView!!.findViewById<LinearLayout>(R.id.suggestion_layout).visibility = View.GONE
-        bottomSheetView!!.findViewById<LinearLayout>(R.id.suggestions_container).removeAllViews()
+        sheet.findViewById<LinearLayout>(R.id.suggestion_layout).visibility = View.GONE
+        sheet.findViewById<LinearLayout>(R.id.suggestions_container).removeAllViews()
 
         thinkingText.text = when {
             isGenerationTask -> "Drafting replies..."
@@ -1003,7 +1014,13 @@ class MyAccessibilityService : AccessibilityService(), BubbleInteractionListener
                 withContext(Dispatchers.Main) {
                     result.fold(
                         onSuccess = { suggestions ->
-                            displaySuggestions(suggestions, bottomSheetView!!.findViewById(R.id.suggestions_container), bottomSheetView!!.findViewById(R.id.suggestion_layout), activeSourceNode, isGenerationTask)
+                            if (bottomSheetView === sheet && sheet.isAttachedToWindow) {
+                                displaySuggestions(suggestions, sheet.findViewById(R.id.suggestions_container), sheet.findViewById(R.id.suggestion_layout), activeSourceNode, isGenerationTask)
+                            } else {
+                                // Closed while the AI worked: nothing to show it in.
+                                isGenerating = false
+                                isPerformingManualTransition = false
+                            }
                         },
                         onFailure = { e -> showAiError(e) },
                     )
@@ -1150,10 +1167,11 @@ class MyAccessibilityService : AccessibilityService(), BubbleInteractionListener
         
         // Update credits display
         if (creditManager.isProUser()) {
-            creditsTextView.text = "Unlimited Credits (Pro)"
+            creditsTextView.text = "Unlimited AI (Pro)"
         } else {
             val creditCount = creditManager.getCredits()
-            creditsTextView.text = "Credits Remaining: $creditCount"
+            creditsTextView.text = if (com.noxquill.rewordium.keyboard.app.ReleaseFlags.subscriptionsEnabled) "Credits Remaining: $creditCount"
+            else "Free AI uses left: $creditCount of ${com.noxquill.rewordium.keyboard.app.ReleaseFlags.FREE_AI_USES}"
         }
     }
 

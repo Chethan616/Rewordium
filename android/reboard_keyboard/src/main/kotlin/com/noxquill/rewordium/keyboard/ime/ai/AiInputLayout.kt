@@ -609,10 +609,15 @@ private fun PanelHeader(
         }
         when {
             account.ownKey -> Unit
-            !account.loggedIn -> StatusPill("Log in", Symbols.Lock, errorTone(), onAccountClick)
+            !account.loggedIn -> StatusPill("Sign in", Symbols.Lock, errorTone(), onAccountClick)
             account.pro -> StatusPill("PRO", Symbols.StarShine, tones.at(0))
             else -> StatusPill(
-                if (account.credits == 1) "1 credit" else "${account.credits}",
+                // What's left of the built-in AI allowance (it's never shown as unlimited).
+                if (com.noxquill.rewordium.keyboard.app.ReleaseFlags.subscriptionsEnabled) {
+                    if (account.credits == 1) "1 credit" else "${account.credits}"
+                } else {
+                    "${account.credits} left"
+                },
                 Symbols.Bolt,
                 if (account.credits > 0) tones.at(2) else errorTone(),
                 onAccountClick,
@@ -934,8 +939,8 @@ private fun FailedView(
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             if (needsApp) {
                 val label = when (kind) {
-                    AIException.Kind.CREDITS -> "Get more credits"
-                    AIException.Kind.LOGIN -> "Log in"
+                    AIException.Kind.CREDITS -> if (com.noxquill.rewordium.keyboard.app.ReleaseFlags.subscriptionsEnabled) "Get more credits" else "See AI uses"
+                    AIException.Kind.LOGIN -> "Open Rewordium"
                     else -> "Open settings"
                 }
                 Button(onClick = onOpenApp, shapes = ButtonDefaults.shapes()) { Text(label) }

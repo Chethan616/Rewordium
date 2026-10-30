@@ -115,6 +115,7 @@ import com.noxquill.rewordium.billing.PlayBillingManager
 import com.noxquill.rewordium.data.AccountInfo
 import com.noxquill.rewordium.data.AppSettings
 import com.noxquill.rewordium.data.RewordiumRepository
+import com.noxquill.rewordium.keyboard.app.ReleaseFlags
 import com.noxquill.rewordium.keyboard.ime.ai.AIConfigProvider
 import com.noxquill.rewordium.app.ui.warmColorSchemes
 import com.noxquill.rewordium.data.KeyboardEngine
@@ -158,7 +159,10 @@ private fun RewordiumRootContent(
 
     suspend fun refreshAccount(): AccountInfo? =
         if (storeDemo) AccountInfo("guest", "Maya Patel", "maya@example.com", 250, true, "pro").also { account = it }
-        else runCatching { RewordiumRepository.refreshAccount(context) }.getOrNull().also { account = it }
+        else {
+            RewordiumRepository.ensureSession()
+            runCatching { RewordiumRepository.refreshAccount(context) }.getOrNull().also { account = it }
+        }
 
     fun usesOwnKey() = AIConfigProvider.getConfig(context).isAdvancedEnabled
 
@@ -169,10 +173,12 @@ private fun RewordiumRootContent(
             owner = { RewordiumRepository.currentUser?.uid ?: "guest" },
             userName = { account?.name?.trim()?.substringBefore(' ') },
             beforeRequest = {
-                if (RewordiumRepository.currentUser == null) throw IllegalStateException("Sign in to chat with Jade.")
+                if (!usesOwnKey() && RewordiumRepository.currentUser == null) {
+                    throw IllegalStateException("The built-in AI needs a quick sign-in on this phone. Typing and everything else work without one.")
+                }
                 if (!usesOwnKey() && account?.isPro != true) {
                     val credits = account?.credits ?: refreshAccount()?.credits ?: 0
-                    if (credits <= 0) throw IllegalStateException("You’re out of credits. Rewordium Pro gives you unlimited Jade.")
+                    if (credits <= 0) throw IllegalStateException(outOfAiUsesMessage())
                 }
             },
             afterSuccess = {
@@ -234,7 +240,7 @@ private fun RewordiumRootContent(
             },
         )
     }
-    LaunchedEffect(billingManager) { billingManager.connect() }
+    LaunchedEffect(billingManager) { if (ReleaseFlags.subscriptionsEnabled) billingManager.connect() }
     DisposableEffect(billingManager) { onDispose { billingManager.close() } }
 
     fun openLink(url: String) {
@@ -248,7 +254,7 @@ private fun RewordiumRootContent(
 
     val stage = when {
         !onboardingDone -> Stage.Onboarding
-        firebaseUser == null && !storeDemo -> Stage.SignIn
+        firebaseUser == null && !storeDemo && ReleaseFlags.requireSignIn -> Stage.SignIn
         else -> Stage.App
     }
 
@@ -631,7 +637,14 @@ private fun MainApp(
                             onSignOut = onSignOut,
                             onDeleteAccount = onDeleteAccount,
                             onOpenAdmin = { go("admin") },
+                            onSignIn = { go("sign_in") },
                         )
+                    }
+                }
+                composable("sign_in") {
+                    Box(Modifier.fillMaxSize()) {
+                        SignInGate(onOpenLink = onOpenLink, onSignedIn = { navController.popBackStack() })
+                        com.noxquill.rewordium.app.ui.BackButton(onBack = { navController.popBackStack() }, modifier = Modifier.padding(12.dp))
                     }
                 }
                 composable("admin") {
@@ -644,7 +657,14 @@ private fun MainApp(
                 }
                 composable("pro") {
                     Screen {
-                        ProScreen(
+                        if (!ReleaseFlags.subscriptionsEnabled) com.noxquill.rewordium.app.screens.AiAllowanceScreen(
+                            account = account,
+                            packageName = activity.packageName,
+                            onBack = { navController.popBackStack() },
+                            onOpenLink = onOpenLink,
+                            onAiSettings = { go("ai_settings") },
+                            onSignIn = { go("sign_in") },
+                        ) else ProScreen(
                             account = account,
                             billing = billingState,
                             packageName = activity.packageName,
@@ -792,3 +812,8 @@ private fun authMessage(error: Throwable): String = when (error) {
         else -> error.message ?: "Something went wrong. Please try again."
     }
 }
+
+/** What to say when the built-in AI allowance is used up, matching what this release offers. */
+internal fun outOfAiUsesMessage(): String =
+    if (ReleaseFlags.subscriptionsEnabled) "You’re out of credits. Rewordium Pro gives you unlimited Jade."
+    else "You’ve used all ${ReleaseFlags.FREE_AI_USES} of your free AI uses. Typing works as normal, and you can add your own AI key in Settings › AI provider to keep using AI."

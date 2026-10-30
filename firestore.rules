@@ -42,13 +42,12 @@ service cloud.firestore {
             && after.get('subscription', {}).get('purchaseToken', '').size() > 20);
     }
 
-    // Credits may go down freely (usage) or be reset to the free amount;
-    // only admins can raise them above that.
+    // The built-in AI allowance: a client may only spend credits, never add them back (not even up to the
+    // starting amount). Only admins can raise them. New profiles start at no more than maxSelfCredits().
     function creditsChangeAllowed(before, after) {
       return !('credits' in after)
         || after.credits == before.get('credits', 0)
-        || after.credits <= before.get('credits', 0)
-        || after.credits <= maxSelfCredits();
+        || (after.credits is int && after.credits >= 0 && after.credits < before.get('credits', 0));
     }
 
     // App configuration - allow anyone to read version info for updates
@@ -148,14 +147,15 @@ service cloud.firestore {
       allow read, write: if isAdmin();
     }
 
-    // In-app announcements, campaigns and release notes published from the admin panel.
+    // In-app announcements, campaigns and release notes published from the admin panel: public, so they
+    // reach people who never signed in. Only admins write them.
     match /in_app_messages/{messageId} {
-      allow read: if isSignedIn();
+      allow read: if true;
       allow write: if isAdmin();
     }
 
-    // Community keyboard themes: signed-in users publish themes they designed; everyone signed in can
-    // browse and download them. Only the theme's own fields can be written, within size limits.
+    // Community keyboard themes: anyone can browse and download them; publishing needs a session (signed in
+    // or the app's silent per-install one). Only the theme's own fields can be written, within size limits.
     function validThemeContent(data) {
       return data.name is string && data.name.size() >= 1 && data.name.size() <= 40
         && data.spec is string && data.spec.size() >= 2 && data.spec.size() <= 4000
@@ -164,8 +164,9 @@ service cloud.firestore {
     }
 
     match /keyboard_themes/{themeId} {
-      allow get: if isSignedIn();
-      allow list: if isAdmin() || (isSignedIn() && request.query.limit <= 50);
+      // Browsing needs no account: themes are public content. Pages stay small.
+      allow get: if true;
+      allow list: if isAdmin() || request.query.limit <= 50;
 
       allow create: if isSignedIn()
         && !isBanned()

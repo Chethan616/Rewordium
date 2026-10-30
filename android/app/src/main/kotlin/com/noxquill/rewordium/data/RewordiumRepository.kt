@@ -20,7 +20,8 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.withContext
 import java.util.Date
 
-const val FREE_CREDITS = 20
+/** The built-in AI allowance a new profile starts with (see ReleaseFlags). */
+const val FREE_CREDITS = com.noxquill.rewordium.keyboard.app.ReleaseFlags.FREE_AI_USES
 
 data class AccountInfo(
     val uid: String,
@@ -29,6 +30,8 @@ data class AccountInfo(
     val credits: Int,
     val isPro: Boolean,
     val planType: String = "free",
+    /** A silent per-install session rather than an account someone signed in to. */
+    val anonymous: Boolean = false,
 )
 
 object RewordiumRepository {
@@ -37,6 +40,21 @@ object RewordiumRepository {
     private val firestore by lazy { FirebaseFirestore.getInstance() }
 
     val currentUser: FirebaseUser? get() = runCatching { auth.currentUser }.getOrNull()
+
+    /** True while nobody has signed in and the app is running on its silent per-install session (or none). */
+    val isSignedOutOrAnonymous: Boolean get() = currentUser?.isAnonymous != false
+
+    /**
+     * When sign-in isn't required, makes sure there's at least a silent per-install session: the built-in AI
+     * allowance and community themes are kept on the server per user, and their rules need one. Nothing is
+     * asked of the person. If the project hasn't enabled anonymous sessions this does nothing, and those two
+     * features offer an optional sign-in instead; typing and everything on the phone work either way.
+     */
+    suspend fun ensureSession() {
+        if (com.noxquill.rewordium.keyboard.app.ReleaseFlags.requireSignIn || currentUser != null) return
+        runCatching { io { Tasks.await(auth.signInAnonymously()) } }
+            .onFailure { Log.i(TAG, "No silent session available; AI and community themes will offer sign-in", it) }
+    }
 
     private val _suspension = MutableStateFlow<String?>(null)
 
@@ -105,7 +123,21 @@ object RewordiumRepository {
             return null
         }
         return try {
-            val snapshot = io { Tasks.await(firestore.collection("users").document(user.uid).get()) }
+            var snapshot = io { Tasks.await(firestore.collection("users").document(user.uid).get()) }
+            if (!snapshot.exists()) {
+                // A new silent session (or an account whose profile is missing): start it on the free allowance.
+                io {
+                    Tasks.await(firestore.collection("users").document(user.uid).set(mapOf(
+                        "name" to (user.displayName ?: ""),
+                        "email" to user.email,
+                        "isPro" to false,
+                        "createdAt" to FieldValue.serverTimestamp(),
+                        "credits" to FREE_CREDITS,
+                        "signInMethod" to if (user.isAnonymous) "anonymous" else "unknown",
+                    )))
+                }
+                snapshot = io { Tasks.await(firestore.collection("users").document(user.uid).get()) }
+            }
             val data = snapshot.data.orEmpty()
             if (data["banned"] == true) {
                 _suspension.value = (data["bannedReason"] as? String).orEmpty()
@@ -128,13 +160,14 @@ object RewordiumRepository {
                         ?: data["planType"] as? String
                         ?: if (isPro) "pro" else "free"
                 },
+                anonymous = user.isAnonymous,
             )
             syncNativeStatus(context, info)
             savePushToken(user.uid, data["fcmToken"] as? String)
             info
         } catch (error: Exception) {
             Log.w(TAG, "Could not refresh the account profile", error)
-            val cached = AccountInfo(user.uid, user.displayName ?: "", user.email.orEmpty(), 0, false)
+            val cached = AccountInfo(user.uid, user.displayName ?: "", user.email.orEmpty(), 0, false, anonymous = user.isAnonymous)
             syncNativeStatus(context, cached)
             cached
         }

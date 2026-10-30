@@ -170,7 +170,14 @@ fun HomeScreen(
                     ) {
                         Row(Modifier.padding(horizontal = 14.dp, vertical = 9.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                             Icon(Icons.Filled.Stars, null, Modifier.size(16.dp))
-                            Text(if (account?.isPro == true) "PRO" else "${account?.credits ?: 0}", style = monoNumber())
+                            Text(
+                                when {
+                                    account?.isPro == true -> "PRO"
+                                    account == null -> "AI"
+                                    else -> "${account.credits} AI"
+                                },
+                                style = monoNumber(),
+                            )
                         }
                     }
                 }
@@ -372,9 +379,22 @@ fun HomeScreen(
                         label = "Rewordium Pro",
                     )
                     Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
-                        Text(if (account?.isPro == true) "Rewordium Pro is on" else "More room with Pro", style = MaterialTheme.typography.titleMedium)
+                        val selling = com.noxquill.rewordium.keyboard.app.ReleaseFlags.subscriptionsEnabled
                         Text(
-                            if (account?.isPro == true) "Unlimited Jade, everywhere you write." else "${account?.credits ?: 0} credits left · Unlimited Jade with Pro",
+                            when {
+                                account?.isPro == true -> "Rewordium Pro is on"
+                                selling -> "More room with Pro"
+                                else -> "AI writing uses"
+                            },
+                            style = MaterialTheme.typography.titleMedium,
+                        )
+                        Text(
+                            when {
+                                account?.isPro == true -> "Unlimited AI, everywhere you write."
+                                selling -> "${account?.credits ?: 0} credits left · Unlimited Jade with Pro"
+                                account == null -> "Optional AI tools · sign in to use the built-in AI"
+                                else -> "${account.credits} of ${com.noxquill.rewordium.keyboard.app.ReleaseFlags.FREE_AI_USES} free AI uses left · your keyboard is free"
+                            },
                             style = MaterialTheme.typography.bodySmall,
                         )
                     }

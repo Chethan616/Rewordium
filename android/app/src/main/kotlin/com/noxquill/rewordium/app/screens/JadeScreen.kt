@@ -813,8 +813,10 @@ private fun FailureBubble(item: JadeItem.Failure, isPro: Boolean, onUpgrade: () 
         ) {
             Column(Modifier.padding(horizontal = 16.dp, vertical = 12.dp)) {
                 Text(item.text, style = MaterialTheme.typography.bodyMedium)
-                if (!isPro && item.text.contains("credit", ignoreCase = true)) {
-                    TextButton(onClick = onUpgrade, contentPadding = PaddingValues(0.dp)) { Text("Get more room with Pro") }
+                if (!isPro && (item.text.contains("credit", ignoreCase = true) || item.text.contains("AI uses", ignoreCase = true))) {
+                    TextButton(onClick = onUpgrade, contentPadding = PaddingValues(0.dp)) {
+                        Text(if (com.noxquill.rewordium.keyboard.app.ReleaseFlags.subscriptionsEnabled) "Get more room with Pro" else "See your AI uses")
+                    }
                 }
             }
         }
@@ -920,7 +922,7 @@ private fun JadeComposer(controller: JadeController, attaching: Boolean, isPro: 
             }
             val counter = if (controller.draft.length > 6_000) " · ${controller.draft.length}/8,000" else ""
             Text(
-                "Jade is AI and can make mistakes${if (isPro) "" else " · 1 credit per message"}$counter",
+                "Jade is AI and can make mistakes${if (isPro) "" else " · each message uses 1 AI use"}$counter",
                 style = MaterialTheme.typography.labelSmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 textAlign = TextAlign.Center,

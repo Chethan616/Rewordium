@@ -129,6 +129,9 @@ android {
 
         // Feature flags — toggle here for gradual rollout; true = enabled in all builds.
         buildConfigField("boolean", "ENABLE_PATH_SMOOTHER", "true")
+        // Release switches (see ReleaseFlags), set in gradle.properties.
+        buildConfigField("boolean", "REQUIRE_SIGN_IN", (project.findProperty("rewordium.requireSignIn") ?: "false").toString())
+        buildConfigField("boolean", "SUBSCRIPTIONS_ENABLED", (project.findProperty("rewordium.subscriptionsEnabled") ?: "false").toString())
         buildConfigField("boolean", "ENABLE_TRIGRAM_MODEL", "false")
         buildConfigField("boolean", "ENABLE_TFLITE_RERANKER", "false")
         buildConfigField("boolean", "ENABLE_STREAMING_AI", "false")

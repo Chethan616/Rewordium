@@ -153,7 +153,11 @@ fun SettingsScreen(
     onSignOut: () -> Unit,
     onDeleteAccount: suspend (password: String?, googleIdToken: String?) -> Unit,
     onOpenAdmin: () -> Unit = {},
+    onSignIn: () -> Unit = {},
 ) {
+    // No account was signed in to: a silent per-install session, or none at all.
+    val signedIn = account != null && !account.anonymous
+    val selling = com.noxquill.rewordium.keyboard.app.ReleaseFlags.subscriptionsEnabled
     val context = LocalContext.current
     val haptics = LocalHaptics.current
     val avatar by AppSettings.avatar.collectAsState()
@@ -223,9 +227,17 @@ fun SettingsScreen(
                                     ) { haptics.click(); showAvatarPicker = true },
                             )
                             Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                                Text(account?.name?.takeIf(String::isNotBlank) ?: "Your account", style = MaterialTheme.typography.titleLarge, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                                Text(account?.email.orEmpty(), style = MaterialTheme.typography.bodySmall, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                                StatusPill(if (account?.isPro == true) "Pro · ${account.planType}" else "${account?.credits ?: 0} credits", active = account?.isPro == true)
+                                Text(account?.name?.takeIf(String::isNotBlank) ?: if (signedIn) "Your account" else "Your keyboard", style = MaterialTheme.typography.titleLarge, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                                Text(if (signedIn) account?.email.orEmpty() else "Not signed in · nothing needs an account", style = MaterialTheme.typography.bodySmall, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                                StatusPill(
+                                    when {
+                                        account?.isPro == true -> "Pro · ${account.planType}"
+                                        account == null -> "AI: sign in to use"
+                                        selling -> "${account.credits} credits"
+                                        else -> "${account.credits} AI uses left"
+                                    },
+                                    active = account?.isPro == true,
+                                )
                             }
                         }
                         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -239,7 +251,15 @@ fun SettingsScreen(
                                 ),
                                 modifier = Modifier.weight(1f),
                             ) { Text("Change avatar") }
-                            OutlinedButton(
+                            if (!signedIn) Button(
+                                onClick = { haptics.click(); onSignIn() },
+                                shapes = ButtonDefaults.shapes(),
+                                colors = ButtonDefaults.buttonColors(
+                                    containerColor = MaterialTheme.colorScheme.secondary,
+                                    contentColor = MaterialTheme.colorScheme.onSecondary,
+                                ),
+                                modifier = Modifier.weight(1f),
+                            ) { Text("Sign in") } else OutlinedButton(
                                 onClick = { haptics.click(); confirmSignOut = true },
                                 shapes = ButtonDefaults.shapes(),
                                 border = androidx.compose.foundation.BorderStroke(2.dp, MaterialTheme.colorScheme.onSecondaryContainer),
@@ -349,13 +369,22 @@ fun SettingsScreen(
             // 5 · Plan
             item(key = "plan") {
                 SegmentedSection(
-                    title = "Plan",
+                    title = if (selling) "Plan" else "AI tools",
                     modifier = Modifier.enterStagger(5),
                     rows = listOf { shape ->
                         SettingRow(
                             Icons.Filled.Stars,
-                            if (account?.isPro == true) "Rewordium Pro" else "Credits & Pro",
-                            if (account?.isPro == true) "${account.planType.replaceFirstChar(Char::uppercase)} plan · active" else "${account?.credits ?: 0} credits left · see plans",
+                            when {
+                                account?.isPro == true -> "Rewordium Pro"
+                                selling -> "Credits & Pro"
+                                else -> "AI writing uses"
+                            },
+                            when {
+                                account?.isPro == true -> "${account.planType.replaceFirstChar(Char::uppercase)} plan · active"
+                                selling -> "${account?.credits ?: 0} credits left · see plans"
+                                account == null -> "Sign in to use the built-in AI, or use your own key"
+                                else -> "${account.credits} of ${com.noxquill.rewordium.keyboard.app.ReleaseFlags.FREE_AI_USES} free AI uses left"
+                            },
                             shape, Tone.Tertiary, onClick = onPro,
                         )
                     },
@@ -397,9 +426,11 @@ fun SettingsScreen(
                 SegmentedSection(
                     title = "Account",
                     modifier = Modifier.enterStagger(8),
-                    rows = listOf(
+                    rows = if (signedIn) listOf(
                         { shape -> SettingRow(Icons.AutoMirrored.Filled.Logout, "Sign out", account?.email ?: "Sign out of Rewordium on this phone", shape, Tone.Neutral) { confirmSignOut = true } },
                         { shape -> SettingRow(Icons.Filled.DeleteForever, "Delete account", "Permanently remove your account and data", shape, Tone.Error) { showDelete = true } },
+                    ) else listOf(
+                        { shape -> SettingRow(Icons.AutoMirrored.Filled.Logout, "Sign in", "Optional · use your Rewordium account on this phone", shape, Tone.Primary, onClick = onSignIn) },
                     ),
                 )
             }

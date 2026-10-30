@@ -140,10 +140,11 @@ class AIManager(private val context: Context) {
     fun usesOwnApiKey(): Boolean = AIConfigProvider.getConfig(context).isAdvancedEnabled
 
     private fun checkReady(): Result<AIConfigProvider.AIConfig> {
-        if (!isUserLoggedIn()) {
-            return Result.failure(AIException("Log in to Rewordium to use AI", AIException.Kind.LOGIN))
-        }
         val config = AIConfigProvider.reloadConfig(context)
+        // Only the built-in AI (its allowance is kept per user on the server) needs a session; your own key doesn't.
+        if (!config.isAdvancedEnabled && !isUserLoggedIn()) {
+            return Result.failure(AIException(SIGN_IN_FOR_AI, AIException.Kind.LOGIN))
+        }
         if (!config.hasValidApiKey()) {
             return Result.failure(AIException("No API key set. Add one in Settings → Advanced AI.", AIException.Kind.NO_KEY))
         }
@@ -218,7 +219,7 @@ class AIManager(private val context: Context) {
 
         val uid = FirebaseAuth.getInstance().currentUser?.uid
         if (uid.isNullOrBlank()) {
-            return Result.failure(AIException("Log in to Rewordium to use AI", AIException.Kind.LOGIN))
+            return Result.failure(AIException(SIGN_IN_FOR_AI, AIException.Kind.LOGIN))
         }
 
         return withContext(Dispatchers.IO) {
@@ -240,14 +241,14 @@ class AIManager(private val context: Context) {
                 if (remoteIsPro || remoteCredits > 0) {
                     Result.success(Unit)
                 } else {
-                    Result.failure(AIException("You're out of AI credits. Upgrade to keep going.", AIException.Kind.CREDITS))
+                    Result.failure(AIException(outOfAiUses(), AIException.Kind.CREDITS))
                 }
             } catch (e: Exception) {
                 Log.w(TAG, "Credit availability sync failed, using cached keyboard state", e)
                 if (getCachedCredits() > 0) {
                     Result.success(Unit)
                 } else {
-                    Result.failure(AIException("You're out of AI credits. Upgrade to keep going.", AIException.Kind.CREDITS))
+                    Result.failure(AIException(outOfAiUses(), AIException.Kind.CREDITS))
                 }
             }
         }
@@ -487,3 +488,10 @@ class AIManager(private val context: Context) {
 class AIException(message: String, val kind: Kind = Kind.OTHER) : Exception(message) {
     enum class Kind { LOGIN, CREDITS, NO_KEY, NO_TEXT, TOO_LONG, RATE_LIMIT, NETWORK, SERVICE, EMPTY, OTHER }
 }
+
+private const val SIGN_IN_FOR_AI = "Open Rewordium to use the built-in AI (or add your own AI key). Typing works as normal."
+
+/** The message when the built-in AI allowance is used up, matching what this release offers. */
+internal fun outOfAiUses(): String =
+    if (com.noxquill.rewordium.keyboard.app.ReleaseFlags.subscriptionsEnabled) "You're out of AI credits. Upgrade to keep going."
+    else "You've used all ${com.noxquill.rewordium.keyboard.app.ReleaseFlags.FREE_AI_USES} free AI uses. Typing works as normal; add your own AI key in Rewordium to keep using AI."
