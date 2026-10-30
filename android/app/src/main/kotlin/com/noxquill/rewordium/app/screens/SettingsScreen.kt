@@ -383,7 +383,7 @@ fun SettingsScreen(
                                 account?.isPro == true -> "${account.planType.replaceFirstChar(Char::uppercase)} plan · active"
                                 selling -> "${account?.credits ?: 0} credits left · see plans"
                                 account == null -> "Sign in to use the built-in AI, or use your own key"
-                                else -> "${account.credits} of ${com.noxquill.rewordium.keyboard.app.ReleaseFlags.FREE_AI_USES} free AI uses left"
+                                else -> "${account.credits} of ${com.noxquill.rewordium.keyboard.app.ReleaseFlags.FREE_AI_USES} included AI uses left"
                             },
                             shape, Tone.Tertiary, onClick = onPro,
                         )

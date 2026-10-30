@@ -51,11 +51,14 @@ import com.noxquill.rewordium.keyboard.app.ReleaseFlags
 
 private const val MANAGE_PLAY_SUBSCRIPTIONS = "https://play.google.com/store/account/subscriptions"
 
+/** Rewordium Pro subscriptions were sold in the earlier Rewordium app, so that's where they're managed. */
+private const val SUBSCRIPTION_APP_PACKAGE = "com.noxquill.rewordium"
+
 /**
- * What the free release offers instead of plans: the keyboard has no limits, and the optional AI tools run
- * on a fixed allowance — how much is left, that it doesn't refill, and the two ways to keep going (your
- * own AI key, or carrying on without AI). Someone who already pays for Pro sees that, with a way to manage
- * or cancel it in Google Play.
+ * What this release offers instead of plans: the keyboard has no limits, and the optional AI tools run on a
+ * fixed included allowance — how much is left, that it doesn't refill, and the two ways to keep going (your
+ * own AI key, or carrying on without AI). Someone whose Rewordium account has Pro from an earlier
+ * subscription sees that, with a way to manage or cancel it in Google Play.
  */
 @OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable
@@ -70,7 +73,7 @@ fun AiAllowanceScreen(
     val haptics = LocalHaptics.current
     val total = ReleaseFlags.FREE_AI_USES
     val left = (account?.credits ?: 0).coerceAtLeast(0)
-    ExpressiveScaffold(title = "AI writing uses", subtitle = "Free to use", onBack = onBack, heading = Heading.SerifItalic) { padding ->
+    ExpressiveScaffold(title = "AI writing uses", subtitle = "No subscriptions", onBack = onBack, heading = Heading.SerifItalic) { padding ->
         LazyColumn(
             modifier = Modifier.fillMaxSize(),
             contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = padding.calculateTopPadding() + 4.dp, bottom = 32.dp),
@@ -82,7 +85,7 @@ fun AiAllowanceScreen(
                         ShapeBadge(shape = MaterialShapes.Cookie9Sided, color = MaterialTheme.colorScheme.primaryContainer, modifier = Modifier.size(120.dp)) {
                             BotAvatar(type = "star", mood = BotMood.Happy, size = 80.dp, label = null)
                         }
-                        Text("Your keyboard is free", style = Heading.SerifItalic.display(36.sp), textAlign = TextAlign.Center)
+                        Text("No subscriptions, no account", style = Heading.SerifItalic.display(36.sp), textAlign = TextAlign.Center)
                         Text(
                             "Typing, autocorrect, glide typing, suggestions, themes and stickers have no limits and don’t need an account.",
                             style = MaterialTheme.typography.bodyMedium,
@@ -100,11 +103,11 @@ fun AiAllowanceScreen(
                                 Text("Unlimited AI with your Pro plan", style = MaterialTheme.typography.titleMedium)
                                 Text(
                                     if (account.planType == "gifted") "Pro was added to your account by the Rewordium team."
-                                    else "You subscribed before Rewordium became free. You keep Pro while your subscription is active, and you can cancel it any time in Google Play.",
+                                    else "Your Rewordium account has Pro from an earlier subscription. You keep it while that subscription is active, and you can manage or cancel it in Google Play.",
                                     style = MaterialTheme.typography.bodyMedium,
                                 )
                                 if (account.planType != "gifted") OutlinedButton(
-                                    onClick = { haptics.click(); onOpenLink("$MANAGE_PLAY_SUBSCRIPTIONS?package=$packageName") },
+                                    onClick = { haptics.click(); onOpenLink("$MANAGE_PLAY_SUBSCRIPTIONS?package=$SUBSCRIPTION_APP_PACKAGE") },
                                     shapes = ButtonDefaults.shapes(),
                                     modifier = Modifier.fillMaxWidth(),
                                 ) {
@@ -123,7 +126,7 @@ fun AiAllowanceScreen(
                             else -> {
                                 Row(verticalAlignment = Alignment.Bottom, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                                     Text("$left", style = Heading.Serif.display(44.sp))
-                                    Text("of $total free AI uses left", style = MaterialTheme.typography.titleMedium, modifier = Modifier.padding(bottom = 8.dp))
+                                    Text("of $total included AI uses left", style = MaterialTheme.typography.titleMedium, modifier = Modifier.padding(bottom = 8.dp))
                                 }
                                 LinearWavyProgressIndicator(progress = { left / total.toFloat() }, modifier = Modifier.fillMaxWidth())
                                 Text(
@@ -144,7 +147,7 @@ fun AiAllowanceScreen(
                             Text("Use your own AI key", style = MaterialTheme.typography.titleMedium)
                         }
                         Text(
-                            "Add a key from Groq, OpenAI, Google Gemini or Anthropic. Your AI requests then go to that provider on your own account and don’t use your free AI uses.",
+                            "Add a key from Groq, OpenAI, Google Gemini or Anthropic. Your AI requests then go to that provider on your own account and don’t use your included AI uses.",
                             style = MaterialTheme.typography.bodyMedium,
                         )
                         FilledTonalButton(onClick = { haptics.click(); onAiSettings() }, shapes = ButtonDefaults.shapes()) { Text("Set up your own key") }
@@ -168,7 +171,7 @@ fun AiAllowanceScreen(
             item(key = "keyboard-note") {
                 Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                     Icon(Icons.Filled.Keyboard, null, tint = MaterialTheme.colorScheme.onSurfaceVariant)
-                    Text("No subscriptions are sold in this version of Rewordium.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    Text("Rewordium is a one-time purchase on Google Play. There are no subscriptions.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
             }
         }

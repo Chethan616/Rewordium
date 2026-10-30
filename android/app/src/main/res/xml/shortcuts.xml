@@ -10,7 +10,7 @@
         android:shortcutLongLabel="@string/shortcut_keyboard_long">
         <intent
             android:action="android.intent.action.VIEW"
-            android:targetPackage="com.noxquill.rewordium"
+            android:targetPackage="com.chethan616.keyboard"
             android:targetClass="com.noxquill.rewordium.keyboard.app.FlorisAppActivity" />
         <categories android:name="android.shortcut.conversation" />
     </shortcut>
@@ -24,7 +24,7 @@
         android:shortcutLongLabel="@string/shortcut_ai_long">
         <intent
             android:action="android.intent.action.VIEW"
-            android:targetPackage="com.noxquill.rewordium"
+            android:targetPackage="com.chethan616.keyboard"
             android:targetClass="com.noxquill.rewordium.MainActivity"
             android:data="rewordium://ai_settings" />
         <categories android:name="android.shortcut.conversation" />

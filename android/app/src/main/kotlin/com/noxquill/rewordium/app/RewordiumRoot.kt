@@ -816,4 +816,4 @@ private fun authMessage(error: Throwable): String = when (error) {
 /** What to say when the built-in AI allowance is used up, matching what this release offers. */
 internal fun outOfAiUsesMessage(): String =
     if (ReleaseFlags.subscriptionsEnabled) "You’re out of credits. Rewordium Pro gives you unlimited Jade."
-    else "You’ve used all ${ReleaseFlags.FREE_AI_USES} of your free AI uses. Typing works as normal, and you can add your own AI key in Settings › AI provider to keep using AI."
+    else "You’ve used all ${ReleaseFlags.FREE_AI_USES} of your included AI uses. Typing works as normal, and you can add your own AI key in Settings › AI provider to keep using AI."

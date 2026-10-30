@@ -1171,7 +1171,7 @@ class MyAccessibilityService : AccessibilityService(), BubbleInteractionListener
         } else {
             val creditCount = creditManager.getCredits()
             creditsTextView.text = if (com.noxquill.rewordium.keyboard.app.ReleaseFlags.subscriptionsEnabled) "Credits Remaining: $creditCount"
-            else "Free AI uses left: $creditCount of ${com.noxquill.rewordium.keyboard.app.ReleaseFlags.FREE_AI_USES}"
+            else "Included AI uses left: $creditCount of ${com.noxquill.rewordium.keyboard.app.ReleaseFlags.FREE_AI_USES}"
         }
     }
 

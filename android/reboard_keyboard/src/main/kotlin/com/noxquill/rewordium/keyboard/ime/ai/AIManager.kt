@@ -494,4 +494,4 @@ private const val SIGN_IN_FOR_AI = "Open Rewordium to use the built-in AI (or ad
 /** The message when the built-in AI allowance is used up, matching what this release offers. */
 internal fun outOfAiUses(): String =
     if (com.noxquill.rewordium.keyboard.app.ReleaseFlags.subscriptionsEnabled) "You're out of AI credits. Upgrade to keep going."
-    else "You've used all ${com.noxquill.rewordium.keyboard.app.ReleaseFlags.FREE_AI_USES} free AI uses. Typing works as normal; add your own AI key in Rewordium to keep using AI."
+    else "You've used all ${com.noxquill.rewordium.keyboard.app.ReleaseFlags.FREE_AI_USES} included AI uses. Typing works as normal; add your own AI key in Rewordium to keep using AI."

@@ -95,7 +95,7 @@ fun HomeScreen() = FlorisScreen {
                     if (!popped) {
                         try {
                             val intent = Intent().apply {
-                                setClassName("com.noxquill.rewordium", "com.noxquill.rewordium.MainActivity")
+                                setClassName(context.packageName, "com.noxquill.rewordium.MainActivity")
                                 addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
                                 addFlags(Intent.FLAG_ACTIVITY_SINGLE_TOP)
                                 addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP)

@@ -7,44 +7,36 @@
   "client": [
     {
       "client_info": {
-        "mobilesdk_app_id": "1:1046215732414:android:a97ddde5e4953c46ab02ef",
+        "mobilesdk_app_id": "1:1046215732414:android:8100df010fadda57ab02ef",
         "android_client_info": {
-          "package_name": "com.noxquill.rewordium"
+          "package_name": "com.chethan616.keyboard"
         }
       },
       "oauth_client": [
         {
-          "client_id": "1046215732414-7hll1v7gjfou2d2s16hgvb6ht62pm2k2.apps.googleusercontent.com",
-          "client_type": 3
-        },
-        {
-          "client_id": "1046215732414-debug.apps.googleusercontent.com",
+          "client_id": "1046215732414-1a0oujnh8h7ag0k71o6ecjfuehc14l82.apps.googleusercontent.com",
           "client_type": 1,
           "android_info": {
-            "package_name": "com.noxquill.rewordium",
-            "certificate_hash": "0fbbb493ec132e0e12247639605454e4b0fae68c"
-          }
-        },
-        {
-          "client_id": "1046215732414-release.apps.googleusercontent.com",
-          "client_type": 1,
-          "android_info": {
-            "package_name": "com.noxquill.rewordium",
+            "package_name": "com.chethan616.keyboard",
             "certificate_hash": "738e497d62ca566a329f63de1dc48e7e82016e0e"
           }
         },
         {
-          "client_id": "1046215732414-playstore.apps.googleusercontent.com",
+          "client_id": "1046215732414-3vga5q7b79j3r3c0ervbk92vakeokr7j.apps.googleusercontent.com",
           "client_type": 1,
           "android_info": {
-            "package_name": "com.noxquill.rewordium",
-            "certificate_hash": "4f6ac2b6b61eb088705e4c79d5ecde4572aa4a73"
+            "package_name": "com.chethan616.keyboard",
+            "certificate_hash": "0fbbb493ec132e0e122476396054b5e4b0fae68c"
           }
+        },
+        {
+          "client_id": "1046215732414-7hll1v7gjfou2d2s16hgvb6ht62pm2k2.apps.googleusercontent.com",
+          "client_type": 3
         }
       ],
       "api_key": [
         {
-          "current_key": "AIzaSyD9gox3z9JEOEzR3VKfg98uwDpK9phYD2U"
+          "current_key": "AIzaSyBoG1w3GaQVy2O6kjp-ZQw09TZgbUWjrTg"
         }
       ],
       "services": {
@@ -55,10 +47,62 @@
               "client_type": 3
             },
             {
-              "client_id": "1046215732414-dcm9ivr4tum4unhsc37truln5ud8lpb4.apps.googleusercontent.com",
+              "client_id": "1046215732414-5kien2ar9uoc4m957cdei3v9ou946llb.apps.googleusercontent.com",
               "client_type": 2,
               "ios_info": {
-                "bundle_id": "com.example.ycStartup"
+                "bundle_id": "com.noxquill.rewordium"
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:1046215732414:android:a97ddde5e4953c46ab02ef",
+        "android_client_info": {
+          "package_name": "com.noxquill.rewordium"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "1046215732414-0k40uu4cpjosdaa7ejokag8146sm7s4j.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.noxquill.rewordium",
+            "certificate_hash": "4f6ac2b6b61eb088705e4c79d5ecde4572aa4a73"
+          }
+        },
+        {
+          "client_id": "1046215732414-i1jd211v66scvahk94b5i71bcr0fklii.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.noxquill.rewordium",
+            "certificate_hash": "738e497d62ca566a329f63de1dc48e7e82016e0e"
+          }
+        },
+        {
+          "client_id": "1046215732414-7hll1v7gjfou2d2s16hgvb6ht62pm2k2.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBoG1w3GaQVy2O6kjp-ZQw09TZgbUWjrTg"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "1046215732414-7hll1v7gjfou2d2s16hgvb6ht62pm2k2.apps.googleusercontent.com",
+              "client_type": 3
+            },
+            {
+              "client_id": "1046215732414-5kien2ar9uoc4m957cdei3v9ou946llb.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "com.noxquill.rewordium"
               }
             }
           ]

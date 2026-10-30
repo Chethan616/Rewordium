@@ -393,7 +393,7 @@ fun HomeScreen(
                                 account?.isPro == true -> "Unlimited AI, everywhere you write."
                                 selling -> "${account?.credits ?: 0} credits left · Unlimited Jade with Pro"
                                 account == null -> "Optional AI tools · sign in to use the built-in AI"
-                                else -> "${account.credits} of ${com.noxquill.rewordium.keyboard.app.ReleaseFlags.FREE_AI_USES} free AI uses left · your keyboard is free"
+                                else -> "${account.credits} of ${com.noxquill.rewordium.keyboard.app.ReleaseFlags.FREE_AI_USES} included AI uses left · no subscriptions"
                             },
                             style = MaterialTheme.typography.bodySmall,
                         )

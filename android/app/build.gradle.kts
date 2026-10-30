@@ -139,7 +139,8 @@ android {
     }
 
     defaultConfig {
-        applicationId = "com.noxquill.rewordium"
+        // A new listing: Rewordium – Smart Keyboard (paid). The old app, com.noxquill.rewordium, lives on main.
+        applicationId = "com.chethan616.keyboard"
         minSdk = 26
         targetSdk = 36
         versionCode = projectVersionCode.toInt()
