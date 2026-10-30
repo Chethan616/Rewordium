@@ -1,89 +1,105 @@
-# Google Play Store App Description - Accessibility Service Compliant
+# Google Play listing — Rewordium – Smart Keyboard
 
-## Short Description (80 characters max)
-AI-powered writing assistant with smart keyboard and accessibility features
+Package: `com.chethan616.keyboard` · Pricing: paid upfront (one-time purchase) · No in-app purchases, no ads, no subscriptions.
 
-## Long Description (4000 characters max)
+> The earlier app, Rewordium (`com.noxquill.rewordium`), has its own listing and documents on the `main` branch.
 
-**Rewordium - AI Writing Assistant & Smart Keyboard**
+## App name (≤ 30)
 
-Transform your writing experience with Rewordium, the intelligent AI-powered writing assistant that enhances your text across all apps. Our advanced keyboard technology uses accessibility services to provide seamless, context-aware writing assistance wherever you type.
+```
+Rewordium – Smart Keyboard
+```
 
-**🔧 ACCESSIBILITY SERVICE USAGE**
-Rewordium uses Android's AccessibilityService API to deliver core functionality:
+## Short description (≤ 80)
 
-• **Text Context Reading**: Reads text from input fields across apps to understand context and provide relevant AI suggestions
-• **Smart Text Insertion**: Automatically inserts AI-generated content directly into text fields without manual copy-pasting
-• **Cross-App Integration**: Works seamlessly in messaging apps, email clients, social media, documents, and more
-• **Real-time Processing**: Analyzes surrounding text to provide contextually appropriate writing improvements
+```
+Smart keyboard: autocorrect, swipe typing & optional AI. Typing stays on device.
+```
 
-**✨ KEY FEATURES**
+## Full description (≤ 4000)
 
-📝 **AI Writing Tools**
-• Paraphrase text with multiple tone options (formal, casual, creative)
-• Translate between 100+ languages instantly
-• Generate professional emails, creative content, and summaries
-• Expand or shorten text while maintaining meaning
-• Grammar and style improvements
+```
+Rewordium is a smart Android keyboard. Type faster with intelligent autocorrect, accurate swipe typing and suggestions that learn the way you write, while your typing stays on your phone.
 
-⌨️ **Smart Keyboard**
-• Swipe typing with AI-powered word prediction
-• Context-aware emoji suggestions
-• Custom themes and layouts
-• Voice-to-text with AI enhancement
-• Quick access to AI tools via long-press gestures
+KEYBOARD FIRST
+• Intelligent autocorrect that leaves names and slang alone
+• Accurate swipe (glide) typing
+• Smart word suggestions and next-word predictions
+• A personal dictionary that learns your words on your phone, with Incognito mode when you don't want it to learn
+• Clipboard history, emoji search, emoticons, GIFs and stickers
+• Make your own stickers or import sticker collections
+• Number row, one-handed mode, adjustable height and key spacing
 
-🎯 **Persona-Based Writing**
-• Academic writing style for research and papers
-• Professional tone for business communication
-• Creative mode for storytelling and content creation
-• Casual style for social media and messaging
+MAKE IT YOURS
+• Ready-made theme packs, from playful to clean and professional
+• A theme builder for colours, key shapes, fonts and depth
+• A community gallery of themes made by other people
+• Bouncy key animations and a mascot on your space bar
 
-🔒 **Privacy & Security**
-• Local text processing when possible
-• No storage of personal information or passwords
-• Transparent data usage policies
-• Complete user control over accessibility permissions
+OPTIONAL AI WRITING TOOLS
+Rewrite, fix grammar, change the tone, shorten, expand, summarize or translate right from the keyboard, or ask Jade, the in-app writing assistant.
+• AI is optional. Text is sent to the AI provider only when you use an AI tool.
+• The app includes a limited number of AI uses, shown in the app. They don't refill in this version. AI is not unlimited.
+• When your included AI uses run out, the keyboard and every other feature keep working.
+• Prefer your own AI provider? Add your own API key (Groq, OpenAI, Google Gemini or Anthropic).
 
-**🛡️ ACCESSIBILITY COMPLIANCE**
-This app requires accessibility permissions to function properly. The AccessibilityService API is used exclusively for:
-- Reading text content from input fields to provide context-aware AI assistance
-- Inserting AI-generated text seamlessly into applications
-- Enhancing the writing experience across all text-based apps
+PRIVACY-CONSCIOUS BY DESIGN
+• Typing, autocorrect, predictions and the words the keyboard learns are processed on your phone
+• No account needed
+• No ads, and the app doesn't collect the advertising ID
+• Suggestions and autocorrect are off in password fields
+• The built-in AI runs on models hosted by Groq. Only the text you choose is sent, and only when you use an AI tool.
+Read exactly what leaves your phone in our Privacy Policy and Data Safety page.
 
-Users maintain full control and can disable accessibility services at any time through Android settings.
+OPTIONAL WRITING ASSISTANT IN OTHER APPS
+Rewordium can also offer a floating writing assistant inside other apps. It uses Android's Accessibility Service API, is off until you turn it on, and the app explains what it does first. When you use it, it reads the text field you're writing in (and, for reply suggestions, the visible conversation) and sends that text to the AI provider only when you run a tool.
 
-**🌟 WHO IT'S FOR**
-• Students writing essays and research papers
-• Professionals creating emails and documents
-• Content creators and social media managers
-• Non-native speakers needing translation help
-• Anyone wanting to improve their writing quality
+ONE PURCHASE
+Rewordium is a one-time purchase. No subscriptions, no ads.
 
-**📱 COMPATIBILITY**
-• Works with all text-based Android apps
-• Supports Android 7.0 and above
-• Optimized for tablets and phones
-• Low battery consumption
-• Offline capabilities for basic features
+Questions? noxquilltech@gmail.com
+```
 
-**🚀 GET STARTED**
-1. Install Rewordium
-2. Review and accept accessibility permissions disclosure
-3. Enable accessibility service in Android settings
-4. Activate Rewordium keyboard
-5. Start writing with AI assistance!
+## What's new (≤ 500) — version 1.0.0
 
-**💡 PRO TIP**
-Long-press the AI button on the keyboard to access advanced writing tools instantly, or use the main app for detailed text analysis and batch processing.
+```
+Welcome to Rewordium – Smart Keyboard.
+• A fast keyboard with intelligent autocorrect, swipe typing and next-word suggestions, worked out on your phone
+• No sign-in and no subscription
+• Optional AI rewriting, tone changes and summaries, with included AI uses shown in the app
+• Themes, stickers, GIFs and emoji search, plus a community theme gallery
+```
 
-Experience the future of writing with Rewordium - where artificial intelligence meets seamless accessibility to enhance your communication across every app.
+## Screenshot captions
 
-**📜 Open Source Attribution**
-The keyboard component is based on FlorisBoard (Patrick Goldinger and contributors), licensed under Apache License 2.0.
+1. A smarter keyboard. Autocorrect, swipe typing and suggestions.
+2. Your typing stays on your phone. No account, no ads.
+3. Make it yours. Theme packs, a theme builder and a community gallery.
+4. Stickers, GIFs and emoji, with search.
+5. Optional AI: rewrite, change the tone, summarize. Included uses shown in the app.
+6. One purchase. No subscriptions.
 
----
+## Store settings checklist
 
-**Video Demonstration**: [Link to video showing AccessibilityService features]
-**Privacy Policy**: [Link to privacy policy]
-**Support**: [Support contact information]
+- Category: Tools (or Productivity). Tags: keyboard, typing.
+- Privacy policy URL: https://chethan616.github.io/Rewordium/keyboard/privacy-policy.html
+- Account deletion URL (the app offers optional sign-in): https://chethan616.github.io/Rewordium/keyboard/delete-data.html
+- Contains ads: No. In-app purchases: No.
+- Advertising ID: the app doesn't use it (permission removed, collection disabled).
+- Accessibility API: declare the optional writing assistant and its purpose in the Play Console accessibility declaration.
+
+## Data safety form (draft — check against Firebase's official Play disclosure guidance before submitting)
+
+Data is encrypted in transit: **Yes**. Users can request deletion: **Yes** (in-app for signed-in accounts; delete-data page for everyone).
+
+| Category › type | Collected | Shared | Optional | Purpose | Notes |
+|---|---|---|---|---|---|
+| Personal info › Name, Email address | Yes | No | Yes | Account management | Only if the user signs in |
+| App activity › App interactions | Yes | No | No | Analytics | Google Analytics for Firebase; no typed text |
+| App activity › In-app search history | Yes | No | Yes | App functionality | GIF/sticker search words sent to KLIPY at the user's request |
+| App activity › Other user-generated content | Yes | No | Yes | App functionality | Text the user sends to an AI tool (sent to Groq at the user's request, not stored by us); published themes; AI reply reports |
+| Device or other IDs | Yes | No | No | App functionality, Analytics | Anonymous Firebase user ID, Firebase installation/app-instance ID, FCM token |
+
+Not collected: typed keystrokes, contacts (read on device only, when enabled), photos (on device only), location, advertising ID, financial info (the Play purchase is handled by Google Play).
+
+"Shared" is **No** for the rows above because transfers to Groq and KLIPY happen at the user's request (user-initiated) and Google Firebase acts as a service provider. Review this if that changes.

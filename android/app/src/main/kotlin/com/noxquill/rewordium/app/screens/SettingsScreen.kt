@@ -452,7 +452,7 @@ fun SettingsScreen(
         onDismissRequest = { confirmSignOut = false },
         icon = { Icon(Icons.AutoMirrored.Filled.Logout, null) },
         title = { Text("Sign out?") },
-        text = { Text("You’ll need to sign in again to use Jade and your credits.") },
+        text = { Text("You can sign back in any time. The keyboard and everything on this phone keep working.") },
         confirmButton = { TextButton(onClick = { confirmSignOut = false; haptics.confirm(); onSignOut() }) { Text("Sign out") } },
         dismissButton = { TextButton(onClick = { confirmSignOut = false }) { Text("Stay signed in") } },
     )
@@ -602,9 +602,9 @@ private fun DeleteAccountDialog(isPro: Boolean, onDismiss: () -> Unit, onDelete:
         title = { Text("Delete your account?") },
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                Text("This permanently deletes your Rewordium account, profile, credits and plan records, and the Jade chats on this phone. It can’t be undone.")
+                Text("This permanently deletes your Rewordium account, profile, included AI uses and plan records, and the Jade chats on this phone. It can’t be undone.")
                 if (isPro) Text(
-                    "Deleting your account doesn’t cancel Rewordium Pro. Cancel it in Google Play → Subscriptions so you aren’t charged again.",
+                    "If your account has Rewordium Pro from an earlier subscription, deleting it doesn’t cancel that subscription. Cancel it in Google Play → Subscriptions so you aren’t charged again.",
                     color = MaterialTheme.colorScheme.error,
                     style = MaterialTheme.typography.bodyMedium,
                 )

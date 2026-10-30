@@ -1,126 +1,158 @@
 # Privacy Policy
 
-**Last updated: May 18, 2026**
+_Rewordium – Smart Keyboard · Last updated: 30 October 2026_
 
-Rewordium ("we," "our," or "us") is dedicated to protecting your personal data, secure configurations, and typing privacy. This Privacy Policy details our absolute commitment to transparency, the exact parameters under which we handle user text, and our zero-tolerance policy towards unauthorized data-mining, telemetry tracking, and keylogging.
+Rewordium – Smart Keyboard is an Android keyboard. Typing, autocorrect, suggestions, swipe typing and the words it learns all work on your phone. A few optional features need the internet. A keyboard can see everything you type, so this policy says exactly what leaves your phone, when, and where it goes.
 
-By downloading, installing, or interacting with the Rewordium mobile application (the "App" or "Service"), you explicitly agree to the data collection, local storage, and stateless processing frameworks described in this Privacy Policy. If you do not consent to these terms, you must immediately deactivate the Service and uninstall the App.
+## 1. The short version
 
----
+- What you type is processed on your phone. The keyboard doesn’t send your typing to us, and analytics never include what you type.
+- AI writing tools are optional. Text is sent for AI processing only when you tap an AI tool or send a message to Jade, and it goes to the AI provider, not to our servers.
+- No ads. The app doesn’t collect the advertising ID, and we don’t sell your data.
+- You don’t need an account. The app keeps an anonymous ID so it can track your included AI uses. Signing in is optional.
 
-## 🚨 MANDATORY ANDROID ACCESSIBILITY SERVICE DISCLOSURE
+## 2. Who we are
 
-Rewordium integrates Android’s standard `AccessibilityService` API to provide its core real-time AI writing companion features. This integration is optional but critical for the floating AI Assistant Bubble to function.
+This policy covers Rewordium – Smart Keyboard (Google Play package com.chethan616.keyboard), made by Noxquill (“we”, “us”). Contact: noxquilltech@gmail.com.
 
-### 1. Scope and Purpose of Accessibility Service
-- **Inline Text Reading**: When you actively focus a text input field in a third-party application and tap the floating Rewordium Assistant Bubble, the service safely reads the active draft inside that input field.
-- **Context-Aware Replied Suggestion**: If you tap the Assistant Bubble when your active text input box is completely blank, the service contextually scans surrounding visible page elements (such as an incoming email subject or previous chat line) strictly to draft a relevant response.
-- **Direct Inline Text Replacement**: After our secure AI completion completes, the service automatically replaces your active draft in the text field with the refined, polished version. This eliminates the need for manual copy-paste actions.
+## 3. What stays on your phone
 
-### 2. Operational Limitations & Boundaries (What is NOT Accessed)
-- **Automatic Password Suspension**: The Accessibility Service automatically suspends all monitoring, reading, and AI suggest layers whenever a secure password, credit card, or pin entry input field is active on your device.
-- **No Background Surveillance**: The Accessibility Service does not run passive background tracking. It does not monitor apps, catalog browsing history, inspect personal photo files, capture device screens, or record calls.
-- **Opt-In Control**: Enabling the Accessibility Service is 100% voluntary. You must explicitly authorize it in Android Settings (`Settings > Accessibility > Installed Services > Rewordium`). You can revoke this permission at any moment without deleting your account.
+- Typing and predictions: autocorrect, word suggestions, next-word predictions, swipe (glide) typing and spell checking run on your phone. In password fields the keyboard turns suggestions and autocorrect off.
+- Words the keyboard learns (your personal dictionary and learned words) are saved on your phone. It doesn’t learn in Incognito mode, in apps that ask keyboards not to learn, or in password, email, web address and number fields. You can clear learned words in the app’s Keys tab.
+- Clipboard history, if you use the keyboard’s clipboard, is saved on your phone.
+- Emoji, emoticon, GIF and sticker recents and favourites; themes you build; stickers you make or import; Jade chat history; and your settings are saved on your phone.
+- Backups you export are files on your phone; you choose where they go.
+- Contact names: only if you turn on contact suggestions and allow the Contacts permission. The keyboard reads contact names on your phone to suggest them. They aren’t uploaded.
+- Camera: only if you choose “take a photo” in Sticker Studio. The photo is used on your phone to make a sticker.
+- Voice typing: the microphone key switches to your phone’s voice input app (for example, Google voice typing). That app handles your voice under its own privacy policy.
+- Crash reports: if the keyboard crashes, a report is saved on your phone. It’s only sent anywhere if you choose to share it.
 
----
+## 4. AI writing tools (optional)
 
-## 1. Zero-Data-Collection & Privacy-First Architecture
+AI tools include rewrite, tone changes, summaries, translation, the Jade assistant, and the optional accessibility writing assistant.
 
-Rewordium is engineered on a strict **privacy-by-design** framework. Our business model does not rely on gathering, profiling, mining, or selling user typing content, communications, or personal metadata.
-- **No Telemetry Keylogging**: Our keyboard input engine runs completely locally in offline RAM. We do not maintain any logs of your keystrokes, personal chats, custom dictionaries, or search queries.
-- **Smart Clipboard Privacy**: The clipboard recommendation panel processes copied text segments strictly locally. It automatically ignores and discards passwords, security pins, credit card details, and raw phone numbers from showing up as suggestions.
+### When text is sent
 
----
+Only when you tap an AI tool, send a message to Jade, or run the accessibility writing assistant. Nothing is sent while you just type.
 
-## 2. Information We Collect and Process
+### What is sent
 
-To run account-based billing, standard credit daily allocations, and active security systems, we process the following categories of data:
+- The text you chose to work on (the text you selected, or the text in the field) and the instruction for the tool, such as “make it friendlier”.
+- For Jade: your message and the recent messages of that chat (up to the last 12), so the reply makes sense.
+- For reply suggestions in the accessibility assistant: the text of the conversation visible on your screen, so the reply fits.
 
-### 2.1 Account and Security Information
-- **Authentication Credentials**: Secure sign-in tokens generated via Google Sign-In or Firebase Authentication.
-- **Profile Data**: Your email address, account identifier, and billing status.
-- **Account Preferences**: Personal parameters, including custom writer personas, saved settings, and theme choices.
+### Where it goes
 
-### 2.2 Billing & Subscription Data
-- **Transaction Logs**: Secure subscription statuses, transaction IDs, and credit tallies. All credit card billing details are processed securely and exclusively by Google Play Billing; Rewordium never collects, views, or stores financial card details on its servers.
+By default, to Groq, Inc., which runs the AI models that write the result. Requests go directly from your phone to Groq over an encrypted connection. They don’t pass through our servers, and we don’t store your text or the result. Groq processes the text to produce the result; how long it keeps it is governed by Groq’s own privacy policy and terms.
 
-### 2.3 Transient Text Processing Data (Stateless Cloud Transit)
-- **Draft Refinements**: When you submit a block of text for Tone Shift, Summarization, Translation, or Grammar Check using our default cloud AI, the raw draft is securely transmitted over HTTPS.
-- **Stateless RAM Processing**: The draft is processed transiently inside secure, volatile RAM. The text is immediately deleted upon completion and is **never** archived in databases, logged to disk, or utilized to retrain AI language models.
+If you add your own AI key in Settings › AI provider, requests go directly from your phone to the provider you chose (Groq, OpenAI, Google Gemini, Anthropic, or a custom address you enter) under your own account with them, and their terms apply.
 
-### 2.4 Secure Local Storage (Encryption Specs)
-- **AES-256 Key Encryption**: Your private API keys (OpenAI, Google Gemini, Anthropic Claude, custom endpoints) and custom settings are stored locally on your device's secure hardware partition.
-- **Keystore / Keychain Integration**: We utilize `FlutterSecureStorage` interfacing directly with the device's hardware-backed **Android Keystore** (and iOS Keychain on Apple platforms) via 256-bit AES cryptographic encryption. This data never touches our cloud servers.
+### Please don’t send secrets
 
----
+Don’t use AI tools on passwords, card numbers, health details or anything else you don’t want an AI provider to process.
 
-## 3. Data Sovereignty & AI Infrastructure (Qwen via Groq)
+### Included AI uses
 
-Many users are concerned about where their private writing transits when using modern language models. We have implemented strict geographical and infrastructural boundaries to guarantee your security:
+The app includes a limited number of AI uses (shown in the app). The count is stored with your app profile in our database. If you use your own AI key, AI requests don’t count against it.
 
-- **Default Cloud AI Engine**: Rewordium's standard cloud writing refinements utilize the state-of-the-art open-source **Qwen 3 (32B)** model.
-- **Western Infrastructure Isolation (Groq)**: 100% of these default model completions are routed directly through **Groq’s secure, ultra-low latency server networks located in the United States**.
-- **No Chinese Endpoints**: We do **not** use, transit through, or connect to any Chinese domestic endpoints, Alibaba Cloud networks, or third-party servers subject to foreign surveillance. Your text remains fully protected under secure Western data frameworks.
+### Reporting AI replies
 
----
+If you report an AI reply, the reply, your note, and the request it answered (if included) are sent to us so we can review it.
 
-## 4. Bring Your Own Key (BYOK) Data Processing
+## 5. Your app profile and account
 
-If you enable **Bring Your Own Key (BYOK)** in the advanced settings to bypass standard daily credit caps:
-- **Direct Secure Dispatch**: Your custom API keys are loaded locally from your encrypted device Keystore and dispatched directly over secure HTTPS tunnels to the respective provider's endpoints (e.g. `api.openai.com`, `generativelanguage.googleapis.com`, or `api.anthropic.com`).
-- **No Intermediary Transit**: Your custom keys and text drafts completely bypass Rewordium's servers in BYOK mode, transiting directly to your selected provider.
-- **Billing Responsibility**: All interactions under BYOK mode are governed strictly by the respective third-party provider's privacy policies and terms of service. You are solely responsible for reviewing and managing your API key usage logs.
+To keep your included AI uses and let you publish themes without an account, the app creates an anonymous ID for your installation using Firebase Authentication (Google). It holds no name, email or phone number.
 
----
+Stored with that ID in our database (Cloud Firestore, Google): how many AI uses you have left, whether your Rewordium account has Pro from an earlier subscription, when the profile was created, how you signed in, and a push notification token.
 
-## 5. Tampering, Safety, & APK Integrity Safeguards
+Signing in is optional (email and password, or Google). If you sign in, we also store your name and email address.
 
-To prevent malicious modified copies of Rewordium (which could easily have spyware or keyloggers injected by bad actors on unofficial forums) from harvesting your typing inputs:
-- **Signature Integrity Locking**: Rewordium contains cryptographic installation checks that cross-reference the app's signature against official store certificates.
-- **Automated Disabling**: If modified, cracked, or tampered APK packages are detected, the Service immediately stops running and locks all features to safeguard your device's keystream.
-- **Third-Party Telemetry**: In modified copies, all privacy guarantees are null and void. We strongly advise users to only install the App from the official Google Play Store.
+We also keep a basic install record: app version, platform, when the app was first and last opened, and your app ID.
 
----
+## 6. App analytics
 
-## 6. Data Security Measures
+We use Google Analytics for Firebase to understand which parts of the app are used: screens opened, app opens and feature use (for example, that an AI tool was used). It also receives device details such as model, Android version and language, and Google derives an approximate region from your IP address. Analytics never include what you type.
 
-We enforce rigorous administrative, technical, and physical security layers:
-- **Full Transit Encryption**: 100% of external network communications use secure TLS/HTTPS protocols.
-- **Access Control Controls**: Strict role-based credential restrictions preventing unauthorized server administrative entry.
-- **Anonymized Aggregated Analytics**: Standard usage metrics and app crash reports are fully stripped of personal identifiers and deleted automatically after 90 days.
+Collection of the advertising ID is turned off, and analytics data isn’t used for ad personalisation.
 
----
+## 7. Notifications and announcements
 
-## 7. Your Data Rights & Control
+If notifications are on, Firebase Cloud Messaging gives your phone a push token so we can send announcements, and the app may show in-app announcements. The app may also show an occasional note from its mascots if you haven’t opened it for a while; those notes are created on your phone and send nothing. One switch in Settings turns all of these off.
 
-You hold absolute control over your private information and device integrations:
-- **Accessibility Opt-Out**: You can turn off accessibility integration at any moment inside your device's settings menu.
-- **Account Deletion**: You can request immediate account deletion in the settings drawer. Upon trigger, all account profile entries and sign-in tokens are instantly wiped from our databases.
-- **API Key Removal**: Clearing your private keys in advanced settings completely purges them from your device's secure Keystore storage blocks.
+## 8. Community themes (optional)
 
----
+Anyone can browse themes other people shared; no account is needed. If you publish a theme, its design, the name you give it, your first name as the author and your app ID are visible to everyone who browses.
 
-## 8. GDPR & CCPA Compliance Disclosures
+## 9. GIF and sticker search
 
-### 8.1 European Union (GDPR)
-For EU users, the lawful basis for transient text processing is the performance of a contract (delivering the AI edits you trigger). You hold the right to portability, data erasure, and to file inquiries with your national data protection agency.
+To show GIFs and stickers, the app sends your search words (and, as with any web request, your IP address) to KLIPY and loads the results from KLIPY. KLIPY’s privacy policy applies to that data.
 
-### 8.2 State of California (CCPA)
-California residents are entitled to know what data categories are gathered, request deletion, and are explicitly protected under a **"Do Not Sell My Info"** guarantee. Rewordium sells zero user data.
+## 10. Google Play
 
----
+Your purchase of the app, app updates and occasional review prompts are handled by Google Play under Google’s terms.
 
-## 9. Updates to this Privacy Policy
+## 11. Accessibility writing assistant (optional)
 
-We reserve the right to modify this policy periodically to align with legal guidelines or operational feature expansions. When significant revisions occur, we will display a prominent notice inside the app. Continuing to use Rewordium after changes are posted constitutes your absolute acceptance of the revised Privacy Policy.
+This assistant is off unless you turn it on in Android settings, after the app explains what it does. When it’s on:
 
----
+- It shows a floating bubble over other apps when you’re in a text field.
+- When you open it, it reads the text of the field you’re editing.
+- When you ask it for a reply suggestion, it reads the visible conversation on screen.
+- That text is only sent to the AI provider when you run a tool, as described above. The assistant doesn’t record your screen or send anything in the background.
 
-## 10. Contact Us
+You can turn it off at any time in Android Settings › Accessibility.
 
-For all privacy questions, data requests, or compliance audits, please contact us at:
+## 12. How we use information
 
-**Email**: noxquilltech@gmail.com  
-**Developer Group**: Noxquill Tech  
-**Support Desk**: noxquilltech@gmail.com  
-**Website**: rewordium.tech  
+- To provide the app’s features: your AI allowance, community themes and announcements.
+- To keep the app working, fix problems and protect it from abuse, for example by suspending profiles that misuse the AI service.
+- To understand, in aggregate, which features are used.
+
+We don’t sell personal information and don’t use it for advertising.
+
+## 13. Who receives data
+
+- Google (Firebase Authentication, Cloud Firestore, Analytics, Cloud Messaging, In-App Messaging; Google Play).
+- Groq, Inc., for the built-in AI tools.
+- KLIPY, for GIF and sticker search.
+- The AI provider you choose, if you add your own key.
+- Authorities, where the law requires it.
+
+## 14. Security
+
+The app’s connections to Google, Groq and KLIPY are encrypted in transit (HTTPS). No system is perfectly secure, so we keep what we store to the minimum the features need.
+
+## 15. Keeping and deleting data
+
+- Data on your phone stays until you delete it in the app, clear the app’s data, or uninstall the app.
+- If you signed in, Settings › Delete account removes your profile and your sign-in account. Themes you published stay in the gallery unless you unshare them first or ask us to remove them.
+- If you never signed in, or can’t open the app, email us to delete your anonymous profile. See the “Delete your data” page linked below.
+- Analytics data is kept by Google Analytics for Firebase according to the retention setting in our Firebase project.
+- AI reply reports are kept until we’ve reviewed them.
+
+## 16. Your choices
+
+- Use Incognito mode so the keyboard doesn’t learn from what you type.
+- Turn off “AI tools in the keyboard” in Settings, or simply don’t use AI tools.
+- Leave the accessibility assistant off, or turn it off in Android settings.
+- Turn notifications off in Settings.
+- Withdraw the Contacts or Camera permission in Android settings.
+- Use your own AI key instead of the built-in AI.
+
+## 17. Children
+
+The app isn’t directed at children under 13, and we don’t knowingly collect their personal information. If you believe a child has given us personal information, contact us and we’ll delete it.
+
+## 18. Your rights
+
+Depending on where you live, you may have rights to access, correct, delete or object to the processing of your personal information. Email noxquilltech@gmail.com and we’ll respond.
+
+## 19. Changes to this policy
+
+If we change this policy, we’ll update the date at the top, and for significant changes we’ll let you know in the app.
+
+## 20. Contact
+
+Questions or requests: noxquilltech@gmail.com.
+
+The published version is at https://chethan616.github.io/Rewordium/keyboard/privacy-policy.html.

@@ -1,3 +1,6 @@
+# Release switches read by the app module; the library pass would otherwise drop them as unused
+-keep class com.noxquill.rewordium.keyboard.app.ReleaseFlags { *; }
+
 # Keep Routes classes and all serialization data
 -keep class com.noxquill.rewordium.keyboard.app.Routes { *; }
 -keep class com.noxquill.rewordium.keyboard.app.Routes$* { *; }

@@ -65,12 +65,12 @@ fun AccessibilityDisclosureDialog(onAgree: () -> Unit, onDecline: () -> Unit) {
                 DisclosurePoint(
                     Icons.Filled.Cloud, Tone.Secondary,
                     "How it’s used",
-                    "Only the text you ask it to work on is sent to Rewordium’s AI provider to write the suggestion. The result goes back into the field when you choose it.",
+                    "Only the text you ask it to work on is sent to the AI provider (Groq for the built-in AI, or the provider of your own key) to write the suggestion. The result goes back into the field when you choose it.",
                 )
                 DisclosurePoint(
                     Icons.Filled.Block, Tone.Tertiary,
                     "What it never does",
-                    "It isn’t used for ads, isn’t sold, and Rewordium doesn’t keep the text after your request is done.",
+                    "It isn’t used for ads or sold. Rewordium doesn’t store the text; the AI provider handles it under its own privacy policy.",
                 )
                 DisclosurePoint(
                     Icons.Filled.ToggleOff, Tone.Neutral,

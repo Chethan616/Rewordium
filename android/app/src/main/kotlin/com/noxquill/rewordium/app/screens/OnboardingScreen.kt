@@ -67,9 +67,9 @@ import kotlin.math.absoluteValue
 private data class OnboardingPage(val headline: String, val body: String)
 
 private val pages = listOf(
-    OnboardingPage("Meet your writing crew", "Clearer sentences, sharper ideas, and a voice that still sounds like you."),
-    OnboardingPage("Write wherever you are", "Use the Rewordium keyboard and the writing assistant inside the apps you already love."),
-    OnboardingPage("Say hi to Jade", "Talk through a draft, find the right tone — or just ask her to tune your keyboard."),
+    OnboardingPage("A smarter keyboard", "Intelligent autocorrect, accurate swipe typing and suggestions that learn the way you write."),
+    OnboardingPage("Your typing stays yours", "Typing, predictions and the words it learns stay on this phone. No account needed, no ads."),
+    OnboardingPage("AI when you want it", "Ask Jade to rewrite, change the tone or tune your keyboard. It’s optional, and AI only sees the text you send it."),
     OnboardingPage("Pick your avatar", "This little friend stands for you in chats and around the app. Change it any time."),
 )
 

@@ -73,7 +73,7 @@ object InAppMessages {
         return remote ?: Message(
             id = "local-$versionCode",
             title = "What’s new in $versionName",
-            body = "A big one for your keyboard.",
+            body = "Here’s what’s improved in your keyboard.",
             type = Type.RELEASE_NOTES,
             version = versionName,
             notes = BUILT_IN_NOTES,
@@ -166,12 +166,10 @@ object InAppMessages {
 
     /** Shown after updating to this version when the admin panel has no notes for it. */
     private val BUILT_IN_NOTES = listOf(
-        "Theme shop: playful, expressive, professional and clean Android looks",
-        "Build your own keyboard theme, or describe a vibe and let Jade design it",
-        "Bouncy, squishy, wobbly keys and a mascot on your space bar",
-        "Playful new emoji, GIF, sticker, clipboard and AI panels, with Gboard-style search",
-        "Next-word predictions that keep up as you write whole sentences",
-        "Sharper autocorrect that leaves names and slang alone",
-        "Forget learned words any time from the Keys tab",
+        "Use the keyboard straight away: no sign-in, no subscription",
+        "Autocorrect, swipe typing and next-word suggestions, worked out on your phone",
+        "Optional AI rewriting, tone changes and summaries, with your included AI uses shown in the app",
+        "Themes, stickers, GIFs and emoji search, plus a community theme gallery",
+        "Cleaner keys: letters stay centred and hint symbols make room for them",
     )
 }

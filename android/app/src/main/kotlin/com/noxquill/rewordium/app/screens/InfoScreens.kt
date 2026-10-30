@@ -42,24 +42,25 @@ const val PRIVACY_URL = com.noxquill.rewordium.data.RewordiumLinks.PRIVACY_POLIC
 const val TERMS_URL = com.noxquill.rewordium.data.RewordiumLinks.TERMS
 
 private val privacySections = listOf(
-    "Your writing" to "When you ask Rewordium for help — in Jade, the keyboard or the accessibility assistant — the text you choose is sent to the AI provider that writes the answer (Rewordium’s default provider, or the one you set up in AI preferences). Rewordium doesn’t keep that text after your request is done. Avoid sharing sensitive information you don’t want processed.",
-    "Jade chats" to "Your Jade conversations are saved only on this phone so you can come back to them. You can delete one chat, or all of them, at any time.",
-    "Settings Jade changes" to "When you ask Jade to change a setting, she reads and updates the keyboard and app settings on this phone. Those settings stay on your device.",
-    "Reports" to "If you report a Jade reply, that reply and the message before it are sent to the Rewordium team so we can review it and make Jade safer.",
-    "Your account" to "When you sign in, we store your name, email, credit balance and subscription status with Firebase so they follow your account across devices. We also record basic, anonymous usage events to keep the app working well.",
-    "Keyboard" to "The keyboard works on your device. Words it learns stay on your phone. Its AI tools only send the text you choose when you use them.",
-    "Accessibility assistant" to "Runs only after you turn it on in Android settings. It notices text fields to show the floating assistant, and reads the field (and, for smart replies, the visible conversation) only when you use it. It isn’t used for ads.",
-    "Your choices" to "Sign out or permanently delete your account any time in Settings → Account. Deleting removes your profile and plan records and clears your Jade chats from this phone.",
-    "Questions & data requests" to "Email ${com.noxquill.rewordium.data.RewordiumLinks.SUPPORT_EMAIL} to ask a question, get a copy of your data, or request deletion. You can also request deletion on our website if you can’t sign in.",
+    "Your typing" to "Typing, autocorrect, suggestions, swipe typing and the words the keyboard learns are processed and saved on this phone. Analytics never include what you type. In Incognito mode the keyboard doesn’t learn, and in password fields suggestions and autocorrect are off.",
+    "AI tools, only when you use them" to "Text is sent for AI processing only when you tap an AI tool or message Jade: the text you chose, the tool’s instruction and, for Jade, the recent messages of that chat. It goes straight from this phone to the AI provider (Groq for the built-in AI, or the provider of your own key), not to our servers, and we don’t store it. The provider’s own policy covers how long it keeps it. Please don’t send passwords or other secrets.",
+    "No account needed" to "The app keeps an anonymous ID with a count of your included AI uses, a push token and basic install details (app version, first and last opened). If you choose to sign in, your name and email are stored too.",
+    "Analytics" to "Google Analytics for Firebase sees which features are used, plus device model, Android version, language and approximate region. The advertising ID isn’t collected and nothing is used for ads.",
+    "GIFs and stickers" to "Your GIF and sticker search words are sent to KLIPY to find results.",
+    "Accessibility assistant" to "Off unless you turn it on in Android settings. It reads the field you’re editing when you open it (and the visible conversation for reply suggestions), and sends that text only when you run a tool.",
+    "On this phone only" to "Clipboard history, contact names (if you allow contact suggestions), photos for stickers, your themes, stickers, Jade chats and backups stay on this phone.",
+    "Your choices" to "Use Incognito, turn AI tools off in Settings, leave the assistant off, or turn notifications off. Delete a signed-in account in Settings › Account, or see “Delete your data” on our website.",
+    "Questions & requests" to "Email ${com.noxquill.rewordium.data.RewordiumLinks.SUPPORT_EMAIL} to ask a question or request deletion.",
 )
 
 private val termsSections = listOf(
-    "Using Rewordium" to "Rewordium offers writing help, the Rewordium keyboard, an accessibility writing assistant and Jade, an AI companion. You need an account to use AI features.",
-    "AI-generated content" to "Jade and the writing tools use AI. Answers can be wrong, incomplete or unexpected, and they aren’t professional, legal, medical or financial advice. Review text before you use or share it, and use Report on any reply that seems harmful.",
-    "Fair use" to "Don’t use Rewordium to create content that’s illegal, hateful, harassing, sexually explicit involving minors, or meant to deceive or harm others, and don’t try to misuse or overload the service.",
-    "Credits & subscriptions" to "Free accounts get a limited number of AI credits. Rewordium Pro is billed through Google Play, renews automatically until cancelled, and can be cancelled any time in Google Play. Refunds follow Google Play’s policies.",
-    "Your account" to "Keep your sign-in details safe. You can delete your account in the app at any time.",
-    "Open-source software" to "Rewordium includes open-source software. Licenses and project links are listed under Open-source licenses.",
+    "The app" to "Rewordium – Smart Keyboard is an Android keyboard with optional extras: AI writing tools, Jade, themes, stickers, GIFs and an accessibility writing assistant. No account is needed.",
+    "Buying the app" to "The app is a one-time purchase on Google Play. There are no subscriptions. Refunds follow Google Play’s policies.",
+    "Included AI uses" to "The app includes a limited number of AI uses, shown in the app. They don’t refill in this version. When they’re used up, the keyboard and every non-AI feature keep working, and you can add your own AI key.",
+    "AI-generated content" to "AI answers can be wrong, incomplete or unexpected, and they aren’t professional, legal, medical or financial advice. Review text before you use or share it, and report any reply that seems harmful.",
+    "Fair use" to "Don’t use the app for content that’s illegal, hateful, harassing, sexually explicit involving minors, or meant to deceive or harm others, and don’t misuse, overload or try to get around the AI service.",
+    "Community themes" to "Themes you publish are shown to other users. Don’t publish names or content you don’t have the right to use. Published themes can be removed.",
+    "Open-source software" to "The app includes open-source software, including FlorisBoard. Licences are listed under Open-source licenses.",
 )
 
 @OptIn(ExperimentalMaterial3ExpressiveApi::class)
@@ -89,7 +90,7 @@ fun InfoScreen(privacy: Boolean, onBack: () -> Unit, onOpenLink: (String) -> Uni
                         BotAvatar(type = if (privacy) "ghost" else "circle", mood = BotMood.Happy, size = 60.dp, label = null)
                         Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
                             Text(if (privacy) "Your words are yours." else "A few things to know.", style = Heading.SerifItalic.display(30.sp))
-                            Text("This is a plain-language summary. The full document on our website is the one that applies.", style = MaterialTheme.typography.bodyMedium)
+                            Text("A plain-language summary. The full document on our website is the one that applies.", style = MaterialTheme.typography.bodyMedium)
                         }
                     }
                 }

@@ -1,16 +1,29 @@
-# Rewordium Android
+# Rewordium – Smart Keyboard (Android)
 
-Rewordium is a native Android writing assistant with an on-device keyboard and an optional accessibility service for writing actions in other apps.
+Rewordium is a smart Android keyboard: intelligent autocorrect, swipe typing and next-word suggestions that run on the phone, plus optional AI writing tools and an optional accessibility writing assistant for other apps.
+
+This branch (`paid-app`) builds **Rewordium – Smart Keyboard**, package `com.chethan616.keyboard`, sold as a one-time purchase on Google Play. The earlier app, Rewordium (`com.noxquill.rewordium`, with sign-in and subscriptions), is on `main`.
 
 ## App features
 
 - Kotlin and Jetpack Compose with Material 3 Expressive components and spring-based motion.
-- Firebase email and Google sign-in, Firestore credits, account management, and Firebase notifications.
-- Google Play subscriptions, in-app updates, review prompts, and Play Integrity integration.
-- Jade chat, rewriting, grammar, summaries, translation, tone editing, AI writing checks, and document polishing. Jade can also change any keyboard setting for you.
-- ReBoard keyboard settings, typing tools, and persona selection inside the Rewordium settings flow.
-- Backup and restore of chats, app settings and keyboard data (never account state or API keys).
-- Accessibility and keyboard setup are managed through Android system settings.
+- No sign-in needed. A silent Firebase anonymous session keeps the built-in AI allowance and lets people publish themes; email and Google sign-in remain optional.
+- No subscriptions and no ads. The Google Play Billing code is kept but switched off, and never contacts Play while subscriptions are off.
+- Optional AI tools: rewriting, grammar, tone, summaries, translation and Jade chat. The built-in AI (Groq) runs on a limited, clearly shown allowance of included AI uses that doesn't refill; people can add their own provider key instead.
+- Themes: packs, a theme builder and a community gallery anyone can browse.
+- Backup and restore of chats, app settings and keyboard data (never sign-in, AI allowance or API keys).
+- An owner-only admin panel (hidden, password-locked, and enforced by Firestore rules).
+
+### Release switches
+
+`android/gradle.properties` holds the switches both modules read through `ReleaseFlags`:
+
+```properties
+rewordium.requireSignIn=false        # true brings back the sign-in gate
+rewordium.subscriptionsEnabled=false # true brings back Pro plans and Google Play billing
+```
+
+`ReleaseFlags.FREE_AI_USES` is the included AI allowance (20). Firestore rules only let a client spend it, never add it back.
 
 ## The keyboard
 
@@ -86,11 +99,11 @@ Build a Play Store bundle with:
 
 The release build uses `android/app/google-services.json` for Firebase and `android/key.properties` plus the upload keystore for signing. Keep these files out of version control. CI receives Firebase configuration and signing credentials through repository secrets.
 
-The application ID remains `com.noxquill.rewordium`. `versionCode` and `versionName` are read from `projectVersionCode` and `projectVersionName` in the local Gradle properties, with the current release values as fallback.
+The application ID is `com.chethan616.keyboard` (registered in the `rewordium` Firebase project). `versionCode` and `versionName` are read from `projectVersionCode` and `projectVersionName` in `android/gradle.properties` (`local.properties` can override them). The admin panel's password hash is read from `ADMIN_PASSWORD_SALT` / `ADMIN_PASSWORD_HASH` in `local.properties` or the environment, so it isn't in the repository.
 
 ## Supporting services
 
-Firebase Cloud Functions remain in `functions/`. The public site and account deletion pages remain under `website/` and `website2.0/`.
+Firebase Cloud Functions remain in `functions/` (deploying them needs the Blaze plan). This app's privacy policy, terms, data safety and data deletion pages are in `website2.0/rewordium-landingpage/keyboard/`; the earlier app's pages stay in `website2.0/rewordium-landingpage/pages/`.
 
 ## Attribution
 

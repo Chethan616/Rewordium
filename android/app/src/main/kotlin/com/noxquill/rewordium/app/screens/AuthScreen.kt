@@ -200,8 +200,8 @@ fun AuthScreen(
                     Text(if (creating) "Make yourself at home" else "Welcome back", style = Heading.Geometric.display(34.sp), textAlign = TextAlign.Center)
                     Spacer(Modifier.height(6.dp))
                     Text(
-                        if (creating) "Create your account to chat with Jade and keep your credits safe."
-                        else "Sign in to pick up right where your words left off.",
+                        if (creating) "Optional: an account keeps its own included AI uses with you on any phone."
+                        else "Optional: sign in to use your Rewordium account on this phone.",
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                         textAlign = TextAlign.Center,

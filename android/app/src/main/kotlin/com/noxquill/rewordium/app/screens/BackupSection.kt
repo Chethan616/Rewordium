@@ -219,7 +219,7 @@ private fun BackupOptionsSheet(
                 Tone.Neutral,
             ) { onChange(options.copy(clipboard = it, keyboard = options.keyboard || it)) }
             Text(
-                "Your AI API key, sign-in, credits and Pro status are never put in a backup — they stay with your account.",
+                "Your AI API key, sign-in, included AI uses and Pro status are never put in a backup.",
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier.padding(horizontal = 8.dp, vertical = 12.dp),

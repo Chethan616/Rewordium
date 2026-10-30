@@ -71,7 +71,7 @@ fun AiSettingsScreen(onBack: () -> Unit) {
                         BotAvatar(type = "droid", mood = if (enabled) BotMood.Working else BotMood.Idle, size = 52.dp, label = null)
                         Column(Modifier.weight(1f)) {
                             Text("Use my own API key", style = MaterialTheme.typography.titleMedium)
-                            Text("Off uses Rewordium’s AI with your credits.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            Text("Off uses Rewordium’s built-in AI and your included AI uses.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                         }
                         ExpressiveSwitch(enabled) { enabled = it; saved = false; haptics.toggle(it) }
                     }
