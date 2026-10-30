@@ -507,15 +507,19 @@ private fun AppearanceSection(onOpenThemeShop: () -> Unit, modifier: Modifier) {
                     }
                 }
                 val accentColor = if (accent == Color.Unspecified) MaterialTheme.colorScheme.primary else accent
+                // Every theme you've ever tried or built lives in `themes` and this strip only ever grew —
+                // after a while it was a wall of thumbnails that just repeated the Theme shop below. Only
+                // the look that's active now plus ReBoard's own built-in looks belong here for a quick swap;
+                // everything else (packs, your own, the community's) is what the shop card is for.
                 if (mode != ThemeMode.ALWAYS_NIGHT) ThemeStrip(
                     title = "Light look",
-                    options = themes.filter { !it.night },
+                    options = quickThemeOptions(themes, night = false, selectedId = dayTheme.toString()),
                     selected = dayTheme.toString(),
                     accent = accentColor,
                 ) { id -> haptics.tick(); scope.launch { keyboardPrefs.theme.dayThemeId.set(ExtensionComponentName.from(id)) } }
                 if (mode != ThemeMode.ALWAYS_DAY) ThemeStrip(
                     title = "Dark look",
-                    options = themes.filter { it.night },
+                    options = quickThemeOptions(themes, night = true, selectedId = nightTheme.toString()),
                     selected = nightTheme.toString(),
                     accent = accentColor,
                 ) { id -> haptics.tick(); scope.launch { keyboardPrefs.theme.nightThemeId.set(ExtensionComponentName.from(id)) } }
@@ -555,13 +559,22 @@ private fun ThemeShopEntry(shape: Shape, onOpen: () -> Unit) {
                 }
                 Icon(Icons.AutoMirrored.Filled.OpenInNew, null)
             }
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                com.noxquill.rewordium.keyboard.ime.theme.studio.ThemePacks.all.forEach { pack ->
-                    com.noxquill.rewordium.app.screens.themes.KeyboardMock(pack.themes.first(), Modifier.weight(1f), compact = true)
+            // Fixed, generous widths in a scrolling row — splitting the card evenly between every pack
+            // squeezed each mock's own ten-key row down to a few dp per key once there were four of them.
+            LazyRow(horizontalArrangement = Arrangement.spacedBy(10.dp), contentPadding = PaddingValues(end = 4.dp)) {
+                items(com.noxquill.rewordium.keyboard.ime.theme.studio.ThemePacks.all, key = { it.id }) { pack ->
+                    com.noxquill.rewordium.app.screens.themes.KeyboardMock(pack.themes.first(), Modifier.width(118.dp), compact = true)
                 }
             }
         }
     }
+}
+
+/** The theme that's active plus ReBoard's own built-in looks (its labels all start with "ReBoard") — not every theme ever installed. */
+private fun quickThemeOptions(themes: List<ReboardSettingsBridge.ThemeOption>, night: Boolean, selectedId: String): List<ReboardSettingsBridge.ThemeOption> {
+    val current = themes.filter { it.night == night && it.id == selectedId }
+    val defaults = themes.filter { it.night == night && it.label.startsWith("ReBoard") }
+    return (current + defaults).distinctBy { it.id }
 }
 
 @Composable

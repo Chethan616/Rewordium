@@ -304,6 +304,24 @@ private fun RewordiumRootContent(
         }
     }
 
+    // An admin banned the account that was signed in: it has been signed out; say why, once.
+    val suspension by RewordiumRepository.suspension.collectAsState()
+    suspension?.let { reason ->
+        androidx.compose.material3.AlertDialog(
+            onDismissRequest = { RewordiumRepository.dismissSuspension() },
+            title = { androidx.compose.material3.Text("Account suspended") },
+            text = {
+                androidx.compose.material3.Text(
+                    if (reason.isBlank()) "This account can’t use Rewordium right now. Contact ${com.noxquill.rewordium.data.RewordiumLinks.SUPPORT_EMAIL} if you think this is a mistake."
+                    else "This account can’t use Rewordium right now: $reason\n\nContact ${com.noxquill.rewordium.data.RewordiumLinks.SUPPORT_EMAIL} if you think this is a mistake.",
+                )
+            },
+            confirmButton = {
+                androidx.compose.material3.TextButton(onClick = { RewordiumRepository.dismissSuspension() }) { androidx.compose.material3.Text("OK") }
+            },
+        )
+    }
+
     if (showDisclosure) AccessibilityDisclosureDialog(
         onAgree = {
             showDisclosure = false
@@ -612,6 +630,15 @@ private fun MainApp(
                             onBackupRestored = { jade.reloadChats() },
                             onSignOut = onSignOut,
                             onDeleteAccount = onDeleteAccount,
+                            onOpenAdmin = { go("admin") },
+                        )
+                    }
+                }
+                composable("admin") {
+                    Screen {
+                        com.noxquill.rewordium.app.screens.admin.AdminScreen(
+                            billing = billingState,
+                            onBack = { navController.popBackStack() },
                         )
                     }
                 }

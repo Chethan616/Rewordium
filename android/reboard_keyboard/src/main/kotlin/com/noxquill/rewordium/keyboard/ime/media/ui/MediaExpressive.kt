@@ -80,6 +80,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.MotionScheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.Typography
 import androidx.compose.material3.ripple
 import androidx.compose.material3.toPath
 import androidx.compose.material3.toShape
@@ -131,6 +132,7 @@ import com.noxquill.rewordium.keyboard.ime.text.keyboard.TextKeyData
 import com.noxquill.rewordium.keyboard.ime.theme.FlorisImeUi
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import org.florisboard.lib.snygg.ui.rememberSnyggFontFamily
 import org.florisboard.lib.snygg.ui.rememberSnyggThemeQuery
 import java.util.IdentityHashMap
 import kotlin.math.floor
@@ -149,11 +151,54 @@ import kotlin.math.floor
 @Composable
 fun MediaExpressiveTheme(content: @Composable () -> Unit) {
     val scheme = rememberKeyboardColorScheme()
+    val typography = rememberKeyboardTypography()
     MaterialExpressiveTheme(
         colorScheme = scheme,
         motionScheme = MotionScheme.expressive(),
+        typography = typography,
         content = content,
     )
+}
+
+/**
+ * The default [Typography] for every panel, carrying the active theme's typeface and whether its "Bold
+ * letters" switch is on — so emoji/GIF/sticker/clipboard/AI text matches the keys around it instead of
+ * always drawing in the stock Material font. Composables that set their own [FontWeight] for emphasis
+ * (a selected tab, "ABC") keep that contrast; only the baseline weight moves with the theme.
+ */
+@Composable
+private fun rememberKeyboardTypography(): Typography {
+    val key = rememberSnyggThemeQuery(FlorisImeUi.Key.elementName)
+    val family = rememberSnyggFontFamily(key)
+    val weight = key.fontWeight()
+    val base = MaterialTheme.typography
+    return remember(family, weight, base) {
+        if (family == null && weight == null) {
+            base
+        } else {
+            fun androidx.compose.ui.text.TextStyle.themed() = copy(
+                fontFamily = family ?: fontFamily,
+                fontWeight = weight ?: fontWeight,
+            )
+            base.copy(
+                displayLarge = base.displayLarge.themed(),
+                displayMedium = base.displayMedium.themed(),
+                displaySmall = base.displaySmall.themed(),
+                headlineLarge = base.headlineLarge.themed(),
+                headlineMedium = base.headlineMedium.themed(),
+                headlineSmall = base.headlineSmall.themed(),
+                titleLarge = base.titleLarge.themed(),
+                titleMedium = base.titleMedium.themed(),
+                titleSmall = base.titleSmall.themed(),
+                bodyLarge = base.bodyLarge.themed(),
+                bodyMedium = base.bodyMedium.themed(),
+                bodySmall = base.bodySmall.themed(),
+                labelLarge = base.labelLarge.themed(),
+                labelMedium = base.labelMedium.themed(),
+                labelSmall = base.labelSmall.themed(),
+            )
+        }
+    }
 }
 
 @Composable
@@ -172,7 +217,7 @@ private fun rememberKeyboardColorScheme(): ColorScheme {
     val foreground = media.foreground(default = key.foreground())
     val accent = enter.background()
     return remember(windowBg, mediaBg, keyBg, foreground, accent, base) {
-        keyboardColorScheme(windowBg, mediaBg, keyBg, foreground, accent, base.primary)
+        keyboardColorScheme(windowBg, mediaBg, keyBg, foreground, accent, base.primary, base.surface)
     }
 }
 
@@ -183,6 +228,7 @@ private fun keyboardColorScheme(
     foreground: Color,
     accent: Color,
     fallbackAccent: Color,
+    fallbackPanel: Color,
 ): ColorScheme {
     // Themes often leave one of the panel or the window transparent: lay the panel over the window.
     val window = windowBg.takeIf { it.isSpecified && it.alpha > 0.05f }?.copy(alpha = 1f)
@@ -191,7 +237,12 @@ private fun keyboardColorScheme(
         mediaBg.isSpecified && mediaBg.alpha > 0f && window != null -> mediaBg.compositeOver(window)
         window != null -> window
         keyBg.isSpecified && keyBg.alpha > 0.05f -> keyBg.copy(alpha = 1f)
-        else -> Color(0xFF1C1B1F)
+        // A theme whose media/window/key backgrounds don't resolve to a flat colour here (a gradient, a
+        // wallpaper-through window, a style this query doesn't match) used to fall back to a literal dark
+        // grey — meaning icon/text colour then always computed against a "dark" panel and came out near-white,
+        // on light themes too. Falling back to the app's own ambient surface colour at least tracks light vs.
+        // dark instead of being wrong in one direction for every theme that hits this branch.
+        else -> fallbackPanel
     }
     val isDark = panel.luminance() < 0.4f
     val onPanel = foreground.takeIf { it.isSpecified && contrast(it.copy(alpha = 1f), panel) >= 3.0 }?.copy(alpha = 1f)
@@ -859,10 +910,13 @@ fun MediaSearchField(
         modifier = modifier.height(48.dp),
     ) {
         Row(Modifier.padding(start = 6.dp, end = 4.dp), verticalAlignment = Alignment.CenterVertically) {
-            // While typing a search the shape carries the way back out (Gboard's back arrow), still morphing per letter.
+            // While typing a search the shape carries the way back out (Gboard's back arrow), still morphing
+            // per letter. Both states stay on the same soft tonal pairing the rest of the keyboard's special
+            // keys use — switching to the raw M3 primary/onPrimary here (a stronger, often darker colour,
+            // white icon) broke the theme's own icon language the moment a search opened.
             MorphBlob(
                 shape = shape,
-                color = if (onBack != null) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.primaryContainer,
+                color = MaterialTheme.colorScheme.primaryContainer,
                 modifier = Modifier
                     .size(36.dp)
                     .then(
@@ -878,7 +932,7 @@ fun MediaSearchField(
                 Icon(
                     imageVector = if (onBack != null) Symbols.ArrowBack else Symbols.Search,
                     contentDescription = if (onBack != null) "Close search" else null,
-                    tint = if (onBack != null) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onPrimaryContainer,
+                    tint = MaterialTheme.colorScheme.onPrimaryContainer,
                     modifier = Modifier.size(19.dp),
                 )
             }

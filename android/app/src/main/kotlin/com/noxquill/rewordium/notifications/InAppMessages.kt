@@ -3,6 +3,7 @@ package com.noxquill.rewordium.notifications
 import android.content.Context
 import com.google.android.gms.tasks.Tasks
 import com.google.firebase.Timestamp
+import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.DocumentSnapshot
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.ListenerRegistration
@@ -18,6 +19,9 @@ import java.util.concurrent.TimeUnit
  * (`type`: release_notes or patch_notes, with an optional `version` and a `notes` list). Fields as the
  * admin panel writes them: title, body, type, imageUrl, buttonText, actionUrl, target, publishedAt.
  * Each message is shown once; after an update the app also shows its own "What's new".
+ *
+ * A message the admin sends to one person lands in `users/{uid}/inbox` instead, which only that person
+ * (and admins) can read, and is shown the same way, ahead of announcements.
  */
 object InAppMessages {
     enum class Type { CARD, MODAL, BANNER, RELEASE_NOTES }
@@ -35,6 +39,7 @@ object InAppMessages {
     )
 
     private const val COLLECTION = "in_app_messages"
+    private const val INBOX = "inbox"
     private const val PREFS = "rewordium_in_app"
     private const val KEY_SEEN = "seen_ids"
     private const val KEY_LAST_VERSION = "last_version_code"
@@ -81,21 +86,46 @@ object InAppMessages {
      */
     suspend fun nextUnseen(context: Context): Message? {
         val seen = seen(context)
-        return runCatching { latest(context) }.getOrDefault(emptyList())
-            .firstOrNull { it.id !in seen && it.type != Type.RELEASE_NOTES }
+        val personal = runCatching { inbox() }.getOrDefault(emptyList())
+        val announcements = runCatching { latest(context) }.getOrDefault(emptyList())
+        return (personal + announcements).firstOrNull { it.id !in seen && it.type != Type.RELEASE_NOTES }
     }
 
     /** Calls [onMessage] for every message published while the app is open; remove the listener when done. */
     fun listen(context: Context, since: Date, onMessage: (Message) -> Unit): ListenerRegistration? = runCatching {
-        FirebaseFirestore.getInstance().collection(COLLECTION)
+        fun deliver(messages: List<Message>?) {
+            val seen = seen(context)
+            messages?.filter { it.id !in seen && it.type != Type.RELEASE_NOTES }?.lastOrNull()?.let(onMessage)
+        }
+        val firestore = FirebaseFirestore.getInstance()
+        val announcements = firestore.collection(COLLECTION)
             .whereGreaterThan("publishedAt", Timestamp(since))
-            .addSnapshotListener { snapshot, _ ->
-                val seen = seen(context)
-                snapshot?.documents?.mapNotNull(::parse)
-                    ?.filter { it.id !in seen && it.type != Type.RELEASE_NOTES }
-                    ?.lastOrNull()?.let(onMessage)
-            }
+            .addSnapshotListener { snapshot, _ -> deliver(snapshot?.documents?.mapNotNull { parse(it, personal = false) }) }
+        val personal = FirebaseAuth.getInstance().currentUser?.uid?.let { uid ->
+            firestore.collection("users").document(uid).collection(INBOX)
+                .whereGreaterThan("publishedAt", Timestamp(since))
+                .addSnapshotListener { snapshot, _ -> deliver(snapshot?.documents?.mapNotNull { parse(it, personal = true) }) }
+        }
+        ListenerRegistration {
+            announcements.remove()
+            personal?.remove()
+        }
     }.getOrNull()
+
+    /** The signed-in person's own messages from the admin, newest first. */
+    private suspend fun inbox(): List<Message> = withContext(Dispatchers.IO) {
+        val uid = FirebaseAuth.getInstance().currentUser?.uid ?: return@withContext emptyList()
+        val snapshot = Tasks.await(
+            FirebaseFirestore.getInstance().collection("users").document(uid).collection(INBOX)
+                .orderBy("publishedAt", Query.Direction.DESCENDING).limit(10).get(),
+            10, TimeUnit.SECONDS,
+        )
+        val now = System.currentTimeMillis()
+        snapshot.documents.filter { doc ->
+            val published = doc.getTimestamp("publishedAt")?.toDate()?.time ?: return@filter false
+            now - published <= MAX_AGE_MS
+        }.mapNotNull { parse(it, personal = true) }
+    }
 
     private suspend fun latest(context: Context): List<Message> = withContext(Dispatchers.IO) {
         val snapshot = Tasks.await(
@@ -106,12 +136,12 @@ object InAppMessages {
         snapshot.documents.filter { doc ->
             val published = doc.getTimestamp("publishedAt")?.toDate()?.time ?: return@filter false
             now - published <= MAX_AGE_MS
-        }.mapNotNull(::parse)
+        }.mapNotNull { parse(it, personal = false) }
     }
 
-    private fun parse(doc: DocumentSnapshot): Message? {
+    private fun parse(doc: DocumentSnapshot, personal: Boolean): Message? {
         val target = doc.getString("target").orEmpty().lowercase()
-        if (target !in TARGETS) return null
+        if (!personal && target !in TARGETS) return null
         val title = doc.getString("title")?.takeIf { it.isNotBlank() } ?: return null
         val type = when (doc.getString("type")?.lowercase()) {
             "modal" -> Type.MODAL
@@ -122,7 +152,7 @@ object InAppMessages {
         @Suppress("UNCHECKED_CAST")
         val notes = (doc.get("notes") as? List<*>)?.mapNotNull { (it as? String)?.takeIf(String::isNotBlank) }.orEmpty()
         return Message(
-            id = doc.id,
+            id = if (personal) "u-${doc.id}" else doc.id,
             title = title.take(80),
             body = doc.getString("body").orEmpty().take(600),
             type = type,

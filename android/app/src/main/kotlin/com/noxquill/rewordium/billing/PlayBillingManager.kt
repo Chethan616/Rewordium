@@ -26,7 +26,24 @@ data class BillingUiState(
     val products: List<ProductDetails> = emptyList(),
     val loading: Boolean = true,
     val message: String? = null,
+    /** The Pro subscriptions Google Play says this Play account has right now. */
+    val activePlans: List<ActivePlan> = emptyList(),
 )
+
+data class ActivePlan(val productId: String, val purchaseToken: String, val autoRenewing: Boolean)
+
+/**
+ * The offer this person gets for [this] plan: Play only lists offers they're eligible for, so the cheapest
+ * first phase wins — a free trial, then an intro discount, then the base plan. The plan card and the
+ * purchase both use this, so the price shown is the price charged.
+ */
+fun ProductDetails.bestOffer(): ProductDetails.SubscriptionOfferDetails? =
+    subscriptionOfferDetails.orEmpty().minWithOrNull(
+        compareBy<ProductDetails.SubscriptionOfferDetails>(
+            { it.pricingPhases.pricingPhaseList.firstOrNull()?.priceAmountMicros ?: Long.MAX_VALUE },
+            { if (it.offerId == null) 1 else 0 },
+        ),
+    )
 
 class PlayBillingManager(
     context: Context,
@@ -99,16 +116,26 @@ class PlayBillingManager(
             connect()
             return
         }
-        val offers = product.subscriptionOfferDetails.orEmpty()
-        val selectedOffer = offers.firstOrNull { it.offerId == "special-discount" }
-            ?: offers.firstOrNull { it.offerId == null }
-            ?: offers.firstOrNull()
+        if (state.activePlans.any { it.productId == productId }) {
+            publish(state.copy(message = "That’s already your plan."))
+            return
+        }
         val paramsBuilder = BillingFlowParams.ProductDetailsParams.newBuilder()
             .setProductDetails(product)
-        selectedOffer?.offerToken?.let(paramsBuilder::setOfferToken)
-        val params = BillingFlowParams.newBuilder()
+        product.bestOffer()?.offerToken?.let(paramsBuilder::setOfferToken)
+        val builder = BillingFlowParams.newBuilder()
             .setProductDetailsParamsList(listOf(paramsBuilder.build()))
-            .build()
+        // Already subscribed to the other plan: switch it (Play credits the unused time) instead of
+        // starting a second subscription.
+        state.activePlans.firstOrNull { it.productId != productId }?.let { current ->
+            builder.setSubscriptionUpdateParams(
+                BillingFlowParams.SubscriptionUpdateParams.newBuilder()
+                    .setOldPurchaseToken(current.purchaseToken)
+                    .setSubscriptionReplacementMode(BillingFlowParams.SubscriptionUpdateParams.ReplacementMode.WITH_TIME_PRORATION)
+                    .build(),
+            )
+        }
+        val params = builder.build()
         publish(state.copy(message = null))
         val result = billingClient.launchBillingFlow(activity, params)
         if (result.responseCode != BillingClient.BillingResponseCode.OK) {
@@ -143,6 +170,20 @@ class PlayBillingManager(
             } else emptyList()
             val message = if (found.isEmpty()) "Plans are unavailable in Google Play right now." else null
             publish(state.copy(products = found, loading = false, message = message))
+            refreshActivePlans()
+        }
+    }
+
+    /** Asks Play which Pro plans this Play account has, quietly, so the plan cards show the truth. */
+    private fun refreshActivePlans() {
+        if (!billingClient.isReady) return
+        val params = QueryPurchasesParams.newBuilder().setProductType(BillingClient.ProductType.SUBS).build()
+        billingClient.queryPurchasesAsync(params) { result, purchases ->
+            if (result.responseCode != BillingClient.BillingResponseCode.OK) return@queryPurchasesAsync
+            val active = purchases
+                .filter { it.purchaseState == Purchase.PurchaseState.PURCHASED }
+                .mapNotNull { purchase -> purchase.products.firstOrNull()?.let { ActivePlan(it, purchase.purchaseToken, purchase.isAutoRenewing) } }
+            publish(state.copy(activePlans = active))
         }
     }
 
@@ -171,6 +212,7 @@ class PlayBillingManager(
                     }
                     publish(state.copy(loading = false, message = message))
                     inFlightTokens.remove(purchase.purchaseToken)
+                    refreshActivePlans()
                 }
             } else {
                 publish(state.copy(
@@ -179,6 +221,7 @@ class PlayBillingManager(
                     else "Sign in to Rewordium, then restore your purchase to link Pro to your account.",
                 ))
                 inFlightTokens.remove(purchase.purchaseToken)
+                refreshActivePlans()
             }
         }
     }

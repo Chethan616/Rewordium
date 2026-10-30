@@ -13,9 +13,10 @@
         { "code": -805, "label": "currency_slot_5" }
       ]
     } },
-    { "code":   37, "label": "%", "popup": {
-      "main": { "code": 8240, "label": "‰" },
+    { "code":   95, "label": "_", "popup": {
+      "main": { "code":   37, "label": "%" },
       "relevant": [
+        { "code": 8240, "label": "‰" },
         { "code": 8453, "label": "℅" }
       ]
     } },

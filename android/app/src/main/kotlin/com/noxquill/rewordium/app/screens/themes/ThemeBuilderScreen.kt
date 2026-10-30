@@ -116,6 +116,7 @@ fun ThemeBuilderScreen(onBack: () -> Unit, onSaved: () -> Unit) {
     }
     var editing by remember { mutableStateOf<Slot?>(null) }
     var saving by remember { mutableStateOf(false) }
+    var makeTwin by remember { mutableStateOf(false) }
 
     ExpressiveScaffold(
         title = "theme builder_",
@@ -137,10 +138,12 @@ fun ThemeBuilderScreen(onBack: () -> Unit, onSaved: () -> Unit) {
                             haptics.confirm()
                             scope.launch {
                                 val result = ThemeStudio.installAndApply(context, spec.copy(author = "You"))
+                                if (makeTwin) runCatching { ThemeStudio.install(context, invertedTwin(spec).copy(author = "You")) }
                                 saving = false
                                 result.onSuccess {
                                     haptics.success()
-                                    Toast.makeText(context, "${spec.name} is on your keyboard", Toast.LENGTH_SHORT).show()
+                                    val message = if (makeTwin) "${spec.name} is on your keyboard, with a ${if (spec.night) "light" else "dark"} twin saved too" else "${spec.name} is on your keyboard"
+                                    Toast.makeText(context, message, Toast.LENGTH_SHORT).show()
                                     ThemeDraft.initial = null
                                     onSaved()
                                 }.onFailure { Toast.makeText(context, it.message ?: "Couldn’t save the theme.", Toast.LENGTH_SHORT).show() }
@@ -163,7 +166,7 @@ fun ThemeBuilderScreen(onBack: () -> Unit, onSaved: () -> Unit) {
                 contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 8.dp, bottom = padding.calculateBottomPadding() + 24.dp),
                 verticalArrangement = Arrangement.spacedBy(3.dp),
             ) {
-                item(key = "basics") { Basics(spec) { spec = it } }
+                item(key = "basics") { Basics(spec, makeTwin, { makeTwin = it }) { spec = it } }
                 item(key = "colours") { Colours(spec) { editing = it } }
                 item(key = "shape") { Shapes(spec) { spec = it } }
                 item(key = "type") { Type(spec) { spec = it } }
@@ -199,11 +202,11 @@ fun ThemeBuilderScreen(onBack: () -> Unit, onSaved: () -> Unit) {
 
 @OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable
-private fun Basics(spec: KeyboardThemeSpec, onChange: (KeyboardThemeSpec) -> Unit) {
+private fun Basics(spec: KeyboardThemeSpec, makeTwin: Boolean, onMakeTwinChange: (Boolean) -> Unit, onChange: (KeyboardThemeSpec) -> Unit) {
     val haptics = LocalHaptics.current
     Column(verticalArrangement = Arrangement.spacedBy(3.dp)) {
         SectionLabel("Basics", Modifier.padding(bottom = 6.dp, top = 8.dp))
-        Surface(shape = segmentShape(0, 1), color = MaterialTheme.colorScheme.surfaceContainer) {
+        Surface(shape = segmentShape(0, 2), color = MaterialTheme.colorScheme.surfaceContainer) {
             Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
                 OutlinedTextField(
                     value = spec.name,
@@ -217,7 +220,19 @@ private fun Basics(spec: KeyboardThemeSpec, onChange: (KeyboardThemeSpec) -> Uni
                     listOf(false to "Light", true to "Dark").forEachIndexed { i, (night, label) ->
                         ToggleButton(
                             checked = spec.night == night,
-                            onCheckedChange = { haptics.tick(); onChange(spec.copy(night = night)) },
+                            onCheckedChange = {
+                                haptics.tick()
+                                // This only used to flip which slot the theme saves to, not how it looks —
+                                // so picking "Light" on a theme you'd built dark kept the dark preview right
+                                // under the new label, which read as broken. If the picked mode and the
+                                // colours disagree, bring the colours along too.
+                                var next = spec.copy(night = night)
+                                if (isDarkHex(spec.background) != night) {
+                                    next = next.copy(background = recolorForMode(spec.background, night), keys = recolorForMode(spec.keys, night))
+                                    next = next.copy(letters = KeyboardThemeSpec.textOn(next.keys), special = null)
+                                }
+                                onChange(next)
+                            },
                             colors = segmentColors(),
                             shapes = if (i == 0) ButtonGroupDefaults.connectedLeadingButtonShapes() else ButtonGroupDefaults.connectedTrailingButtonShapes(),
                             modifier = Modifier.weight(1f),
@@ -228,10 +243,60 @@ private fun Basics(spec: KeyboardThemeSpec, onChange: (KeyboardThemeSpec) -> Uni
                         }
                     }
                 }
-                Text("Which slot it fills: light themes show by day, dark ones at night (or always, if you pick).", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                // Every keyboard theme is either a light look or a dark one — there's no single theme that's
+                // "both" (the keyboard shows one installed theme per mode). This is which one you're building;
+                // "Save & use" puts it in that slot and switches your keyboard to match if it wasn't already.
+                Text(
+                    if (spec.night) "A dark look. Saving puts it in your dark slot and switches your keyboard to dark, if it wasn't already."
+                    else "A light look. Saving puts it in your light slot and switches your keyboard to light, if it wasn't already.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+        }
+        Surface(shape = segmentShape(1, 2), color = MaterialTheme.colorScheme.surfaceContainer) {
+            Row(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 14.dp), verticalAlignment = Alignment.CenterVertically) {
+                Column(Modifier.weight(1f)) {
+                    Text("Also make the ${if (spec.night) "light" else "dark"} twin", style = MaterialTheme.typography.titleSmall)
+                    Text("Same colours, inverted — saved for the ${if (spec.night) "light" else "dark"} slot too, so switching modes doesn't lose the look.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                }
+                ExpressiveSwitch(makeTwin) { haptics.tick(); onMakeTwinChange(it) }
             }
         }
     }
+}
+
+/** True when [hex] reads as a dark colour (the same brightness axis [recolorForMode] works on). */
+private fun isDarkHex(hex: String): Boolean {
+    val hsv = FloatArray(3)
+    android.graphics.Color.colorToHSV(hexColor(hex).toArgb(), hsv)
+    return hsv[2] < 0.5f
+}
+
+/** [hex] pushed to [night]'s brightness range, hue and roughly its saturation kept. */
+private fun recolorForMode(hex: String, night: Boolean): String {
+    val hsv = FloatArray(3)
+    android.graphics.Color.colorToHSV(hexColor(hex).toArgb(), hsv)
+    val value = if (night) (hsv[2] * 0.22f).coerceIn(0.08f, 0.30f) else (1f - (1f - hsv[2]) * 0.22f).coerceIn(0.85f, 1f)
+    val saturation = if (night) hsv[1].coerceAtLeast(0.35f) else hsv[1] * 0.3f
+    return "#%06X".format(android.graphics.Color.HSVToColor(floatArrayOf(hsv[0], saturation, value)) and 0xFFFFFF)
+}
+
+/**
+ * The same theme for the opposite mode: hue and the accent stay put, but how light or dark the background
+ * and keys are flips, and the letters and function-key tint are rederived so they still read.
+ */
+private fun invertedTwin(spec: KeyboardThemeSpec): KeyboardThemeSpec {
+    val night = !spec.night
+    val keys = recolorForMode(spec.keys, night)
+    return spec.copy(
+        name = spec.name,
+        night = night,
+        background = recolorForMode(spec.background, night),
+        keys = keys,
+        letters = KeyboardThemeSpec.textOn(keys),
+        special = null,
+    )
 }
 
 @Composable

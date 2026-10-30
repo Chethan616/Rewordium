@@ -52,6 +52,8 @@ import com.noxquill.rewordium.app.ui.avatar.BotAvatar
 import com.noxquill.rewordium.app.ui.avatar.BotMood
 import com.noxquill.rewordium.app.ui.haptics.LocalHaptics
 import com.noxquill.rewordium.billing.BillingUiState
+import com.noxquill.rewordium.billing.bestOffer
+import androidx.compose.ui.draw.alpha
 import com.noxquill.rewordium.data.AccountInfo
 
 private data class Perk(val title: String, val body: String, val icon: androidx.compose.ui.graphics.vector.ImageVector, val tone: Tone, val shape: RoundedPolygon)
@@ -125,15 +127,31 @@ fun ProScreen(
                     }
                 }
             }
-            itemsIndexed(listOf("rewordium_pro_yearly", "rewordium_pro_monthly"), key = { _, id -> id }) { index, id ->
+            itemsIndexed(listOf(YEARLY_ID, MONTHLY_ID), key = { _, id -> id }) { index, id ->
                 val product = billing.products.firstOrNull { it.productId == id }
+                // Play is the truth about which plan this person pays for; the account is the fallback
+                // (signed in on a phone with a different Play account, or Pro granted by us).
+                val playPlan = billing.activePlans.firstOrNull()?.productId
+                val currentPlan = playPlan ?: when {
+                    !isPro -> null
+                    account?.planType == "yearly" -> YEARLY_ID
+                    account?.planType == "monthly" -> MONTHLY_ID
+                    else -> GIFTED
+                }
                 PlanCard(
-                    yearly = id.endsWith("yearly"),
+                    yearly = id == YEARLY_ID,
                     product = product,
+                    monthly = billing.products.firstOrNull { it.productId == MONTHLY_ID },
                     loading = billing.loading,
-                    isPro = isPro,
+                    state = when {
+                        currentPlan == null -> PlanState.Available
+                        currentPlan == id -> PlanState.Current
+                        currentPlan == GIFTED || playPlan == null -> PlanState.Included
+                        else -> PlanState.SwitchTo
+                    },
                     modifier = Modifier.enterStagger(2 + index),
                     onChoose = { haptics.send(); onPurchase(id) },
+                    onManage = { haptics.click(); onOpenLink("$MANAGE_SUBSCRIPTIONS?sku=$id&package=$packageName") },
                 )
             }
             if (!billing.message.isNullOrBlank()) item(key = "message") {
@@ -167,54 +185,159 @@ fun ProScreen(
     }
 }
 
-@OptIn(ExperimentalMaterial3ExpressiveApi::class)
+private const val YEARLY_ID = "rewordium_pro_yearly"
+private const val MONTHLY_ID = "rewordium_pro_monthly"
+private const val GIFTED = "gifted"
+
+/** Where this plan stands for the person looking at it. */
+private enum class PlanState { Available, Current, SwitchTo, Included }
+
+/**
+ * One plan, priced live from Google Play. A discounted intro shows the regular price struck through beside
+ * the sale price; a free trial leads with "Free". Yearly also shows what it works out to per month and how
+ * much it saves over paying monthly.
+ */
+@OptIn(ExperimentalMaterial3ExpressiveApi::class, androidx.compose.foundation.layout.ExperimentalLayoutApi::class)
 @Composable
-private fun PlanCard(yearly: Boolean, product: ProductDetails?, loading: Boolean, isPro: Boolean, modifier: Modifier, onChoose: () -> Unit) {
-    val offers = product?.subscriptionOfferDetails.orEmpty()
-    val offer = offers.firstOrNull { it.offerId == "special-discount" } ?: offers.firstOrNull { it.offerId == null } ?: offers.firstOrNull()
+private fun PlanCard(
+    yearly: Boolean,
+    product: ProductDetails?,
+    monthly: ProductDetails?,
+    loading: Boolean,
+    state: PlanState,
+    modifier: Modifier,
+    onChoose: () -> Unit,
+    onManage: () -> Unit,
+) {
+    val offer = product?.bestOffer()
     val phases = offer?.pricingPhases?.pricingPhaseList.orEmpty()
     val regular = phases.lastOrNull()
     val intro = phases.dropLast(1).firstOrNull()
+    val trial = intro != null && intro.priceAmountMicros == 0L
+    val discount = intro?.takeIf { regular != null && it.priceAmountMicros in 1 until regular.priceAmountMicros }
+    val discountPercent = if (discount != null && regular != null) ((1 - discount.priceAmountMicros.toDouble() / regular.priceAmountMicros) * 100).toInt() else 0
+    val monthlyRegular = monthly?.bestOffer()?.pricingPhases?.pricingPhaseList?.lastOrNull()
+    val yearlySaving = if (yearly && regular != null && monthlyRegular != null && monthlyRegular.priceCurrencyCode == regular.priceCurrencyCode) {
+        ((1 - regular.priceAmountMicros.toDouble() / (monthlyRegular.priceAmountMicros * 12)) * 100).toInt().takeIf { it > 0 }
+    } else null
     val unit = if (yearly) "year" else "month"
+    val current = state == PlanState.Current
     Surface(
         shape = MaterialTheme.shapes.extraLarge,
-        color = if (yearly) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surfaceContainerHigh,
-        contentColor = if (yearly) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSurface,
+        color = when {
+            current -> MaterialTheme.colorScheme.tertiaryContainer
+            yearly -> MaterialTheme.colorScheme.primaryContainer
+            else -> MaterialTheme.colorScheme.surfaceContainerHigh
+        },
+        contentColor = when {
+            current -> MaterialTheme.colorScheme.onTertiaryContainer
+            yearly -> MaterialTheme.colorScheme.onPrimaryContainer
+            else -> MaterialTheme.colorScheme.onSurface
+        },
         modifier = modifier.fillMaxWidth(),
     ) {
         Column(Modifier.padding(20.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Text(if (yearly) "Yearly" else "Monthly", style = MaterialTheme.typography.titleLarge, modifier = Modifier.weight(1f))
-                if (yearly) StatusPill("Best value", active = true)
+                androidx.compose.foundation.layout.FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                    if (current) StatusPill("Your plan", active = true)
+                    if (discount != null && discountPercent > 0) StatusPill("$discountPercent% off", active = true)
+                    if (trial) StatusPill("Free trial", active = true)
+                    if (yearlySaving != null && !current) StatusPill("Save $yearlySaving%", active = false)
+                }
             }
             when {
-                loading -> Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                loading && product == null -> Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     LoadingIndicator(Modifier.size(30.dp))
                     Text("Getting prices from Google Play…", style = MaterialTheme.typography.bodyMedium)
                 }
                 regular == null -> Text("Price unavailable right now", style = MaterialTheme.typography.bodyMedium)
                 else -> {
-                    Row(verticalAlignment = Alignment.Bottom, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-                        Text(regular.formattedPrice, style = Heading.Serif.display(40.sp))
-                        Text("/ $unit", style = MaterialTheme.typography.titleMedium, modifier = Modifier.padding(bottom = 6.dp))
+                    Row(verticalAlignment = Alignment.Bottom, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        when {
+                            current -> PriceText(regular.formattedPrice, unit)
+                            trial -> Text("Free", style = Heading.Serif.display(40.sp))
+                            discount != null -> {
+                                PriceText(discount.formattedPrice, unit)
+                                Text(
+                                    regular.formattedPrice,
+                                    style = MaterialTheme.typography.titleMedium.copy(textDecoration = androidx.compose.ui.text.style.TextDecoration.LineThrough),
+                                    modifier = Modifier.padding(bottom = 6.dp).alpha(0.7f),
+                                )
+                            }
+                            else -> PriceText(regular.formattedPrice, unit)
+                        }
                     }
-                    if (intro != null) Text(
-                        if (intro.priceAmountMicros == 0L) "Free for ${periodText(intro.billingPeriod)}, then ${regular.formattedPrice} per $unit"
-                        else "${intro.formattedPrice} for ${periodText(intro.billingPeriod)}, then ${regular.formattedPrice} per $unit",
-                        style = MaterialTheme.typography.bodyMedium,
+                    val detail = when {
+                        current -> null
+                        trial -> "Free for ${periodText(intro!!.billingPeriod)}, then ${regular.formattedPrice} per $unit"
+                        discount != null -> "${discount.formattedPrice} per $unit for ${introLength(discount)}, then ${regular.formattedPrice}"
+                        else -> null
+                    }
+                    detail?.let { Text(it, style = MaterialTheme.typography.bodyMedium) }
+                    if (yearly) Text("That’s ${money(regular.priceAmountMicros / 12, regular.priceCurrencyCode)} a month", style = MaterialTheme.typography.bodyMedium)
+                    Text(
+                        if (current) "Renews automatically every $unit · manage or cancel in Google Play"
+                        else "Renews automatically every $unit · cancel any time",
+                        style = MaterialTheme.typography.bodySmall,
                     )
-                    Text("Renews automatically every $unit · cancel any time", style = MaterialTheme.typography.bodySmall)
                 }
             }
-            Button(
-                onClick = onChoose,
-                enabled = !loading && product != null && !isPro,
-                shapes = ButtonDefaults.shapes(),
-                modifier = Modifier.fillMaxWidth().height(54.dp),
-            ) { Text(if (isPro) "Active" else "Choose ${if (yearly) "yearly" else "monthly"}", style = MaterialTheme.typography.titleMedium) }
+            when (state) {
+                PlanState.Current -> androidx.compose.material3.OutlinedButton(
+                    onClick = onManage,
+                    shapes = ButtonDefaults.shapes(),
+                    modifier = Modifier.fillMaxWidth().height(54.dp),
+                ) {
+                    Text("Manage in Google Play", style = MaterialTheme.typography.titleMedium)
+                    Spacer(Modifier.width(6.dp))
+                    Icon(Icons.AutoMirrored.Filled.OpenInNew, null, Modifier.size(18.dp))
+                }
+                PlanState.Included -> Button(onClick = {}, enabled = false, shapes = ButtonDefaults.shapes(), modifier = Modifier.fillMaxWidth().height(54.dp)) {
+                    Text("Included with your Pro", style = MaterialTheme.typography.titleMedium)
+                }
+                PlanState.SwitchTo, PlanState.Available -> Button(
+                    onClick = onChoose,
+                    enabled = !loading && product != null,
+                    shapes = ButtonDefaults.shapes(),
+                    modifier = Modifier.fillMaxWidth().height(54.dp),
+                ) {
+                    Text(
+                        when {
+                            state == PlanState.SwitchTo && yearly -> yearlySaving?.let { "Switch to yearly · save $it%" } ?: "Switch to yearly"
+                            state == PlanState.SwitchTo -> "Switch to monthly"
+                            trial -> "Start free trial"
+                            discount != null -> "Get $discountPercent% off"
+                            else -> "Choose ${if (yearly) "yearly" else "monthly"}"
+                        },
+                        style = MaterialTheme.typography.titleMedium,
+                    )
+                }
+            }
         }
     }
 }
+
+@Composable
+private fun PriceText(price: String, unit: String) {
+    Row(verticalAlignment = Alignment.Bottom, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+        Text(price, style = Heading.Serif.display(40.sp))
+        Text("/ $unit", style = MaterialTheme.typography.titleMedium, modifier = Modifier.padding(bottom = 6.dp))
+    }
+}
+
+/** How long a discounted intro lasts: "3 months", or "1 year". */
+private fun introLength(phase: ProductDetails.PricingPhase): String {
+    val cycles = phase.billingCycleCount.coerceAtLeast(1)
+    val match = Regex("P(\\d+)([DWMY])").find(phase.billingPeriod) ?: return periodText(phase.billingPeriod)
+    val count = (match.groupValues[1].toIntOrNull() ?: 1) * cycles
+    return periodText("P$count${match.groupValues[2]}")
+}
+
+private fun money(micros: Long, currency: String): String =
+    runCatching {
+        java.text.NumberFormat.getCurrencyInstance().apply { this.currency = java.util.Currency.getInstance(currency) }.format(micros / 1_000_000.0)
+    }.getOrDefault("$currency ${micros / 1_000_000.0}")
 
 /** "P1W" → "1 week", "P3M" → "3 months", "P1Y" → "1 year". */
 private fun periodText(iso: String): String {

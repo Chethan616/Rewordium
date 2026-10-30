@@ -412,6 +412,16 @@ internal fun Modifier.snyggIconSize(
     }
 }
 
+/**
+ * [style]'s font family, resolved against the active theme's preloaded (bundled or custom) fonts, or
+ * [default] when the style doesn't set one. Lets code outside this module (Compose panels drawn beside
+ * the native key views) pick up the same typeface the keys themselves render with, without reaching into
+ * [LocalSnyggPreloadedCustomFontFamilies] directly.
+ */
+@Composable
+fun rememberSnyggFontFamily(style: SnyggSinglePropertySet, default: FontFamily? = null): FontFamily? =
+    style.fontFamily(LocalSnyggPreloadedCustomFontFamilies.current, default)
+
 /// SnyggValue helpers
 
 internal fun SnyggValue.colorOrDefault(default: Color): Color {

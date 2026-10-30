@@ -9,11 +9,22 @@ service cloud.firestore {
       return isSignedIn() && request.auth.uid == userId;
     }
 
-    // Admin function - check if user is admin
+    // Admins, by verified email: an unverified email/password account using an admin's address isn't one.
     function isAdmin() {
       return isSignedIn() &&
+             request.auth.token.email_verified == true &&
              (request.auth.token.email == 'chethankrishna2022@gmail.com' ||
               request.auth.token.email == 'rupakbabu1994@gmail.com');
+    }
+
+    // Whether an admin has banned the signed-in account (one read; only used on rare writes).
+    function isBanned() {
+      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data.get('banned', false) == true;
+    }
+
+    // Fields only an admin sets on a profile: the ban and admin-granted Pro.
+    function touchesAdminFields(before, after) {
+      return after.diff(before).affectedKeys().hasAny(['banned', 'bannedReason', 'bannedAt', 'proGrantedAt']);
     }
 
     // Free accounts may hold at most this many credits unless an admin grants more.
@@ -57,14 +68,24 @@ service cloud.firestore {
       // New accounts start as free users with at most the free credits.
       allow create: if isSelf(userId)
         && request.resource.data.get('isPro', false) == false
-        && request.resource.data.get('credits', 0) <= maxSelfCredits();
+        && request.resource.data.get('credits', 0) <= maxSelfCredits()
+        && !request.resource.data.keys().hasAny(['banned', 'bannedReason', 'bannedAt', 'proGrantedAt']);
 
-      // Users can update their own data, but can't self-grant Pro or credits.
+      // Users can update their own data, but can't self-grant Pro or credits, can't touch the ban,
+      // and a banned account can't change its profile at all.
       allow update: if isSelf(userId)
+        && resource.data.get('banned', false) != true
+        && !touchesAdminFields(resource.data, request.resource.data)
         && proChangeAllowed(resource.data, request.resource.data)
         && creditsChangeAllowed(resource.data, request.resource.data);
 
       allow delete: if isSelf(userId);
+
+      // Messages the admin sends to just this person: only they (and admins) can read them.
+      match /inbox/{messageId} {
+        allow read: if isSelf(userId) || isAdmin();
+        allow write: if isAdmin();
+      }
     }
 
     // Device installs (signed in or not) for the admin dashboard.
@@ -121,11 +142,10 @@ service cloud.firestore {
       allow read: if isSignedIn();
     }
 
-    // Payments collection - authenticated users can create/read their own records
+    // Old payment records from before Google Play billing. Purchases are Play-only now; nobody but an
+    // admin reads or writes these.
     match /payments/{paymentId} {
-      allow create: if isSignedIn() && request.resource.data.userId == request.auth.uid;
-      allow read: if isAdmin() || (isSignedIn() && resource.data.userId == request.auth.uid);
-      allow write: if isAdmin();
+      allow read, write: if isAdmin();
     }
 
     // In-app announcements, campaigns and release notes published from the admin panel.
@@ -145,9 +165,10 @@ service cloud.firestore {
 
     match /keyboard_themes/{themeId} {
       allow get: if isSignedIn();
-      allow list: if isSignedIn() && request.query.limit <= 50;
+      allow list: if isAdmin() || (isSignedIn() && request.query.limit <= 50);
 
       allow create: if isSignedIn()
+        && !isBanned()
         && request.resource.data.keys().hasOnly(['name', 'spec', 'night', 'style', 'authorName', 'authorUid', 'createdAt', 'downloads'])
         && request.resource.data.keys().hasAll(['name', 'spec', 'night', 'style', 'authorName', 'authorUid', 'createdAt', 'downloads'])
         && validThemeContent(request.resource.data)
@@ -171,6 +192,11 @@ service cloud.firestore {
     // Admin panel collections - only admin access
     match /admin/{document} {
       allow read, write: if isAdmin();
+    }
+
+    // What the in-app admin panel changed, by whom. Append-only.
+    match /admin_audit/{entryId} {
+      allow read, create: if isAdmin();
     }
 
     // Test collection for debugging

@@ -167,34 +167,38 @@ object KeyboardThemeFactory {
             }
             typeface()
         }
-        rule("key:pressed", "background" to c.keyPressed, "foreground" to c.onKeyPressed, "shape" to shape(s.pressedShape ?: s.shape))
+        rule("key:pressed", "background" to c.keyPressed, "foreground" to c.onKeyPressed, "shape" to shape(s.pressedShape ?: s.shape)) { typeface() }
         // Hints sit in the top-end corner; on very round keys move them in so the corner doesn't clip them.
         val roundCorner = s.shape in setOf(KeyShape.SOFT, KeyShape.PILL, KeyShape.BUBBLE, KeyShape.LEAF, KeyShape.TICKET)
         rule("key-hint", "padding" to if (roundCorner) "0dp 3dp 6dp 0dp" else "0dp 1dp 2dp 0dp") { typeface(); put("font-size", JsonPrimitive("11sp")) }
 
-        // Function keys wear the accent tint; a press fills them with the accent.
+        // Function keys wear the accent tint; a press fills them with the accent. Every rule repeats the
+        // typeface explicitly — a selector this specific isn't guaranteed to fall back to the base "key"
+        // rule's font, so without it bold/the theme's font silently drop on these keys (shift, delete, the
+        // ?123/ABC toggle, the number-pad switch) while every plain letter key keeps it.
         for (code in listOf("-7", "-5", "-11", "-201,-202,-203", "-204,-205")) {
-            rule("key[code=$code]", "background" to c.special, "foreground" to c.onSpecial)
-            rule("key[code=$code]:pressed", "background" to c.accent, "foreground" to c.onAccent, "shape" to shape(s.pressedShape ?: s.shape))
+            rule("key[code=$code]", "background" to c.special, "foreground" to c.onSpecial) { typeface() }
+            rule("key[code=$code]:pressed", "background" to c.accent, "foreground" to c.onAccent, "shape" to shape(s.pressedShape ?: s.shape)) { typeface() }
         }
-        rule("key[code=-201,-202,-203]", "shape" to "rounded-corner(50%, 50%, 50%, 50%)")
-        rule("key[code=-11][shiftstate=`shifted_manual`]", "background" to c.accent, "foreground" to c.onAccent)
-        rule("key[code=-11][shiftstate=`shifted_automatic`]", "background" to c.accent, "foreground" to c.onAccent)
+        rule("key[code=-201,-202,-203]", "shape" to "rounded-corner(50%, 50%, 50%, 50%)") { typeface() }
+        rule("key[code=-11][shiftstate=`shifted_manual`]", "background" to c.accent, "foreground" to c.onAccent) { typeface() }
+        rule("key[code=-11][shiftstate=`shifted_automatic`]", "background" to c.accent, "foreground" to c.onAccent) { typeface() }
         rule("key[code=-11][shiftstate=`caps_lock`]", "background" to c.accentStrong, "foreground" to c.onAccentStrong) {
             put("border-color", JsonPrimitive(c.onAccentStrong))
             put("border-width", JsonPrimitive("2dp"))
+            typeface()
         }
         // Comma and full stop: a whisper of the accent, so the bottom row reads as a group.
         for (code in listOf("44", "46")) {
-            rule("key[code=$code]", "background" to c.punctuation, "foreground" to c.letters)
-            rule("key[code=$code]:pressed", "background" to c.keyPressed, "foreground" to c.onKeyPressed)
+            rule("key[code=$code]", "background" to c.punctuation, "foreground" to c.letters) { typeface() }
+            rule("key[code=$code]:pressed", "background" to c.keyPressed, "foreground" to c.onKeyPressed) { typeface() }
         }
         // Enter is the hero: the accent, round, and stronger when pressed.
-        rule("key[code=10]", "background" to c.accent, "foreground" to c.onAccent, "shape" to "rounded-corner(50%, 50%, 50%, 50%)", "shadow-elevation" to "${(s.shadow + 1).coerceAtMost(4)}dp")
-        rule("key[code=10]:pressed", "background" to c.accentStrong, "foreground" to c.onAccentStrong)
+        rule("key[code=10]", "background" to c.accent, "foreground" to c.onAccent, "shape" to "rounded-corner(50%, 50%, 50%, 50%)", "shadow-elevation" to "${(s.shadow + 1).coerceAtMost(4)}dp") { typeface() }
+        rule("key[code=10]:pressed", "background" to c.accentStrong, "foreground" to c.onAccentStrong) { typeface() }
         // The space bar is a pill in every theme.
         rule("key[code=32]", "shape" to "rounded-corner(50%, 50%, 50%, 50%)", "foreground" to c.lettersDim) { typeface() }
-        rule("key[code=32]:pressed", "background" to c.keyPressed, "shape" to "rounded-corner(50%, 50%, 50%, 50%)")
+        rule("key[code=32]:pressed", "background" to c.keyPressed, "shape" to "rounded-corner(50%, 50%, 50%, 50%)") { typeface() }
 
         // 4. Popups pop: big, soft, raised, the focused letter in an accent pill.
         rule("key-popup-box", "shape" to "rounded-corner(20dp, 20dp, 20dp, 20dp)", "shadow-elevation" to "8dp", "font-size" to "26sp") { typeface() }

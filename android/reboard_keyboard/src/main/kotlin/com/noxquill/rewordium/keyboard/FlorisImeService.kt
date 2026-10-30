@@ -57,6 +57,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.animation.togetherWith
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
@@ -933,7 +934,7 @@ class FlorisImeService : LifecycleInputMethodService() {
                                     ),
                                     exit = androidx.compose.animation.fadeOut(
                                         animationSpec = androidx.compose.animation.core.tween(
-                                            durationMillis = 90,
+                                            durationMillis = 130,
                                             easing = androidx.compose.animation.core.EaseIn,
                                         ),
                                     ),
@@ -955,7 +956,7 @@ class FlorisImeService : LifecycleInputMethodService() {
                                     ),
                                     exit = androidx.compose.animation.fadeOut(
                                         animationSpec = androidx.compose.animation.core.tween(
-                                            durationMillis = 90,
+                                            durationMillis = 130,
                                             easing = androidx.compose.animation.core.EaseIn,
                                         ),
                                     ),
@@ -964,11 +965,45 @@ class FlorisImeService : LifecycleInputMethodService() {
                                 }
                                 val isResizeMode by keyboardManager.isResizeMode.collectAsState()
                                 Box {
-                                    when (effectiveImeMode) {
-                                        ImeUiMode.TEXT -> TextInputLayout()
-                                        ImeUiMode.MEDIA -> MediaInputLayout()
-                                        ImeUiMode.CLIPBOARD -> ClipboardInputLayout()
-                                        ImeUiMode.AI -> com.noxquill.rewordium.keyboard.ime.ai.AiInputLayout()
+                                    // A plain `when` here used to swap panels (QWERTY, emoji, clipboard, AI)
+                                    // on one frame with no transition — most visible closing emoji search
+                                    // (it hands off from the full QWERTY straight to the emoji grid) and
+                                    // opening/leaving the AI panel. Cross-fading the switch, with a spring
+                                    // on the size change so a taller panel (AI) doesn't jump-cut the
+                                    // keyboard's height either, is the one place that fixes every such swap.
+                                    androidx.compose.animation.AnimatedContent(
+                                        targetState = effectiveImeMode,
+                                        transitionSpec = {
+                                            androidx.compose.animation.fadeIn(
+                                                animationSpec = androidx.compose.animation.core.tween(
+                                                    durationMillis = 160,
+                                                    delayMillis = 50,
+                                                    easing = androidx.compose.animation.core.EaseOut,
+                                                ),
+                                            ).togetherWith(
+                                                androidx.compose.animation.fadeOut(
+                                                    animationSpec = androidx.compose.animation.core.tween(
+                                                        durationMillis = 110,
+                                                        easing = androidx.compose.animation.core.EaseIn,
+                                                    ),
+                                                ),
+                                            ).using(
+                                                androidx.compose.animation.SizeTransform(clip = false) { _, _ ->
+                                                    androidx.compose.animation.core.spring(
+                                                        dampingRatio = androidx.compose.animation.core.Spring.DampingRatioNoBouncy,
+                                                        stiffness = androidx.compose.animation.core.Spring.StiffnessMediumLow,
+                                                    )
+                                                },
+                                            )
+                                        },
+                                        label = "ime-panel",
+                                    ) { mode ->
+                                        when (mode) {
+                                            ImeUiMode.TEXT -> TextInputLayout()
+                                            ImeUiMode.MEDIA -> MediaInputLayout()
+                                            ImeUiMode.CLIPBOARD -> ClipboardInputLayout()
+                                            ImeUiMode.AI -> com.noxquill.rewordium.keyboard.ime.ai.AiInputLayout()
+                                        }
                                     }
                                     if (isResizeMode && effectiveImeMode == ImeUiMode.TEXT) {
                                         com.noxquill.rewordium.keyboard.ime.keyboard.KeyboardResizeOverlay(

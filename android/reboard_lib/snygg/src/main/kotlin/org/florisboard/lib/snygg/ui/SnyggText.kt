@@ -20,7 +20,13 @@ import androidx.compose.ui.unit.TextUnit
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.geometry.Rect
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.LocalLayoutDirection
+import androidx.compose.ui.text.TextLayoutResult
+import org.florisboard.lib.snygg.value.SnyggPaddingValue
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
@@ -57,8 +63,32 @@ fun SnyggText(
     modifier: Modifier = Modifier,
     text: String,
     fontSize: TextUnit = TextUnit.Unspecified,
+    onInkBounds: ((Rect) -> Unit)? = null,
 ) {
     ProvideSnyggStyle(elementName, attributes, selector) { style ->
+        val density = LocalDensity.current
+        val layoutDirection = LocalLayoutDirection.current
+        // The glyphs' own outline bounds (not the line box), in this element's coordinates: the text sits
+        // inside the style's margin and padding, so those are added back.
+        val onTextLayout: ((TextLayoutResult) -> Unit)? = onInkBounds?.let { report ->
+            remember(style, density, layoutDirection, report) {
+                { result: TextLayoutResult ->
+                    val length = result.layoutInput.text.length
+                    val ink = if (length > 0) result.getPathForRange(0, length).getBounds() else Rect.Zero
+                    if (!ink.isEmpty) {
+                        val margin = (style.margin as? SnyggPaddingValue)?.values
+                        val padding = (style.padding as? SnyggPaddingValue)?.values
+                        with(density) {
+                            val dx = (margin?.calculateLeftPadding(layoutDirection)?.toPx() ?: 0f) +
+                                (padding?.calculateLeftPadding(layoutDirection)?.toPx() ?: 0f)
+                            val dy = (margin?.calculateTopPadding()?.toPx() ?: 0f) +
+                                (padding?.calculateTopPadding()?.toPx() ?: 0f)
+                            report(ink.translate(dx, dy))
+                        }
+                    }
+                }
+            }
+        }
         Text(
             modifier = modifier
                 .snyggMargin(style)
@@ -78,6 +108,7 @@ fun SnyggText(
             textDecoration = style.textDecorationLine(),
             maxLines = style.textMaxLines(),
             overflow = style.textOverflow(),
+            onTextLayout = onTextLayout,
         )
     }
 }

@@ -156,6 +156,10 @@ android {
 
         // --- CORRECT KOTLIN SYNTAX FOR BUILDFIELD ---
         buildConfigField("String", "GROQ_API_KEY", "\"${getGroqApiKey()}\"")
+        // The admin panel's device lock (a salted PBKDF2 hash, never the password). Kept in local.properties or
+        // the environment so it isn't in the public repo; blank leaves the admin panel locked.
+        buildConfigField("String", "ADMIN_PASSWORD_SALT", "\"${localProperties.getProperty("ADMIN_PASSWORD_SALT") ?: System.getenv("ADMIN_PASSWORD_SALT") ?: ""}\"")
+        buildConfigField("String", "ADMIN_PASSWORD_HASH", "\"${localProperties.getProperty("ADMIN_PASSWORD_HASH") ?: System.getenv("ADMIN_PASSWORD_HASH") ?: ""}\"")
     }
 
     signingConfigs {
@@ -277,6 +281,7 @@ dependencies {
     implementation("com.google.firebase:firebase-inappmessaging-display")
     implementation("com.google.android.gms:play-services-auth:21.3.0")
     implementation("com.android.billingclient:billing:8.3.0")
+    implementation("androidx.work:work-runtime-ktx:2.10.1")
     
     // Google Play In-App Updates (replaces deprecated Play Core)
     implementation("com.google.android.play:app-update:2.1.0")

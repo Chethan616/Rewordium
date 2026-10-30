@@ -111,6 +111,7 @@ class MainActivity : ComponentActivity() {
     override fun onResume() {
         super.onResume()
         InAppUpdateHelper.resumeUpdateIfNeeded(this)
+        com.noxquill.rewordium.notifications.MascotNudges.onAppOpened(this)
     }
 
     override fun onDestroy() {

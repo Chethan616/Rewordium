@@ -57,7 +57,9 @@ import androidx.compose.ui.layout.FirstBaseline
 import androidx.compose.ui.layout.Layout
 import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.graphics.TransformOrigin
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.StrokeCap
@@ -422,7 +424,11 @@ private fun TextKeyButton(
         } else {
             null
         }
-        var labelText: String? = key.label ?: spaceCustomLabel
+        // On the number pads the space key is one small cell, too narrow for a mascot and a label side by
+        // side, so with a mascot there it stands alone: no label, no space icon.
+        val mascotOnlySpace = key.computedData.code == KeyCode.SPACE && mascot.visible &&
+            evaluator.keyboard.mode in NUMBER_PAD_MODES
+        var labelText: String? = if (mascotOnlySpace) null else key.label ?: spaceCustomLabel
         var labelFontSize = TextUnit.Unspecified
         if (labelText != null && key.computedData.code == KeyCode.SPACE) {
             val prefs by FlorisPreferenceStore
@@ -437,6 +443,10 @@ private fun TextKeyButton(
             labelFontSize = 14.sp
         }
         val hintedLabel = key.hintedLabel
+        // Where each text's glyphs actually draw, as measured from their outlines once laid out — read only
+        // while placing, so a change re-places the key without recomposing it.
+        val labelInk = remember { mutableStateOf<Rect?>(null) }
+        val hintInk = remember { mutableStateOf<Rect?>(null) }
         val label: (@Composable () -> Unit)? = labelText?.let { text ->
             if ('\n' in text && !isTelPadKey) {
                 // Multi-line labels ("1 2 / 3 4") sit on an even grid so their columns line up.
@@ -449,6 +459,7 @@ private fun TextKeyButton(
                             .then(if (isTelPadKey) Modifier.align(BiasAlignment(-0.5f, 0f)) else Modifier.align(Alignment.Center)),
                         text = text,
                         fontSize = labelFontSize,
+                        onInkBounds = { labelInk.value = it },
                     )
                 }
             }
@@ -463,18 +474,21 @@ private fun TextKeyButton(
                         .wrapContentSize()
                         .then(if (isTelPadKey) Modifier.align(BiasAlignment(0.5f, 0f)) else Modifier.align(Alignment.TopEnd)),
                     text = text,
+                    onInkBounds = { hintInk.value = it },
                 )
             }
         }
         if (label != null && hint != null && !isTelPadKey) {
-            // Lay the two out together so a big letter (caps, tall glyphs, round fonts) never runs into the hint,
-            // and the hint never hides behind a round key corner.
+            // Lay the two out together: the letter stays centred like on every other key, and the hint gives
+            // way inside its corner if the two would touch.
             val keyShape = rememberSnyggThemeQuery(FlorisImeUi.Key.elementName, boxAttributes).shape()
             val hintPadding = (rememberSnyggThemeQuery(FlorisImeUi.KeyHint.elementName, boxAttributes, selector).padding
                 as? SnyggPaddingValue)?.values
             KeyLabelWithHint(
                 label = label,
                 hint = hint,
+                labelInk = { labelInk.value },
+                hintInk = { hintInk.value },
                 keyShape = keyShape,
                 hintPadding = hintPadding,
                 modifier = Modifier.matchParentSize(),
@@ -484,7 +498,7 @@ private fun TextKeyButton(
             hint?.invoke()
         }
         // On the number pads the space key draws an icon; the custom label takes its place.
-        key.foregroundImageVector?.takeIf { spaceCustomLabel == null }?.let { imageVector ->
+        key.foregroundImageVector?.takeIf { spaceCustomLabel == null && !mascotOnlySpace }?.let { imageVector ->
             val iconTint = Color.Unspecified
             SnyggIcon(
                 modifier = Modifier.align(Alignment.Center),
@@ -503,6 +517,13 @@ private fun TextKeyButton(
         )
     }
 }
+
+private val NUMBER_PAD_MODES = setOf(
+    KeyboardMode.NUMERIC,
+    KeyboardMode.NUMERIC_ADVANCED,
+    KeyboardMode.PHONE,
+    KeyboardMode.PHONE2,
+)
 
 /**
  * A label written over several lines ("1 2" over "3 4"): every character gets a cell of the same width and
@@ -540,16 +561,21 @@ private fun KeyGridLabel(text: String, fontSize: TextUnit, modifier: Modifier = 
 /**
  * A key's letter and its hint (the small symbol in the top-end corner), laid out together.
  *
- * The hint sits just inside the key's own top-end corner: far enough in that a round corner never cuts it
- * off, no further (a theme's hint padding is folded into that, so every theme lands in the same place).
- * The letter stays centred unless its ink would reach the hint's, in which case it moves down just enough,
- * staying inside the key. Ink edges are estimated from each text's first baseline, which holds for any
- * theme font and size.
+ * The letter is centred exactly like a key without a hint, so every letter in a row shares one baseline.
+ * The hint sits just inside the key's own top-end corner (far enough in that a round corner never cuts it
+ * off; a theme's hint padding is folded into that), on the same baseline as every other hint.
+ *
+ * If the two would touch — judged from where their glyphs actually draw ([labelInk], [hintInk], measured
+ * from the glyph outlines once laid out) — the hint is the one that gives way: it shrinks toward its
+ * corner just until it clears the letter. Moving the letter instead is what put some letters lower than
+ * their neighbours.
  */
 @Composable
 private fun KeyLabelWithHint(
     label: @Composable () -> Unit,
     hint: @Composable () -> Unit,
+    labelInk: () -> Rect?,
+    hintInk: () -> Rect?,
     keyShape: Shape,
     hintPadding: PaddingValues?,
     modifier: Modifier = Modifier,
@@ -561,14 +587,13 @@ private fun KeyLabelWithHint(
         val width = constraints.maxWidth
         val height = constraints.maxHeight
         layout(width, height) {
-            val labelBaseline = labelPlaceable[FirstBaseline].takeIf { it != AlignmentLine.Unspecified }
-                ?: (labelPlaceable.height * 0.8f).toInt()
-            val hintBaseline = hintPlaceable[FirstBaseline].takeIf { it != AlignmentLine.Unspecified }
-                ?: (hintPlaceable.height * 0.8f).toInt()
+            val labelX = (width - labelPlaceable.width) / 2
+            val labelY = (height - labelPlaceable.height) / 2
+            labelPlaceable.place(labelX, labelY)
 
             // How far in from the top-end corner the hint's ink must start to stay inside the key's outline:
             // a point on a rounded corner's diagonal is inside once it's ~0.3 r in (0.5 r for a cut corner).
-            val keySize = androidx.compose.ui.geometry.Size(width.toFloat(), height.toFloat())
+            val keySize = Size(width.toFloat(), height.toFloat())
             val inset = when (keyShape) {
                 is CutCornerShape -> keyShape.topEnd.toPx(keySize, this@Layout) * 0.5f
                 is CornerBasedShape -> keyShape.topEnd.toPx(keySize, this@Layout) * 0.3f
@@ -576,30 +601,52 @@ private fun KeyLabelWithHint(
             } + 1.5.dp.toPx()
             val padTop = hintPadding?.calculateTopPadding()?.toPx() ?: 0f
             val padEnd = hintPadding?.calculateRightPadding(LayoutDirection.Ltr)?.toPx() ?: 0f
-            // The hint's glyphs start about a fifth of the way down from its text top.
-            val hintInkTop = padTop + (hintBaseline - padTop) * 0.22f
+            // The hint's box is placed from its font's baseline, not its own glyph, so every hint shares a line.
+            val hintBaseline = hintPlaceable[FirstBaseline].takeIf { it != AlignmentLine.Unspecified }
+                ?: hintPlaceable.height
+            val hintCapTop = padTop + (hintBaseline - padTop) * 0.22f
             val hintX = (width - hintPlaceable.width + padEnd - inset).roundToInt()
-            val hintY = (inset - hintInkTop).roundToInt()
-            hintPlaceable.place(hintX, hintY)
+            val hintY = (inset - hintCapTop).roundToInt()
 
-            val labelX = (width - labelPlaceable.width) / 2
-            var labelY = (height - labelPlaceable.height) / 2
-            // Ascenders and capitals reach about a fifth of the baseline below the text's top; hint symbols
-            // like ( ) ; dip a little under their baseline.
-            val hintInkBottom = hintY + hintBaseline + (hintBaseline - padTop) * 0.12f
-            val hintInkLeft = hintX + hintPlaceable.width * 0.12f
-            val labelInkTop = labelY + labelBaseline * 0.2f
-            val gap = 2.dp.toPx()
-            val overlapsHorizontally = labelX + labelPlaceable.width * 0.92f > hintInkLeft
-            if (overlapsHorizontally && labelInkTop < hintInkBottom + gap) {
-                val wanted = labelY + (hintInkBottom + gap - labelInkTop)
-                // Keep descenders (g, j, p, y) inside the key.
-                val lowest = height - 2.dp.toPx() - labelBaseline * 1.22f
-                labelY = maxOf(labelY.toFloat(), minOf(wanted, lowest)).roundToInt()
+            val hintBox = Rect(0f, 0f, hintPlaceable.width.toFloat(), hintPlaceable.height.toFloat())
+            val labelBox = Rect(0f, 0f, labelPlaceable.width.toFloat(), labelPlaceable.height.toFloat())
+            val hintRect = (hintInk() ?: hintBox).translate(hintX.toFloat(), hintY.toFloat())
+            val labelRect = (labelInk() ?: labelBox).translate(labelX.toFloat(), labelY.toFloat())
+            val scale = hintScaleToClear(hintRect, labelRect, gap = 2.dp.toPx(), minScale = 0.6f)
+
+            if (scale >= 1f) {
+                hintPlaceable.place(hintX, hintY)
+            } else {
+                // Shrink about the hint's own top-end ink corner, so it stays tucked in the key's corner.
+                val pivotX = (hintRect.right - hintX) / hintPlaceable.width.coerceAtLeast(1)
+                val pivotY = (hintRect.top - hintY) / hintPlaceable.height.coerceAtLeast(1)
+                hintPlaceable.placeWithLayer(hintX, hintY) {
+                    scaleX = scale
+                    scaleY = scale
+                    transformOrigin = TransformOrigin(pivotX, pivotY)
+                }
             }
-            labelPlaceable.place(labelX, labelY)
         }
     }
+}
+
+/**
+ * How much [hint] must shrink about its top-end corner to sit at least [gap] away from [label], given both
+ * as drawn glyph bounds: 1 when they already clear, never less than [minScale]. Two boxes clear once they're
+ * apart on either axis, so whichever needs the smaller shrink — below the hint, or beside it — wins.
+ */
+private fun hintScaleToClear(hint: Rect, label: Rect, gap: Float, minScale: Float): Float {
+    val clearsBelow = hint.bottom + gap <= label.top
+    val clearsBeside = hint.left - gap >= label.right
+    if (clearsBelow || clearsBeside) return 1f
+    val pivotX = hint.right
+    val pivotY = hint.top
+    // A shrink about (pivotX, pivotY) by s moves the bottom to pivotY + s·(bottom − pivotY), the left edge
+    // to pivotX − s·(pivotX − left).
+    val belowScale = (label.top - gap - pivotY) / (hint.bottom - pivotY)
+    val besideScale = (pivotX - label.right - gap) / (pivotX - hint.left)
+    val needed = maxOf(belowScale.takeIf { it.isFinite() } ?: 0f, besideScale.takeIf { it.isFinite() } ?: 0f)
+    return needed.coerceIn(minScale, 1f)
 }
 
 @Suppress("unused_parameter")

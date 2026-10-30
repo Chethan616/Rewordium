@@ -359,7 +359,13 @@ fun AiInputLayout(
         state = PanelState.Tools
     }
 
-    val panelHeight = FlorisImeSizing.keyboardRowBaseHeight * 5 + FlorisImeSizing.smartbarHeight
+    // A flat "5 keyboard rows" reads fine on a compact phone but pinches the tool grid and the result
+    // view on a tall screen, where the real keyboard would never be that short relative to the display.
+    // Floor it to a share of the actual screen height instead, so it grows with the phone.
+    val screenHeightDp = androidx.compose.ui.platform.LocalConfiguration.current.screenHeightDp.dp
+    val panelHeight = (FlorisImeSizing.keyboardRowBaseHeight * 5 + FlorisImeSizing.smartbarHeight)
+        .coerceAtLeast(screenHeightDp * 0.44f)
+        .coerceAtMost(screenHeightDp * 0.62f)
     // The mascot hops whenever a result or an applied edit lands.
     var hops by remember { mutableIntStateOf(0) }
     LaunchedEffect(state::class) {

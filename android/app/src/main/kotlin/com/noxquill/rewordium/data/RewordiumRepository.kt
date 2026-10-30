@@ -15,6 +15,8 @@ import com.google.firebase.Timestamp
 import com.noxquill.rewordium.service.CreditManager
 import com.noxquill.rewordium.util.KeyboardConstants
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.withContext
 import java.util.Date
 
@@ -35,6 +37,15 @@ object RewordiumRepository {
     private val firestore by lazy { FirebaseFirestore.getInstance() }
 
     val currentUser: FirebaseUser? get() = runCatching { auth.currentUser }.getOrNull()
+
+    private val _suspension = MutableStateFlow<String?>(null)
+
+    /** Set when an admin has banned the account that was signed in: the reason (possibly blank), until shown. */
+    val suspension: StateFlow<String?> = _suspension
+
+    fun dismissSuspension() {
+        _suspension.value = null
+    }
 
     suspend fun signIn(email: String, password: String): FirebaseUser = io {
         val result = Tasks.await(auth.signInWithEmailAndPassword(email.trim(), password))
@@ -96,6 +107,11 @@ object RewordiumRepository {
         return try {
             val snapshot = io { Tasks.await(firestore.collection("users").document(user.uid).get()) }
             val data = snapshot.data.orEmpty()
+            if (data["banned"] == true) {
+                _suspension.value = (data["bannedReason"] as? String).orEmpty()
+                signOut(context)
+                return null
+            }
             val isPro = data["isPro"] as? Boolean ?: false
             val info = AccountInfo(
                 uid = user.uid,
@@ -105,11 +121,16 @@ object RewordiumRepository {
                 email = user.email.orEmpty(),
                 credits = (data["credits"] as? Number)?.toInt() ?: 0,
                 isPro = isPro,
-                planType = (data["subscription"] as? Map<*, *>)?.get("planType") as? String
-                    ?: data["planType"] as? String
-                    ?: if (isPro) "pro" else "free",
+                planType = when {
+                    // Pro handed out from the admin panel, not bought.
+                    data["planType"] == "admin_grant" -> "gifted"
+                    else -> (data["subscription"] as? Map<*, *>)?.get("planType") as? String
+                        ?: data["planType"] as? String
+                        ?: if (isPro) "pro" else "free"
+                },
             )
             syncNativeStatus(context, info)
+            savePushToken(user.uid, data["fcmToken"] as? String)
             info
         } catch (error: Exception) {
             Log.w(TAG, "Could not refresh the account profile", error)
@@ -117,6 +138,16 @@ object RewordiumRepository {
             syncNativeStatus(context, cached)
             cached
         }
+    }
+
+    /** Keeps this phone's push token on the profile, so the admin can reach just this person. */
+    private suspend fun savePushToken(uid: String, saved: String?) {
+        runCatching {
+            val token = io { Tasks.await(com.google.firebase.messaging.FirebaseMessaging.getInstance().token) }
+            if (token.isNotBlank() && token != saved) {
+                io { Tasks.await(firestore.collection("users").document(uid).set(mapOf("fcmToken" to token), SetOptions.merge())) }
+            }
+        }.onFailure { Log.w(TAG, "Could not save the push token", it) }
     }
 
     suspend fun consumeCredit(context: Context, source: String): Boolean {

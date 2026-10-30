@@ -295,7 +295,10 @@ async function verifyAdmin(context: any): Promise<boolean> {
 
   try {
     const userRecord = await auth.getUser(context.auth.uid);
-    return userRecord.email ? ADMIN_EMAILS.includes(userRecord.email) : false;
+    // A verified email only: an unverified password account can carry any address.
+    return userRecord.email && userRecord.emailVerified ?
+      ADMIN_EMAILS.includes(userRecord.email.toLowerCase()) :
+      false;
   } catch (error) {
     console.error("Error verifying admin:", error);
     return false;

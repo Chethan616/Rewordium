@@ -461,6 +461,7 @@ private fun ThemeSheet(
     var trying by remember { mutableStateOf(false) }
     var busy by remember { mutableStateOf(false) }
     var tryText by remember { mutableStateOf("") }
+    var sharing by remember { mutableStateOf(false) }
     val focus = remember { FocusRequester() }
     // The sheet's own scope is cancelled by the time it is disposed, so the preview must end detached;
     // a preview left running would pin the keyboard's look and ignore the light/dark choice.
@@ -554,11 +555,8 @@ private fun ThemeSheet(
                 Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                     if (canShare) TextButton(onClick = {
                         if (RewordiumRepository.currentUser == null) { toast("Sign in to share themes."); return@TextButton }
-                        scope.launch {
-                            CommunityThemes.publish(spec, authorName ?: "Someone")
-                                .onSuccess { haptics.success(); toast("Shared with the community"); onChanged() }
-                                .onFailure { toast(it.message ?: "Couldn’t share it.") }
-                        }
+                        haptics.tick()
+                        sharing = true
                     }) {
                         Icon(Icons.Filled.CloudUpload, null, Modifier.size(18.dp))
                         Spacer(Modifier.width(6.dp))
@@ -585,6 +583,47 @@ private fun ThemeSheet(
             }
         }
     }
+
+    if (sharing) {
+        ShareNameDialog(
+            initialName = spec.name,
+            onDismiss = { sharing = false },
+            onShare = { name ->
+                sharing = false
+                scope.launch {
+                    CommunityThemes.publish(spec.copy(name = name), authorName ?: "Someone")
+                        .onSuccess { haptics.success(); toast("Shared with the community"); onChanged() }
+                        .onFailure { toast(it.message ?: "Couldn’t share it.") }
+                }
+            },
+        )
+    }
+}
+
+/** Asks for the public name a shared theme lists under — the builder's draft name ("My theme remix") rarely is one. */
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun ShareNameDialog(initialName: String, onDismiss: () -> Unit, onShare: (String) -> Unit) {
+    var name by remember { mutableStateOf(initialName) }
+    androidx.compose.material3.AlertDialog(
+        onDismissRequest = onDismiss,
+        icon = { Icon(Icons.Filled.CloudUpload, null) },
+        title = { Text("Share to community") },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                Text("What should it be called?", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                OutlinedTextField(
+                    value = name,
+                    onValueChange = { name = it.take(40) },
+                    singleLine = true,
+                    shape = RoundedCornerShape(18.dp),
+                    modifier = Modifier.fillMaxWidth(),
+                )
+            }
+        },
+        confirmButton = { Button(onClick = { onShare(name.trim().ifBlank { initialName }) }, enabled = name.isNotBlank()) { Text("Share") } },
+        dismissButton = { TextButton(onClick = onDismiss) { Text("Cancel") } },
+    )
 }
 
 @Composable

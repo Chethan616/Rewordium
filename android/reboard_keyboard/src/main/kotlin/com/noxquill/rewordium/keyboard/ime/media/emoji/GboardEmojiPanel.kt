@@ -262,7 +262,12 @@ fun GboardEmojiPanel(
                             onPick = { category ->
                                 feedback.tick()
                                 val target = sections.firstOrNull { it.category == category } ?: sections.firstOrNull()
-                                if (target != null) scope.launch { gridState.animateScrollToItem(target.headerIndex) }
+                                // Every emoji across every category lives in one grid, Gboard-style, so a
+                                // category jump can be thousands of items away. animateScrollToItem has to
+                                // compose each one it passes to do the smooth scroll — on a jump that long
+                                // that's the "lags like hell": real work on every frame of the animation.
+                                // A snap is instant because LazyGrid can place the target index directly.
+                                if (target != null) scope.launch { gridState.scrollToItem(target.headerIndex) }
                             },
                         )
                         EmojiGrid(
@@ -995,9 +1000,21 @@ private fun MediaBottomBar(
                     animationSpec = spring(dampingRatio = 0.4f, stiffness = 500f),
                     label = "mode-pop",
                 )
+                // A press squish, like every other tappable thing in this kit — Gboard's tab row does the
+                // same: the symbol shrinks the instant a finger lands, before the panel even has time to
+                // switch, so the tap itself feels acknowledged rather than waiting on the content swap.
+                val interaction = remember { MutableInteractionSource() }
+                val pressed by interaction.collectIsPressedAsState()
+                val squish by animateFloatAsState(
+                    targetValue = if (pressed) 0.78f else 1f,
+                    animationSpec = MaterialTheme.motionScheme.fastSpatialSpec(),
+                    label = "mode-squish",
+                )
+                val tint = if (checked) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurface
                 ToggleButton(
                     checked = checked,
                     onCheckedChange = { if (!checked) onModeChange(m) },
+                    interactionSource = interaction,
                     modifier = Modifier
                         .weight(1f)
                         .fillMaxHeight()
@@ -1020,20 +1037,22 @@ private fun MediaBottomBar(
                     contentPadding = PaddingValues(horizontal = 2.dp),
                 ) {
                     val bounce = Modifier.graphicsLayer {
-                        // Peaks mid-spring, so the symbol pops as its button is chosen.
-                        val s = 1f + 0.9f * pop * (1f - pop)
+                        // Peaks mid-spring, so the symbol pops as its button is chosen, scaled down further
+                        // while actually held.
+                        val s = (1f + 0.9f * pop * (1f - pop)) * squish
                         scaleX = s
                         scaleY = s
                     }
                     when (m) {
                         EmojiPanelMode.EMOJI -> Icon(
-                            if (checked) Symbols.SentimentSatisfiedFilled else Symbols.SentimentSatisfied, null, bounce.size(24.dp),
+                            if (checked) Symbols.SentimentSatisfiedFilled else Symbols.SentimentSatisfied, null, bounce.size(24.dp), tint,
                         )
-                        EmojiPanelMode.GIF -> Icon(Symbols.Gif2, null, bounce.size(24.dp))
-                        EmojiPanelMode.STICKER -> Icon(if (checked) Symbols.StickerFilled else Symbols.Sticker, null, bounce.size(24.dp))
+                        EmojiPanelMode.GIF -> Icon(Symbols.Gif2, null, bounce.size(24.dp), tint)
+                        EmojiPanelMode.STICKER -> Icon(if (checked) Symbols.StickerFilled else Symbols.Sticker, null, bounce.size(24.dp), tint)
                         EmojiPanelMode.EMOTICON -> Text(
                             ":-)",
                             style = MaterialTheme.typography.labelLarge,
+                            color = tint,
                             fontWeight = FontWeight.ExtraBold,
                             maxLines = 1,
                             modifier = bounce,

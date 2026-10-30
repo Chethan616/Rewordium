@@ -66,6 +66,7 @@ object RewordiumNotifications {
             TOPICS.forEach { topic -> if (on) messaging.subscribeToTopic(topic) else messaging.unsubscribeFromTopic(topic) }
         }
         runCatching { FirebaseInAppMessaging.getInstance().setMessagesSuppressed(!on) }
+        MascotNudges.sync(context, on)
     }
 
     private fun createChannels(context: Context) {
@@ -74,6 +75,12 @@ object RewordiumNotifications {
         manager.createNotificationChannel(
             NotificationChannel(CHANNEL_UPDATES, "Updates and news", NotificationManager.IMPORTANCE_DEFAULT).apply {
                 description = "New features, release notes and offers from Rewordium"
+            },
+        )
+        manager.createNotificationChannel(
+            NotificationChannel(MascotNudges.CHANNEL, "Mascot notes", NotificationManager.IMPORTANCE_LOW).apply {
+                description = "Now and then, a quiet note from the mascots when you haven’t visited in a while"
+                setShowBadge(false)
             },
         )
     }

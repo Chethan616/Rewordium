@@ -152,6 +152,7 @@ fun SettingsScreen(
     onBackupRestored: () -> Unit,
     onSignOut: () -> Unit,
     onDeleteAccount: suspend (password: String?, googleIdToken: String?) -> Unit,
+    onOpenAdmin: () -> Unit = {},
 ) {
     val context = LocalContext.current
     val haptics = LocalHaptics.current
@@ -166,6 +167,26 @@ fun SettingsScreen(
     var showDelete by rememberSaveable { mutableStateOf(false) }
     val listState = rememberLazyListState()
     val version = remember { runCatching { context.packageManager.getPackageInfo(context.packageName, 0).versionName }.getOrNull().orEmpty() }
+    // Seven quick taps on the version open the admin password prompt — on the owner's own account only;
+    // for everyone else the row isn't even tappable.
+    val isOwner = remember(account?.email) { com.noxquill.rewordium.data.admin.AdminRepository.isOwnerSignedIn() }
+    var versionTaps by remember { mutableStateOf(0) }
+    var lastVersionTap by remember { mutableStateOf(0L) }
+    var showAdminUnlock by rememberSaveable { mutableStateOf(false) }
+    val onVersionTap: (() -> Unit)? = if (!isOwner) null else {
+        {
+            val now = android.os.SystemClock.uptimeMillis()
+            versionTaps = if (now - lastVersionTap < 700) versionTaps + 1 else 1
+            lastVersionTap = now
+            if (versionTaps >= 7) {
+                versionTaps = 0
+                haptics.confirm()
+                if (com.noxquill.rewordium.data.admin.AdminRepository.isUnlocked()) onOpenAdmin() else showAdminUnlock = true
+            } else {
+                haptics.tick()
+            }
+        }
+    }
 
     ExpressiveScaffold(title = "Settings", subtitle = "Make Rewordium yours", heading = Heading.Narrow) { padding ->
         LazyColumn(
@@ -366,7 +387,7 @@ fun SettingsScreen(
                                 }.onFailure { onOpenLink(RewordiumLinks.WEBSITE) }
                             }
                         },
-                        { shape -> SettingRow(Icons.Filled.Info, "Rewordium for Android", "Version $version", shape, Tone.Neutral) },
+                        { shape -> SettingRow(Icons.Filled.Info, "Rewordium for Android", "Version $version", shape, Tone.Neutral, onClick = onVersionTap) },
                     ),
                 )
             }
@@ -384,6 +405,11 @@ fun SettingsScreen(
             }
         }
     }
+
+    if (showAdminUnlock) com.noxquill.rewordium.app.screens.admin.AdminUnlockDialog(
+        onDismiss = { showAdminUnlock = false },
+        onUnlocked = { showAdminUnlock = false; onOpenAdmin() },
+    )
 
     if (showAvatarPicker) AvatarPickerSheet(
         current = avatar,

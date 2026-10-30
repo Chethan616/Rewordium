@@ -126,6 +126,31 @@ class JadeEngine(context: Context) {
         spec.readable().copy(author = "Jade", style = spec.style.ifBlank { "jade" })
     }
 
+    /**
+     * A title and message about [brief] for an announcement, a push or a note to one person, in Rewordium's
+     * voice. [maxBody] keeps it within what that surface shows.
+     */
+    suspend fun draftMessage(brief: String, maxBody: Int): Pair<String, String> = withContext(Dispatchers.IO) {
+        require(brief.isNotBlank()) { "Say what it’s about first." }
+        val config = readyConfig()
+        val system = DRAFT_PROMPT.replace("{MAX_BODY}", maxBody.toString())
+        val user = brief.take(600)
+        val raw = if (config.isClaude() || config.isGemini()) {
+            plainCompletion(config, system, listOf(JadeTurn(true, user)), 400)
+        } else {
+            val messages = JsonArray().apply {
+                add(msg("system", system))
+                add(msg("user", user))
+            }
+            completeWithFallback(config, modelsFor(config).toMutableList(), messages, withTools = false, maxTokens = 400).get("content").asText().orEmpty()
+        }
+        val json = runCatching { JsonParser.parseString("{" + raw.substringAfter('{', "").substringBeforeLast('}', "") + "}").asJsonObject }.getOrNull()
+        val title = json?.get("title").asText()?.trim().orEmpty()
+        val body = json?.get("body").asText()?.trim().orEmpty()
+        if (title.isBlank() || body.isBlank()) throw JadeException("That draft didn’t come out right. Try again.", retryable = true)
+        title.take(80) to body.take(maxBody)
+    }
+
     private fun readyConfig(): AIConfigProvider.AIConfig {
         val config = AIConfigProvider.reloadConfig(appContext)
         if (!config.hasValidApiKey()) throw JadeException("No AI key is set up. Add one in Settings → AI preferences.")
@@ -362,6 +387,15 @@ class JadeEngine(context: Context) {
              "mascot": one of clover, flower, triangle, square, blob, ghost, circle, drop, star, droid, mech, alien, hexagon, cat, cloud, pill, pebble, puddle, or null for none,
              "style": one of playful, expressive, professional, clean}
             Match the mood the user describes. Keep it readable: letters vs keys contrast at least 4.5:1.
+        """.trimIndent()
+
+        private val DRAFT_PROMPT = """
+            You write short messages from the Rewordium team to its users. Rewordium is an Android app: the ReBoard
+            keyboard with AI writing tools, Jade (a cheerful AI writing buddy), playful keyboard themes and mascots.
+            Reply with ONE JSON object and nothing else: {"title": "...", "body": "..."}
+            - title: at most 45 characters, catchy, no trailing period.
+            - body: at most {MAX_BODY} characters, warm and clear, says what's new or what to do; one emoji at most.
+            - Plain text only, no markdown, no hashtags, no made-up features, prices or dates beyond what the brief says.
         """.trimIndent()
 
         private const val TAG = "JadeEngine"
