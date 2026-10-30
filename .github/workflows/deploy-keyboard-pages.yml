@@ -1,0 +1,33 @@
+name: Deploy Rewordium Keyboard pages
+
+# The legal and support pages for Rewordium – Smart Keyboard (com.chethan616.keyboard), published at
+# https://chethan616.github.io/Rewordium/keyboard/. Only the keyboard/ folder is written to gh-pages, so the
+# earlier Rewordium app's site (deployed from main) is left as it is.
+
+on:
+  push:
+    branches:
+      - paid-app
+    paths:
+      - 'website2.0/rewordium-landingpage/keyboard/**'
+      - '.github/workflows/deploy-keyboard-pages.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Deploy keyboard/ to GitHub Pages (gh-pages)
+        uses: peaceiris/actions-gh-pages@v4
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: ./website2.0/rewordium-landingpage/keyboard
+          destination_dir: keyboard
+          publish_branch: gh-pages
+          keep_files: true
